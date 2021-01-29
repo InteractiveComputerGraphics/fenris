@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 30fceec597d68f4be3af06a9661f6d26c791c150a5818382f8eb24fac730766f # shrinks to (mesh, cell_indices) = (Mesh2d { vertices: [], cells: [] }, [0])

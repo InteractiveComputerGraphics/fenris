@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 925f952fe3aaca31b20a02512e467f1e4f6b1034d856bf8366a6bdc7e166ad8c # shrinks to mesh = Mesh2d { vertices: [Point { coords: Matrix { data: [0.0, 0.0] } }, Point { coords: Matrix { data: [1.0, 0.0] } }, Point { coords: Matrix { data: [0.0, -1.0] } }, Point { coords: Matrix { data: [1.0, -1.0] } }, Point { coords: Matrix { data: [0.0, -2.0] } }, Point { coords: Matrix { data: [1.0, -2.0] } }], cells: [QuadIndices([2, 3, 1, 0]), QuadIndices([4, 5, 3, 2])] }

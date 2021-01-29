@@ -1,0 +1,52 @@
+[package]
+name = "fenris"
+version = "0.1.0"
+authors = ["Andreas Longva <longva@cs.rwth-aachen.de>"]
+edition = "2018"
+
+[features]
+default = [ "proptest" ]
+
+[dependencies]
+nalgebra = { version = "0.21", features = [ "serde-serialize" ] }
+alga = { version = "0.9", default-features = false }
+vtkio = "0.3"
+num = "0.2"
+numeric_literals = { git = "https://github.com/Andlon/numeric_literals", rev = "c43f098e617f0b768b43c185711ed106f4170cd7" }
+itertools = "0.9"
+ordered-float = "1.0"
+proptest = { version = "0.9", optional = true }
+rayon = "1.3"
+nested-vec = { path="nested-vec" }
+# TODO: Make serde optional
+serde = { version="1.0", features = [ "derive" ] }
+arrayvec = "0.5.1"
+log = "0.4"
+paradis = { path = "paradis" }
+rustc-hash = "1.1.0"
+thread_local = "1.1.2"
+sparse = { path = "sparse" }
+fenris-geometry = { path = "fenris-geometry", features = [ "proptest", "vtkio" ] }
+fenris-optimize = { path = "fenris-optimize" }
+
+[dev-dependencies]
+proptest = "0.9"
+prettytable-rs = "^0.8"
+matrixcompare = "0.2"
+mkl-corrode = { git = "https://github.com/Andlon/mkl-corrode.git", rev="26a0d49d66839d46ec1884a9afcdc8d597a65d84", features = [ "openmp", "ilp64" ] }
+paste = "0.1.7"
+criterion = "0.3.2"
+util = { path = "util" }
+sparse-proptest = { path = "sparse/sparse-proptest" }
+
+# Many of our integration tests depend on fenris-solid for historical reasons
+# TODO: Fix this
+#fenris-solid = { path = "../fenris-solid" }
+
+[[bench]]
+name = "assembly"
+harness = false
+
+[workspace]
+members = ["fenris-geometry", "fenris-optimize", "sparse", "nested-vec", "paradis" ]
+#members = ["nested-vec" ]

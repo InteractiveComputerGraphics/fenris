@@ -1,0 +1,11 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc eb3d0383b97096d2736865250aa2a1e353e78fcde28ede14d02aa9a9a663cb11 # shrinks to coo = CooMatrix { nrows: 1, ncols: 2, i: [0, 0, 0], j: [1, 0, 0], v: [0, 0, 1] }
+cc 6cbf6d9b828de0df85a172e2f926a8663b6443d3261b7c9467cfbf7aded8d761 # shrinks to coo = CooMatrix { nrows: 3, ncols: 3, i: [0, 0, 0], j: [0, 0, 0], v: [0, 0, 0] }
+cc 4f059c9ff0161935917bc36eb6493be2a373ca223561aaaf1893d190f96fd902 # shrinks to (coo, x, y, alpha, beta) = (CooMatrix { nrows: 1, ncols: 0, i: [], j: [], v: [] }, [-5, -4, 0, -1, -5, -2], [-1, -3, -5, -3, 0, -3], 1, 4)
+cc 6840b2b458601adddbafc37004e0b2703cea45f96e1a6fb387f0b0b88f2ae24c # shrinks to matrices = [CsrMatrix { sparsity_pattern: SparsityPattern { major_offsets: [0], minor_indices: [], minor_dim: 0 }, v: [] }]
+cc b4d2d7ee3defa0a79c1bcf1cebe4b12224e827d4f1d7ce248ceb0e9c40797f89 # shrinks to (_, [a, b]) = (CsrMatrix { sparsity_pattern: SparsityPattern { major_offsets: [0, 4, 7], minor_indices: [0, 1, 2, 3, 0, 2, 3], minor_dim: 4 }, v: [0, 0, 0, 0, 0, 0, 0] }, [CsrMatrix { sparsity_pattern: SparsityPattern { major_offsets: [0, 2, 4], minor_indices: [2, 3, 1, 3], minor_dim: 4 }, v: [5, 4, 5, 7] }, CsrMatrix { sparsity_pattern: SparsityPattern { major_offsets: [0, 4, 7, 11, 11], minor_indices: [0, 1, 2, 3, 0, 2, 3, 0, 1, 2, 3], minor_dim: 4 }, v: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }])

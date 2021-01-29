@@ -1,0 +1,11 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 98a33f1ef95de867c023436d05254517ded8f1dd9aea56a3d0c38fc170be11a7 # shrinks to (x, y) = (0.0, 0.3795635332390195)
+cc de24d8bff42796cd3a7e927c1d894874fc96a143cd766409f20a983c3de2acdb # shrinks to tri = Triangle2d([Point { coords: Matrix { data: [0.0, 0.0] } }, Point { coords: Matrix { data: [0.0, -99.65933887502784] } }, Point { coords: Matrix { data: [57.997960082136984, -92.59510743817927] } }])
+cc e3931d1eff663bf05135714b7d16b90b92803e3ca5866e2fd6df92a550efa684 # shrinks to (a, b, xi) = (Point { coords: Matrix { data: [0.0, 0.20939344981708885] } }, Point { coords: Matrix { data: [-37.52723953068697, 6.034261117385057] } }, -0.8591033571234763)
+cc 170e251a7fba0d179a7ea0383f4c16ce3acfb0fc96309e0f14ad0bb8d580d8b1 # shrinks to (tet, xi) = (Tet4Element { vertices: [Point { coords: Matrix { data: [0.0, 0.0, -9.82566465994083] } }, Point { coords: Matrix { data: [0.0, -7.794835280149801, 0.0] } }, Point { coords: Matrix { data: [-4.6558498908784385, 0.0, 0.0] } }, Point { coords: Matrix { data: [34.43724993104183, 0.0, 0.0] } }] }, Point { coords: Matrix { data: [0.0, -0.0, -0.0] } })
+cc 999d392d7796f81363dae05aa2816004ba4e764101e31a4886d204d836dd32d8 # shrinks to tri = Triangle([Point { coords: Matrix { data: [-0.5350053492532321, 0.0] } }, Point { coords: Matrix { data: [-82.85181263386065, 90.14126143890536] } }, Point { coords: Matrix { data: [-98.76535656554171, 0.0] } }])

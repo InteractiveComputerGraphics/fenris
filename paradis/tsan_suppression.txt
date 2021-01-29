@@ -1,0 +1,3 @@
+race:core::sync::atomic::atomic
+race:lazy_static::lazy::Lazy
+race:alloc::sync::Arc
