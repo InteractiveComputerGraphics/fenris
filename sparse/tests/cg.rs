@@ -1,4 +1,4 @@
-use fenris::nalgebra::{DMatrix, DVector};
+use nalgebra::{DMatrix, DVector};
 use sparse::cg::{ConjugateGradient, IdentityOperator, RelativeResidualCriterion};
 use util::assert_approx_matrix_eq;
 

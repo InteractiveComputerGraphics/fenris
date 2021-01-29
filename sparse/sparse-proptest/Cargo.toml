@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 sparse = { path=".." }
-nalgebra = "0.21"
+nalgebra = "0.24.1"
 proptest = "0.9"
 num = "0.2"
 util = { path = "../../util" }

@@ -47,7 +47,7 @@ where
         .prop_map(|(num_rows, num_cols, triplets)| {
             let mut coo = CooMatrix::new(num_rows, num_cols);
             for (i, j, v) in triplets {
-                coo.push(i, j, v);
+                coo.push(i, j, v.inlined_clone());
             }
             coo
         })

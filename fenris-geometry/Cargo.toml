@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 itertools = "0.9"
-nalgebra = "0.21"
+nalgebra = "0.24.1"
 serde = { version="1.0", features = [ "derive" ] }
 numeric_literals = { git = "https://github.com/Andlon/numeric_literals", rev = "c43f098e617f0b768b43c185711ed106f4170cd7" }
 nested-vec = { path="../nested-vec" }
