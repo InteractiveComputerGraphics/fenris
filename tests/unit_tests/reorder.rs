@@ -1,6 +1,6 @@
 use fenris::reorder::{cuthill_mckee, reverse_cuthill_mckee};
-use nalgebra::DMatrix;
 use fenris_sparse::CsrMatrix;
+use nalgebra::DMatrix;
 
 #[test]
 fn cuthill_mckee_basic_examples() {

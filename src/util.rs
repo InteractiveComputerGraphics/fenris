@@ -1,6 +1,7 @@
 use crate::assembly::CsrParAssembler;
 use crate::connectivity::Connectivity;
 use crate::mesh::Mesh;
+use fenris_sparse::{CooMatrix, CsrMatrix};
 use itertools::Itertools;
 use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{DimEq, ShapeConstraint};
@@ -12,7 +13,6 @@ use nalgebra::{
 };
 use num::Zero;
 use numeric_literals::replace_float_literals;
-use fenris_sparse::{CooMatrix, CsrMatrix};
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt::LowerExp;

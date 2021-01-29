@@ -9,8 +9,7 @@ use num::Zero;
 
 use fenris::assembly::{
     apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_matrix,
-    assemble_generalized_element_mass,
-    CsrParAssembler, ElementConnectivityAssembler,
+    assemble_generalized_element_mass, CsrParAssembler, ElementConnectivityAssembler,
 };
 use fenris::connectivity::Quad4d2Connectivity;
 use fenris::element::{ElementConnectivity, MatrixSliceMut, Quad4d2Element};
@@ -90,7 +89,12 @@ fn analytic_comparison_of_element_mass_matrix_for_reference_element() {
 
     let ndof = 8;
     let mut m = DMatrix::zeros(ndof, ndof);
-    assemble_generalized_element_mass::<_, U2, _, _>(MatrixSliceMut::from(&mut m), &quad, density, &quadrature);
+    assemble_generalized_element_mass::<_, U2, _, _>(
+        MatrixSliceMut::from(&mut m),
+        &quad,
+        density,
+        &quadrature,
+    );
 
     #[rustfmt::skip]
     let expected4x4 = (density / 9.0) * Matrix4::new(

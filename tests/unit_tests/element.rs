@@ -1,4 +1,9 @@
-use fenris::element::{map_physical_coordinates, project_physical_coordinates, FiniteElement, Hex20Element, Hex27Element, Hex8Element, Quad4d2Element, Quad9d2Element, Segment2d2Element, Tet10Element, Tet4Element, Tri3d2Element, Tri6d2Element, FixedNodesReferenceFiniteElement, MatrixSlice};
+use fenris::element::{
+    map_physical_coordinates, project_physical_coordinates, FiniteElement,
+    FixedNodesReferenceFiniteElement, Hex20Element, Hex27Element, Hex8Element, MatrixSlice,
+    Quad4d2Element, Quad9d2Element, Segment2d2Element, Tet10Element, Tet4Element, Tri3d2Element,
+    Tri6d2Element,
+};
 use fenris::error::{estimate_element_L2_error, ErrorWorkspace};
 use fenris::geometry::proptest_strategies::{
     clockwise_triangle2d_strategy_f64, nondegenerate_convex_quad2d_strategy_f64,
@@ -256,11 +261,13 @@ fn quad4_bilinear_function_exact_error() {
 
     // TODO: Use lower strength quadrature
     let quadrature = quad_quadrature_strength_11();
-    let error = estimate_element_L2_error(&mut ErrorWorkspace::default(),
-                                          &element,
-                                          |p, _| u_exact(p),
-                                          MatrixSlice::from(&u_weights),
-                                          &quadrature);
+    let error = estimate_element_L2_error(
+        &mut ErrorWorkspace::default(),
+        &element,
+        |p, _| u_exact(p),
+        MatrixSlice::from(&u_weights),
+        &quadrature,
+    );
 
     // Note: The solution here is obtained by symbolic integration. See
     // the accompanying notebooks
@@ -294,11 +301,13 @@ fn hex27_triquadratic_function_exact_error() {
 
     // TODO: Use lower strength quadrature
     let quadrature = hex_quadrature_strength_11();
-    let error = estimate_element_L2_error(&mut ErrorWorkspace::default(),
-                                          &element,
-                                          |p, _| u_exact(p),
-                                          MatrixSlice::from(&u_weights),
-                                          &quadrature);
+    let error = estimate_element_L2_error(
+        &mut ErrorWorkspace::default(),
+        &element,
+        |p, _| u_exact(p),
+        MatrixSlice::from(&u_weights),
+        &quadrature,
+    );
 
     // Note: The solution here is obtained by symbolic integration. See
     // the accompanying notebooks
@@ -333,11 +342,13 @@ fn hex20_quadratic_function_exact_error() {
 
     // TODO: Use lower strength quadrature
     let quadrature = hex_quadrature_strength_11();
-    let error = estimate_element_L2_error(&mut ErrorWorkspace::default(),
-                                          &element,
-                                          |p, _| u_exact(p),
-                                          MatrixSlice::from(&u_weights),
-                                          &quadrature);
+    let error = estimate_element_L2_error(
+        &mut ErrorWorkspace::default(),
+        &element,
+        |p, _| u_exact(p),
+        MatrixSlice::from(&u_weights),
+        &quadrature,
+    );
 
     // Note: The solution here is obtained by symbolic integration. See
     // the accompanying notebooks

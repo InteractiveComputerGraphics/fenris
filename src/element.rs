@@ -1,5 +1,8 @@
 use nalgebra::allocator::Allocator;
-use nalgebra::{distance, DVectorSlice, DVectorSliceMut, DimName, Matrix1x6, Matrix2x6, Matrix3, Matrix3x4, Point2, Point3, Vector1, Vector3, Dynamic};
+use nalgebra::{
+    distance, DVectorSlice, DVectorSliceMut, DimName, Dynamic, Matrix1x6, Matrix2x6, Matrix3,
+    Matrix3x4, Point2, Point3, Vector1, Vector3,
+};
 use nalgebra::{
     DefaultAllocator, DimMin, Matrix1x3, Matrix1x4, Matrix2, Matrix2x3, Matrix2x4, MatrixMN,
     RealField, Scalar, Vector2, VectorN, U1, U10, U2, U20, U27, U3, U4, U6, U8, U9,
@@ -103,8 +106,8 @@ where
     T: Scalar,
     E: FixedNodesReferenceFiniteElement<T>,
     DefaultAllocator: ReferenceFiniteElementAllocator<T, E::ReferenceDim>
-    + Allocator<T, U1, E::NodalDim>
-    + Allocator<T, E::ReferenceDim, E::NodalDim>,
+        + Allocator<T, U1, E::NodalDim>
+        + Allocator<T, E::ReferenceDim, E::NodalDim>,
 {
     type ReferenceDim = <Self as FixedNodesReferenceFiniteElement<T>>::ReferenceDim;
 
@@ -112,16 +115,20 @@ where
         E::NodalDim::dim()
     }
 
-    fn populate_basis(&self,
-                      mut result: MatrixSliceMut<T, U1, Dynamic>,
-                      reference_coords: &VectorN<T, E::ReferenceDim>) {
+    fn populate_basis(
+        &self,
+        mut result: MatrixSliceMut<T, U1, Dynamic>,
+        reference_coords: &VectorN<T, E::ReferenceDim>,
+    ) {
         let basis_values = E::evaluate_basis(self, reference_coords);
         result.copy_from(&basis_values);
     }
 
-    fn populate_basis_gradients(&self,
-                                mut result: MatrixSliceMut<T, E::ReferenceDim, Dynamic>,
-                                reference_coords: &VectorN<T, E::ReferenceDim>) {
+    fn populate_basis_gradients(
+        &self,
+        mut result: MatrixSliceMut<T, E::ReferenceDim, Dynamic>,
+        reference_coords: &VectorN<T, E::ReferenceDim>,
+    ) {
         let gradients = E::gradients(self, reference_coords);
         result.copy_from(&gradients);
     }
@@ -160,8 +167,7 @@ where
 pub trait ElementConnectivity<T>: Debug + Connectivity
 where
     T: Scalar,
-    DefaultAllocator:
-        FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
+    DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
     type Element: FiniteElement<
         T,
@@ -178,8 +184,7 @@ where
         &self,
         mut u_local: MatrixSliceMut<T, SolutionDim, Dynamic>,
         u_global: impl Into<DVectorSlice<'a, T>>,
-    )
-    where
+    ) where
         T: Zero,
         SolutionDim: DimName,
     {
@@ -187,7 +192,8 @@ where
         let indices = self.vertex_indices();
         let sol_dim = SolutionDim::dim();
         for (i_local, i_global) in indices.iter().enumerate() {
-            u_local.index_mut((.., i_local))
+            u_local
+                .index_mut((.., i_local))
                 .copy_from(&u_global.index((sol_dim * i_global..sol_dim * i_global + sol_dim, ..)));
         }
     }
@@ -199,11 +205,11 @@ where
     /// TODO: Remove this once we've rewritten tests
     fn element_variables<'a, SolutionDim>(
         &self,
-        u_global: impl Into<DVectorSlice<'a, T>>
+        u_global: impl Into<DVectorSlice<'a, T>>,
     ) -> MatrixMN<T, SolutionDim, Dynamic>
     where
         T: Zero,
-        SolutionDim: DimName
+        SolutionDim: DimName,
     {
         let mut u_local = MatrixMN::<_, SolutionDim, Dynamic>::zeros(self.vertex_indices().len());
         let u_local_slice = MatrixSliceMut::<_, SolutionDim, _>::from(&mut u_local);
@@ -217,8 +223,7 @@ pub trait VolumetricFiniteElement<T>:
     FiniteElement<T, ReferenceDim = <Self as FiniteElement<T>>::GeometryDim>
 where
     T: Scalar,
-    DefaultAllocator:
-        FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
+    DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
 }
 
@@ -226,16 +231,14 @@ impl<T, E> VolumetricFiniteElement<T> for E
 where
     T: Scalar,
     E: FiniteElement<T, ReferenceDim = <Self as FiniteElement<T>>::GeometryDim>,
-    DefaultAllocator:
-        FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
+    DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
 }
 
 pub trait SurfaceFiniteElement<T>: FiniteElement<T>
 where
     T: Scalar,
-    DefaultAllocator:
-        FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
+    DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
     /// Compute the normal at the point associated with the provided reference coordinate.
     fn normal(&self, xi: &VectorN<T, Self::ReferenceDim>) -> VectorN<T, Self::GeometryDim>;
@@ -2150,8 +2153,7 @@ where
     T: RealField,
     Element: FiniteElement<T>,
     Element::ReferenceDim: DimName + DimMin<Element::ReferenceDim, Output = Element::ReferenceDim>,
-    DefaultAllocator:
-        FiniteElementAllocator<T, Element::GeometryDim, Element::ReferenceDim>,
+    DefaultAllocator: FiniteElementAllocator<T, Element::GeometryDim, Element::ReferenceDim>,
 {
     assert!(
         Element::ReferenceDim::dim() <= Element::GeometryDim::dim(),

@@ -11,7 +11,10 @@ use crate::quadrature::QuadraturePair;
 use crate::space::GeometricFiniteElementSpace;
 use itertools::izip;
 use nalgebra::allocator::Allocator;
-use nalgebra::{DVector, DefaultAllocator, DimMin, DimName, Point, RealField, Scalar, VectorN, U1, U2, U3, MatrixMN, Dynamic, MatrixSliceMut};
+use nalgebra::{
+    DVector, DefaultAllocator, DimMin, DimName, Dynamic, MatrixMN, MatrixSliceMut, Point,
+    RealField, Scalar, VectorN, U1, U2, U3,
+};
 use paradis::DisjointSubsets;
 use serde::{Deserialize, Serialize};
 

@@ -1,8 +1,6 @@
 //! Helper traits for collecting element allocator trait bounds.
 
-use crate::element::{
-    ConnectivityGeometryDim, ConnectivityReferenceDim, ElementConnectivity,
-};
+use crate::element::{ConnectivityGeometryDim, ConnectivityReferenceDim, ElementConnectivity};
 use nalgebra::allocator::Allocator;
 use nalgebra::{DefaultAllocator, DimName, Scalar, U1};
 
@@ -71,21 +69,19 @@ where
 {
 }
 
-impl<T, ReferenceDim> ReferenceFiniteElementAllocator<T, ReferenceDim>
-    for DefaultAllocator
+impl<T, ReferenceDim> ReferenceFiniteElementAllocator<T, ReferenceDim> for DefaultAllocator
 where
     T: Scalar,
     ReferenceDim: DimName,
-    DefaultAllocator:
-        Allocator<T, ReferenceDim, ReferenceDim>
+    DefaultAllocator: Allocator<T, ReferenceDim, ReferenceDim>
         + Allocator<T, ReferenceDim, U1>
         + Allocator<T, U1, ReferenceDim>
         + Allocator<(usize, usize), ReferenceDim>,
 {
 }
 
-impl<T, GeometryDim, ReferenceDim>
-    FiniteElementAllocator<T, GeometryDim, ReferenceDim> for DefaultAllocator
+impl<T, GeometryDim, ReferenceDim> FiniteElementAllocator<T, GeometryDim, ReferenceDim>
+    for DefaultAllocator
 where
     T: Scalar,
     GeometryDim: DimName,
@@ -106,8 +102,8 @@ where
 {
 }
 
-impl<T, SolutionDim, GeometryDim>
-    FiniteElementMatrixAllocator<T, SolutionDim, GeometryDim> for DefaultAllocator
+impl<T, SolutionDim, GeometryDim> FiniteElementMatrixAllocator<T, SolutionDim, GeometryDim>
+    for DefaultAllocator
 where
     T: Scalar,
     GeometryDim: DimName,
@@ -120,8 +116,7 @@ where
 {
 }
 
-impl<T, GeometryDim> VolumeFiniteElementAllocator<T, GeometryDim>
-    for DefaultAllocator
+impl<T, GeometryDim> VolumeFiniteElementAllocator<T, GeometryDim> for DefaultAllocator
 where
     T: Scalar,
     GeometryDim: DimName,
@@ -150,10 +145,7 @@ impl<T, C> ElementConnectivityAllocator<T, C> for DefaultAllocator
 where
     T: Scalar,
     C: ElementConnectivity<T>,
-    DefaultAllocator: FiniteElementAllocator<
-        T,
-        ConnectivityGeometryDim<T, C>,
-        ConnectivityReferenceDim<T, C>,
-    >,
+    DefaultAllocator:
+        FiniteElementAllocator<T, ConnectivityGeometryDim<T, C>, ConnectivityReferenceDim<T, C>>,
 {
 }

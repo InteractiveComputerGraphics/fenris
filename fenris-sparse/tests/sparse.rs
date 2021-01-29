@@ -6,10 +6,10 @@ use nalgebra::{DMatrix, DVector, Vector3};
 
 use ::proptest::collection::vec;
 use ::proptest::prelude::*;
-use itertools::Itertools;
 use fenris_sparse::{spmm_csr, spmm_csr_pattern, spmv_csr, CscMatrix};
 use fenris_sparse_proptest;
 use fenris_sparse_proptest::{CsrStrategy, SparsityPatternStrategy};
+use itertools::Itertools;
 use std::sync::Arc;
 use util::assert_approx_matrix_eq;
 use util::assert_panics;

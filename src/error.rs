@@ -2,9 +2,11 @@
 
 use crate::allocators::VolumeFiniteElementAllocator;
 use crate::element::{FiniteElement, MatrixSlice, MatrixSliceMut};
-use crate::quadrature::{Quadrature};
+use crate::quadrature::Quadrature;
 use nalgebra::allocator::Allocator;
-use nalgebra::{DefaultAllocator, DimMin, DimName, Point, RealField, VectorN, U1, DMatrix, Dynamic, Scalar};
+use nalgebra::{
+    DMatrix, DefaultAllocator, DimMin, DimName, Dynamic, Point, RealField, Scalar, VectorN, U1,
+};
 
 #[derive(Debug, Clone)]
 pub struct ErrorWorkspace<T: Scalar> {
@@ -17,7 +19,7 @@ impl<T: RealField> Default for ErrorWorkspace<T> {
     fn default() -> Self {
         Self {
             basis: DMatrix::zeros(0, 0),
-            basis_tr: DMatrix::zeros(0, 0)
+            basis_tr: DMatrix::zeros(0, 0),
         }
     }
 }
@@ -44,16 +46,20 @@ where
     Element: FiniteElement<T, GeometryDim = GeometryDim, ReferenceDim = GeometryDim>,
     GeometryDim: DimName + DimMin<GeometryDim, Output = GeometryDim>,
     SolutionDim: DimName,
-    DefaultAllocator: VolumeFiniteElementAllocator<T, Element::GeometryDim>
-        + Allocator<T, SolutionDim, U1>
+    DefaultAllocator:
+        VolumeFiniteElementAllocator<T, Element::GeometryDim> + Allocator<T, SolutionDim, U1>,
 {
     let weights = quadrature.weights();
     let points = quadrature.points();
 
     use itertools::izip;
 
-    workspace.basis.resize_mut(1, element.num_nodes(), T::zero());
-    workspace.basis_tr.resize_mut(element.num_nodes(), 1, T::zero());
+    workspace
+        .basis
+        .resize_mut(1, element.num_nodes(), T::zero());
+    workspace
+        .basis_tr
+        .resize_mut(element.num_nodes(), 1, T::zero());
     let mut basis = MatrixSliceMut::<_, U1, Dynamic>::from(&mut workspace.basis);
     let mut basis_transposed = MatrixSliceMut::<_, Dynamic, U1>::from(&mut workspace.basis_tr);
 
@@ -86,8 +92,8 @@ where
     Element: FiniteElement<T, GeometryDim = GeometryDim, ReferenceDim = GeometryDim>,
     SolutionDim: DimName,
     GeometryDim: DimName + DimMin<GeometryDim, Output = GeometryDim>,
-    DefaultAllocator: VolumeFiniteElementAllocator<T, Element::GeometryDim>
-        + Allocator<T, SolutionDim, U1>,
+    DefaultAllocator:
+        VolumeFiniteElementAllocator<T, Element::GeometryDim> + Allocator<T, SolutionDim, U1>,
 {
     estimate_element_L2_error_squared(workspace, element, u, u_weights, quadrature).sqrt()
 }
@@ -110,8 +116,8 @@ where
     Element: FiniteElement<T, GeometryDim = GeometryDim, ReferenceDim = GeometryDim>,
     GeometryDim: DimName + DimMin<GeometryDim, Output = GeometryDim>,
     SolutionDim: DimName,
-    DefaultAllocator: VolumeFiniteElementAllocator<T, Element::GeometryDim>
-        + Allocator<T, SolutionDim, U1>,
+    DefaultAllocator:
+        VolumeFiniteElementAllocator<T, Element::GeometryDim> + Allocator<T, SolutionDim, U1>,
 {
     estimate_element_L2_error_squared(
         workspace,
@@ -134,8 +140,7 @@ where
     Element: FiniteElement<T, GeometryDim = GeometryDim, ReferenceDim = GeometryDim>,
     GeometryDim: DimName + DimMin<GeometryDim, Output = GeometryDim>,
     SolutionDim: DimName,
-    DefaultAllocator: VolumeFiniteElementAllocator<T, GeometryDim>
-        + Allocator<T, SolutionDim, U1>,
+    DefaultAllocator: VolumeFiniteElementAllocator<T, GeometryDim> + Allocator<T, SolutionDim, U1>,
 {
     estimate_element_L2_norm_squared(workspace, element, u, quadrature).sqrt()
 }

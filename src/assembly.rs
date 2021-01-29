@@ -1,4 +1,7 @@
-use crate::element::{ElementConnectivity, VolumetricFiniteElement, ReferenceFiniteElement, MatrixSlice, MatrixSliceMut};
+use crate::element::{
+    ElementConnectivity, MatrixSlice, MatrixSliceMut, ReferenceFiniteElement,
+    VolumetricFiniteElement,
+};
 use crate::quadrature::Quadrature;
 
 use nalgebra::{
@@ -17,6 +20,8 @@ use crate::connectivity::Connectivity;
 use crate::mesh::Mesh;
 use crate::util::{coerce_col_major_slice, coerce_col_major_slice_mut};
 use alga::general::{ClosedAdd, ClosedMul};
+use fenris_sparse::{CooMatrix, CsrMatrix};
+use fenris_sparse::{CsrRowMut, SparsityPattern};
 use nalgebra::allocator::Allocator;
 use nalgebra::storage::Storage;
 use nested_vec::NestedVec;
@@ -25,8 +30,6 @@ use paradis::adapter::BlockAdapter;
 use paradis::coloring::sequential_greedy_coloring;
 use paradis::DisjointSubsets;
 use rayon::prelude::*;
-use fenris_sparse::{CooMatrix, CsrMatrix};
-use fenris_sparse::{CsrRowMut, SparsityPattern};
 use std::cell::RefCell;
 use std::error::Error;
 use std::marker::PhantomData;
@@ -390,7 +393,10 @@ where
 
         // TODO: Don't allocate!
         let mut u_element = DMatrix::zeros(SolutionDim::dim(), element.num_nodes());
-        connectivity.populate_element_variables(MatrixSliceMut::<T, SolutionDim, Dynamic>::from(&mut u_element), self.u);
+        connectivity.populate_element_variables(
+            MatrixSliceMut::<T, SolutionDim, Dynamic>::from(&mut u_element),
+            self.u,
+        );
         assemble_generalized_element_stiffness(
             DMatrixSliceMut::from(&mut output),
             &element,
@@ -571,13 +577,13 @@ impl<T: RealField> ElementMatrixTransformation<T> for DefaultSemidefiniteProject
 /// Computes
 fn mat_mul_mat_transpose<'a, T, R, C>(
     a: impl Into<MatrixSlice<'a, T, R, Dynamic>>,
-    b: impl Into<MatrixSlice<'a, T, C, Dynamic>>)
-    -> MatrixMN<T, R, C>
+    b: impl Into<MatrixSlice<'a, T, C, Dynamic>>,
+) -> MatrixMN<T, R, C>
 where
     T: RealField,
     R: DimName,
     C: DimName,
-    DefaultAllocator: Allocator<T, R, C>
+    DefaultAllocator: Allocator<T, R, C>,
 {
     mat_mul_mat_transpose_(a.into(), b.into())
 }
@@ -586,13 +592,13 @@ where
 /// dynamic column counts.
 fn mat_mul_mat_transpose_<'a, T, R, C>(
     a: MatrixSlice<'a, T, R, Dynamic>,
-    b: MatrixSlice<'a, T, C, Dynamic>)
-    -> MatrixMN<T, R, C>
+    b: MatrixSlice<'a, T, C, Dynamic>,
+) -> MatrixMN<T, R, C>
 where
     T: RealField,
     R: DimName,
     C: DimName,
-    DefaultAllocator: Allocator<T, R, C>
+    DefaultAllocator: Allocator<T, R, C>,
 {
     assert_eq!(a.nrows(), b.nrows());
     let mut result = MatrixMN::<T, R, C>::zeros();
@@ -649,9 +655,11 @@ where
 
         let X = element.map_reference_coords(xi);
         let u = mat_mul_mat_transpose(u_element, &basis_values);
-        let u_grad = compute_volume_u_grad(&J_inv.transpose(),
-                                           MatrixSlice::from(&gradients),
-                                           MatrixSlice::from(u_element));
+        let u_grad = compute_volume_u_grad(
+            &J_inv.transpose(),
+            MatrixSlice::from(&gradients),
+            MatrixSlice::from(u_element),
+        );
         let f = function(&X, &u, &u_grad);
         f_e += f * w * J_det.abs();
     }
@@ -670,8 +678,7 @@ pub fn assemble_generalized_element_mass<T, SolutionDim, Element, Q>(
     element: &Element,
     density: T,
     quadrature: &Q,
-)
-where
+) where
     T: RealField,
     Element: VolumetricFiniteElement<T>,
     Element::GeometryDim: DimMin<Element::GeometryDim, Output = Element::GeometryDim>,
@@ -716,8 +723,8 @@ where
 fn compute_volume_u_grad<T, GeometryDim, SolutionDim>(
     jacobian_inv_t: &MatrixMN<T, GeometryDim, GeometryDim>,
     phi_grad_ref: MatrixSlice<T, GeometryDim, Dynamic>,
-    u: MatrixSlice<T, SolutionDim, Dynamic>)
--> MatrixMN<T, GeometryDim, SolutionDim>
+    u: MatrixSlice<T, SolutionDim, Dynamic>,
+) -> MatrixMN<T, GeometryDim, SolutionDim>
 where
     T: RealField,
     SolutionDim: DimName,
@@ -725,7 +732,7 @@ where
     DefaultAllocator: Allocator<T, GeometryDim>
         + Allocator<T, GeometryDim, SolutionDim>
         + Allocator<T, SolutionDim, GeometryDim>
-        + Allocator<T, GeometryDim, GeometryDim>
+        + Allocator<T, GeometryDim, GeometryDim>,
 {
     // We have that grad u = sum_I grad phi_I u_I^T,
     // which can alternatively be written
@@ -756,15 +763,14 @@ pub fn assemble_generalized_element_elliptic_term<T, SolutionDim, Element>(
     g: &impl GeneralizedEllipticOperator<T, SolutionDim, Element::GeometryDim>,
     u: &MatrixSlice<T, SolutionDim, Dynamic>,
     quadrature: &impl Quadrature<T, Element::GeometryDim>,
-)
-where
+) where
     T: RealField,
     Element: VolumetricFiniteElement<T>,
     Element::GeometryDim: DimName + DimMin<Element::GeometryDim, Output = Element::GeometryDim>,
     SolutionDim: DimName,
     DefaultAllocator: VolumeFiniteElementAllocator<T, Element::GeometryDim>
         + Allocator<T, Element::GeometryDim, SolutionDim>
-        + Allocator<T, SolutionDim, Element::GeometryDim>
+        + Allocator<T, SolutionDim, Element::GeometryDim>,
 {
     let mut f_e = result;
 
@@ -785,9 +791,8 @@ where
         // TODO: Make error instead of panic?
         let J_inv = J.try_inverse().expect("Jacobian must be invertible");
         let J_inv_t = J_inv.transpose();
-        let u_grad = compute_volume_u_grad(&J_inv_t,
-                                           MatrixSlice::from(&phi_ref),
-                                           MatrixSlice::from(u));
+        let u_grad =
+            compute_volume_u_grad(&J_inv_t, MatrixSlice::from(&phi_ref), MatrixSlice::from(u));
 
         let g = g.compute_elliptic_term(&u_grad);
         let g_J_inv_t = g.transpose() * &J_inv_t;
@@ -806,8 +811,7 @@ pub fn assemble_generalized_element_stiffness<T, SolutionDim, Element>(
     contraction: &impl GeneralizedEllipticContraction<T, SolutionDim, Element::GeometryDim>,
     u: MatrixSlice<T, SolutionDim, Dynamic>,
     quadrature: &impl Quadrature<T, Element::GeometryDim>,
-)
-where
+) where
     T: RealField,
     Element: VolumetricFiniteElement<T>,
     Element::GeometryDim: DimMin<Element::GeometryDim, Output = Element::GeometryDim>,
@@ -836,12 +840,15 @@ where
         // TODO: Rename gradients to populate_gradients and similarly for basis function values
         element.populate_basis_gradients(MatrixSliceMut::from(&mut phi_grad_ref), xi);
 
-        let u_grad = compute_volume_u_grad(&J_inv_t,
-                                           MatrixSlice::from(&phi_grad_ref),
-                                           MatrixSlice::from(&u));
+        let u_grad = compute_volume_u_grad(
+            &J_inv_t,
+            MatrixSlice::from(&phi_grad_ref),
+            MatrixSlice::from(&u),
+        );
 
         // Compute gradients with respect to physical coords instead of reference coords
-        let mut phi_grad = MatrixSliceMut::<_, Element::GeometryDim, Dynamic>::from(&mut phi_grad_ref);
+        let mut phi_grad =
+            MatrixSliceMut::<_, Element::GeometryDim, Dynamic>::from(&mut phi_grad_ref);
         for mut phi_grad in phi_grad.column_iter_mut() {
             let new_phi_grad = &J_inv_t * &phi_grad;
             phi_grad.copy_from(&new_phi_grad);
@@ -1018,7 +1025,10 @@ pub fn assemble_generalized_elliptic_term_into_par<'a, T, SolutionDim, Connectiv
                     .expect("All vertices of element are assumed to be in bounds.");
                 // TODO: Don't allocate!
                 let mut u_element = DMatrix::zeros(SolutionDim::dim(), element.num_nodes());
-                connectivity.populate_element_variables(MatrixSliceMut::<T, SolutionDim, Dynamic>::from(&mut u_element), u);
+                connectivity.populate_element_variables(
+                    MatrixSliceMut::<T, SolutionDim, Dynamic>::from(&mut u_element),
+                    u,
+                );
 
                 // TODO: Don't allocate!
                 let mut f_element = DMatrix::zeros(SolutionDim::dim(), element.num_nodes());
@@ -1061,7 +1071,7 @@ pub fn assemble_generalized_elliptic_term_into<'a, T, SolutionDim, Connectivity>
     SolutionDim: DimName,
     DefaultAllocator: ElementConnectivityAllocator<T, Connectivity>
         + Allocator<T, Connectivity::GeometryDim, SolutionDim>
-        + Allocator<T, SolutionDim, Connectivity::GeometryDim>
+        + Allocator<T, SolutionDim, Connectivity::GeometryDim>,
 {
     let u = u.into();
     for (i, connectivity) in connectivity.iter().enumerate() {
@@ -1071,7 +1081,10 @@ pub fn assemble_generalized_elliptic_term_into<'a, T, SolutionDim, Connectivity>
         );
         // TODO: Don't allocate!
         let mut u_element = DMatrix::zeros(SolutionDim::dim(), element.num_nodes());
-        connectivity.populate_element_variables(MatrixSliceMut::<T, SolutionDim, Dynamic>::from(&mut u_element), u);
+        connectivity.populate_element_variables(
+            MatrixSliceMut::<T, SolutionDim, Dynamic>::from(&mut u_element),
+            u,
+        );
 
         // TODO: Don't allocate!
         let mut f_element = DMatrix::zeros(SolutionDim::dim(), element.num_nodes());
@@ -1149,11 +1162,7 @@ pub fn assemble_generalized_stiffness_into_csr<T, SolutionDim, Connectivity>(
     Connectivity::GeometryDim:
         DimMin<Connectivity::GeometryDim, Output = Connectivity::GeometryDim>,
     SolutionDim: DimName,
-    DefaultAllocator: FiniteElementMatrixAllocator<
-        T,
-        SolutionDim,
-        Connectivity::GeometryDim,
-    >,
+    DefaultAllocator: FiniteElementMatrixAllocator<T, SolutionDim, Connectivity::GeometryDim>,
 {
     assemble_transformed_generalized_stiffness_into_csr(
         csr,
@@ -1184,11 +1193,7 @@ pub fn assemble_transformed_generalized_stiffness_into_csr<T, SolutionDim, Conne
     Connectivity::GeometryDim:
         DimMin<Connectivity::GeometryDim, Output = Connectivity::GeometryDim>,
     SolutionDim: DimName,
-    DefaultAllocator: FiniteElementMatrixAllocator<
-        T,
-        SolutionDim,
-        Connectivity::GeometryDim,
-    >,
+    DefaultAllocator: FiniteElementMatrixAllocator<T, SolutionDim, Connectivity::GeometryDim>,
 {
     let element_assembler = GeneralizedStiffnessElementAssembler {
         vertices,
@@ -1222,11 +1227,7 @@ pub fn assemble_generalized_stiffness_into_csr_par<T, SolutionDim, Connectivity>
     Connectivity::GeometryDim:
         DimMin<Connectivity::GeometryDim, Output = Connectivity::GeometryDim>,
     SolutionDim: DimName,
-    DefaultAllocator: FiniteElementMatrixAllocator<
-        T,
-        SolutionDim,
-        Connectivity::GeometryDim,
-    >,
+    DefaultAllocator: FiniteElementMatrixAllocator<T, SolutionDim, Connectivity::GeometryDim>,
     <DefaultAllocator as Allocator<T, Connectivity::GeometryDim>>::Buffer: Sync,
 {
     assemble_transformed_generalized_stiffness_into_csr_par(
@@ -1258,11 +1259,7 @@ pub fn assemble_transformed_generalized_stiffness_into_csr_par<T, SolutionDim, C
     Connectivity::GeometryDim:
         DimMin<Connectivity::GeometryDim, Output = Connectivity::GeometryDim>,
     SolutionDim: DimName,
-    DefaultAllocator: FiniteElementMatrixAllocator<
-        T,
-        SolutionDim,
-        Connectivity::GeometryDim,
-    >,
+    DefaultAllocator: FiniteElementMatrixAllocator<T, SolutionDim, Connectivity::GeometryDim>,
     <DefaultAllocator as Allocator<T, Connectivity::GeometryDim>>::Buffer: Sync,
 {
     let element_assembler = GeneralizedStiffnessElementAssembler {
@@ -1298,11 +1295,7 @@ pub fn assemble_transformed_generalized_stiffness_into<T, SolutionDim, Connectiv
     Connectivity::GeometryDim:
         DimMin<Connectivity::GeometryDim, Output = Connectivity::GeometryDim>,
     SolutionDim: DimName,
-    DefaultAllocator: FiniteElementMatrixAllocator<
-        T,
-        SolutionDim,
-        Connectivity::GeometryDim,
-    >,
+    DefaultAllocator: FiniteElementMatrixAllocator<T, SolutionDim, Connectivity::GeometryDim>,
 {
     for (i, connectivity) in connectivity.iter().enumerate() {
         let element = connectivity.element(vertices).expect(
@@ -1312,7 +1305,10 @@ pub fn assemble_transformed_generalized_stiffness_into<T, SolutionDim, Connectiv
 
         // TODO: Don't allocate!
         let mut u_element = DMatrix::zeros(SolutionDim::dim(), element.num_nodes());
-        connectivity.populate_element_variables(MatrixSliceMut::<T, SolutionDim, Dynamic>::from(&mut u_element), u);
+        connectivity.populate_element_variables(
+            MatrixSliceMut::<T, SolutionDim, Dynamic>::from(&mut u_element),
+            u,
+        );
 
         // TODO: Don't allocate!
         let matrix_size = SolutionDim::dim() * element.num_nodes();
@@ -1352,11 +1348,7 @@ pub fn assemble_generalized_stiffness_into<T, SolutionDim, Connectivity>(
     Connectivity::GeometryDim:
         DimMin<Connectivity::GeometryDim, Output = Connectivity::GeometryDim>,
     SolutionDim: DimName,
-    DefaultAllocator: FiniteElementMatrixAllocator<
-        T,
-        SolutionDim,
-        Connectivity::GeometryDim,
-    >,
+    DefaultAllocator: FiniteElementMatrixAllocator<T, SolutionDim, Connectivity::GeometryDim>,
 {
     assemble_transformed_generalized_stiffness_into(
         coo,
@@ -1385,11 +1377,7 @@ where
     Connectivity::GeometryDim:
         DimMin<Connectivity::GeometryDim, Output = Connectivity::GeometryDim>,
     SolutionDim: DimName,
-    DefaultAllocator: FiniteElementMatrixAllocator<
-        T,
-        SolutionDim,
-        Connectivity::GeometryDim,
-    >,
+    DefaultAllocator: FiniteElementMatrixAllocator<T, SolutionDim, Connectivity::GeometryDim>,
 {
     let ndof = vertices.len() * SolutionDim::dim();
     let mut coo = CooMatrix::new(ndof, ndof);
@@ -1419,11 +1407,7 @@ where
     Connectivity::GeometryDim:
         DimMin<Connectivity::GeometryDim, Output = Connectivity::GeometryDim>,
     SolutionDim: DimName,
-    DefaultAllocator: FiniteElementMatrixAllocator<
-        T,
-        SolutionDim,
-        Connectivity::GeometryDim,
-    >,
+    DefaultAllocator: FiniteElementMatrixAllocator<T, SolutionDim, Connectivity::GeometryDim>,
     <DefaultAllocator as Allocator<T, Connectivity::GeometryDim>>::Buffer: Sync,
 {
     assemble_transformed_generalized_stiffness_par(
@@ -1452,11 +1436,7 @@ where
     Connectivity::GeometryDim:
         DimMin<Connectivity::GeometryDim, Output = Connectivity::GeometryDim>,
     SolutionDim: DimName,
-    DefaultAllocator: FiniteElementMatrixAllocator<
-        T,
-        SolutionDim,
-        Connectivity::GeometryDim,
-    >,
+    DefaultAllocator: FiniteElementMatrixAllocator<T, SolutionDim, Connectivity::GeometryDim>,
     <DefaultAllocator as Allocator<T, Connectivity::GeometryDim>>::Buffer: Sync,
 {
     let ndof = vertices.len() * SolutionDim::dim();
@@ -1472,7 +1452,10 @@ where
                 );
                 // TODO: Don't allocate!
                 let mut u_element = DMatrix::zeros(SolutionDim::dim(), element.num_nodes());
-                connectivity.populate_element_variables(MatrixSliceMut::<T, SolutionDim, Dynamic>::from(&mut u_element), u);
+                connectivity.populate_element_variables(
+                    MatrixSliceMut::<T, SolutionDim, Dynamic>::from(&mut u_element),
+                    u,
+                );
 
                 // TODO: Don't allocate!
                 let matrix_size = SolutionDim::dim() * element.num_nodes();
@@ -1524,11 +1507,7 @@ pub fn assemble_generalized_mass_into<T, SolutionDim, Connectivity, Table>(
         DimMin<Connectivity::GeometryDim, Output = Connectivity::GeometryDim>,
     Table: QuadratureTable<T, Connectivity::GeometryDim>,
     SolutionDim: DimName,
-    DefaultAllocator: FiniteElementMatrixAllocator<
-        T,
-        SolutionDim,
-        Connectivity::GeometryDim,
-    >,
+    DefaultAllocator: FiniteElementMatrixAllocator<T, SolutionDim, Connectivity::GeometryDim>,
 {
     for (i, connectivity) in connectivity.iter().enumerate() {
         let element = connectivity.element(vertices).expect(
@@ -1566,11 +1545,7 @@ where
         DimMin<Connectivity::GeometryDim, Output = Connectivity::GeometryDim>,
     Table: QuadratureTable<T, Connectivity::GeometryDim>,
     SolutionDim: DimName,
-    DefaultAllocator: FiniteElementMatrixAllocator<
-        T,
-        SolutionDim,
-        Connectivity::GeometryDim,
-    >,
+    DefaultAllocator: FiniteElementMatrixAllocator<T, SolutionDim, Connectivity::GeometryDim>,
 {
     let ndof = vertices.len() * SolutionDim::dim();
     let mut coo = CooMatrix::new(ndof, ndof);
