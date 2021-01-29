@@ -8,7 +8,7 @@ edition = "2018"
 default = [ "proptest" ]
 
 [dependencies]
-nalgebra = { version = "0.21", features = [ "serde-serialize" ] }
+nalgebra = { version = "0.24.1", features = [ "serde-serialize" ] }
 alga = { version = "0.9", default-features = false }
 vtkio = "0.3"
 num = "0.2"
