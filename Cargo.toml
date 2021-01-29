@@ -43,10 +43,6 @@ sparse-proptest = { path = "sparse/sparse-proptest" }
 # TODO: Fix this
 #fenris-solid = { path = "../fenris-solid" }
 
-[[bench]]
-name = "assembly"
-harness = false
-
 [workspace]
 members = ["fenris-geometry", "fenris-optimize", "sparse", "nested-vec", "paradis" ]
 #members = ["nested-vec" ]
