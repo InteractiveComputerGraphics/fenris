@@ -9,8 +9,8 @@
 // use fenris::quadrature::hex_quadrature_strength_5;
 // use fenris_solid::materials::{LinearElasticMaterial, YoungPoisson};
 // use fenris_solid::ElasticityModel;
-// use sparse::cg::{CgWorkspace, ConjugateGradient, RelativeResidualCriterion};
-// use sparse::CsrMatrix;
+// use fenris_sparse::cg::{CgWorkspace, ConjugateGradient, RelativeResidualCriterion};
+// use fenris_sparse::CsrMatrix;
 // use std::ops::Add;
 // use util::assert_approx_matrix_eq;
 //

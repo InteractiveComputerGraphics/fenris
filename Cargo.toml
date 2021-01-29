@@ -25,7 +25,7 @@ log = "0.4"
 paradis = { path = "paradis" }
 rustc-hash = "1.1.0"
 thread_local = "1.1.2"
-sparse = { path = "sparse" }
+fenris-sparse = { path = "fenris-sparse" }
 fenris-geometry = { path = "fenris-geometry", features = [ "proptest", "vtkio" ] }
 fenris-optimize = { path = "fenris-optimize" }
 
@@ -37,12 +37,12 @@ mkl-corrode = { git = "https://github.com/Andlon/mkl-corrode.git", rev="26a0d49d
 paste = "0.1.7"
 criterion = "0.3.2"
 util = { path = "util" }
-sparse-proptest = { path = "sparse/sparse-proptest" }
+fenris-sparse-proptest = { path = "fenris-sparse/fenris-sparse-proptest" }
 
 # Many of our integration tests depend on fenris-solid for historical reasons
 # TODO: Fix this
 #fenris-solid = { path = "../fenris-solid" }
 
 [workspace]
-members = ["fenris-geometry", "fenris-optimize", "sparse", "nested-vec", "paradis" ]
+members = ["fenris-geometry", "fenris-optimize", "fenris-sparse", "nested-vec", "paradis" ]
 #members = ["nested-vec" ]

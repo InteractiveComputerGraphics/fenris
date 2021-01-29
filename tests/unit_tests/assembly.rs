@@ -15,7 +15,7 @@ use nalgebra::dimension::U8;
 use nalgebra::{DMatrix, DVector, DefaultAllocator, DimMin, DimName, DimNameMul, VectorN, MatrixMN, Dynamic, DMatrixSliceMut, U3};
 use nalgebra::{Matrix2, Matrix2x4, Matrix4, MatrixN, Point2, Point3, RealField, U2};
 use num::{FromPrimitive, Zero};
-use sparse::{CsrMatrix, SparsityPattern};
+use fenris_sparse::{CsrMatrix, SparsityPattern};
 use std::iter::once;
 
 use fenris::allocators::ElementConnectivityAllocator;

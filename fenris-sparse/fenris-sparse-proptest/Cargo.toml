@@ -1,5 +1,5 @@
 [package]
-name = "sparse-proptest"
+name = "fenris-sparse-proptest"
 version = "0.1.0"
 authors = ["Andreas Longva <longva@cs.rwth-aachen.de>"]
 edition = "2018"
@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sparse = { path=".." }
+fenris-sparse = { path=".." }
 nalgebra = "0.24.1"
 proptest = "0.9"
 num = "0.2"

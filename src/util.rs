@@ -12,7 +12,7 @@ use nalgebra::{
 };
 use num::Zero;
 use numeric_literals::replace_float_literals;
-use sparse::{CooMatrix, CsrMatrix};
+use fenris_sparse::{CooMatrix, CsrMatrix};
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt::LowerExp;

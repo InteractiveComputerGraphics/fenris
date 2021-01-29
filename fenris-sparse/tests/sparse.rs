@@ -1,4 +1,4 @@
-use sparse::{CooMatrix, CsrMatrix};
+use fenris_sparse::{CooMatrix, CsrMatrix};
 
 use std::ops::Add;
 
@@ -7,9 +7,9 @@ use nalgebra::{DMatrix, DVector, Vector3};
 use ::proptest::collection::vec;
 use ::proptest::prelude::*;
 use itertools::Itertools;
-use sparse::{spmm_csr, spmm_csr_pattern, spmv_csr, CscMatrix};
-use sparse_proptest;
-use sparse_proptest::{CsrStrategy, SparsityPatternStrategy};
+use fenris_sparse::{spmm_csr, spmm_csr_pattern, spmv_csr, CscMatrix};
+use fenris_sparse_proptest;
+use fenris_sparse_proptest::{CsrStrategy, SparsityPatternStrategy};
 use std::sync::Arc;
 use util::assert_approx_matrix_eq;
 use util::assert_panics;
@@ -389,7 +389,7 @@ fn spmm_compatible_csr_matrices() -> impl Strategy<Value = (CsrMatrix<i32>, [Csr
 proptest! {
     #[test]
     fn coo_csr_identical_dense_representations(
-        coo in sparse_proptest::coo(4, 4, 10, -5..5)
+        coo in fenris_sparse_proptest::coo(4, 4, 10, -5..5)
     ) {
         let coo_as_dense = coo.build_dense();
         let csr = coo.to_csr(Add::add);
@@ -401,7 +401,7 @@ proptest! {
     #[test]
     fn csr_spmv_same_as_dense_gemv(
         (coo, x, y, alpha, beta) in (
-            sparse_proptest::coo(6, 6, 10, -5..5),
+            fenris_sparse_proptest::coo(6, 6, 10, -5..5),
             vec(-5..5, 6),
             vec(-5..5, 6),
             -5..5,
@@ -429,7 +429,7 @@ proptest! {
     #[test]
     fn csr_mat_mul_vec_same_as_dense(
         (coo, x) in (
-            sparse_proptest::coo(6, 6, 10, -5..5),
+            fenris_sparse_proptest::coo(6, 6, 10, -5..5),
             vec(-5..5, 6))
     ) {
         // TODO: It seems `nalgebra` does not compute the correct matrix-vector product

@@ -4,7 +4,7 @@ use proptest::collection::{btree_set, vec};
 use proptest::prelude::*;
 use proptest::strategy::ValueTree;
 use proptest::test_runner::{Reason, TestRunner};
-use sparse::{CooMatrix, CsrMatrix, SparsityPattern};
+use fenris_sparse::{CooMatrix, CsrMatrix, SparsityPattern};
 use std::cmp::{max, min};
 use std::iter::once;
 use std::sync::Arc;

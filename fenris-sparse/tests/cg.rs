@@ -1,5 +1,5 @@
 use nalgebra::{DMatrix, DVector};
-use sparse::cg::{ConjugateGradient, IdentityOperator, RelativeResidualCriterion};
+use fenris_sparse::cg::{ConjugateGradient, IdentityOperator, RelativeResidualCriterion};
 use util::assert_approx_matrix_eq;
 
 #[test]

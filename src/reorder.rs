@@ -4,7 +4,7 @@ use crate::mesh::Mesh;
 use core::fmt;
 use nalgebra::allocator::Allocator;
 use nalgebra::{DefaultAllocator, DimName, Scalar};
-use sparse::SparsityPattern;
+use fenris_sparse::SparsityPattern;
 use std::collections::VecDeque;
 use std::error::Error;
 use std::marker::PhantomData;

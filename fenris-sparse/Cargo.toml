@@ -1,5 +1,5 @@
 [package]
-name = "sparse"
+name = "fenris-sparse"
 version = "0.1.0"
 authors = ["Andreas Longva <longva@cs.rwth-aachen.de>"]
 edition = "2018"
@@ -16,5 +16,5 @@ paradis = { path = "../paradis" }
 
 [dev-dependencies]
 proptest = "0.9"
-sparse-proptest = { path = "sparse-proptest" }
+fenris-sparse-proptest = { path = "fenris-sparse-proptest" }
 util = { path = "../util" }
