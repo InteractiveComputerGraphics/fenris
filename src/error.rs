@@ -1,10 +1,10 @@
 //! Functionality for error estimation.
 
 use crate::allocators::VolumeFiniteElementAllocator;
-use crate::element::{FiniteElement, FixedNodesReferenceFiniteElement, MatrixSlice, MatrixSliceMut};
-use crate::quadrature::{Quadrature, Quadrature2d};
+use crate::element::{FiniteElement, MatrixSlice, MatrixSliceMut};
+use crate::quadrature::{Quadrature};
 use nalgebra::allocator::Allocator;
-use nalgebra::{DefaultAllocator, DimMin, DimName, DimNameMul, MatrixMN, Point, RealField, VectorN, U1, U2, DMatrix, Dynamic, Scalar};
+use nalgebra::{DefaultAllocator, DimMin, DimName, Point, RealField, VectorN, U1, DMatrix, Dynamic, Scalar};
 
 #[derive(Debug, Clone)]
 pub struct ErrorWorkspace<T: Scalar> {

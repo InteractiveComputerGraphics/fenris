@@ -206,7 +206,7 @@ where
         SolutionDim: DimName
     {
         let mut u_local = MatrixMN::<_, SolutionDim, Dynamic>::zeros(self.vertex_indices().len());
-        let mut u_local_slice = MatrixSliceMut::<_, SolutionDim, _>::from(&mut u_local);
+        let u_local_slice = MatrixSliceMut::<_, SolutionDim, _>::from(&mut u_local);
         self.populate_element_variables(u_local_slice, u_global);
         u_local
     }

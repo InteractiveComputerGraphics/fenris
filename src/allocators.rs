@@ -4,7 +4,7 @@ use crate::element::{
     ConnectivityGeometryDim, ConnectivityReferenceDim, ElementConnectivity,
 };
 use nalgebra::allocator::Allocator;
-use nalgebra::{DefaultAllocator, DimName, DimNameMul, DimNameProd, Scalar, U1};
+use nalgebra::{DefaultAllocator, DimName, Scalar, U1};
 
 /// Helper trait to make specifying bounds on generic functions working with the
 /// `ReferenceFiniteElement` trait easier.

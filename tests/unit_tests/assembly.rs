@@ -1,32 +1,22 @@
-use fenris::assembly::{
-    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_matrix,
-    assemble_generalized_element_elliptic_term, assemble_generalized_element_mass,
-    assemble_generalized_element_stiffness, CsrParAssembler, ElementConnectivityAssembler,
-};
-use fenris::geometry::Quad2d;
-use fenris::model::{Quad4Model, Tet4Model};
-use fenris::quadrature::{quad_quadrature_strength_5_f64, tet_quadrature_strength_5, Quadrature};
-use fenris_optimize::calculus::{approximate_jacobian, VectorFunction, VectorFunctionBuilder};
+use nalgebra::{DMatrix, DVector, Dynamic, MatrixMN};
+use nalgebra::{Matrix2x4, Matrix4, MatrixN, Point2, RealField, U2};
 // use fenris_solid::assembly::MaterialEllipticOperator;
 // use fenris_solid::materials::{LameParameters, LinearElasticMaterial, StVKMaterial, YoungPoisson};
 // use fenris_solid::ElasticMaterialModel;
 // use fenris_solid::ElasticityModel;
 use nalgebra::dimension::U8;
-use nalgebra::{DMatrix, DVector, DefaultAllocator, DimMin, DimName, DimNameMul, VectorN, MatrixMN, Dynamic, DMatrixSliceMut, U3};
-use nalgebra::{Matrix2, Matrix2x4, Matrix4, MatrixN, Point2, Point3, RealField, U2};
-use num::{FromPrimitive, Zero};
-use fenris_sparse::{CsrMatrix, SparsityPattern};
-use std::iter::once;
+use num::Zero;
 
-use fenris::allocators::ElementConnectivityAllocator;
-use fenris::connectivity::{Quad4d2Connectivity, Tet4Connectivity};
-use fenris::element::{ElementConnectivity, Quad4d2Element, Tet4Element, ReferenceFiniteElement, MatrixSliceMut, MatrixSlice};
-use fenris::geometry::polymesh::PolyMesh3d;
-use fenris::mesh::Tet4Mesh;
-use fenris::procedural::{
-    create_rectangular_uniform_hex_mesh, create_unit_square_uniform_quad_mesh_2d,
+use fenris::assembly::{
+    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_matrix,
+    assemble_generalized_element_mass,
+    CsrParAssembler, ElementConnectivityAssembler,
 };
-use std::convert::TryFrom;
+use fenris::connectivity::Quad4d2Connectivity;
+use fenris::element::{ElementConnectivity, MatrixSliceMut, Quad4d2Element};
+use fenris::geometry::Quad2d;
+use fenris::quadrature::quad_quadrature_strength_5_f64;
+use fenris_sparse::{CsrMatrix, SparsityPattern};
 
 // #[derive(Debug, Copy, Clone)]
 // struct MockIdentityMaterial;

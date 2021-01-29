@@ -1,9 +1,9 @@
 use crate::element::{ElementConnectivity, VolumetricFiniteElement, ReferenceFiniteElement, MatrixSlice, MatrixSliceMut};
 use crate::quadrature::Quadrature;
-use nalgebra::dimension::{DimNameMul, DimNameProd};
+
 use nalgebra::{
     ComplexField, DMatrix, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, Dim, DimMin,
-    DimName, Matrix, MatrixMN, MatrixN, Point, RealField, Scalar, SquareMatrix, VectorN, U1,
+    DimName, Matrix, MatrixMN, Point, RealField, Scalar, SquareMatrix, VectorN, U1,
 };
 use nalgebra::{DMatrixSliceMut, Dynamic, MatrixSliceMN};
 use std::ops::AddAssign;
