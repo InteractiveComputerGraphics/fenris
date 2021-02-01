@@ -1,4 +1,4 @@
-use crate::assembly::CsrParAssembler;
+use crate::assembly::global::CsrParAssembler;
 use crate::connectivity::Connectivity;
 use crate::mesh::Mesh;
 use fenris_sparse::{CooMatrix, CsrMatrix};

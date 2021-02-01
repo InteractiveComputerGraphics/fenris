@@ -1,4 +1,4 @@
-use crate::assembly::CsrParAssembler;
+use crate::assembly::global::CsrParAssembler;
 use crate::connectivity::{Connectivity, ConnectivityMut};
 use crate::mesh::Mesh;
 use core::fmt;

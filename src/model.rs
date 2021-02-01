@@ -1,5 +1,5 @@
 use crate::allocators::ElementConnectivityAllocator;
-use crate::assembly::color_nodes;
+use crate::assembly::global::color_nodes;
 use crate::connectivity::{
     CellConnectivity, Connectivity, Quad4d2Connectivity, Quad9d2Connectivity, Tet4Connectivity,
     Tri3d2Connectivity, Tri6d2Connectivity,
