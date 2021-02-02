@@ -29,3 +29,15 @@ mod space_impl;
 pub extern crate nalgebra;
 pub extern crate nested_vec;
 pub extern crate vtkio;
+
+use nalgebra::{DimName, DimMin};
+
+/// A small, fixed-size dimension.
+///
+/// Used as a trait alias for various traits frequently needed by generic `fenris` routines.
+pub trait SmallDim: DimName + DimMin<Self, Output=Self> {}
+
+impl<D> SmallDim for D
+where
+    D: DimName + DimMin<Self, Output=Self>
+{}
