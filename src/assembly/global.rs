@@ -1,6 +1,6 @@
 use crate::allocators::{ElementConnectivityAllocator, FiniteElementMatrixAllocator};
 use crate::assembly::local::{
-    ElementAssembler, ElementConnectivityAssembler, ElementMatrixTransformation,
+    ElementConnectivityAssembler, ElementMatrixAssembler, ElementMatrixTransformation,
     GeneralizedEllipticContraction, GeneralizedEllipticOperator,
     GeneralizedStiffnessElementAssembler,
 };
@@ -56,7 +56,7 @@ impl<T: RealField> CsrAssembler<T> {
     pub fn assemble_into_csr(
         &mut self,
         csr: &mut CsrMatrix<T>,
-        element_assembler: &dyn ElementAssembler<T>,
+        element_assembler: &dyn ElementMatrixAssembler<T>,
     ) -> Result<(), Box<dyn Send + Error>> {
         // Reuse previously allocated buffers
         let connectivity_permutation = &mut self.connectivity_permutation;
@@ -209,7 +209,7 @@ impl<T: RealField + Send> CsrParAssembler<T> {
         &mut self,
         csr: &mut CsrMatrix<T>,
         colors: &[DisjointSubsets],
-        element_assembler: &(dyn Sync + ElementAssembler<T>),
+        element_assembler: &(dyn Sync + ElementMatrixAssembler<T>),
     ) -> Result<(), Box<dyn Send + Error>> {
         let sdim = element_assembler.solution_dim();
 

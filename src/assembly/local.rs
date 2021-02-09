@@ -66,7 +66,7 @@ where
 }
 
 /// TODO: Rename to `ElementMatrixAssembler`
-pub trait ElementAssembler<T: Scalar>: ElementConnectivityAssembler {
+pub trait ElementMatrixAssembler<T: Scalar>: ElementConnectivityAssembler {
     fn assemble_element_matrix_into(
         &self,
         output: DMatrixSliceMut<T>,
@@ -127,7 +127,7 @@ where
     }
 }
 
-impl<'a, T, SolutionDim, C, Contraction, Q, Transformation> ElementAssembler<T>
+impl<'a, T, SolutionDim, C, Contraction, Q, Transformation> ElementMatrixAssembler<T>
     for GeneralizedStiffnessElementAssembler<'a, T, SolutionDim, C, Contraction, Q, Transformation>
 where
     T: RealField,
