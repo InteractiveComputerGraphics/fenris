@@ -65,6 +65,7 @@ where
     }
 }
 
+/// TODO: Rename to `ElementMatrixAssembler`
 pub trait ElementAssembler<T: Scalar>: ElementConnectivityAssembler {
     fn assemble_element_matrix_into(
         &self,
@@ -362,11 +363,12 @@ pub fn assemble_generalized_element_mass<T, SolutionDim, Element, Q>(
     }
 }
 
+// TODO: Move this to the right spot and don't make it pub(crate)
 #[allow(non_snake_case)]
-fn compute_volume_u_grad<T, GeometryDim, SolutionDim>(
+pub(crate) fn compute_volume_u_grad<'a, T, GeometryDim, SolutionDim>(
     jacobian_inv_t: &MatrixMN<T, GeometryDim, GeometryDim>,
-    phi_grad_ref: MatrixSlice<T, GeometryDim, Dynamic>,
-    u: MatrixSlice<T, SolutionDim, Dynamic>,
+    phi_grad_ref: impl Into<MatrixSlice<'a, T, GeometryDim, Dynamic>>,
+    u: impl Into<MatrixSlice<'a, T, SolutionDim, Dynamic>>,
 ) -> MatrixMN<T, GeometryDim, SolutionDim>
 where
     T: RealField,
@@ -377,6 +379,8 @@ where
         + Allocator<T, SolutionDim, GeometryDim>
         + Allocator<T, GeometryDim, GeometryDim>,
 {
+    let phi_grad_ref = phi_grad_ref.into();
+    let u = u.into();
     // We have that grad u = sum_I grad phi_I u_I^T,
     // which can alternatively be written
     //  grad u = G U^T,
@@ -390,13 +394,14 @@ where
     let G_ref = phi_grad_ref;
     let mut u_grad = MatrixMN::<_, GeometryDim, SolutionDim>::zeros();
     for (phi_I_grad_ref, u_I) in G_ref.column_iter().zip(u.column_iter()) {
-        // The gradients here are with respect to reference coordinates, so we need to
-        // transform them to gradients in physical coordinates
-        let phi_grad = jacobian_inv_t * phi_I_grad_ref;
-        // u_grad += phi_I u_I^T
-        u_grad.ger(T::one(), &phi_grad, &u_I, T::one());
+        // Instead of computing each column of G (gradients in physical space),
+        // we instead use the reference coordinates and only multiply by J^{-T} for the end result,
+        // which involves substantially less work
+        // TODO: Rewrite the earlier explanation to clarify this
+        // (i.e. that we compute J^{-T} * G_ref * U^T insetad of G U^T)
+        u_grad.ger(T::one(), &phi_I_grad_ref, &u_I, T::one());
     }
-    u_grad
+    jacobian_inv_t * u_grad
 }
 
 #[allow(non_snake_case)]

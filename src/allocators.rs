@@ -149,3 +149,50 @@ where
         FiniteElementAllocator<T, ConnectivityGeometryDim<T, C>, ConnectivityReferenceDim<T, C>>,
 {
 }
+
+// TODO: The SmallDimAllocator, BiDimAllocator and TriDimAllocator classes should make
+// many/most of the other allocators redundant, I think?
+pub trait SmallDimAllocator<T: Scalar, D: DimName>:
+Allocator<T, D> + Allocator<T, D, D> + Allocator<T, U1, D>
+// Used for various functionality like decompositions
++ Allocator<usize, D>
++ Allocator<(usize, usize), D>
+{}
+
+impl<T, D> SmallDimAllocator<T, D> for DefaultAllocator
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>
+        + Allocator<T, D, D>
+        + Allocator<T, U1, D>
+        + Allocator<usize, D>
+        + Allocator<(usize, usize), D>,
+{
+}
+
+pub trait BiDimAllocator<T: Scalar, D1: DimName, D2: DimName>:
+    SmallDimAllocator<T, D1> + SmallDimAllocator<T, D2> + Allocator<T, D1, D2> + Allocator<T, D2, D1>
+{
+}
+
+impl<T: Scalar, D1: DimName, D2: DimName> BiDimAllocator<T, D1, D2> for DefaultAllocator where
+    DefaultAllocator: SmallDimAllocator<T, D1>
+        + SmallDimAllocator<T, D2>
+        + Allocator<T, D1, D2>
+        + Allocator<T, D2, D1>
+{
+}
+
+pub trait TriDimAllocator<T: Scalar, D1: DimName, D2: DimName, D3: DimName>:
+    BiDimAllocator<T, D1, D2> + BiDimAllocator<T, D1, D3> + BiDimAllocator<T, D2, D3>
+{
+}
+
+impl<T: Scalar, D1: DimName, D2: DimName, D3: DimName> TriDimAllocator<T, D1, D2, D3>
+    for DefaultAllocator
+where
+    DefaultAllocator:
+        BiDimAllocator<T, D1, D2> + BiDimAllocator<T, D1, D3> + BiDimAllocator<T, D2, D3>,
+{
+}
