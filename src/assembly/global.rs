@@ -57,7 +57,7 @@ impl<T: RealField> CsrAssembler<T> {
         &mut self,
         csr: &mut CsrMatrix<T>,
         element_assembler: &dyn ElementMatrixAssembler<T>,
-    ) -> Result<(), Box<dyn Send + Error>> {
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
         // Reuse previously allocated buffers
         let connectivity_permutation = &mut self.connectivity_permutation;
         let element_global_nodes = &mut self.element_global_nodes;
@@ -210,7 +210,7 @@ impl<T: RealField + Send> CsrParAssembler<T> {
         csr: &mut CsrMatrix<T>,
         colors: &[DisjointSubsets],
         element_assembler: &(dyn Sync + ElementMatrixAssembler<T>),
-    ) -> Result<(), Box<dyn Send + Error>> {
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
         let sdim = element_assembler.solution_dim();
 
         for color in colors {
@@ -264,7 +264,7 @@ impl<T: RealField + Send> CsrParAssembler<T> {
 
                     Ok(())
                 })
-                .collect::<Result<(), Box<dyn Send + Error>>>()?;
+                .collect::<Result<(), Box<dyn Error + Send + Sync>>>()?;
         }
 
         Ok(())

@@ -1,18 +1,20 @@
 //! New functionality that will eventually supercede various methods in the `assembly` module.
 
-use crate::allocators::{BiDimAllocator, FiniteElementAllocator};
-use crate::assembly::local::{compute_volume_u_grad, ElementConnectivityAssembler};
-use crate::element::MatrixSliceMut;
+use crate::allocators::{BiDimAllocator, SmallDimAllocator};
+use crate::assembly::local::{
+    compute_volume_u_grad, ElementConnectivityAssembler, ElementMatrixAssembler,
+};
+use crate::element::{MatrixSlice, MatrixSliceMut};
 use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{
     DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic,
     MatrixMN, MatrixSliceMN, Point, RealField, Scalar, VectorN, U1,
 };
-use crate::space::{FiniteElementSpace2, VolumetricFiniteElementSpace};
+use crate::space::VolumetricFiniteElementSpace;
 use crate::workspace::Workspace;
 use crate::SmallDim;
 use itertools::izip;
-use nalgebra::{DMatrix, MatrixSliceMutMN};
+use nalgebra::DMatrix;
 use std::cell::RefCell;
 use std::error::Error;
 use std::ops::AddAssign;
@@ -106,7 +108,7 @@ pub trait ElementVectorAssembler<T: Scalar>: ElementConnectivityAssembler {
         &self,
         element_index: usize,
         output: DVectorSliceMut<T>,
-    ) -> Result<(), Box<dyn Send + Error>>;
+    ) -> Result<(), Box<dyn Error + Send + Sync>>;
 }
 
 pub struct ElementEllipticAssembler<'a, T: Scalar, Space, Op, QTable> {
@@ -120,10 +122,9 @@ impl<'a, T, Space, Op, QTable> ElementConnectivityAssembler
     for ElementEllipticAssembler<'a, T, Space, Op, QTable>
 where
     T: Scalar,
-    Space: FiniteElementSpace2<T>,
+    Space: VolumetricFiniteElementSpace<T>,
     Op: Operator<T>,
-    DefaultAllocator: FiniteElementAllocator<T, Space::GeometryDim, Space::ReferenceDim>
-        + Allocator<T, Space::GeometryDim, Op::SolutionDim>,
+    DefaultAllocator: SmallDimAllocator<T, Space::GeometryDim>,
 {
     fn solution_dim(&self) -> usize {
         Op::SolutionDim::dim()
@@ -147,7 +148,7 @@ where
 }
 
 #[derive(Debug)]
-struct EllipticVectorWorkspace<T, GeometryDim, Data>
+struct EllipticAssemblerWorkspace<T, GeometryDim, Data>
 where
     T: Scalar,
     GeometryDim: DimName,
@@ -161,7 +162,7 @@ where
     quad_data: Vec<Data>,
 }
 
-impl<T, GeometryDim, Data> EllipticVectorWorkspace<T, GeometryDim, Data>
+impl<T, GeometryDim, Data> EllipticAssemblerWorkspace<T, GeometryDim, Data>
 where
     T: RealField,
     GeometryDim: DimName,
@@ -180,7 +181,7 @@ where
     }
 }
 
-impl<T, GeometryDim, Data> Default for EllipticVectorWorkspace<T, GeometryDim, Data>
+impl<T, GeometryDim, Data> Default for EllipticAssemblerWorkspace<T, GeometryDim, Data>
 where
     T: RealField,
     GeometryDim: DimName,
@@ -202,31 +203,64 @@ impl<'a, T: Scalar, S, O, Q> ElementEllipticAssembler<'a, T, S, O, Q> {
     thread_local! { static WORKSPACE: RefCell<Workspace> = RefCell::new(Workspace::default());  }
 }
 
-impl<'a, T, Space, Op, QTable> ElementVectorAssembler<T>
-    for ElementEllipticAssembler<'a, T, Space, Op, QTable>
+struct ForEachQuadraturePoint<'a, T, GeometryDim, SolutionDim, Data>
+where
+    T: Scalar,
+    GeometryDim: DimName,
+    SolutionDim: DimName,
+    DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>,
+{
+    u_grad: &'a MatrixMN<T, GeometryDim, SolutionDim>,
+    phi_grad_ref: MatrixSliceMut<'a, T, GeometryDim, Dynamic>,
+    jacobian_inv_t: &'a MatrixMN<T, GeometryDim, GeometryDim>,
+    jacobian_det: T,
+    weight: T,
+    data: &'a Data,
+}
+
+impl<'a, T: Scalar, Space, Op, QTable> ElementEllipticAssembler<'a, T, Space, Op, QTable>
 where
     T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
-    Op: EllipticOperator<T, Space::GeometryDim>,
+    Op: Operator<T>,
     QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Data>,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Op::SolutionDim>,
 {
+    /// Calls the given function with a mutable reference to a thread-local workspace.
+    ///
+    /// Helper method that abstracts away the boilerplate of obtaining the workspace.
+    fn with_workspace<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&mut EllipticAssemblerWorkspace<T, Space::GeometryDim, Op::Data>) -> R,
+    {
+        Self::WORKSPACE.with(|workspace| {
+            // First get through the RefCell
+            let mut ws = workspace.borrow_mut();
+            // Then get the concrete type from the type-erased workspace
+            let ws =
+                ws.get_or_default::<EllipticAssemblerWorkspace<T, Space::GeometryDim, Op::Data>>();
+            f(ws)
+        })
+    }
+
+    /// Populates element quantities into workspace buffers and calls the provided function
+    /// per quadrature point.
     #[allow(non_snake_case)]
-    fn assemble_element_vector_into(
+    fn for_each_quadrature_point<F>(
         &self,
         element_index: usize,
-        mut output: DVectorSliceMut<T>,
-    ) -> Result<(), Box<dyn Send + Error>> {
-        Self::WORKSPACE.with(|workspace| {
-            let mut ws = workspace.borrow_mut();
-            let ws =
-                ws.get_or_default::<EllipticVectorWorkspace<T, Space::GeometryDim, Op::Data>>();
-
+        mut f: F,
+    ) -> Result<(), Box<dyn Error + Send + Sync>>
+    where
+        F: FnMut(
+            ForEachQuadraturePoint<T, Space::GeometryDim, Op::SolutionDim, Op::Data>,
+        ) -> Result<(), Box<dyn Error + Send + Sync>>,
+    {
+        self.with_workspace(|ws| {
             let quadrature_size = self.qtable.element_quadrature_size(element_index);
             let s = Op::SolutionDim::dim();
             let n = self.element_node_count(element_index);
             ws.resize_workspace(quadrature_size, s, n);
-            assert_eq!(output.len(), s * n);
 
             self.space
                 .populate_element_nodes(&mut ws.element_nodes, element_index);
@@ -238,7 +272,7 @@ where
             let s = Op::SolutionDim::name();
             let n = Dynamic::new(n);
             let u_element = MatrixSliceMN::from_slice_generic(ws.u_element.as_slice(), s, n);
-            let mut output = MatrixSliceMutMN::from_slice_generic(output.as_mut_slice(), s, n);
+            // let mut output = MatrixSliceMutMN::from_slice_generic(output.as_mut_slice(), s, n);
 
             self.qtable.populate_element_quadrature_and_data(
                 element_index,
@@ -260,17 +294,119 @@ where
                 // Jacobian
                 let J = self.space.element_reference_jacobian(element_index, &xi);
                 let J_det = J.determinant();
-
-                // TODO: Make error instead of panic?
-                let J_inv = J.try_inverse().expect("Jacobian must be invertible");
+                let J_inv = J.try_inverse().ok_or_else(|| {
+                    Box::<dyn Error + Send + Sync>::from("Singular element Jacobian encountered")
+                })?;
                 let J_inv_t = J_inv.transpose();
-                let u_grad = compute_volume_u_grad(&J_inv_t, &*phi_grad_ref, u_element);
 
-                let g = self.op.compute_elliptic_term(&u_grad, data);
-                let g_J_inv_t = g.transpose() * &J_inv_t;
-                output.gemm(w * J_det.abs(), &g_J_inv_t, &phi_grad_ref, T::one());
+                f(ForEachQuadraturePoint {
+                    u_grad: &compute_volume_u_grad(&J_inv_t, &*phi_grad_ref, u_element),
+                    phi_grad_ref: MatrixSliceMut::from(&mut *phi_grad_ref),
+                    jacobian_inv_t: &J_inv_t,
+                    jacobian_det: J_det,
+                    weight: w,
+                    data,
+                })?;
             }
 
+            Ok(())
+        })
+    }
+}
+
+impl<'a, T, Space, Op, QTable> ElementVectorAssembler<T>
+    for ElementEllipticAssembler<'a, T, Space, Op, QTable>
+where
+    T: RealField,
+    Space: VolumetricFiniteElementSpace<T>,
+    Op: EllipticOperator<T, Space::GeometryDim>,
+    QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Data>,
+    DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Op::SolutionDim>,
+{
+    #[allow(non_snake_case)]
+    fn assemble_element_vector_into(
+        &self,
+        element_index: usize,
+        mut output: DVectorSliceMut<T>,
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let s = self.solution_dim();
+        let n = self.element_node_count(element_index);
+        assert_eq!(output.len(), s * n, "Output vector dimension mismatch");
+        self.for_each_quadrature_point(element_index, |for_each_point_data| {
+            let ForEachQuadraturePoint {
+                u_grad,
+                phi_grad_ref,
+                jacobian_inv_t,
+                jacobian_det,
+                weight,
+                data,
+            } = for_each_point_data;
+
+            // TODO: Document what's going on here
+            let g = self.op.compute_elliptic_term(&u_grad, data);
+            let g_J_inv_t = g.transpose() * jacobian_inv_t;
+            output.gemm(
+                weight * jacobian_det.abs(),
+                &g_J_inv_t,
+                &phi_grad_ref,
+                T::one(),
+            );
+            Ok(())
+        })
+    }
+}
+
+impl<'a, T, Space, Op, QTable> ElementMatrixAssembler<T>
+    for ElementEllipticAssembler<'a, T, Space, Op, QTable>
+where
+    T: RealField,
+    Space: VolumetricFiniteElementSpace<T>,
+    Op: EllipticContraction<T, Space::GeometryDim>,
+    QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Data>,
+    DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Op::SolutionDim>,
+{
+    // TODO: Reorder method parameters (element_index first)
+    #[allow(non_snake_case)]
+    fn assemble_element_matrix_into(
+        &self,
+        mut output: DMatrixSliceMut<T, U1, Dynamic>,
+        element_index: usize,
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let s = self.solution_dim();
+        let n = self.element_node_count(element_index);
+        assert_eq!(output.nrows(), s * n, "Output matrix dimension mismatch");
+        assert_eq!(output.ncols(), s * n, "Output matrix dimension mismatch");
+
+        self.for_each_quadrature_point(element_index, |for_each_point_data| {
+            let ForEachQuadraturePoint {
+                u_grad,
+                mut phi_grad_ref,
+                jacobian_inv_t,
+                jacobian_det,
+                weight,
+                data,
+            } = for_each_point_data;
+
+            // TODO: Clean this up a bit
+            // Compute gradients with respect to physical coords instead of reference coords
+            for mut phi_grad in phi_grad_ref.column_iter_mut() {
+                let new_phi_grad = jacobian_inv_t * &phi_grad;
+                phi_grad.copy_from(&new_phi_grad);
+            }
+            let phi_grad = phi_grad_ref;
+
+            // TODO: Scale during the loop up above
+            // TODO: Or maybe we should extend the contraction trait to allow a scaling factor
+            let scale = weight * jacobian_det.abs();
+            // We need to multiply the contraction result by the scale factor.
+            // We do this implicitly by multiplying the basis gradients by its square root.
+            // This way we don't have to allocate an additional matrix or complicate
+            // the trait.
+            let mut G = phi_grad;
+            G *= scale.sqrt();
+
+            self.op
+                .contract_multiple_into(&mut output, data, &u_grad, &MatrixSlice::from(&G));
             Ok(())
         })
     }
