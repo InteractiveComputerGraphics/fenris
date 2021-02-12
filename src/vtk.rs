@@ -1,4 +1,4 @@
-use crate::mesh::{ClosedSurfaceMesh2d, Mesh, Mesh2d};
+use crate::mesh::{Mesh, Mesh2d};
 use nalgebra::{DefaultAllocator, DimMin, DimName, Point, RealField, Scalar};
 use num::Zero;
 use vtkio::model::{Attribute, Attributes, CellType, Cells, DataSet};
@@ -202,15 +202,6 @@ where
             cell_types,
             data: Attributes::new(),
         }
-    }
-}
-
-impl<'a, T> From<&'a ClosedSurfaceMesh2d<T, Segment2d2Connectivity>> for DataSet
-where
-    T: Scalar + Zero,
-{
-    fn from(mesh: &'a ClosedSurfaceMesh2d<T, Segment2d2Connectivity>) -> Self {
-        Self::from(mesh.mesh())
     }
 }
 

@@ -1,17 +1,15 @@
 use crate::geometry::{
     AxisAlignedBoundingBox, BoundedGeometry, Distance, DistanceQuery, GeneralPolygon,
-    GeometryCollection, LineSegment2d, Polygon, SignedDistance, SignedDistanceResult,
+    GeometryCollection, LineSegment2d,
 };
 use arrayvec::ArrayVec;
 use nalgebra::{
-    DefaultAllocator, DimName, Point, Point2, RealField, Scalar, Vector2, VectorN, U2, U3,
+    DefaultAllocator, DimName, Point, RealField, Scalar, Vector2, VectorN, U2, U3,
 };
 use nested_vec::NestedVec;
 use std::collections::hash_map::Entry as HashMapEntry;
 use std::collections::{BTreeMap, HashMap};
 use std::iter::once;
-
-use numeric_literals::replace_float_literals;
 
 use crate::connectivity::{
     CellConnectivity, Connectivity, ConnectivityMut, Hex20Connectivity, Hex27Connectivity,
@@ -593,145 +591,6 @@ where
 
     fn normal(&self) -> Vector2<T> {
         self.normal_dir().normalize()
-    }
-}
-
-/// A closed surface mesh with a well-defined inside and outside.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-pub struct ClosedSurfaceMesh2d<T, Connectivity>
-where
-    T: Scalar,
-{
-    mesh: Mesh2d<T, Connectivity>,
-    vertex_normals: Vec<Vector2<T>>,
-}
-
-impl<T, Connectivity> ClosedSurfaceMesh2d<T, Connectivity>
-where
-    T: Scalar,
-{
-    pub fn mesh(&self) -> &Mesh2d<T, Connectivity> {
-        &self.mesh
-    }
-}
-
-impl<T, Connectivity> ClosedSurfaceMesh2d<T, Connectivity>
-where
-    T: RealField,
-    Connectivity: CellConnectivity<T, U2>,
-    Connectivity::Cell: PlanarFace<T, Dimension = U2>,
-    DefaultAllocator: Allocator<T, <Connectivity::Cell as PlanarFace<T>>::Dimension>,
-{
-    /// Transform all vertices of the mesh by the given transformation function.
-    pub fn transform_vertices<F>(&mut self, mut transformation: F)
-    where
-        F: FnMut(&mut [Point2<T>]),
-    {
-        transformation(self.mesh.vertices_mut());
-        self.recompute_vertex_normals();
-    }
-
-    pub fn from_mesh(mesh: Mesh2d<T, Connectivity>) -> Result<Self, Box<dyn Error>> {
-        let num_vertices = mesh.vertices().len();
-        let mut closed_mesh = Self {
-            mesh,
-            vertex_normals: vec![Vector2::zeros(); num_vertices],
-        };
-
-        closed_mesh.recompute_vertex_normals();
-
-        Ok(closed_mesh)
-    }
-
-    fn recompute_vertex_normals(&mut self) {
-        for v in &mut self.vertex_normals {
-            *v = Vector2::zeros();
-        }
-
-        let mesh = &self.mesh;
-
-        for conn in mesh.connectivity() {
-            let cell = conn.cell(mesh.vertices()).unwrap();
-            let n = cell.normal();
-            for v_idx in conn.vertex_indices() {
-                self.vertex_normals[*v_idx] += &n;
-            }
-        }
-
-        for v in &mut self.vertex_normals {
-            let v_norm = v.norm();
-            if v_norm > T::zero() {
-                *v /= v_norm;
-            } else {
-                // TODO: How to handle this situation?
-                *v = Vector2::zeros();
-            }
-        }
-    }
-}
-
-impl<'a, T, C> GeometryCollection<'a> for ClosedSurfaceMesh2d<T, C>
-where
-    T: Scalar,
-    Mesh2d<T, C>: GeometryCollection<'a>,
-{
-    type Geometry = <Mesh2d<T, C> as GeometryCollection<'a>>::Geometry;
-
-    fn num_geometries(&self) -> usize {
-        self.mesh.num_geometries()
-    }
-
-    fn get_geometry(&'a self, index: usize) -> Option<Self::Geometry> {
-        self.mesh.get_geometry(index)
-    }
-}
-
-impl<T> SignedDistance<T, U2> for ClosedSurfaceMesh2d<T, Segment2d2Connectivity>
-where
-    T: RealField,
-{
-    fn query_signed_distance(&self, point: &Point2<T>) -> Option<SignedDistanceResult<T, U2>> {
-        let closest_edge = self.closest_edge(point)?;
-
-        Some(SignedDistanceResult {
-            feature_id: closest_edge.edge_index,
-            point: closest_edge.edge_point,
-            signed_distance: closest_edge.signed_distance,
-        })
-    }
-}
-
-impl<T> Polygon<T> for ClosedSurfaceMesh2d<T, Segment2d2Connectivity>
-where
-    T: RealField,
-{
-    fn vertices(&self) -> &[Point<T, U2>] {
-        self.mesh().vertices()
-    }
-
-    fn num_edges(&self) -> usize {
-        self.mesh().connectivity().len()
-    }
-
-    fn get_edge(&self, index: usize) -> Option<LineSegment2d<T>> {
-        self.mesh().get_cell(index)
-    }
-
-    #[replace_float_literals(T::from_f64(literal).unwrap())]
-    fn pseudonormal_on_edge(&self, edge_index: usize, t: T) -> Option<Vector2<T>> {
-        let edge_conn = self.mesh().connectivity().get(edge_index)?;
-        let edge = edge_conn.cell(self.mesh().vertices())?;
-
-        let [a_idx, b_idx] = edge_conn.0;
-        // If parameter suggests that the point is on a vertex, then use the vertex normal instead
-        let pseudo_normal = if t <= T::zero() {
-            self.vertex_normals[a_idx]
-        } else if t >= T::one() {
-            self.vertex_normals[b_idx]
-        } else {
-            edge.normal_dir().normalize()
-        };
-        Some(pseudo_normal)
     }
 }
 
