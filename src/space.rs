@@ -3,7 +3,7 @@ use crate::element::{
     ConnectivityGeometryDim, ElementConnectivity, ElementForSpace, MatrixSliceMut,
 };
 use crate::geometry::GeometryCollection;
-use crate::nalgebra::{DMatrixSliceMut, Dynamic, MatrixMN};
+use crate::nalgebra::{Dynamic, MatrixMN, U1};
 use crate::SmallDim;
 use nalgebra::{DefaultAllocator, Point, Scalar};
 
@@ -26,7 +26,7 @@ where
     fn populate_element_basis(
         &self,
         element_index: usize,
-        basis_values: DMatrixSliceMut<T>,
+        basis_values: MatrixSliceMut<T, U1, Dynamic>,
         reference_coords: &Point<T, Self::ReferenceDim>,
     );
 
@@ -58,7 +58,7 @@ where
     /// points in the element, i.e.
     ///  h = min |x - y| for x, y in K
     /// where K is the element and h is the diameter.
-    fn diameter(&self) -> T;
+    fn diameter(&self, element_index: usize) -> T;
 }
 
 /// A finite element space where `GeometryDim == ReferenceDim`.

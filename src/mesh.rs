@@ -3,9 +3,7 @@ use crate::geometry::{
     GeometryCollection, LineSegment2d,
 };
 use arrayvec::ArrayVec;
-use nalgebra::{
-    DefaultAllocator, DimName, Point, RealField, Scalar, Vector2, VectorN, U2, U3,
-};
+use nalgebra::{DefaultAllocator, DimName, Point, RealField, Scalar, Vector2, VectorN, U2, U3};
 use nested_vec::NestedVec;
 use std::collections::hash_map::Entry as HashMapEntry;
 use std::collections::{BTreeMap, HashMap};

@@ -177,6 +177,9 @@ where
     type GeometryDim: DimName;
     type ReferenceDim: DimName;
 
+    /// Returns the finite element associated with this connectivity.
+    ///
+    /// The vertices passed in should be the collection of *all* vertices in the mesh.
     fn element(&self, vertices: &[Point<T, Self::GeometryDim>]) -> Option<Self::Element>;
 
     /// TODO: Move this out of the trait itself?
