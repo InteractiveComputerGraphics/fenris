@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 10871f74074b5826263edce714d480081fcd1f175baf2a6b6dc87f4000643093 # shrinks to args = GatherGlobalToLocalArgs { solution_dim: 0, u: Matrix { data: VecStorage { data: [0], nrows: Dynamic { value: 1 }, ncols: U1 } }, indices: [0] }
+cc 2cafd1e4c3e076c3bea61945b4f39201305cda8df908c852c000446663f91569 # shrinks to args = GatherGlobalToLocalArgs { solution_dim: 2, u: Matrix { data: VecStorage { data: [0], nrows: Dynamic { value: 1 }, ncols: U1 } }, indices: [0] }

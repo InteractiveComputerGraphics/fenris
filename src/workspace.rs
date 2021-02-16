@@ -4,6 +4,8 @@ use std::any::Any;
 ///
 /// The workspace is intended to hold intermediate data used as workspace in computations.
 /// It is optimized particularly for the case where the same type is accessed many times in a row.
+///
+/// TODO: Tests
 #[derive(Debug, Default)]
 pub struct Workspace {
     workspaces: Vec<Box<dyn Any>>,
@@ -21,8 +23,9 @@ impl Workspace {
             Some(idx) => idx,
             None => {
                 let w = create();
+                let idx = self.workspaces.len();
                 self.workspaces.push(Box::new(w) as Box<dyn Any>);
-                self.workspaces.len()
+                idx
             }
         };
 

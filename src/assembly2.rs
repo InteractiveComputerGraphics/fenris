@@ -6,10 +6,7 @@ use crate::assembly::local::{
 };
 use crate::element::{MatrixSlice, MatrixSliceMut};
 use crate::nalgebra::allocator::Allocator;
-use crate::nalgebra::{
-    DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic,
-    MatrixMN, MatrixSliceMN, Point, RealField, Scalar, VectorN, U1,
-};
+use crate::nalgebra::{DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic, MatrixMN, MatrixSliceMN, Point, RealField, Scalar, VectorN, U1};
 use crate::space::VolumetricFiniteElementSpace;
 use crate::workspace::Workspace;
 use crate::SmallDim;
@@ -111,11 +108,32 @@ pub trait ElementVectorAssembler<T: Scalar>: ElementConnectivityAssembler {
     ) -> Result<(), Box<dyn Error + Send + Sync>>;
 }
 
+#[derive(Debug)]
 pub struct ElementEllipticAssembler<'a, T: Scalar, Space, Op, QTable> {
-    space: Space,
-    op: Op,
-    qtable: QTable,
-    u: DVectorSlice<'a, T>,
+    // TODO: Create builder?
+    pub space: &'a Space,
+    pub op: &'a Op,
+    pub qtable: &'a QTable,
+    pub u: DVectorSlice<'a, T>,
+}
+
+impl<'a, T: Scalar> ElementEllipticAssembler<'static, T, (), (), ()> {
+    pub fn new() -> Self {
+        Self {
+            space: &(),
+            op: &(),
+            qtable: &(),
+            u: DVectorSlice::from_slice(&[], 0)
+        }
+    }
+}
+
+impl<'a, T, Space, Op, QTable> ElementEllipticAssembler<'a, T, Space, Op, QTable>
+where
+    T: Scalar
+{
+
+
 }
 
 impl<'a, T, Space, Op, QTable> ElementConnectivityAssembler
@@ -423,8 +441,6 @@ where
 {
     type Data: Default + Clone;
 
-    fn num_elements(&self) -> usize;
-
     fn element_quadrature_size(&self, element_index: usize) -> usize;
 
     fn populate_element_data(&self, element_index: usize, data: &mut [Self::Data]);
@@ -464,10 +480,88 @@ fn gather_global_to_local_<T: Scalar>(
     indices: &[usize],
     solution_dim: usize,
 ) {
+    assert_eq!(local.len(), indices.len() * solution_dim,
+               "Size of local vector must be compatible with solutio mdim and index count");
     let s = solution_dim;
     for (i_local, i_global) in indices.iter().enumerate() {
         local
-            .index_mut((.., i_local))
-            .copy_from(&global.index((s * i_global..s * i_global + s, ..)));
+            .index_mut((s * i_local .. s * i_local + s, 0))
+            .copy_from(&global.index((s * i_global..s * i_global + s, 0)));
+    }
+}
+
+#[derive(Debug)]
+pub struct UniformQuadratureTable<T, GeometryDim, Data=()>
+where
+    T: Scalar,
+    GeometryDim: DimName,
+    DefaultAllocator: Allocator<T, GeometryDim>
+{
+    points: Vec<Point<T, GeometryDim>>,
+    weights: Vec<T>,
+    data: Vec<Data>,
+}
+
+impl<T, GeometryDim> UniformQuadratureTable<T, GeometryDim>
+where
+    T: Scalar,
+    GeometryDim: DimName,
+    DefaultAllocator: Allocator<T, GeometryDim>
+{
+    pub fn from_points_and_weights(
+        points: Vec<Point<T, GeometryDim>>,
+        weights: Vec<T>) -> Self {
+        let data = vec![(); points.len()];
+        Self::from_points_weights_and_data(points, weights, data)
+    }
+}
+
+impl<T, GeometryDim, Data> UniformQuadratureTable<T, GeometryDim, Data>
+    where
+        T: Scalar,
+        GeometryDim: DimName,
+        DefaultAllocator: Allocator<T, GeometryDim>
+{
+    pub fn from_points_weights_and_data(
+        points: Vec<Point<T, GeometryDim>>,
+        weights: Vec<T>,
+        data: Vec<Data>) -> Self {
+        let msg = "Points, weights and data must have the same length.";
+        assert_eq!(points.len(), weights.len(), "{}", msg);
+        assert_eq!(points.len(), data.len(), "{}", msg);
+        Self {
+            points,
+            weights,
+            data
+        }
+    }
+}
+
+impl<T, GeometryDim, Data> QuadratureTable<T, GeometryDim> for UniformQuadratureTable<T, GeometryDim, Data>
+where
+    T: Scalar,
+    GeometryDim: SmallDim,
+    Data: Clone + Default,
+    DefaultAllocator: Allocator<T, GeometryDim>
+{
+    type Data = Data;
+
+    fn element_quadrature_size(&self, _element_index: usize) -> usize {
+        self.points.len()
+    }
+
+    fn populate_element_data(&self, _element_index: usize, data: &mut [Self::Data]) {
+        assert_eq!(data.len(), self.data.len());
+        data.clone_from_slice(&self.data);
+    }
+
+    fn populate_element_quadrature(&self,
+                                   _element_index: usize,
+                                   points: &mut [Point<T, GeometryDim>],
+                                   weights: &mut [T]) {
+        assert_eq!(points.len(), self.points.len());
+        assert_eq!(weights.len(), self.weights.len());
+        points.clone_from_slice(&self.points);
+        weights.clone_from_slice(&self.weights);
     }
 }
