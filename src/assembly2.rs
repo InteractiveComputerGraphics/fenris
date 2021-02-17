@@ -112,6 +112,85 @@ pub trait ElementVectorAssembler<T: Scalar>: ElementConnectivityAssembler {
     ) -> Result<(), Box<dyn Error + Send + Sync>>;
 }
 
+pub struct ElementEllipticAssemblerBuilder<Space, Op, QTable, U> {
+    space: Space,
+    op: Op,
+    qtable: QTable,
+    u: U
+}
+
+impl ElementEllipticAssemblerBuilder<(), (), (), ()> {
+    pub fn new() -> Self {
+        Self {
+            space: (),
+            op: (),
+            qtable: (),
+            u: ()
+        }
+    }
+}
+
+impl<Op, QTable, U> ElementEllipticAssemblerBuilder<(), Op, QTable, U> {
+    pub fn with_space<Space>(self, space: &Space) -> ElementEllipticAssemblerBuilder<&Space, Op, QTable, U> {
+        ElementEllipticAssemblerBuilder {
+            space,
+            op: self.op,
+            qtable: self.qtable,
+            u: self.u
+        }
+    }
+}
+
+impl<Space, QTable, U> ElementEllipticAssemblerBuilder<Space, (), QTable, U> {
+    pub fn with_op<Op>(self, op: &Op) -> ElementEllipticAssemblerBuilder<Space, &Op, QTable, U> {
+        ElementEllipticAssemblerBuilder {
+            space: self.space,
+            op,
+            qtable: self.qtable,
+            u: self.u
+        }
+    }
+}
+
+impl<Space, Op, U> ElementEllipticAssemblerBuilder<Space, Op, (), U> {
+    pub fn with_quadrature_table<QTable>(self, qtable: &QTable) -> ElementEllipticAssemblerBuilder<Space, Op, &QTable, U> {
+        ElementEllipticAssemblerBuilder {
+            space: self.space,
+            op: self.op,
+            qtable,
+            u: self.u
+        }
+    }
+}
+
+impl<Space, Op, QTable> ElementEllipticAssemblerBuilder<Space, Op, QTable, ()> {
+    pub fn with_u<'a, T>(self, u: impl Into<DVectorSlice<'a, T>>) -> ElementEllipticAssemblerBuilder<Space, Op, QTable, DVectorSlice<'a, T>>
+    where
+        T: Scalar,
+    {
+        ElementEllipticAssemblerBuilder {
+            space: self.space,
+            op: self.op,
+            qtable: self.qtable,
+            u: u.into()
+        }
+    }
+}
+
+impl<'a, T, Space, Op, QTable> ElementEllipticAssemblerBuilder<&'a Space, &'a Op, &'a QTable, DVectorSlice<'a, T>>
+where
+    T: Scalar
+{
+    pub fn build(self) -> ElementEllipticAssembler<'a, T, Space, Op, QTable> {
+        ElementEllipticAssembler {
+            space: self.space,
+            op: self.op,
+            qtable: self.qtable,
+            u: self.u
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct ElementEllipticAssembler<'a, T: Scalar, Space, Op, QTable> {
     // TODO: Create builder?

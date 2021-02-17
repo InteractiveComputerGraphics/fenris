@@ -1,10 +1,7 @@
 use fenris::assembly::global::{CsrAssembler, CsrParAssembler, apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs};
-use fenris::assembly2::{
-    ElementEllipticAssembler, ElementSourceAssembler, EllipticContraction, EllipticOperator,
-    Operator, SerialVectorAssembler, SourceFunction, UniformQuadratureTable,
-};
+use fenris::assembly2::{ElementEllipticAssembler, ElementSourceAssembler, EllipticContraction, EllipticOperator, Operator, SerialVectorAssembler, SourceFunction, UniformQuadratureTable, ElementEllipticAssemblerBuilder};
 use fenris::mesh::QuadMesh2d;
-use fenris::nalgebra::{DVector, DVectorSlice, MatrixMN, Point2, VectorN, U1, U2};
+use fenris::nalgebra::{DVector, MatrixMN, Point2, VectorN, U1, U2};
 use fenris::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::quadrature::quad_quadrature_strength_5_f64;
 use fenris_sparse::CsrMatrix;
@@ -68,13 +65,13 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     let u = DVector::<f64>::zeros(mesh.vertices().len());
 
-    // TODO: Build API or something for the elliptic assembler?
-    let element_assembler = ElementEllipticAssembler {
-        space: &mesh,
-        op: &op,
-        qtable: &quadrature,
-        u: DVectorSlice::from(&u),
-    };
+    let element_assembler = ElementEllipticAssemblerBuilder::new()
+        .with_space(&mesh)
+        .with_op(&op)
+        .with_quadrature_table(&quadrature)
+        .with_u(&u)
+        .build();
+
 
     // TODO: CsrAssembler is not able to assemble patterns atm. So we use par assembler for the
     // pattern
