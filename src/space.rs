@@ -7,14 +7,8 @@ use crate::nalgebra::{Dynamic, MatrixMN, U1};
 use crate::SmallDim;
 use nalgebra::{DefaultAllocator, Point, Scalar};
 
-/// The "new" FiniteElementSpace trait. Currently playground for new design
-pub trait FiniteElementSpace2<T: Scalar>
-where
-    DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
-{
-    type GeometryDim: SmallDim;
-    type ReferenceDim: SmallDim;
-
+/// Describes the connectivity of elements in a finite element space.
+pub trait FiniteElementConnectivity {
     fn num_elements(&self) -> usize;
 
     fn num_nodes(&self) -> usize;
@@ -22,6 +16,15 @@ where
     fn element_node_count(&self, element_index: usize) -> usize;
 
     fn populate_element_nodes(&self, nodes: &mut [usize], element_index: usize);
+}
+
+/// The "new" FiniteElementSpace trait. Currently playground for new design
+pub trait FiniteElementSpace2<T: Scalar>: FiniteElementConnectivity
+where
+    DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
+{
+    type GeometryDim: SmallDim;
+    type ReferenceDim: SmallDim;
 
     fn populate_element_basis(
         &self,

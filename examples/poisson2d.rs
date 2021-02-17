@@ -1,5 +1,5 @@
 use fenris::assembly::global::{CsrAssembler, CsrParAssembler, apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs};
-use fenris::assembly2::{ElementEllipticAssembler, ElementSourceAssembler, EllipticContraction, EllipticOperator, Operator, SerialVectorAssembler, SourceFunction, UniformQuadratureTable, ElementEllipticAssemblerBuilder};
+use fenris::assembly2::{EllipticContraction, EllipticOperator, Operator, SerialVectorAssembler, SourceFunction, UniformQuadratureTable, ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder};
 use fenris::mesh::QuadMesh2d;
 use fenris::nalgebra::{DVector, MatrixMN, Point2, VectorN, U1, U2};
 use fenris::procedural::create_unit_square_uniform_quad_mesh_2d;
@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 pub struct PoissonOperator2d;
 
-impl Operator<f64> for PoissonOperator2d {
+impl Operator for PoissonOperator2d {
     type SolutionDim = U1;
     type Data = ();
 }
@@ -40,7 +40,7 @@ impl EllipticContraction<f64, U2> for PoissonOperator2d {
 
 struct Source;
 
-impl Operator<f64> for Source {
+impl Operator for Source {
     type SolutionDim = U1;
     type Data = ();
 }
@@ -72,7 +72,6 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         .with_u(&u)
         .build();
 
-
     // TODO: CsrAssembler is not able to assemble patterns atm. So we use par assembler for the
     // pattern
     let matrix_assembler = CsrParAssembler::<f64>::default();
@@ -87,12 +86,11 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     matrix_assembler.assemble_into_csr(&mut a, &element_assembler)?;
 
     let source = Source;
-    let source_assembler: ElementSourceAssembler<f64, _, _, _> = ElementSourceAssembler {
-        space: &mesh,
-        qtable: &quadrature,
-        source: &source,
-        marker: Default::default(),
-    };
+    let source_assembler = ElementSourceAssemblerBuilder::new()
+        .with_space(&mesh)
+        .with_quadrature_table(&quadrature)
+        .with_source(&source)
+        .build();
 
     let mut b = vector_assembler.assemble_vector(&source_assembler)?;
 

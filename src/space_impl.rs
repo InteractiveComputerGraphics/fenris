@@ -1,10 +1,10 @@
-use crate::allocators::ElementConnectivityAllocator;
-use crate::connectivity::CellConnectivity;
+use crate::allocators::{ElementConnectivityAllocator};
+use crate::connectivity::{CellConnectivity};
 use crate::element::{ElementConnectivity, FiniteElement, MatrixSliceMut, ReferenceFiniteElement};
 use crate::mesh::Mesh;
 use crate::model::NodalModel;
 use crate::nalgebra::{Dynamic, MatrixMN, U1};
-use crate::space::{FiniteElementSpace, FiniteElementSpace2, GeometricFiniteElementSpace};
+use crate::space::{FiniteElementSpace, FiniteElementSpace2, GeometricFiniteElementSpace, FiniteElementConnectivity};
 use crate::SmallDim;
 use nalgebra::{DefaultAllocator, DimName, Point, Scalar};
 
@@ -39,17 +39,13 @@ where
 {
 }
 
-impl<T, D, C> FiniteElementSpace2<T> for Mesh<T, D, C>
+impl<T, D, C> FiniteElementConnectivity for Mesh<T, D, C>
 where
     T: Scalar,
+    C: ElementConnectivity<T, GeometryDim=D>,
     D: SmallDim,
-    C: ElementConnectivity<T, GeometryDim = D>,
-    C::ReferenceDim: SmallDim,
-    DefaultAllocator: ElementConnectivityAllocator<T, C>,
+    DefaultAllocator: ElementConnectivityAllocator<T, C>
 {
-    type GeometryDim = D;
-    type ReferenceDim = C::ReferenceDim;
-
     fn num_elements(&self) -> usize {
         self.num_connectivities()
     }
@@ -77,6 +73,18 @@ where
         );
         nodes.copy_from_slice(&indices);
     }
+}
+
+impl<T, D, C> FiniteElementSpace2<T> for Mesh<T, D, C>
+where
+    T: Scalar,
+    D: SmallDim,
+    C: ElementConnectivity<T, GeometryDim = D>,
+    C::ReferenceDim: SmallDim,
+    DefaultAllocator: ElementConnectivityAllocator<T, C>,
+{
+    type GeometryDim = D;
+    type ReferenceDim = C::ReferenceDim;
 
     fn populate_element_basis(
         &self,

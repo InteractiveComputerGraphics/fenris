@@ -10,17 +10,16 @@ use crate::nalgebra::{
     DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic,
     MatrixMN, MatrixSliceMN, Point, RealField, Scalar, VectorN, U1,
 };
-use crate::space::{FiniteElementSpace2, VolumetricFiniteElementSpace};
+use crate::space::{FiniteElementSpace2, VolumetricFiniteElementSpace, FiniteElementConnectivity};
 use crate::workspace::Workspace;
 use crate::SmallDim;
 use itertools::izip;
 use nalgebra::{DMatrix, MatrixSliceMutMN};
 use std::cell::{RefCell, RefMut};
 use std::error::Error;
-use std::marker::PhantomData;
 use std::ops::AddAssign;
 
-pub trait Operator<T> {
+pub trait Operator {
     type SolutionDim: SmallDim;
 
     /// The data associated with the operator.
@@ -31,7 +30,7 @@ pub trait Operator<T> {
     type Data: Default + Clone + 'static;
 }
 
-pub trait EllipticOperator<T, GeometryDim>: Operator<T>
+pub trait EllipticOperator<T, GeometryDim>: Operator
 where
     T: Scalar,
     GeometryDim: SmallDim,
@@ -112,6 +111,8 @@ pub trait ElementVectorAssembler<T: Scalar>: ElementConnectivityAssembler {
     ) -> Result<(), Box<dyn Error + Send + Sync>>;
 }
 
+/// TODO: The builder here is pretty complex. Is it possible to simplify without losing too
+/// much type safety?
 pub struct ElementEllipticAssemblerBuilder<Space, Op, QTable, U> {
     space: Space,
     op: Op,
@@ -218,7 +219,7 @@ impl<'a, T, Space, Op, QTable> ElementConnectivityAssembler
 where
     T: Scalar,
     Space: VolumetricFiniteElementSpace<T>,
-    Op: Operator<T>,
+    Op: Operator,
     DefaultAllocator: SmallDimAllocator<T, Space::GeometryDim>,
 {
     fn solution_dim(&self) -> usize {
@@ -317,7 +318,7 @@ impl<'a, T: Scalar, Space, Op, QTable> ElementEllipticAssembler<'a, T, Space, Op
 where
     T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
-    Op: Operator<T>,
+    Op: Operator,
     QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Data>,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Op::SolutionDim>,
 {
@@ -834,7 +835,7 @@ impl<T: RealField> BasisFunctionBuffer<T> {
     }
 }
 
-pub trait SourceFunction<T, GeometryDim>: Operator<T>
+pub trait SourceFunction<T, GeometryDim>: Operator
 where
     T: Scalar,
     GeometryDim: SmallDim,
@@ -847,22 +848,70 @@ where
     ) -> VectorN<T, Self::SolutionDim>;
 }
 
-pub struct ElementSourceAssembler<'a, T, Space, Source, QTable> {
+pub struct ElementSourceAssemblerBuilder<SpaceRef, SourceRef, QTableRef> {
+    space: SpaceRef,
+    source: SourceRef,
+    qtable: QTableRef
+}
+
+impl ElementSourceAssemblerBuilder<(), (), ()> {
+    pub fn new() -> Self {
+        Self {
+            space: (),
+            source: (),
+            qtable: ()
+        }
+    }
+}
+
+impl<SpaceRef, SourceRef, QTableRef> ElementSourceAssemblerBuilder<SpaceRef, SourceRef, QTableRef> {
+    pub fn with_space<Space>(self, space: &Space) -> ElementSourceAssemblerBuilder<&Space, SourceRef, QTableRef> {
+        ElementSourceAssemblerBuilder {
+            space,
+            source: self.source,
+            qtable: self.qtable
+        }
+    }
+
+    pub fn with_source<Source>(self, source: &Source) -> ElementSourceAssemblerBuilder<SpaceRef, &Source, QTableRef> {
+        ElementSourceAssemblerBuilder {
+            space: self.space,
+            source,
+            qtable: self.qtable
+        }
+    }
+
+    pub fn with_quadrature_table<QTable>(self, qtable: &QTable) -> ElementSourceAssemblerBuilder<SpaceRef, SourceRef, &QTable> {
+        ElementSourceAssemblerBuilder {
+            space: self.space,
+            source: self.source,
+            qtable
+        }
+    }
+}
+
+impl<'a, Space, Source, QTable> ElementSourceAssemblerBuilder<&'a Space, &'a Source, &'a QTable> {
+    pub fn build(self) -> ElementSourceAssembler<'a, Space, Source, QTable> {
+        ElementSourceAssembler {
+            space: self.space,
+            qtable: self.qtable,
+            source: self.source
+        }
+    }
+}
+
+pub struct ElementSourceAssembler<'a, Space, Source, QTable> {
     // TODO: Create builder API instead of having pub fields
     pub space: &'a Space,
     pub qtable: &'a QTable,
     pub source: &'a Source,
-    pub marker: PhantomData<T>,
 }
 
-impl<'a, T, Space, Source, QTable> ElementConnectivityAssembler
-    for ElementSourceAssembler<'a, T, Space, Source, QTable>
+impl<'a, Space, Source, QTable> ElementConnectivityAssembler
+    for ElementSourceAssembler<'a, Space, Source, QTable>
 where
-    T: Scalar,
-    Space: FiniteElementSpace2<T>,
-    Source: SourceFunction<T, Space::GeometryDim>,
-    DefaultAllocator:
-        TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Source::SolutionDim>,
+    Space: FiniteElementConnectivity,
+    Source: Operator,
 {
     fn solution_dim(&self) -> usize {
         Source::SolutionDim::dim()
@@ -912,7 +961,7 @@ where
 }
 
 impl<'a, T, Space, Source, QTable> ElementVectorAssembler<T>
-    for ElementSourceAssembler<'a, T, Space, Source, QTable>
+    for ElementSourceAssembler<'a, Space, Source, QTable>
 where
     T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
