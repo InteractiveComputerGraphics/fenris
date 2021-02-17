@@ -1,20 +1,21 @@
 //! New functionality that will eventually supercede various methods in the `assembly` module.
 
-use crate::allocators::{BiDimAllocator, SmallDimAllocator};
+use crate::allocators::{BiDimAllocator, SmallDimAllocator, TriDimAllocator};
 use crate::assembly::local::{
     compute_volume_u_grad, ElementConnectivityAssembler, ElementMatrixAssembler,
 };
 use crate::element::{MatrixSlice, MatrixSliceMut};
 use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic, MatrixMN, MatrixSliceMN, Point, RealField, Scalar, VectorN, U1};
-use crate::space::VolumetricFiniteElementSpace;
+use crate::space::{VolumetricFiniteElementSpace, FiniteElementSpace2};
 use crate::workspace::Workspace;
 use crate::SmallDim;
 use itertools::izip;
-use nalgebra::DMatrix;
-use std::cell::RefCell;
+use nalgebra::{DMatrix, MatrixSliceMutMN};
+use std::cell::{RefCell, RefMut};
 use std::error::Error;
 use std::ops::AddAssign;
+use std::marker::PhantomData;
 
 pub trait Operator<T> {
     type SolutionDim: SmallDim;
@@ -290,7 +291,6 @@ where
             let s = Op::SolutionDim::name();
             let n = Dynamic::new(n);
             let u_element = MatrixSliceMN::from_slice_generic(ws.u_element.as_slice(), s, n);
-            // let mut output = MatrixSliceMutMN::from_slice_generic(output.as_mut_slice(), s, n);
 
             self.qtable.populate_element_quadrature_and_data(
                 element_index,
@@ -563,5 +563,300 @@ where
         assert_eq!(weights.len(), self.weights.len());
         points.clone_from_slice(&self.points);
         weights.clone_from_slice(&self.weights);
+    }
+}
+
+/// A buffer for storing intermediate quadrature data.
+#[derive(Debug)]
+pub struct QuadratureBuffer<T, D, Data>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>
+{
+    quad_weights: Vec<T>,
+    quad_points: Vec<Point<T, D>>,
+    quad_data: Vec<Data>,
+}
+
+impl<T, D, Data> Default for QuadratureBuffer<T, D, Data>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>
+{
+    fn default() -> Self {
+        Self {
+            quad_weights: Vec::new(),
+            quad_points: Vec::new(),
+            quad_data: Vec::new()
+        }
+    }
+}
+
+impl<T, GeometryDim, Data> QuadratureBuffer<T, GeometryDim, Data>
+where
+    T: RealField,
+    GeometryDim: SmallDim,
+    Data: Default + Clone,
+    DefaultAllocator: SmallDimAllocator<T, GeometryDim>
+{
+    /// Resizes the internal buffer storages to the given size.
+    pub fn resize(&mut self, quadrature_size: usize) {
+        self.quad_points.resize(quadrature_size, Point::origin());
+        self.quad_weights.resize(quadrature_size, T::zero());
+        self.quad_data.resize(quadrature_size, Data::default());
+    }
+
+    /// Populates the buffer by querying a quadrature table with the given element index.
+    pub fn populate_element_quadrature_from_table(
+        &mut self,
+        element_index: usize,
+        table: &dyn QuadratureTable<T, GeometryDim, Data=Data>) {
+        let quadrature_size = table.element_quadrature_size(element_index);
+        self.resize(quadrature_size);
+        table.populate_element_quadrature_and_data(
+            element_index,
+            &mut self.quad_points,
+            &mut self.quad_weights,
+            &mut self.quad_data,
+        );
+    }
+
+    /// Calls a closure for each quadrature point currently in the workspace.
+    pub fn for_each_quadrature_point<F>(&self, mut f: F) -> Result<(), Box<dyn Error + Sync + Send>>
+    where
+        F: FnMut(T, &Point<T, GeometryDim>, &Data) -> Result<(), Box<dyn Error + Sync + Send>>
+    {
+        assert_eq!(self.quad_weights.len(), self.quad_points.len());
+        assert_eq!(self.quad_weights.len(), self.quad_data.len());
+        let iter = izip!(&self.quad_weights, &self.quad_points, &self.quad_data);
+        for (&w, xi, data) in iter {
+            f(w, xi, data)?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct BasisFunctionBuffer<T: Scalar>
+{
+    element_nodes: Vec<usize>,
+    element_basis_values: DMatrix<T>,
+    element_basis_gradients: DMatrix<T>
+}
+
+impl<T: RealField> Default for BasisFunctionBuffer<T> {
+    fn default() -> Self {
+        Self {
+            element_nodes: Vec::new(),
+            element_basis_values: DMatrix::zeros(0, 0),
+            element_basis_gradients: DMatrix::zeros(0, 0)
+        }
+    }
+}
+
+impl<T: RealField> BasisFunctionBuffer<T>
+{
+    pub fn resize(&mut self, node_count: usize, reference_dim: usize) {
+        self.element_nodes.resize(node_count, usize::MAX);
+        self.element_basis_values.resize_mut(1, node_count, T::zero());
+        self.element_basis_gradients.resize_mut(reference_dim, node_count, T::zero());
+    }
+
+    pub fn populate_element_nodes_from_space<Space>(
+        &mut self,
+        element_index: usize,
+        space: &Space,
+    )
+    where
+        Space: FiniteElementSpace2<T>,
+        DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>
+    {
+        let node_count = space.element_node_count(element_index);
+        self.resize(node_count, Space::ReferenceDim::dim());
+        space.populate_element_nodes(&mut self.element_nodes, element_index);
+    }
+
+    /// TODO: Document that populate_element_nodes should be called first
+    pub fn populate_element_basis_values_from_space<Space>(
+        &mut self,
+        element_index: usize,
+        space: &Space,
+        reference_coords: &Point<T, Space::ReferenceDim>
+    )
+    where
+        Space: FiniteElementSpace2<T>,
+        DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>
+    {
+        space.populate_element_basis(element_index,
+                                     MatrixSliceMut::from(&mut self.element_basis_values),
+                                     reference_coords);
+    }
+
+    pub fn populate_element_basis_gradients_from_space<Space>(
+        &mut self,
+        element_index: usize,
+        space: &Space,
+        reference_coords: &Point<T, Space::ReferenceDim>
+    )
+    where
+        Space: FiniteElementSpace2<T>,
+        DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>
+    {
+        space.populate_element_gradients(element_index,
+                                         MatrixSliceMut::from(&mut self.element_basis_gradients),
+                                         reference_coords);
+    }
+
+    pub fn element_nodes(&self) -> &[usize] {
+        &self.element_nodes
+    }
+
+    pub fn element_basis_values<D: DimName>(&self) -> MatrixSlice<T, U1, Dynamic> {
+        MatrixSlice::from(&self.element_basis_values)
+    }
+
+    pub fn element_basis_values_mut<D: DimName>(&mut self) -> MatrixSliceMut<T, U1, Dynamic> {
+        MatrixSliceMut::from(&mut self.element_basis_values)
+    }
+
+    pub fn element_gradients_mut<D: DimName>(&mut self) -> MatrixSliceMut<T, D, Dynamic> {
+        MatrixSliceMut::from(&mut self.element_basis_gradients)
+    }
+}
+
+pub trait SourceFunction<T, GeometryDim>: Operator<T>
+where
+    T: Scalar,
+    GeometryDim: SmallDim,
+    DefaultAllocator: BiDimAllocator<T, GeometryDim, Self::SolutionDim>
+{
+    fn evaluate(&self, coords: &Point<T, GeometryDim>, data: &Self::Data)
+        -> VectorN<T, Self::SolutionDim>;
+}
+
+pub struct ElementSourceAssembler<'a, T, Space, Source, QTable> {
+    space: &'a Space,
+    qtable: &'a QTable,
+    source: &'a Source,
+    marker: PhantomData<T>
+}
+
+impl<'a, T, Space, Source, QTable> ElementConnectivityAssembler
+    for ElementSourceAssembler<'a, T, Space, Source, QTable>
+where
+    T: Scalar,
+    Space: FiniteElementSpace2<T>,
+    Source: SourceFunction<T, Space::GeometryDim>,
+    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Source::SolutionDim>
+{
+    fn solution_dim(&self) -> usize {
+        Source::SolutionDim::dim()
+    }
+
+    fn num_elements(&self) -> usize {
+        self.space.num_elements()
+    }
+
+    fn num_nodes(&self) -> usize {
+        self.space.num_nodes()
+    }
+
+    fn element_node_count(&self, element_index: usize) -> usize {
+        self.space.element_node_count(element_index)
+    }
+
+    fn populate_element_nodes(&self, output: &mut [usize], element_index: usize) {
+        self.space.populate_element_nodes(output, element_index)
+    }
+}
+
+thread_local! { static SOURCE_WORKSPACE: RefCell<Workspace> = RefCell::new(Workspace::default()) }
+
+// #[derive(Default)]
+struct SourceTermWorkspace<T, D, Data>
+where
+    T: Scalar,
+    D: SmallDim,
+    DefaultAllocator: SmallDimAllocator<T, D>
+{
+    quadrature_buffer: QuadratureBuffer<T, D, Data>,
+    basis_buffer: BasisFunctionBuffer<T>
+}
+
+impl<T, D, Data> Default for SourceTermWorkspace<T, D, Data>
+where
+    T: RealField,
+    D: SmallDim,
+    DefaultAllocator: SmallDimAllocator<T, D>
+{
+    fn default() -> Self {
+        Self {
+            quadrature_buffer: QuadratureBuffer::default(),
+            basis_buffer: BasisFunctionBuffer::default()
+        }
+    }
+}
+
+impl<'a, T, Space, Source, QTable> ElementVectorAssembler<T>
+    for ElementSourceAssembler<'a, T, Space, Source, QTable>
+where
+    T: RealField,
+    Space: VolumetricFiniteElementSpace<T>,
+    Source: SourceFunction<T, Space::GeometryDim>,
+    QTable: QuadratureTable<T, Space::ReferenceDim, Data=Source::Data>,
+    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Source::SolutionDim>
+{
+    fn assemble_element_vector_into(&self,
+                                    element_index: usize,
+                                    mut output: DVectorSliceMut<T>) -> Result<(), Box<dyn Error + Send + Sync>> {
+        SOURCE_WORKSPACE.with(|ws| {
+            // TODO: Is it possible to simplify retrieving a mutable reference to the workspace?
+            let mut ws: RefMut<SourceTermWorkspace<T, Space::ReferenceDim, Source::Data>>
+                = RefMut::map(ws.borrow_mut(), |ws| ws.get_or_default());
+            let ws: &mut SourceTermWorkspace<_, _, _> = &mut *ws;
+            let basis_buffer = &mut ws.basis_buffer;
+            let quad_buffer = &mut ws.quadrature_buffer;
+
+            // TODO: Should output be cleared or not?
+            basis_buffer.populate_element_nodes_from_space(element_index, self.space);
+
+            // TODO: Use QuadratureBuffer in the elliptic assembler trait impls too
+            quad_buffer.populate_element_quadrature_from_table(
+                element_index, self.qtable);
+
+            // Reshape output into an `s x n` matrix, so that each column corresponds to the
+            // output associated with a node
+            let n = basis_buffer.element_nodes().len();
+            assert_eq!(output.len(), n * Source::SolutionDim::dim(),
+                       "Length of output vector must be consistent with number of nodes and solution dim");
+            let mut output = MatrixSliceMutMN::from_slice_generic(output.as_mut_slice(),
+                                                              Source::SolutionDim::name(),
+                                                              Dynamic::new(n));
+
+            quad_buffer.for_each_quadrature_point(|w, xi, data| {
+                basis_buffer.populate_element_basis_values_from_space(
+                    element_index, self.space, xi);
+
+                let x = self.space.map_element_reference_coords(element_index, xi);
+                let j = self.space.element_reference_jacobian(element_index, xi);
+                let f = self.source.evaluate(&x, data);
+
+                // The output contribution for quadrature point q is
+                //  w * |det J| * [ f_1 f_2 f_3, ... ]
+                // where f_I = f * phi_I is the output associated with node I, and phi_I is the
+                // basis values of node I.
+                // Then the contribution is given by
+                //  w * |det J| * [ f * phi_1, f * phi_2, ... ] = w * |det J| * f * phi,
+                // where phi is a row vector of basis values
+                let phi = basis_buffer.element_basis_values::<Space::ReferenceDim>();
+                output.gemm(w * j.determinant().abs(), &f, &phi, T::one());
+
+                Ok(())
+            })?;
+
+            Ok(())
+        })
     }
 }

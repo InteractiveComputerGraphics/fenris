@@ -3,7 +3,6 @@ pub use fenris::assembly2::gather_global_to_local;
 use fenris::nalgebra::{DVector, min};
 use proptest::collection::vec;
 use proptest::num::i32;
-use itertools::izip;
 
 #[derive(Debug)]
 struct GatherGlobalToLocalArgs {
