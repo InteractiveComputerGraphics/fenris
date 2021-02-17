@@ -1,4 +1,4 @@
-use fenris::assembly::global::{CsrAssembler, CsrParAssembler};
+use fenris::assembly::global::{CsrAssembler, CsrParAssembler, apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs};
 use fenris::assembly2::{
     ElementEllipticAssembler, ElementSourceAssembler, EllipticContraction, EllipticOperator,
     Operator, SerialVectorAssembler, SourceFunction, UniformQuadratureTable,
@@ -58,7 +58,7 @@ impl SourceFunction<f64, U2> for Source {
 fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     // TODO: Make it easy to construct triangle meshes as well.
     // Need to make it easy to convert between different meshes, such as Quad2d -> Tri2d
-    let mesh: QuadMesh2d<f64> = create_unit_square_uniform_quad_mesh_2d(3);
+    let mesh: QuadMesh2d<f64> = create_unit_square_uniform_quad_mesh_2d(4);
     let op = PoissonOperator2d;
 
     let (weights, points) = quad_quadrature_strength_5_f64();
@@ -89,8 +89,6 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     // TODO: Doesn't need to be mutable, does it?
     matrix_assembler.assemble_into_csr(&mut a, &element_assembler)?;
 
-    println!("{}", a.build_dense());
-
     let source = Source;
     let source_assembler: ElementSourceAssembler<f64, _, _, _> = ElementSourceAssembler {
         space: &mesh,
@@ -99,11 +97,26 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         marker: Default::default(),
     };
 
-    let b = vector_assembler.assemble_vector(&source_assembler)?;
-    dbg!(b);
+    let mut b = vector_assembler.assemble_vector(&source_assembler)?;
 
-    // TODO: Boundary conditions
-    // TODO: Solve system
+    let dirichlet_nodes: Vec<_> = mesh.vertices()
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, v)| (v.x < 1e-6).then(|| idx))
+        .collect();
+
+    apply_homogeneous_dirichlet_bc_csr::<_, U1>(&mut a, &dirichlet_nodes);
+    apply_homogeneous_dirichlet_bc_rhs(&mut b, &dirichlet_nodes, 1);
+
+    // TODO: Use sparse solver
+    let a = a.build_dense();
+    let cholesky = a.cholesky()
+        .ok_or_else(|| Box::<dyn Error + Sync + Send>::from("Failed to solve linear system"))?;
+    let u = cholesky.solve(&b);
+
+    println!("{}", u);
+
+    // TODO: Output to e.g. VTK
 
     Ok(())
 }

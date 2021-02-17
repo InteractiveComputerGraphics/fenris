@@ -508,7 +508,7 @@ pub fn add_local_to_global_<'a, T: RealField>(
     assert_eq!(
         local.len(),
         indices.len() * solution_dim,
-        "Size of local vector must be compatible with solutio mdim and index count"
+        "Size of local vector must be compatible with solution dim and index count"
     );
     let s = solution_dim;
     for (i_local, i_global) in indices.iter().enumerate() {
@@ -808,7 +808,6 @@ where
 
 thread_local! { static SOURCE_WORKSPACE: RefCell<Workspace> = RefCell::new(Workspace::default()) }
 
-// #[derive(Default)]
 struct SourceTermWorkspace<T, D, Data>
 where
     T: Scalar,
@@ -954,7 +953,7 @@ impl<T: RealField> SerialVectorAssembler<T> {
             workspace
                 .vector
                 .resize_vertically_mut(s * element_node_count, T::zero());
-
+            element_assembler.populate_element_nodes(&mut workspace.nodes, i);
             element_assembler.assemble_element_vector_into(i, (&mut workspace.vector).into())?;
             add_local_to_global(&workspace.vector, &mut output, &workspace.nodes, s);
         }
