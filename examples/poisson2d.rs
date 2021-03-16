@@ -1,7 +1,10 @@
-use fenris::assembly::global::{CsrAssembler, apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs};
-use fenris::assembly2::{EllipticContraction, EllipticOperator, Operator, SerialVectorAssembler,
-                        SourceFunction, UniformQuadratureTable, ElementEllipticAssemblerBuilder,
-                        ElementSourceAssemblerBuilder};
+use fenris::assembly::global::{
+    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, CsrAssembler,
+};
+use fenris::assembly2::{
+    ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, EllipticContraction,
+    EllipticOperator, Operator, SerialVectorAssembler, SourceFunction, UniformQuadratureTable,
+};
 use fenris::mesh::QuadMesh2d;
 use fenris::nalgebra::{DVector, MatrixMN, Point2, VectorN, U1, U2};
 use fenris::procedural::create_unit_square_uniform_quad_mesh_2d;
@@ -87,7 +90,8 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     let mut b = vector_assembler.assemble_vector(&source_assembler)?;
 
-    let dirichlet_nodes: Vec<_> = mesh.vertices()
+    let dirichlet_nodes: Vec<_> = mesh
+        .vertices()
         .iter()
         .enumerate()
         .filter_map(|(idx, v)| (v.x < 1e-6).then(|| idx))
@@ -98,7 +102,8 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     // TODO: Use sparse solver
     let a = a.build_dense();
-    let cholesky = a.cholesky()
+    let cholesky = a
+        .cholesky()
         .ok_or_else(|| Box::<dyn Error + Sync + Send>::from("Failed to solve linear system"))?;
     let u = cholesky.solve(&b);
 

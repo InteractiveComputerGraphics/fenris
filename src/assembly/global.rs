@@ -30,8 +30,8 @@ use paradis::coloring::sequential_greedy_coloring;
 use paradis::DisjointSubsets;
 
 use std::cell::RefCell;
-use std::error::Error;
 use std::collections::BTreeSet;
+use std::error::Error;
 use std::sync::Arc;
 
 /// An assembler for CSR matrices.
@@ -56,8 +56,10 @@ impl<T: RealField> Default for CsrAssembler<T> {
 
 impl<T: Scalar> CsrAssembler<T> {
     // TODO: Test this method!
-    pub fn assemble_pattern(&self, element_assembler: &dyn ElementConnectivityAssembler)
-                            -> SparsityPattern {
+    pub fn assemble_pattern(
+        &self,
+        element_assembler: &dyn ElementConnectivityAssembler,
+    ) -> SparsityPattern {
         // Here we optimize for memory usage rather than performance: by collecting into a
         // BTreeSet we store each matrix entry exactly once. This is important, because depending
         // on the mesh, there may be a relatively large number of duplicate entries which would
@@ -65,15 +67,15 @@ impl<T: Scalar> CsrAssembler<T> {
         let sdim = element_assembler.solution_dim();
         let mut matrix_entries = BTreeSet::new();
         let mut element_global_nodes = Vec::new();
-        for i in 0 .. element_assembler.num_elements() {
+        for i in 0..element_assembler.num_elements() {
             let element_node_count = element_assembler.element_node_count(i);
             element_global_nodes.resize(element_node_count, usize::MAX);
             element_assembler.populate_element_nodes(&mut element_global_nodes, i);
 
             for node_i in &element_global_nodes {
                 for node_j in &element_global_nodes {
-                    for s_i in 0 .. sdim {
-                        for s_j in 0 .. sdim {
+                    for s_i in 0..sdim {
+                        for s_j in 0..sdim {
                             let idx_i = sdim * node_i + s_i;
                             let idx_j = sdim * node_j + s_j;
                             matrix_entries.insert((idx_i, idx_j));
@@ -104,12 +106,14 @@ impl<T: Scalar> CsrAssembler<T> {
 
 impl<T: RealField> CsrAssembler<T> {
     // TODO: Take &self rather than &mut self (use interior mutability for buffers etc.)
-    pub fn assemble(&mut self, element_assembler: &dyn ElementMatrixAssembler<T>)
-        -> Result<CsrMatrix<T>, Box<dyn Error + Send + Sync>> {
+    pub fn assemble(
+        &mut self,
+        element_assembler: &dyn ElementMatrixAssembler<T>,
+    ) -> Result<CsrMatrix<T>, Box<dyn Error + Send + Sync>> {
         let pattern = self.assemble_pattern(element_assembler.as_connectivity_assembler());
         let initial_matrix_values = vec![T::zero(); pattern.nnz()];
-        let mut matrix = CsrMatrix::from_pattern_and_values(
-            Arc::new(pattern), initial_matrix_values);
+        let mut matrix =
+            CsrMatrix::from_pattern_and_values(Arc::new(pattern), initial_matrix_values);
         self.assemble_into_csr(&mut matrix, element_assembler)?;
         Ok(matrix)
     }

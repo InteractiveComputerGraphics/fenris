@@ -10,7 +10,7 @@ use crate::nalgebra::{
     DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic,
     MatrixMN, MatrixSliceMN, Point, RealField, Scalar, VectorN, U1,
 };
-use crate::space::{FiniteElementSpace2, VolumetricFiniteElementSpace, FiniteElementConnectivity};
+use crate::space::{FiniteElementConnectivity, FiniteElementSpace2, VolumetricFiniteElementSpace};
 use crate::workspace::Workspace;
 use crate::SmallDim;
 use itertools::izip;
@@ -117,7 +117,7 @@ pub struct ElementEllipticAssemblerBuilder<Space, Op, QTable, U> {
     space: Space,
     op: Op,
     qtable: QTable,
-    u: U
+    u: U,
 }
 
 impl ElementEllipticAssemblerBuilder<(), (), (), ()> {
@@ -126,18 +126,21 @@ impl ElementEllipticAssemblerBuilder<(), (), (), ()> {
             space: (),
             op: (),
             qtable: (),
-            u: ()
+            u: (),
         }
     }
 }
 
 impl<Op, QTable, U> ElementEllipticAssemblerBuilder<(), Op, QTable, U> {
-    pub fn with_space<Space>(self, space: &Space) -> ElementEllipticAssemblerBuilder<&Space, Op, QTable, U> {
+    pub fn with_space<Space>(
+        self,
+        space: &Space,
+    ) -> ElementEllipticAssemblerBuilder<&Space, Op, QTable, U> {
         ElementEllipticAssemblerBuilder {
             space,
             op: self.op,
             qtable: self.qtable,
-            u: self.u
+            u: self.u,
         }
     }
 }
@@ -148,24 +151,30 @@ impl<Space, QTable, U> ElementEllipticAssemblerBuilder<Space, (), QTable, U> {
             space: self.space,
             op,
             qtable: self.qtable,
-            u: self.u
+            u: self.u,
         }
     }
 }
 
 impl<Space, Op, U> ElementEllipticAssemblerBuilder<Space, Op, (), U> {
-    pub fn with_quadrature_table<QTable>(self, qtable: &QTable) -> ElementEllipticAssemblerBuilder<Space, Op, &QTable, U> {
+    pub fn with_quadrature_table<QTable>(
+        self,
+        qtable: &QTable,
+    ) -> ElementEllipticAssemblerBuilder<Space, Op, &QTable, U> {
         ElementEllipticAssemblerBuilder {
             space: self.space,
             op: self.op,
             qtable,
-            u: self.u
+            u: self.u,
         }
     }
 }
 
 impl<Space, Op, QTable> ElementEllipticAssemblerBuilder<Space, Op, QTable, ()> {
-    pub fn with_u<'a, T>(self, u: impl Into<DVectorSlice<'a, T>>) -> ElementEllipticAssemblerBuilder<Space, Op, QTable, DVectorSlice<'a, T>>
+    pub fn with_u<'a, T>(
+        self,
+        u: impl Into<DVectorSlice<'a, T>>,
+    ) -> ElementEllipticAssemblerBuilder<Space, Op, QTable, DVectorSlice<'a, T>>
     where
         T: Scalar,
     {
@@ -173,21 +182,22 @@ impl<Space, Op, QTable> ElementEllipticAssemblerBuilder<Space, Op, QTable, ()> {
             space: self.space,
             op: self.op,
             qtable: self.qtable,
-            u: u.into()
+            u: u.into(),
         }
     }
 }
 
-impl<'a, T, Space, Op, QTable> ElementEllipticAssemblerBuilder<&'a Space, &'a Op, &'a QTable, DVectorSlice<'a, T>>
+impl<'a, T, Space, Op, QTable>
+    ElementEllipticAssemblerBuilder<&'a Space, &'a Op, &'a QTable, DVectorSlice<'a, T>>
 where
-    T: Scalar
+    T: Scalar,
 {
     pub fn build(self) -> ElementEllipticAssembler<'a, T, Space, Op, QTable> {
         ElementEllipticAssembler {
             space: self.space,
             op: self.op,
             qtable: self.qtable,
-            u: self.u
+            u: self.u,
         }
     }
 }
@@ -855,7 +865,7 @@ where
 pub struct ElementSourceAssemblerBuilder<SpaceRef, SourceRef, QTableRef> {
     space: SpaceRef,
     source: SourceRef,
-    qtable: QTableRef
+    qtable: QTableRef,
 }
 
 impl ElementSourceAssemblerBuilder<(), (), ()> {
@@ -863,33 +873,42 @@ impl ElementSourceAssemblerBuilder<(), (), ()> {
         Self {
             space: (),
             source: (),
-            qtable: ()
+            qtable: (),
         }
     }
 }
 
 impl<SpaceRef, SourceRef, QTableRef> ElementSourceAssemblerBuilder<SpaceRef, SourceRef, QTableRef> {
-    pub fn with_space<Space>(self, space: &Space) -> ElementSourceAssemblerBuilder<&Space, SourceRef, QTableRef> {
+    pub fn with_space<Space>(
+        self,
+        space: &Space,
+    ) -> ElementSourceAssemblerBuilder<&Space, SourceRef, QTableRef> {
         ElementSourceAssemblerBuilder {
             space,
             source: self.source,
-            qtable: self.qtable
+            qtable: self.qtable,
         }
     }
 
-    pub fn with_source<Source>(self, source: &Source) -> ElementSourceAssemblerBuilder<SpaceRef, &Source, QTableRef> {
+    pub fn with_source<Source>(
+        self,
+        source: &Source,
+    ) -> ElementSourceAssemblerBuilder<SpaceRef, &Source, QTableRef> {
         ElementSourceAssemblerBuilder {
             space: self.space,
             source,
-            qtable: self.qtable
+            qtable: self.qtable,
         }
     }
 
-    pub fn with_quadrature_table<QTable>(self, qtable: &QTable) -> ElementSourceAssemblerBuilder<SpaceRef, SourceRef, &QTable> {
+    pub fn with_quadrature_table<QTable>(
+        self,
+        qtable: &QTable,
+    ) -> ElementSourceAssemblerBuilder<SpaceRef, SourceRef, &QTable> {
         ElementSourceAssemblerBuilder {
             space: self.space,
             source: self.source,
-            qtable
+            qtable,
         }
     }
 }
@@ -899,7 +918,7 @@ impl<'a, Space, Source, QTable> ElementSourceAssemblerBuilder<&'a Space, &'a Sou
         ElementSourceAssembler {
             space: self.space,
             qtable: self.qtable,
-            source: self.source
+            source: self.source,
         }
     }
 }

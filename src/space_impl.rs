@@ -1,10 +1,12 @@
-use crate::allocators::{ElementConnectivityAllocator};
-use crate::connectivity::{CellConnectivity};
+use crate::allocators::ElementConnectivityAllocator;
+use crate::connectivity::CellConnectivity;
 use crate::element::{ElementConnectivity, FiniteElement, MatrixSliceMut, ReferenceFiniteElement};
 use crate::mesh::Mesh;
 use crate::model::NodalModel;
 use crate::nalgebra::{Dynamic, MatrixMN, U1};
-use crate::space::{FiniteElementSpace, FiniteElementSpace2, GeometricFiniteElementSpace, FiniteElementConnectivity};
+use crate::space::{
+    FiniteElementConnectivity, FiniteElementSpace, FiniteElementSpace2, GeometricFiniteElementSpace,
+};
 use crate::SmallDim;
 use nalgebra::{DefaultAllocator, DimName, Point, Scalar};
 
@@ -42,9 +44,9 @@ where
 impl<T, D, C> FiniteElementConnectivity for Mesh<T, D, C>
 where
     T: Scalar,
-    C: ElementConnectivity<T, GeometryDim=D>,
+    C: ElementConnectivity<T, GeometryDim = D>,
     D: SmallDim,
-    DefaultAllocator: ElementConnectivityAllocator<T, C>
+    DefaultAllocator: ElementConnectivityAllocator<T, C>,
 {
     fn num_elements(&self) -> usize {
         self.num_connectivities()
