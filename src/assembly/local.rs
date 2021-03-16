@@ -65,13 +65,11 @@ where
     }
 }
 
-/// TODO: Rename to `ElementMatrixAssembler`
 pub trait ElementMatrixAssembler<T: Scalar>: ElementConnectivityAssembler {
-    // TODO: Reorder arguments so that they're consistent with ElementVectorAssembler
     fn assemble_element_matrix_into(
         &self,
-        output: DMatrixSliceMut<T>,
         element_index: usize,
+        output: DMatrixSliceMut<T>,
     ) -> Result<(), Box<dyn Error + Send + Sync>>;
 
     fn as_connectivity_assembler(&self) -> &dyn ElementConnectivityAssembler;
@@ -144,8 +142,8 @@ where
 {
     fn assemble_element_matrix_into(
         &self,
-        mut output: DMatrixSliceMut<T>,
         element_index: usize,
+        mut output: DMatrixSliceMut<T>,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
         let connectivity = &self.connectivity[element_index];
         let element = connectivity.element(self.vertices).expect(

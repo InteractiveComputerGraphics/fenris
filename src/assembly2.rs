@@ -470,12 +470,11 @@ where
     QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Data>,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Op::SolutionDim>,
 {
-    // TODO: Reorder method parameters (element_index first)
     #[allow(non_snake_case)]
     fn assemble_element_matrix_into(
         &self,
-        mut output: DMatrixSliceMut<T, U1, Dynamic>,
         element_index: usize,
+        mut output: DMatrixSliceMut<T, U1, Dynamic>,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
         let s = self.solution_dim();
         let n = self.element_node_count(element_index);

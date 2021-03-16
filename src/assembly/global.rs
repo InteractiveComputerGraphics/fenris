@@ -139,7 +139,7 @@ impl<T: RealField> CsrAssembler<T> {
             element_matrix.fill(T::zero());
 
             let matrix_slice = DMatrixSliceMut::from(&mut *element_matrix);
-            element_assembler.assemble_element_matrix_into(matrix_slice, i)?;
+            element_assembler.assemble_element_matrix_into(i, matrix_slice)?;
             element_assembler.populate_element_nodes(element_global_nodes, i);
 
             connectivity_permutation.clear();
@@ -301,7 +301,7 @@ impl<T: RealField + Send> CsrParAssembler<T> {
                     element_matrix.fill(T::zero());
 
                     let matrix_slice = DMatrixSliceMut::from(&mut *element_matrix);
-                    element_assembler.assemble_element_matrix_into(matrix_slice, element_index)?;
+                    element_assembler.assemble_element_matrix_into(element_index, matrix_slice)?;
                     element_assembler
                         .populate_element_nodes(&mut element_global_nodes, element_index);
                     debug_assert_eq!(subset.global_indices(), element_global_nodes.as_slice());
