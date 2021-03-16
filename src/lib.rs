@@ -1,9 +1,12 @@
+use nalgebra::{DimMin, DimName};
+
 pub mod allocators;
 pub mod assembly;
 pub mod assembly2;
 pub mod connectivity;
 pub mod element;
 pub mod error;
+pub mod io;
 pub mod mesh;
 pub mod model;
 pub mod procedural;
@@ -11,7 +14,6 @@ pub mod quadrature;
 pub mod reorder;
 pub mod space;
 pub mod util;
-pub mod vtk;
 
 pub(crate) mod workspace;
 
@@ -32,8 +34,6 @@ mod space_impl;
 pub extern crate nalgebra;
 pub extern crate nested_vec;
 pub extern crate vtkio;
-
-use nalgebra::{DimMin, DimName};
 
 /// A small, fixed-size dimension.
 ///
