@@ -73,6 +73,8 @@ pub trait ElementMatrixAssembler<T: Scalar>: ElementConnectivityAssembler {
         output: DMatrixSliceMut<T>,
         element_index: usize,
     ) -> Result<(), Box<dyn Error + Send + Sync>>;
+
+    fn as_connectivity_assembler(&self) -> &dyn ElementConnectivityAssembler;
 }
 
 pub struct GeneralizedStiffnessElementAssembler<
@@ -168,6 +170,10 @@ where
         self.transformation.transform_element_matrix(&mut output);
 
         Ok(())
+    }
+
+    fn as_connectivity_assembler(&self) -> &dyn ElementConnectivityAssembler {
+        self
     }
 }
 

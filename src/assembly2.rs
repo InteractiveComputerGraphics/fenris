@@ -505,6 +505,10 @@ where
             Ok(())
         })
     }
+
+    fn as_connectivity_assembler(&self) -> &dyn ElementConnectivityAssembler {
+        self
+    }
 }
 
 /// Lookup table mapping elements to quadrature rules.

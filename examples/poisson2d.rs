@@ -1,13 +1,13 @@
-use fenris::assembly::global::{CsrAssembler, CsrParAssembler, apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs};
-use fenris::assembly2::{EllipticContraction, EllipticOperator, Operator, SerialVectorAssembler, SourceFunction, UniformQuadratureTable, ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder};
+use fenris::assembly::global::{CsrAssembler, apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs};
+use fenris::assembly2::{EllipticContraction, EllipticOperator, Operator, SerialVectorAssembler,
+                        SourceFunction, UniformQuadratureTable, ElementEllipticAssemblerBuilder,
+                        ElementSourceAssemblerBuilder};
 use fenris::mesh::QuadMesh2d;
 use fenris::nalgebra::{DVector, MatrixMN, Point2, VectorN, U1, U2};
 use fenris::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::quadrature::quad_quadrature_strength_5_f64;
-use fenris_sparse::CsrMatrix;
 use nalgebra::{Point, Vector1};
 use std::error::Error;
-use std::sync::Arc;
 
 pub struct PoissonOperator2d;
 
@@ -69,27 +69,20 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         .with_space(&mesh)
         .with_op(&op)
         .with_quadrature_table(&quadrature)
+        // TODO: If the operator is linear, u is not actually needed...
+        // How to reflect this in the API?
         .with_u(&u)
         .build();
 
-    // TODO: CsrAssembler is not able to assemble patterns atm. So we use par assembler for the
-    // pattern
-    let matrix_assembler = CsrParAssembler::<f64>::default();
     let vector_assembler = SerialVectorAssembler::<f64>::default();
-    let pattern = matrix_assembler.assemble_pattern(&element_assembler);
     let mut matrix_assembler = CsrAssembler::default();
-    let nnz = pattern.nnz();
-    let mut a = CsrMatrix::from_pattern_and_values(Arc::new(pattern), vec![0.0; nnz]);
-    // TODO: Need a method that does the whole business of assembling a matrix without
-    // needing storage first
-    // TODO: Doesn't need to be mutable, does it?
-    matrix_assembler.assemble_into_csr(&mut a, &element_assembler)?;
+    // TODO: Matrix assembler shouldn't need to be mutable for assembly
+    let mut a = matrix_assembler.assemble(&element_assembler)?;
 
-    let source = Source;
     let source_assembler = ElementSourceAssemblerBuilder::new()
         .with_space(&mesh)
         .with_quadrature_table(&quadrature)
-        .with_source(&source)
+        .with_source(&Source)
         .build();
 
     let mut b = vector_assembler.assemble_vector(&source_assembler)?;
