@@ -9,6 +9,6 @@ edition = "2018"
 [dependencies]
 fenris-sparse = { path=".." }
 nalgebra = "0.24.1"
-proptest = "0.9"
+proptest = "1.0"
 num = "0.2"
 util = { path = "../../util" }

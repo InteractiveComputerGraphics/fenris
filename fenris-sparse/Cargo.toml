@@ -15,6 +15,6 @@ itertools = "0.9"
 paradis = { path = "../paradis" }
 
 [dev-dependencies]
-proptest = "0.9"
+proptest = "1.0"
 fenris-sparse-proptest = { path = "fenris-sparse-proptest" }
 util = { path = "../util" }
