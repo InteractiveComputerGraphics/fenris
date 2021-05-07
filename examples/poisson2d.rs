@@ -14,6 +14,7 @@ use std::error::Error;
 use fenris::io::vtk::FiniteElementMeshDataSetBuilder;
 use fenris::vtkio::model::{Vtk, Version};
 use std::path::Path;
+use vtkio::model::ByteOrder;
 
 pub struct PoissonOperator2d;
 
@@ -112,19 +113,11 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     println!("{}", u);
 
-    // TODO: Streamline VTK export (also upgrade VTK version)
-    let dataset = FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
-        .try_build()
-        // TODO: Use eyre::Report so we don't have problems with Sync/Send etc.?
+    FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
+        .with_title("Poisson 2D")
+        .try_export("poisson2d.vtu")
+        // TODO: Return error instead of unwrapping
         .unwrap();
-
-    let vtk = Vtk {
-        version: Version { major: 4, minor: 1 },
-        title: "Poisson 2D".to_string(),
-        data: dataset
-    };
-
-    fenris::vtkio::export_be(vtk, &Path::new("poisson2d.vtk"))?;
 
     Ok(())
 }

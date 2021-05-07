@@ -10,7 +10,7 @@ default = [ "proptest" ]
 [dependencies]
 nalgebra = { version = "0.24.1", features = [ "serde-serialize" ] }
 alga = { version = "0.9", default-features = false }
-vtkio = "0.3"
+vtkio = "0.6"
 num = "0.2"
 numeric_literals = { git = "https://github.com/Andlon/numeric_literals", rev = "c43f098e617f0b768b43c185711ed106f4170cd7" }
 itertools = "0.9"

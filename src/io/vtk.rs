@@ -1,14 +1,12 @@
 use crate::mesh::{Mesh};
 use nalgebra::{DefaultAllocator, DimName, RealField, Scalar};
-use vtkio::model::{Attributes, CellType, Cells, DataSet};
+use vtkio::model::{CellType, Cells, DataSet, UnstructuredGridPiece, VertexNumbers};
 
 use crate::connectivity::{
     Connectivity, Hex20Connectivity, Hex27Connectivity, Hex8Connectivity, Quad4d2Connectivity,
     Quad9d2Connectivity, Segment2d2Connectivity, Tet10Connectivity, Tet4Connectivity,
     Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity,
 };
-
-
 
 use nalgebra::allocator::Allocator;
 
@@ -17,6 +15,9 @@ use std::convert::{TryInto};
 // TODO: This is kind of a dirty hack to get around the fact that some VTK things are in
 // the geometry crate and some are in this crate. Need to clean this up!
 pub use fenris_geometry::vtkio::*;
+use crate::vtkio::model::{Piece, Version, ByteOrder, Vtk};
+use num::ToPrimitive;
+use std::path::Path;
 
 /// Represents connectivity that is supported by VTK.
 pub trait VtkCellConnectivity: Connectivity {
@@ -288,6 +289,9 @@ where
 {
     mesh: &'a Mesh<T, D, C>,
 
+    // Only used for exporting directly to file
+    title: Option<String>
+
     // TODO: How to represent attributes?
 }
 
@@ -299,17 +303,25 @@ where
 {
     pub fn from_mesh(mesh: &'a Mesh<T, D, C>) -> Self {
         Self {
-            mesh
+            mesh,
+            title: None
         }
     }
 }
 
 impl <'a, T, D, C> FiniteElementMeshDataSetBuilder<'a, T, D, C>
 where
-    T: RealField,
+    T: RealField + ToPrimitive,
     D: DimName,
     DefaultAllocator: Allocator<T, D>
 {
+    pub fn with_title(self, title: impl Into<String>) -> Self {
+        Self {
+            mesh: self.mesh,
+            title: Some(title.into())
+        }
+    }
+
     // TODO: Different error type
     pub fn try_build(&self) -> Result<DataSet, Box<dyn std::error::Error>>
     where
@@ -352,14 +364,44 @@ where
 
         // TODO: Attributes
 
-        Ok(DataSet::UnstructuredGrid {
+        let piece = UnstructuredGridPiece {
             points: points.into(),
             cells: Cells {
-                num_cells: self.mesh.connectivity().len() as u32,
-                vertices,
+                // TODO: Use XML instead of Legacy?
+                cell_verts: VertexNumbers::Legacy {
+                    num_cells: self.mesh.connectivity().len() as u32,
+                    vertices
+                },
+                types: cell_types
             },
-            cell_types,
-            data: Attributes::new(),
+            data: Default::default()
+        };
+
+        Ok(DataSet::UnstructuredGrid {
+            meta: None,
+            pieces: vec![Piece::Inline(Box::new(piece))]
         })
+    }
+
+    /// Convenience function for directly exporting the dataset to a file.
+    pub fn try_export(&self, filename: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error>>
+    where
+        C: VtkCellConnectivity
+    {
+        let filepath = filename.as_ref();
+        let fallback_title = filepath.file_stem()
+            .map(|os_str| os_str.to_string_lossy().to_string())
+            .unwrap_or_else(|| "untitled".to_string());
+        let dataset = self.try_build()?;
+        Vtk {
+            // TODO: What to choose here? Depends on format?
+            version: Version { major: 4, minor: 1 },
+            // If we don't have a title then just make the filepath the title
+            title: self.title.clone().unwrap_or(fallback_title),
+            byte_order: ByteOrder::BigEndian,
+            data: dataset,
+            file_path: None
+        }.export(filepath)?;
+        Ok(())
     }
 }
