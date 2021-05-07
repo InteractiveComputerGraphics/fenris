@@ -124,7 +124,7 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         data: dataset
     };
 
-    fenris::vtkio::export(vtk, &Path::new("poisson2d.vtk"))?;
+    fenris::vtkio::export_be(vtk, &Path::new("poisson2d.vtk"))?;
 
     Ok(())
 }
