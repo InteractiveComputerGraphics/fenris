@@ -33,7 +33,6 @@ use std::cell::RefCell;
 use std::collections::BTreeSet;
 use std::error::Error;
 use std::sync::Arc;
-use num::Zero;
 
 /// An assembler for CSR matrices.
 #[derive(Debug, Clone)]

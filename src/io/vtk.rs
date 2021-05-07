@@ -1,18 +1,15 @@
-use crate::mesh::{Mesh, Mesh2d};
-use nalgebra::{DefaultAllocator, DimMin, DimName, Point, RealField, Scalar};
-use num::Zero;
-use vtkio::model::{Attribute, Attributes, CellType, Cells, DataSet};
-use vtkio::Error;
+use crate::mesh::{Mesh};
+use nalgebra::{DefaultAllocator, DimName, RealField, Scalar};
+use vtkio::model::{Attributes, CellType, Cells, DataSet};
 
-use crate::allocators::ElementConnectivityAllocator;
 use crate::connectivity::{
     Connectivity, Hex20Connectivity, Hex27Connectivity, Hex8Connectivity, Quad4d2Connectivity,
     Quad9d2Connectivity, Segment2d2Connectivity, Tet10Connectivity, Tet4Connectivity,
     Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity,
 };
-use crate::element::{ElementConnectivity, FiniteElement};
-use crate::quadrature::Quadrature;
-use itertools::zip_eq;
+
+
+
 use nalgebra::allocator::Allocator;
 
 use std::convert::{TryInto};
@@ -158,130 +155,130 @@ impl VtkCellConnectivity for Hex27Connectivity {
     }
 }
 
-impl<'a, T, D, C> From<&'a Mesh<T, D, C>> for DataSet
-where
-    T: Scalar + Zero,
-    D: DimName,
-    C: VtkCellConnectivity,
-    DefaultAllocator: Allocator<T, D>,
-{
-    fn from(mesh: &'a Mesh<T, D, C>) -> Self {
-        // TODO: Create a "SmallDim" trait or something for this case...?
-        // Or just implement the trait directly for U1/U2/U3?
-        assert!(D::dim() <= 3, "Unable to support dimensions larger than 3.");
-        let points: Vec<_> = {
-            let mut points: Vec<T> = Vec::new();
-            for v in mesh.vertices() {
-                points.extend_from_slice(v.coords.as_slice());
+// impl<'a, T, D, C> From<&'a Mesh<T, D, C>> for DataSet
+// where
+//     T: Scalar + Zero,
+//     D: DimName,
+//     C: VtkCellConnectivity,
+//     DefaultAllocator: Allocator<T, D>,
+// {
+//     fn from(mesh: &'a Mesh<T, D, C>) -> Self {
+//         // TODO: Create a "SmallDim" trait or something for this case...?
+//         // Or just implement the trait directly for U1/U2/U3?
+//         assert!(D::dim() <= 3, "Unable to support dimensions larger than 3.");
+//         let points: Vec<_> = {
+//             let mut points: Vec<T> = Vec::new();
+//             for v in mesh.vertices() {
+//                 points.extend_from_slice(v.coords.as_slice());
+//
+//                 for _ in v.coords.len()..3 {
+//                     points.push(T::zero());
+//                 }
+//             }
+//             points
+//         };
+//
+//         // Vertices is laid out as follows: N, i_1, i_2, ... i_N,
+//         // so for quads this becomes 4 followed by the four indices making up the quad
+//         let mut vertices = Vec::new();
+//         let mut cell_types = Vec::new();
+//         let mut vertex_indices = Vec::new();
+//         for cell in mesh.connectivity() {
+//             // TODO: Return Result or something
+//             vertices.push(cell.num_nodes() as u32);
+//
+//             vertex_indices.clear();
+//             vertex_indices.resize(cell.num_nodes(), 0);
+//             cell.write_vtk_connectivity(&mut vertex_indices);
+//
+//             // TODO: Safer cast? How to handle this? TryFrom instead of From?
+//             vertices.extend(vertex_indices.iter().copied().map(|i| i as u32));
+//             cell_types.push(cell.cell_type());
+//         }
+//
+//         DataSet::UnstructuredGrid {
+//             points: points.into(),
+//             cells: Cells {
+//                 num_cells: mesh.connectivity().len() as u32,
+//                 vertices,
+//             },
+//             cell_types,
+//             data: Attributes::new(),
+//         }
+//     }
+// }
 
-                for _ in v.coords.len()..3 {
-                    points.push(T::zero());
-                }
-            }
-            points
-        };
-
-        // Vertices is laid out as follows: N, i_1, i_2, ... i_N,
-        // so for quads this becomes 4 followed by the four indices making up the quad
-        let mut vertices = Vec::new();
-        let mut cell_types = Vec::new();
-        let mut vertex_indices = Vec::new();
-        for cell in mesh.connectivity() {
-            // TODO: Return Result or something
-            vertices.push(cell.num_nodes() as u32);
-
-            vertex_indices.clear();
-            vertex_indices.resize(cell.num_nodes(), 0);
-            cell.write_vtk_connectivity(&mut vertex_indices);
-
-            // TODO: Safer cast? How to handle this? TryFrom instead of From?
-            vertices.extend(vertex_indices.iter().copied().map(|i| i as u32));
-            cell_types.push(cell.cell_type());
-        }
-
-        DataSet::UnstructuredGrid {
-            points: points.into(),
-            cells: Cells {
-                num_cells: mesh.connectivity().len() as u32,
-                vertices,
-            },
-            cell_types,
-            data: Attributes::new(),
-        }
-    }
-}
-
-pub fn create_vtk_data_set_from_quadratures<T, C, D>(
-    vertices: &[Point<T, D>],
-    connectivity: &[C],
-    quadrature_rules: impl IntoIterator<Item = impl Quadrature<T, C::ReferenceDim>>,
-) -> DataSet
-where
-    T: RealField,
-    D: DimName + DimMin<D, Output = D>,
-    C: ElementConnectivity<T, GeometryDim = D, ReferenceDim = D>,
-    DefaultAllocator: Allocator<T, D> + ElementConnectivityAllocator<T, C>,
-{
-    let quadrature_rules = quadrature_rules.into_iter();
-
-    // Quadrature weights and points mapped to physical domain
-    let mut physical_weights = Vec::new();
-    let mut physical_points = Vec::new();
-    // Cell indices map each individual quadrature point to its original cell
-    let mut cell_indices = Vec::new();
-
-    for ((cell_idx, conn), quadrature) in zip_eq(connectivity.iter().enumerate(), quadrature_rules)
-    {
-        let element = conn.element(vertices).unwrap();
-        for (w_ref, xi) in zip_eq(quadrature.weights(), quadrature.points()) {
-            let j = element.reference_jacobian(xi);
-            let x = element.map_reference_coords(xi);
-            let w_physical = j.determinant().abs() * *w_ref;
-            physical_points.push(Point::from(x));
-            physical_weights.push(w_physical);
-            cell_indices.push(cell_idx as u64);
-        }
-    }
-
-    let mut dataset = create_vtk_data_set_from_points(&physical_points);
-    let weight_point_attributes = Attribute::Scalars {
-        num_comp: 1,
-        lookup_table: None,
-        data: physical_weights.into(),
-    };
-
-    let cell_idx_point_attributes = Attribute::Scalars {
-        num_comp: 1,
-        lookup_table: None,
-        data: cell_indices.into(),
-    };
-
-    match dataset {
-        DataSet::PolyData { ref mut data, .. } => {
-            data.point
-                .push(("weight".to_string(), weight_point_attributes));
-            data.point
-                .push(("cell_index".to_string(), cell_idx_point_attributes));
-        }
-        _ => panic!("Unexpected enum variant from data set."),
-    }
-
-    dataset
-}
-
-/// Convenience function for writing meshes to VTK files.
-pub fn write_vtk_mesh<'a, T, Connectivity>(
-    mesh: &'a Mesh2d<T, Connectivity>,
-    filename: &str,
-    title: &str,
-) -> Result<(), Error>
-where
-    T: Scalar + Zero,
-    &'a Mesh2d<T, Connectivity>: Into<DataSet>,
-{
-    let data = mesh.into();
-    write_vtk(data, filename, title)
-}
+// pub fn create_vtk_data_set_from_quadratures<T, C, D>(
+//     vertices: &[Point<T, D>],
+//     connectivity: &[C],
+//     quadrature_rules: impl IntoIterator<Item = impl Quadrature<T, C::ReferenceDim>>,
+// ) -> DataSet
+// where
+//     T: RealField,
+//     D: DimName + DimMin<D, Output = D>,
+//     C: ElementConnectivity<T, GeometryDim = D, ReferenceDim = D>,
+//     DefaultAllocator: Allocator<T, D> + ElementConnectivityAllocator<T, C>,
+// {
+//     let quadrature_rules = quadrature_rules.into_iter();
+//
+//     // Quadrature weights and points mapped to physical domain
+//     let mut physical_weights = Vec::new();
+//     let mut physical_points = Vec::new();
+//     // Cell indices map each individual quadrature point to its original cell
+//     let mut cell_indices = Vec::new();
+//
+//     for ((cell_idx, conn), quadrature) in zip_eq(connectivity.iter().enumerate(), quadrature_rules)
+//     {
+//         let element = conn.element(vertices).unwrap();
+//         for (w_ref, xi) in zip_eq(quadrature.weights(), quadrature.points()) {
+//             let j = element.reference_jacobian(xi);
+//             let x = element.map_reference_coords(xi);
+//             let w_physical = j.determinant().abs() * *w_ref;
+//             physical_points.push(Point::from(x));
+//             physical_weights.push(w_physical);
+//             cell_indices.push(cell_idx as u64);
+//         }
+//     }
+//
+//     let mut dataset = create_vtk_data_set_from_points(&physical_points);
+//     let weight_point_attributes = Attribute::Scalars {
+//         num_comp: 1,
+//         lookup_table: None,
+//         data: physical_weights.into(),
+//     };
+//
+//     let cell_idx_point_attributes = Attribute::Scalars {
+//         num_comp: 1,
+//         lookup_table: None,
+//         data: cell_indices.into(),
+//     };
+//
+//     match dataset {
+//         DataSet::PolyData { ref mut data, .. } => {
+//             data.point
+//                 .push(("weight".to_string(), weight_point_attributes));
+//             data.point
+//                 .push(("cell_index".to_string(), cell_idx_point_attributes));
+//         }
+//         _ => panic!("Unexpected enum variant from data set."),
+//     }
+//
+//     dataset
+// }
+//
+// /// Convenience function for writing meshes to VTK files.
+// pub fn write_vtk_mesh<'a, T, Connectivity>(
+//     mesh: &'a Mesh2d<T, Connectivity>,
+//     filename: &str,
+//     title: &str,
+// ) -> Result<(), Error>
+// where
+//     T: Scalar + Zero,
+//     &'a Mesh2d<T, Connectivity>: Into<DataSet>,
+// {
+//     let data = mesh.into();
+//     write_vtk(data, filename, title)
+// }
 
 pub struct FiniteElementMeshDataSetBuilder<'a, T, D, C>
 where
