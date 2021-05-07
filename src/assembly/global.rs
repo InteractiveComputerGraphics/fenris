@@ -33,6 +33,7 @@ use std::cell::RefCell;
 use std::collections::BTreeSet;
 use std::error::Error;
 use std::sync::Arc;
+use num::Zero;
 
 /// An assembler for CSR matrices.
 #[derive(Debug, Clone)]
@@ -44,12 +45,12 @@ pub struct CsrAssembler<T: Scalar> {
     element_matrix: DMatrix<T>,
 }
 
-impl<T: RealField> Default for CsrAssembler<T> {
+impl<T: Scalar> Default for CsrAssembler<T> {
     fn default() -> Self {
         Self {
             connectivity_permutation: Vec::new(),
             element_global_nodes: Vec::new(),
-            element_matrix: DMatrix::zeros(0, 0),
+            element_matrix: DMatrix::from_row_slice(0, 0, &[]),
         }
     }
 }
@@ -89,13 +90,17 @@ impl<T: Scalar> CsrAssembler<T> {
         let mut offsets = Vec::with_capacity(num_rows + 1);
         let mut column_indices = Vec::with_capacity(matrix_entries.len());
 
+        offsets.push(0);
         for (i, j) in matrix_entries {
-            while i > offsets.len() {
+            while i + 1 > offsets.len() {
+                // This condition indicates that we have reached a new row. We need to run this
+                // in a while loop to correctly handle consecutive empty rows
                 offsets.push(column_indices.len());
             }
             column_indices.push(j);
         }
 
+        // Make sure we fill out the remaining offsets if the last rows are empty
         while offsets.len() < (num_rows + 1) {
             offsets.push(column_indices.len());
         }

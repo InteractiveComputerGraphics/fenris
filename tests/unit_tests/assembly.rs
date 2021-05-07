@@ -7,9 +7,7 @@ use nalgebra::{Matrix2x4, Matrix4, MatrixN, Point2, RealField, U2};
 use nalgebra::dimension::U8;
 use num::Zero;
 
-use fenris::assembly::global::{
-    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_matrix, CsrParAssembler,
-};
+use fenris::assembly::global::{apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_matrix, CsrParAssembler, CsrAssembler};
 use fenris::assembly::local::{assemble_generalized_element_mass, ElementConnectivityAssembler};
 use fenris::connectivity::Quad4d2Connectivity;
 use fenris::element::{ElementConnectivity, MatrixSliceMut, Quad4d2Element};
@@ -642,6 +640,90 @@ impl ElementConnectivityAssembler for MockElementAssembler {
     fn populate_element_nodes(&self, output: &mut [usize], element_index: usize) {
         output.copy_from_slice(&self.element_connectivities[element_index])
     }
+}
+
+#[test]
+fn csr_assemble_mock_pattern() {
+    // Solution dim == 1
+
+    // Empty pattern
+    {
+        let element_assembler = MockElementAssembler {
+            solution_dim: 1,
+            num_nodes: 0,
+            element_connectivities: vec![vec![]],
+        };
+        let csr_assembler = CsrAssembler::<i32>::default();
+        let pattern = csr_assembler.assemble_pattern(&element_assembler);
+        let expected_pattern = SparsityPattern::from_offsets_and_indices(0, 0, vec![0], vec![]);
+        assert_eq!(pattern, expected_pattern);
+    }
+
+    // Empty pattern
+    {
+        let element_assembler = MockElementAssembler {
+            solution_dim: 2,
+            num_nodes: 5,
+            element_connectivities: vec![vec![]],
+        };
+        let csr_assembler = CsrAssembler::<i32>::default();
+        let pattern = csr_assembler.assemble_pattern(&element_assembler);
+        let expected_pattern =
+            SparsityPattern::from_offsets_and_indices(10, 10, vec![0; 11], vec![]);
+        assert_eq!(pattern, expected_pattern);
+    }
+
+    // Simple pattern, solution dim == 1
+    {
+        let element_assembler = MockElementAssembler {
+            solution_dim: 1,
+            num_nodes: 6,
+            element_connectivities: vec![
+                vec![0, 1, 2],
+                vec![2, 3],
+                vec![],
+                vec![3, 4, 4, 4, 4, 4, 4],
+            ],
+        };
+        let csr_assembler = CsrAssembler::<i32>::default();
+        let pattern = csr_assembler.assemble_pattern(&element_assembler);
+        let expected_pattern = SparsityPattern::from_offsets_and_indices(
+            6,
+            6,
+            vec![0, 3, 6, 10, 13, 15, 15],
+            vec![0, 1, 2, 0, 1, 2, 0, 1, 2, 3, 2, 3, 4, 3, 4],
+        );
+        assert_eq!(pattern, expected_pattern);
+    }
+
+    // Simple pattern, solution dim == 2
+    {
+        let element_assembler = MockElementAssembler {
+            solution_dim: 2,
+            num_nodes: 6,
+            element_connectivities: vec![
+                vec![0, 1, 2],
+                vec![2, 3],
+                vec![],
+                vec![3, 4, 4, 4, 4, 4, 4],
+            ],
+        };
+        let csr_assembler = CsrParAssembler::<i32>::default();
+        let pattern = csr_assembler.assemble_pattern(&element_assembler);
+        let expected_pattern = SparsityPattern::from_offsets_and_indices(
+            12,
+            12,
+            vec![0, 6, 12, 18, 24, 32, 40, 46, 52, 56, 60, 60, 60],
+            vec![
+                0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3,
+                4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 4, 5, 6, 7, 8, 9, 4, 5, 6, 7, 8, 9, 6, 7, 8, 9,
+                6, 7, 8, 9,
+            ],
+        );
+        assert_eq!(pattern, expected_pattern);
+    }
+
+    // TODO: Would be good to have some property tests...
 }
 
 #[test]
