@@ -113,6 +113,7 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
         .with_title("Poisson 2D")
+        .with_point_scalar_attributes("u", u.as_slice())
         .try_export("poisson2d.vtu")
         // TODO: Return error instead of unwrapping
         .unwrap();

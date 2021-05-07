@@ -1,6 +1,6 @@
 use crate::mesh::Mesh;
 use nalgebra::{DefaultAllocator, DimName, RealField, Scalar};
-use vtkio::model::{CellType, Cells, DataSet, UnstructuredGridPiece, VertexNumbers};
+use vtkio::model::{CellType, Cells, DataSet, UnstructuredGridPiece, VertexNumbers, Attribute};
 
 use crate::connectivity::{
     Connectivity, Hex20Connectivity, Hex27Connectivity, Hex8Connectivity, Quad4d2Connectivity,
@@ -14,7 +14,7 @@ use std::convert::TryInto;
 
 // TODO: This is kind of a dirty hack to get around the fact that some VTK things are in
 // the geometry crate and some are in this crate. Need to clean this up!
-use crate::vtkio::model::{ByteOrder, Piece, Version, Vtk};
+use crate::vtkio::model::{ByteOrder, Piece, Version, Vtk, Attributes, DataArray};
 pub use fenris_geometry::vtkio::*;
 use num::ToPrimitive;
 use std::path::Path;
@@ -289,6 +289,8 @@ where
 {
     mesh: &'a Mesh<T, D, C>,
 
+    attributes: Attributes,
+
     // Only used for exporting directly to file
     title: Option<String>, // TODO: How to represent attributes?
 }
@@ -300,7 +302,7 @@ where
     DefaultAllocator: Allocator<T, D>,
 {
     pub fn from_mesh(mesh: &'a Mesh<T, D, C>) -> Self {
-        Self { mesh, title: None }
+        Self { mesh, attributes: Attributes::new(), title: None }
     }
 }
 
@@ -314,6 +316,36 @@ where
         Self {
             mesh: self.mesh,
             title: Some(title.into()),
+            attributes: Attributes::new()
+        }
+    }
+
+    /// Adds the given attribute data as scalar point attributes.
+    ///
+    /// The number of components per scalar is inferred from the length of the attribute array.
+    /// For example, if the mesh has 10 points and there are 20 attribute entries, we assign
+    /// 2 scalars per point.
+    ///
+    /// # Panics
+    /// Panics if the number of attribute entries is not divisible by the number of points.
+    pub fn with_point_scalar_attributes(self, name: impl Into<String>, attributes: &[T]) -> Self {
+        let num_points = self.mesh.vertices().len();
+        assert_eq!(attributes.len() % num_points, 0,
+                   "Number of attributes must be a multiple of point count");
+
+        let num_components = attributes.len() / num_points;
+
+        let mut attribs = self.attributes;
+        let num_comp = num_components.try_into()
+            .expect("Number of components is ridiculously huge, stop it!");
+        let data_array = DataArray::scalars(name, num_comp)
+            .with_data(attributes.to_vec());
+        attribs.point.push(Attribute::DataArray(data_array));
+
+        Self {
+            mesh: self.mesh,
+            attributes: attribs,
+            title: self.title
         }
     }
 
@@ -369,7 +401,7 @@ where
                 },
                 types: cell_types,
             },
-            data: Default::default(),
+            data: self.attributes.clone()
         };
 
         Ok(DataSet::UnstructuredGrid {
