@@ -15,6 +15,12 @@ use crate::quadrature::Quadrature;
 use itertools::zip_eq;
 use nalgebra::allocator::Allocator;
 
+use std::convert::{TryInto};
+
+// TODO: This is kind of a dirty hack to get around the fact that some VTK things are in
+// the geometry crate and some are in this crate. Need to clean this up!
+pub use fenris_geometry::vtkio::*;
+
 /// Represents connectivity that is supported by VTK.
 pub trait VtkCellConnectivity: Connectivity {
     fn num_nodes(&self) -> usize {
@@ -263,10 +269,6 @@ where
     dataset
 }
 
-// TODO: This is kind of a dirty hack to get around the fact that some VTK things are in
-// the geometry crate and some are in this crate. Need to clean this up!
-pub use fenris_geometry::vtkio::*;
-
 /// Convenience function for writing meshes to VTK files.
 pub fn write_vtk_mesh<'a, T, Connectivity>(
     mesh: &'a Mesh2d<T, Connectivity>,
@@ -279,4 +281,88 @@ where
 {
     let data = mesh.into();
     write_vtk(data, filename, title)
+}
+
+pub struct FiniteElementMeshDataSetBuilder<'a, T, D, C>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>
+{
+    mesh: &'a Mesh<T, D, C>,
+
+    // TODO: How to represent attributes?
+}
+
+impl<'a, T, D, C> FiniteElementMeshDataSetBuilder<'a, T, D, C>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>
+{
+    pub fn from_mesh(mesh: &'a Mesh<T, D, C>) -> Self {
+        Self {
+            mesh
+        }
+    }
+}
+
+impl <'a, T, D, C> FiniteElementMeshDataSetBuilder<'a, T, D, C>
+where
+    T: RealField,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>
+{
+    // TODO: Different error type
+    pub fn try_build(&self) -> Result<DataSet, Box<dyn std::error::Error>>
+    where
+        C: VtkCellConnectivity
+    {
+        // TODO: Create a "SmallDim" trait or something for this case...?
+        // Or just implement the trait directly for U1/U2/U3?
+        assert!(D::dim() <= 3, "Unable to support dimensions larger than 3.");
+        let points: Vec<_> = {
+            let mut points: Vec<T> = Vec::new();
+            for v in self.mesh.vertices() {
+                points.extend_from_slice(v.coords.as_slice());
+
+                for _ in v.coords.len()..3 {
+                    points.push(T::zero());
+                }
+            }
+            points
+        };
+
+        // Vertices is laid out as follows: N, i_1, i_2, ... i_N,
+        // so for e.g. quads this becomes 4 followed by the four indices making up the quad
+        let mut vertices = Vec::new();
+        let mut cell_types = Vec::new();
+        let mut vertex_indices = Vec::new();
+        for cell in self.mesh.connectivity() {
+            // TODO: Return better error
+            vertices.push(cell.num_nodes().try_into()?);
+
+            vertex_indices.clear();
+            vertex_indices.resize(cell.num_nodes(), 0);
+            cell.write_vtk_connectivity(&mut vertex_indices);
+
+            for &idx in &vertex_indices {
+                // TODO: Return better error
+                vertices.push(idx.try_into()?);
+            }
+            cell_types.push(cell.cell_type());
+        }
+
+        // TODO: Attributes
+
+        Ok(DataSet::UnstructuredGrid {
+            points: points.into(),
+            cells: Cells {
+                num_cells: self.mesh.connectivity().len() as u32,
+                vertices,
+            },
+            cell_types,
+            data: Attributes::new(),
+        })
+    }
 }

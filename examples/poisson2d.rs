@@ -11,6 +11,9 @@ use fenris::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::quadrature::quad_quadrature_strength_5_f64;
 use nalgebra::{Point, Vector1};
 use std::error::Error;
+use fenris::io::vtk::FiniteElementMeshDataSetBuilder;
+use fenris::vtkio::model::{Vtk, Version};
+use std::path::Path;
 
 pub struct PoissonOperator2d;
 
@@ -109,7 +112,19 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     println!("{}", u);
 
-    // TODO: Output to e.g. VTK
+    // TODO: Streamline VTK export (also upgrade VTK version)
+    let dataset = FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
+        .try_build()
+        // TODO: Use eyre::Report so we don't have problems with Sync/Send etc.?
+        .unwrap();
+
+    let vtk = Vtk {
+        version: Version { major: 4, minor: 1 },
+        title: "Poisson 2D".to_string(),
+        data: dataset
+    };
+
+    fenris::vtkio::export(vtk, &Path::new("poisson2d.vtk"))?;
 
     Ok(())
 }
