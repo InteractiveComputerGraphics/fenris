@@ -7,7 +7,10 @@ use nalgebra::{Matrix2x4, Matrix4, MatrixN, Point2, RealField, U2};
 use nalgebra::dimension::U8;
 use num::Zero;
 
-use fenris::assembly::global::{apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_matrix, CsrParAssembler, CsrAssembler};
+use fenris::assembly::global::{
+    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_matrix, CsrAssembler,
+    CsrParAssembler,
+};
 use fenris::assembly::local::{assemble_generalized_element_mass, ElementConnectivityAssembler};
 use fenris::connectivity::Quad4d2Connectivity;
 use fenris::element::{ElementConnectivity, MatrixSliceMut, Quad4d2Element};

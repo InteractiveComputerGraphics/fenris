@@ -5,16 +5,14 @@ use fenris::assembly2::{
     ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, EllipticContraction,
     EllipticOperator, Operator, SerialVectorAssembler, SourceFunction, UniformQuadratureTable,
 };
+use fenris::io::vtk::FiniteElementMeshDataSetBuilder;
 use fenris::mesh::QuadMesh2d;
 use fenris::nalgebra::{DVector, MatrixMN, Point2, VectorN, U1, U2};
 use fenris::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::quadrature::quad_quadrature_strength_5_f64;
+
 use nalgebra::{Point, Vector1};
 use std::error::Error;
-use fenris::io::vtk::FiniteElementMeshDataSetBuilder;
-use fenris::vtkio::model::{Vtk, Version};
-use std::path::Path;
-use vtkio::model::ByteOrder;
 
 pub struct PoissonOperator2d;
 

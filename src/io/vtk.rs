@@ -1,4 +1,4 @@
-use crate::mesh::{Mesh};
+use crate::mesh::Mesh;
 use nalgebra::{DefaultAllocator, DimName, RealField, Scalar};
 use vtkio::model::{CellType, Cells, DataSet, UnstructuredGridPiece, VertexNumbers};
 
@@ -10,12 +10,12 @@ use crate::connectivity::{
 
 use nalgebra::allocator::Allocator;
 
-use std::convert::{TryInto};
+use std::convert::TryInto;
 
 // TODO: This is kind of a dirty hack to get around the fact that some VTK things are in
 // the geometry crate and some are in this crate. Need to clean this up!
+use crate::vtkio::model::{ByteOrder, Piece, Version, Vtk};
 pub use fenris_geometry::vtkio::*;
-use crate::vtkio::model::{Piece, Version, ByteOrder, Vtk};
 use num::ToPrimitive;
 use std::path::Path;
 
@@ -285,47 +285,42 @@ pub struct FiniteElementMeshDataSetBuilder<'a, T, D, C>
 where
     T: Scalar,
     D: DimName,
-    DefaultAllocator: Allocator<T, D>
+    DefaultAllocator: Allocator<T, D>,
 {
     mesh: &'a Mesh<T, D, C>,
 
     // Only used for exporting directly to file
-    title: Option<String>
-
-    // TODO: How to represent attributes?
+    title: Option<String>, // TODO: How to represent attributes?
 }
 
 impl<'a, T, D, C> FiniteElementMeshDataSetBuilder<'a, T, D, C>
 where
     T: Scalar,
     D: DimName,
-    DefaultAllocator: Allocator<T, D>
+    DefaultAllocator: Allocator<T, D>,
 {
     pub fn from_mesh(mesh: &'a Mesh<T, D, C>) -> Self {
-        Self {
-            mesh,
-            title: None
-        }
+        Self { mesh, title: None }
     }
 }
 
-impl <'a, T, D, C> FiniteElementMeshDataSetBuilder<'a, T, D, C>
+impl<'a, T, D, C> FiniteElementMeshDataSetBuilder<'a, T, D, C>
 where
     T: RealField + ToPrimitive,
     D: DimName,
-    DefaultAllocator: Allocator<T, D>
+    DefaultAllocator: Allocator<T, D>,
 {
     pub fn with_title(self, title: impl Into<String>) -> Self {
         Self {
             mesh: self.mesh,
-            title: Some(title.into())
+            title: Some(title.into()),
         }
     }
 
     // TODO: Different error type
     pub fn try_build(&self) -> Result<DataSet, Box<dyn std::error::Error>>
     where
-        C: VtkCellConnectivity
+        C: VtkCellConnectivity,
     {
         // TODO: Create a "SmallDim" trait or something for this case...?
         // Or just implement the trait directly for U1/U2/U3?
@@ -370,26 +365,27 @@ where
                 // TODO: Use XML instead of Legacy?
                 cell_verts: VertexNumbers::Legacy {
                     num_cells: self.mesh.connectivity().len() as u32,
-                    vertices
+                    vertices,
                 },
-                types: cell_types
+                types: cell_types,
             },
-            data: Default::default()
+            data: Default::default(),
         };
 
         Ok(DataSet::UnstructuredGrid {
             meta: None,
-            pieces: vec![Piece::Inline(Box::new(piece))]
+            pieces: vec![Piece::Inline(Box::new(piece))],
         })
     }
 
     /// Convenience function for directly exporting the dataset to a file.
     pub fn try_export(&self, filename: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error>>
     where
-        C: VtkCellConnectivity
+        C: VtkCellConnectivity,
     {
         let filepath = filename.as_ref();
-        let fallback_title = filepath.file_stem()
+        let fallback_title = filepath
+            .file_stem()
             .map(|os_str| os_str.to_string_lossy().to_string())
             .unwrap_or_else(|| "untitled".to_string());
         let dataset = self.try_build()?;
@@ -400,8 +396,9 @@ where
             title: self.title.clone().unwrap_or(fallback_title),
             byte_order: ByteOrder::BigEndian,
             data: dataset,
-            file_path: None
-        }.export(filepath)?;
+            file_path: None,
+        }
+        .export(filepath)?;
         Ok(())
     }
 }
