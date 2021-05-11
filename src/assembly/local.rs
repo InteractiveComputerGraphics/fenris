@@ -3,27 +3,18 @@ use std::ops::AddAssign;
 
 use alga::general::{ClosedAdd, ClosedMul};
 use nalgebra::base::allocator::Allocator;
-use nalgebra::base::storage::Storage;
 use nalgebra::{
-    DMatrix, DMatrixSliceMut, DVector, DefaultAllocator, DimMin, DimName, Dynamic, MatrixMN,
-    MatrixSliceMN, Point, RealField, Scalar, SymmetricEigen, VectorN, U1,
+    DMatrix, DMatrixSliceMut, DefaultAllocator, DimMin, DimName, Dynamic, MatrixMN, MatrixSliceMN,
+    RealField, Scalar, VectorN, U1,
 };
 use num::{One, Zero};
-use serde::__private::PhantomData;
 
-use crate::allocators::{
-    ElementConnectivityAllocator, FiniteElementMatrixAllocator, VolumeFiniteElementAllocator,
-};
+use crate::allocators::{FiniteElementMatrixAllocator, VolumeFiniteElementAllocator};
 
-use crate::assembly::QuadratureTable;
 use crate::connectivity::Connectivity;
-use crate::element::{
-    ElementConnectivity, MatrixSlice, MatrixSliceMut, ReferenceFiniteElement,
-    VolumetricFiniteElement,
-};
+use crate::element::{MatrixSlice, MatrixSliceMut, VolumetricFiniteElement};
 use crate::mesh::Mesh;
 use crate::quadrature::Quadrature;
-use crate::util::coerce_col_major_slice;
 
 pub trait ElementConnectivityAssembler {
     fn solution_dim(&self) -> usize;
@@ -73,106 +64,6 @@ pub trait ElementMatrixAssembler<T: Scalar>: ElementConnectivityAssembler {
     ) -> Result<(), Box<dyn Error + Send + Sync>>;
 
     fn as_connectivity_assembler(&self) -> &dyn ElementConnectivityAssembler;
-}
-
-pub struct GeneralizedStiffnessElementAssembler<
-    'a,
-    T,
-    SolutionDim,
-    C,
-    Contraction,
-    Q,
-    Transformation,
-> where
-    T: Scalar,
-    C: ElementConnectivity<T, ReferenceDim = <C as ElementConnectivity<T>>::GeometryDim>,
-    Transformation: ?Sized,
-    DefaultAllocator: ElementConnectivityAllocator<T, C>,
-{
-    pub vertices: &'a [Point<T, C::GeometryDim>],
-    pub connectivity: &'a [C],
-    pub contraction: &'a Contraction,
-    pub u: &'a DVector<T>,
-    pub quadrature_table: &'a Q,
-    pub transformation: &'a Transformation,
-    pub solution_dim_marker: PhantomData<SolutionDim>,
-}
-
-impl<'a, T, SolutionDim, C, Contraction, Q, Transformation> ElementConnectivityAssembler
-    for GeneralizedStiffnessElementAssembler<'a, T, SolutionDim, C, Contraction, Q, Transformation>
-where
-    T: Scalar,
-    C: ElementConnectivity<T, ReferenceDim = <C as ElementConnectivity<T>>::GeometryDim>,
-    SolutionDim: DimName,
-    Transformation: ?Sized,
-    DefaultAllocator: ElementConnectivityAllocator<T, C>,
-{
-    fn num_nodes(&self) -> usize {
-        self.vertices.len()
-    }
-
-    fn solution_dim(&self) -> usize {
-        SolutionDim::dim()
-    }
-
-    fn num_elements(&self) -> usize {
-        self.connectivity.len()
-    }
-
-    fn element_node_count(&self, element_index: usize) -> usize {
-        self.connectivity[element_index].vertex_indices().len()
-    }
-
-    fn populate_element_nodes(&self, output: &mut [usize], element_index: usize) {
-        output.copy_from_slice(self.connectivity[element_index].vertex_indices());
-    }
-}
-
-impl<'a, T, SolutionDim, C, Contraction, Q, Transformation> ElementMatrixAssembler<T>
-    for GeneralizedStiffnessElementAssembler<'a, T, SolutionDim, C, Contraction, Q, Transformation>
-where
-    T: RealField,
-    C: ElementConnectivity<T, ReferenceDim = <C as ElementConnectivity<T>>::GeometryDim>,
-    C::GeometryDim: DimMin<C::GeometryDim, Output = C::GeometryDim>,
-    SolutionDim: DimName,
-    Contraction: GeneralizedEllipticContraction<T, SolutionDim, C::GeometryDim>,
-    Q: QuadratureTable<T, C::GeometryDim>,
-    Transformation: ?Sized + ElementMatrixTransformation<T>,
-    DefaultAllocator: FiniteElementMatrixAllocator<T, SolutionDim, C::GeometryDim>,
-{
-    fn assemble_element_matrix_into(
-        &self,
-        element_index: usize,
-        mut output: DMatrixSliceMut<T>,
-    ) -> Result<(), Box<dyn Error + Send + Sync>> {
-        let connectivity = &self.connectivity[element_index];
-        let element = connectivity.element(self.vertices).expect(
-            "All vertices of element are assumed to be in bounds.\
-             TODO: Ensure this upon construction of basis?",
-        );
-
-        // TODO: Don't allocate!
-        let mut u_element = DMatrix::zeros(SolutionDim::dim(), element.num_nodes());
-        connectivity.populate_element_variables(
-            MatrixSliceMut::<T, SolutionDim, Dynamic>::from(&mut u_element),
-            self.u,
-        );
-        assemble_generalized_element_stiffness(
-            DMatrixSliceMut::from(&mut output),
-            &element,
-            self.contraction,
-            MatrixSlice::from(&u_element),
-            &self.quadrature_table.quadrature_for_element(element_index),
-        );
-
-        self.transformation.transform_element_matrix(&mut output);
-
-        Ok(())
-    }
-
-    fn as_connectivity_assembler(&self) -> &dyn ElementConnectivityAssembler {
-        self
-    }
 }
 
 pub trait GeneralizedEllipticOperator<T, SolutionDim, GeometryDim>
@@ -250,14 +141,6 @@ where
             }
         }
     }
-}
-
-/// A transformation for element matrices.
-///
-/// This is most often used to adapt the spectrum of an element matrix so that it
-/// becomes semi-definite.
-pub trait ElementMatrixTransformation<T: Scalar> {
-    fn transform_element_matrix(&self, element_matrix: &mut DMatrixSliceMut<T>);
 }
 
 /// Computes the integral of a scalar function f(X, u, grad u) over an element.
@@ -407,136 +290,6 @@ where
         u_grad.ger(T::one(), &phi_I_grad_ref, &u_I, T::one());
     }
     jacobian_inv_t * u_grad
-}
-
-#[allow(non_snake_case)]
-pub fn assemble_generalized_element_elliptic_term<T, SolutionDim, Element>(
-    result: MatrixSliceMut<T, SolutionDim, Dynamic>,
-    element: &Element,
-    g: &impl GeneralizedEllipticOperator<T, SolutionDim, Element::GeometryDim>,
-    u: &MatrixSlice<T, SolutionDim, Dynamic>,
-    quadrature: &impl Quadrature<T, Element::GeometryDim>,
-) where
-    T: RealField,
-    Element: VolumetricFiniteElement<T>,
-    Element::GeometryDim: DimName + DimMin<Element::GeometryDim, Output = Element::GeometryDim>,
-    SolutionDim: DimName,
-    DefaultAllocator: VolumeFiniteElementAllocator<T, Element::GeometryDim>
-        + Allocator<T, Element::GeometryDim, SolutionDim>
-        + Allocator<T, SolutionDim, Element::GeometryDim>,
-{
-    let mut f_e = result;
-
-    // TODO: Avoid allocation
-    let mut phi_ref = DMatrix::zeros(Element::ReferenceDim::dim(), element.num_nodes());
-
-    let weights = quadrature.weights();
-    let points = quadrature.points();
-
-    for (&w, xi) in weights.iter().zip(points) {
-        // Compute gradients with respect to reference coords
-        element.populate_basis_gradients(MatrixSliceMut::from(&mut phi_ref), xi);
-
-        // Jacobian
-        let J = element.reference_jacobian(xi);
-        let J_det = J.determinant();
-
-        // TODO: Make error instead of panic?
-        let J_inv = J.try_inverse().expect("Jacobian must be invertible");
-        let J_inv_t = J_inv.transpose();
-        let u_grad =
-            compute_volume_u_grad(&J_inv_t, MatrixSlice::from(&phi_ref), MatrixSlice::from(u));
-
-        let g = g.compute_elliptic_term(&u_grad);
-        let g_J_inv_t = g.transpose() * &J_inv_t;
-        f_e.gemm(w * J_det.abs(), &g_J_inv_t, &phi_ref, T::one());
-
-        // TODO: Remove old comments
-        // let u_grad = (u * (&G.transpose() * &J_inv)).transpose();
-        // f_e += (g.transpose() * J_inv.transpose() * G) * w * J_det.abs();
-    }
-}
-
-#[allow(non_snake_case)]
-pub fn assemble_generalized_element_stiffness<T, SolutionDim, Element>(
-    mut element_matrix: DMatrixSliceMut<T>,
-    element: &Element,
-    contraction: &impl GeneralizedEllipticContraction<T, SolutionDim, Element::GeometryDim>,
-    u: MatrixSlice<T, SolutionDim, Dynamic>,
-    quadrature: &impl Quadrature<T, Element::GeometryDim>,
-) where
-    T: RealField,
-    Element: VolumetricFiniteElement<T>,
-    Element::GeometryDim: DimMin<Element::GeometryDim, Output = Element::GeometryDim>,
-    SolutionDim: DimName,
-    DefaultAllocator: FiniteElementMatrixAllocator<T, SolutionDim, Element::GeometryDim>,
-{
-    let weights = quadrature.weights();
-    let points = quadrature.points();
-
-    // TODO: The structure here is very similar to that of internal force term assembly
-    // Can we refactor these to re-use more of the same functionality?
-
-    // Basis function gradients with respect to reference coords
-    // TODO: Avoid allocation
-    let mut phi_grad_ref = DMatrix::zeros(Element::ReferenceDim::dim(), element.num_nodes());
-
-    for (&w, xi) in weights.iter().zip(points) {
-        // Jacobian
-        let J = element.reference_jacobian(xi);
-        let J_det = J.determinant();
-
-        // TODO: Make error instead of panic?
-        let J_inv = J.try_inverse().expect("Jacobian must be invertible");
-        let J_inv_t = J_inv.transpose();
-
-        // TODO: Rename gradients to populate_gradients and similarly for basis function values
-        element.populate_basis_gradients(MatrixSliceMut::from(&mut phi_grad_ref), xi);
-
-        let u_grad = compute_volume_u_grad(
-            &J_inv_t,
-            MatrixSlice::from(&phi_grad_ref),
-            MatrixSlice::from(&u),
-        );
-
-        // Compute gradients with respect to physical coords instead of reference coords
-        let mut phi_grad =
-            MatrixSliceMut::<_, Element::GeometryDim, Dynamic>::from(&mut phi_grad_ref);
-        for mut phi_grad in phi_grad.column_iter_mut() {
-            let new_phi_grad = &J_inv_t * &phi_grad;
-            phi_grad.copy_from(&new_phi_grad);
-        }
-
-        let scale = w * J_det.abs();
-        // We need to multiply the contraction result by the scale factor.
-        // We do this implicitly by multiplying the basis gradients by its square root.
-        // This way we don't have to allocate an additional matrix or complicate
-        // the trait.
-        let mut G = phi_grad;
-        G *= scale.sqrt();
-
-        let (G_rows, _) = G.data.shape();
-        let G_slice = coerce_col_major_slice(&G, G_rows, Dynamic::new(G.ncols()));
-
-        contraction.contract_multiple_into(&mut element_matrix, &u_grad, &G_slice);
-    }
-}
-
-/// Projects the given matrix onto semidefiniteness by using `nalgebra`'s symmetric
-/// eigendecomposition.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct DefaultSemidefiniteProjection;
-
-impl<T: RealField> ElementMatrixTransformation<T> for DefaultSemidefiniteProjection {
-    fn transform_element_matrix(&self, element_matrix: &mut DMatrixSliceMut<T>) {
-        let mut eigendecomp = SymmetricEigen::new(element_matrix.clone_owned());
-        for eigenval in &mut eigendecomp.eigenvalues {
-            *eigenval = T::max(T::zero(), *eigenval);
-        }
-        // TODO: Don't recompose if we didn't change anything
-        let recomposed = eigendecomp.recompose();
-        element_matrix.copy_from(&recomposed);
-    }
 }
 
 /// Computes

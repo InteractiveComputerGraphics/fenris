@@ -2,10 +2,8 @@ pub mod global;
 pub mod local;
 
 use crate::quadrature::Quadrature;
-use local::ElementMatrixTransformation;
 
 use nalgebra::allocator::Allocator;
-use nalgebra::DMatrixSliceMut;
 use nalgebra::{DefaultAllocator, DimName, Scalar, U1};
 
 /// Lookup table mapping elements to quadrature rules.
@@ -58,15 +56,3 @@ where
         self.0.clone()
     }
 }
-
-/// Leaves the given element matrix unaltered.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct NoTransformation;
-
-impl<T: Scalar> ElementMatrixTransformation<T> for NoTransformation {
-    fn transform_element_matrix(&self, _element_matrix: &mut DMatrixSliceMut<T>) {
-        // Do nothing
-    }
-}
-
-// TODO: Write tests for distribute_local_to_global
