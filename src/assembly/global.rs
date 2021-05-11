@@ -39,12 +39,27 @@ use std::sync::Arc;
 pub struct CsrAssembler<T: Scalar> {
     // All members are buffers that help prevent unnecessary allocations
     // when assembling multiple matrices with the same assembler
+    workspace: RefCell<CsrAssemblerWorkspace<T>>,
+}
+
+impl<T: Scalar> Default for CsrAssembler<T> {
+    fn default() -> Self {
+        Self {
+            workspace: RefCell::new(CsrAssemblerWorkspace::default()),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct CsrAssemblerWorkspace<T: Scalar> {
+    // All members are buffers that help prevent unnecessary allocations
+    // when assembling multiple matrices with the same assembler
     connectivity_permutation: Vec<usize>,
     element_global_nodes: Vec<usize>,
     element_matrix: DMatrix<T>,
 }
 
-impl<T: Scalar> Default for CsrAssembler<T> {
+impl<T: Scalar> Default for CsrAssemblerWorkspace<T> {
     fn default() -> Self {
         Self {
             connectivity_permutation: Vec::new(),
@@ -109,9 +124,8 @@ impl<T: Scalar> CsrAssembler<T> {
 }
 
 impl<T: RealField> CsrAssembler<T> {
-    // TODO: Take &self rather than &mut self (use interior mutability for buffers etc.)
     pub fn assemble(
-        &mut self,
+        &self,
         element_assembler: &dyn ElementMatrixAssembler<T>,
     ) -> Result<CsrMatrix<T>, Box<dyn Error + Send + Sync>> {
         let pattern = self.assemble_pattern(element_assembler.as_connectivity_assembler());
@@ -123,14 +137,15 @@ impl<T: RealField> CsrAssembler<T> {
     }
 
     pub fn assemble_into_csr(
-        &mut self,
+        &self,
         csr: &mut CsrMatrix<T>,
         element_assembler: &dyn ElementMatrixAssembler<T>,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
         // Reuse previously allocated buffers
-        let connectivity_permutation = &mut self.connectivity_permutation;
-        let element_global_nodes = &mut self.element_global_nodes;
-        let element_matrix = &mut self.element_matrix;
+        let ws = &mut *self.workspace.borrow_mut();
+        let connectivity_permutation = &mut ws.connectivity_permutation;
+        let element_global_nodes = &mut ws.element_global_nodes;
+        let element_matrix = &mut ws.element_matrix;
 
         let sdim = element_assembler.solution_dim();
 
@@ -177,19 +192,13 @@ impl<T: RealField> CsrAssembler<T> {
 /// TODO: Consider using type erasure to store buffers without needing the generic type parameter
 #[derive(Debug)]
 pub struct CsrParAssembler<T: Scalar + Send> {
-    // All members are buffers that help prevent unnecessary allocations
-    // when assembling multiple matrices with the same assembler
-    connectivity_permutation: ThreadLocal<RefCell<Vec<usize>>>,
-    element_global_nodes: ThreadLocal<RefCell<Vec<usize>>>,
-    element_matrix: ThreadLocal<RefCell<DMatrix<T>>>,
+    workspace: ThreadLocal<RefCell<CsrAssemblerWorkspace<T>>>,
 }
 
 impl<T: Scalar + Send> Default for CsrParAssembler<T> {
     fn default() -> Self {
         Self {
-            connectivity_permutation: ThreadLocal::new(),
-            element_global_nodes: ThreadLocal::new(),
-            element_matrix: ThreadLocal::new(),
+            workspace: Default::default()
         }
     }
 }
@@ -275,7 +284,7 @@ impl<T: Scalar + Send> CsrParAssembler<T> {
 
 impl<T: RealField + Send> CsrParAssembler<T> {
     pub fn assemble_into_csr(
-        &mut self,
+        &self,
         csr: &mut CsrMatrix<T>,
         colors: &[DisjointSubsets],
         element_assembler: &(dyn Sync + ElementMatrixAssembler<T>),
@@ -287,32 +296,28 @@ impl<T: RealField + Send> CsrParAssembler<T> {
             color
                 .subsets_par_iter(&mut block_adapter)
                 .map(|mut subset| {
-                    let mut connectivity_permutation =
-                        self.connectivity_permutation.get_or_default().borrow_mut();
-                    let mut element_global_nodes =
-                        self.element_global_nodes.get_or_default().borrow_mut();
-                    let mut element_matrix = self
-                        .element_matrix
-                        .get_or(|| RefCell::new(DMatrix::zeros(0, 0)))
-                        .borrow_mut();
+                    let ws = &mut *self.workspace.get_or_default().borrow_mut();
 
                     let element_index = subset.label();
                     let element_node_count = element_assembler.element_node_count(element_index);
                     let element_matrix_dim = sdim * element_node_count;
 
-                    element_global_nodes.resize(element_node_count, 0);
-                    element_matrix.resize_mut(element_matrix_dim, element_matrix_dim, T::zero());
-                    element_matrix.fill(T::zero());
+                    ws.element_global_nodes.resize(element_node_count, 0);
+                    ws.element_matrix.resize_mut(element_matrix_dim, element_matrix_dim, T::zero());
+                    ws.element_matrix.fill(T::zero());
 
-                    let matrix_slice = DMatrixSliceMut::from(&mut *element_matrix);
+                    let matrix_slice = DMatrixSliceMut::from(&mut ws.element_matrix);
                     element_assembler.assemble_element_matrix_into(element_index, matrix_slice)?;
                     element_assembler
-                        .populate_element_nodes(&mut element_global_nodes, element_index);
-                    debug_assert_eq!(subset.global_indices(), element_global_nodes.as_slice());
+                        .populate_element_nodes(&mut ws.element_global_nodes, element_index);
+                    debug_assert_eq!(subset.global_indices(), ws.element_global_nodes.as_slice());
 
-                    connectivity_permutation.clear();
-                    connectivity_permutation.extend(0..element_node_count);
-                    connectivity_permutation.sort_unstable_by_key(|i| element_global_nodes[*i]);
+                    {
+                        let element_global_nodes = &ws.element_global_nodes;
+                        ws.connectivity_permutation.clear();
+                        ws.connectivity_permutation.extend(0..element_node_count);
+                        ws.connectivity_permutation.sort_unstable_by_key(|i| element_global_nodes[*i]);
+                    }
 
                     for local_node_idx in 0..element_node_count {
                         let mut csr_block_row = subset.get_mut(local_node_idx);
@@ -320,11 +325,11 @@ impl<T: RealField + Send> CsrParAssembler<T> {
                             let local_row_index = sdim * local_node_idx + i;
                             let mut csr_row = csr_block_row.get_mut(i).unwrap();
 
-                            let a_row = element_matrix.row(local_row_index);
+                            let a_row = ws.element_matrix.row(local_row_index);
                             add_element_row_to_csr_row(
                                 &mut csr_row,
-                                &element_global_nodes,
-                                &connectivity_permutation,
+                                &ws.element_global_nodes,
+                                &ws.connectivity_permutation,
                                 sdim,
                                 &a_row,
                             );
@@ -676,7 +681,7 @@ pub fn assemble_transformed_generalized_stiffness_into_csr<T, SolutionDim, Conne
         solution_dim_marker: PhantomData,
     };
 
-    let mut csr_assembler = CsrAssembler::default();
+    let csr_assembler = CsrAssembler::default();
     csr_assembler
         .assemble_into_csr(csr, &element_assembler)
         .expect("TODO: Propagate error")
@@ -743,7 +748,7 @@ pub fn assemble_transformed_generalized_stiffness_into_csr_par<T, SolutionDim, C
         solution_dim_marker: PhantomData,
     };
 
-    let mut csr_assembler = CsrParAssembler::default();
+    let csr_assembler = CsrParAssembler::default();
     csr_assembler
         .assemble_into_csr(csr, colors, &element_assembler)
         .expect("TODO: Propagate error")

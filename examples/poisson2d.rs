@@ -70,6 +70,10 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     let u = DVector::<f64>::zeros(mesh.vertices().len());
 
+    // Set up global assemblers
+    let vector_assembler = SerialVectorAssembler::<f64>::default();
+    let matrix_assembler = CsrAssembler::default();
+
     let element_assembler = ElementEllipticAssemblerBuilder::new()
         .with_space(&mesh)
         .with_op(&op)
@@ -79,9 +83,6 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         .with_u(&u)
         .build();
 
-    let vector_assembler = SerialVectorAssembler::<f64>::default();
-    let mut matrix_assembler = CsrAssembler::default();
-    // TODO: Matrix assembler shouldn't need to be mutable for assembly
     let mut a = matrix_assembler.assemble(&element_assembler)?;
 
     let source_assembler = ElementSourceAssemblerBuilder::new()
