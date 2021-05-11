@@ -198,7 +198,7 @@ pub struct CsrParAssembler<T: Scalar + Send> {
 impl<T: Scalar + Send> Default for CsrParAssembler<T> {
     fn default() -> Self {
         Self {
-            workspace: Default::default()
+            workspace: Default::default(),
         }
     }
 }
@@ -303,7 +303,8 @@ impl<T: RealField + Send> CsrParAssembler<T> {
                     let element_matrix_dim = sdim * element_node_count;
 
                     ws.element_global_nodes.resize(element_node_count, 0);
-                    ws.element_matrix.resize_mut(element_matrix_dim, element_matrix_dim, T::zero());
+                    ws.element_matrix
+                        .resize_mut(element_matrix_dim, element_matrix_dim, T::zero());
                     ws.element_matrix.fill(T::zero());
 
                     let matrix_slice = DMatrixSliceMut::from(&mut ws.element_matrix);
@@ -316,7 +317,8 @@ impl<T: RealField + Send> CsrParAssembler<T> {
                         let element_global_nodes = &ws.element_global_nodes;
                         ws.connectivity_permutation.clear();
                         ws.connectivity_permutation.extend(0..element_node_count);
-                        ws.connectivity_permutation.sort_unstable_by_key(|i| element_global_nodes[*i]);
+                        ws.connectivity_permutation
+                            .sort_unstable_by_key(|i| element_global_nodes[*i]);
                     }
 
                     for local_node_idx in 0..element_node_count {
