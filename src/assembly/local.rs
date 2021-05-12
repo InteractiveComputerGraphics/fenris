@@ -2,14 +2,12 @@ use std::cell::{RefCell, RefMut};
 use std::error::Error;
 use std::ops::AddAssign;
 
-use alga::general::{ClosedAdd, ClosedMul};
 use itertools::izip;
 use nalgebra::base::allocator::Allocator;
 use nalgebra::{
     DMatrix, DMatrixSliceMut, DefaultAllocator, DimMin, DimName, Dynamic, MatrixMN, MatrixSliceMN,
     RealField, Scalar, VectorN, U1,
 };
-use num::{One, Zero};
 
 use crate::allocators::{
     BiDimAllocator, FiniteElementMatrixAllocator, SmallDimAllocator, TriDimAllocator,
@@ -74,83 +72,6 @@ pub trait ElementMatrixAssembler<T: Scalar>: ElementConnectivityAssembler {
     ) -> Result<(), Box<dyn Error + Send + Sync>>;
 
     fn as_connectivity_assembler(&self) -> &dyn ElementConnectivityAssembler;
-}
-
-pub trait GeneralizedEllipticOperator<T, SolutionDim, GeometryDim>
-where
-    T: Scalar,
-    SolutionDim: DimName,
-    GeometryDim: DimName,
-    DefaultAllocator: Allocator<T, GeometryDim, SolutionDim>,
-{
-    fn compute_elliptic_term(
-        &self,
-        gradient: &MatrixMN<T, GeometryDim, SolutionDim>,
-    ) -> MatrixMN<T, GeometryDim, SolutionDim>;
-}
-
-pub trait GeneralizedEllipticContraction<T, SolutionDim, GeometryDim>
-where
-    T: Scalar + Zero + One + ClosedAdd + ClosedMul,
-    SolutionDim: DimName,
-    GeometryDim: DimName,
-    DefaultAllocator: Allocator<T, GeometryDim, SolutionDim>
-        + Allocator<T, GeometryDim, GeometryDim>
-        + Allocator<T, SolutionDim, SolutionDim>
-        + Allocator<T, GeometryDim>
-        + Allocator<T, U1, GeometryDim>,
-{
-    fn contract(
-        &self,
-        gradient: &MatrixMN<T, GeometryDim, SolutionDim>,
-        a: &VectorN<T, GeometryDim>,
-        b: &VectorN<T, GeometryDim>,
-    ) -> MatrixMN<T, SolutionDim, SolutionDim>;
-
-    /// Compute multiple contractions and store the result in the provided matrix.
-    ///
-    /// The matrix `a` is a `GeometryDim x NodalDim` sized matrix, in which each column
-    /// corresponds to a vector of dimension `GeometryDim`. The output matrix is a square matrix
-    /// with row and col dimensions `SolutionDim * NodalDim`, consisting of `NodalDim x NodalDim`
-    /// block matrices, each with dimension `SolutionDim x SolutionDim`.
-    ///
-    /// Let c(gradient, a, b) denote the contraction of vectors a and b.
-    /// Then the result of c(gradient, a_I, a_J) for each I, J in the range `(0 .. NodalDim)`
-    /// must be *added* to `output_IJ`, where `output_IJ` is the `SolutionDim x SolutionDim`
-    /// block matrix corresponding to nodes `I` and `J`.
-    ///
-    /// TODO: Consider using a unit-stride matrix slice for performance reasons.
-    fn contract_multiple_into(
-        &self,
-        output: &mut DMatrixSliceMut<T>,
-        gradient: &MatrixMN<T, GeometryDim, SolutionDim>,
-        a: &MatrixSliceMN<T, GeometryDim, Dynamic>,
-    ) {
-        let num_nodes = a.ncols();
-        let output_dim = num_nodes * SolutionDim::dim();
-        assert_eq!(output_dim, output.nrows());
-        assert_eq!(output_dim, output.ncols());
-
-        let sdim = SolutionDim::dim();
-        for i in 0..num_nodes {
-            for j in i..num_nodes {
-                let a_i = a.fixed_slice::<GeometryDim, U1>(0, i).clone_owned();
-                let a_j = a.fixed_slice::<GeometryDim, U1>(0, j).clone_owned();
-                let contraction = self.contract(gradient, &a_i, &a_j);
-                output
-                    .fixed_slice_mut::<SolutionDim, SolutionDim>(i * sdim, j * sdim)
-                    .add_assign(&contraction);
-
-                // TODO: We currently assume symmetry. Should maybe have a method that
-                // says whether it is symmetric or not?
-                if i != j {
-                    output
-                        .fixed_slice_mut::<SolutionDim, SolutionDim>(j * sdim, i * sdim)
-                        .add_assign(&contraction.transpose());
-                }
-            }
-        }
-    }
 }
 
 /// Computes the integral of a scalar function f(X, u, grad u) over an element.
