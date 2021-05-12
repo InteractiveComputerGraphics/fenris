@@ -1,4 +1,4 @@
-use crate::allocators::{FiniteElementAllocator};
+use crate::allocators::FiniteElementAllocator;
 use crate::geometry::DistanceQuery;
 use crate::space::GeometricFiniteElementSpace;
 use nalgebra::allocator::Allocator;
@@ -110,7 +110,7 @@ impl<T> FiniteElementInterpolator<T> {
     where
         T: RealField,
         D: DimName + DimMin<D, Output = D>,
-        Space: GeometricFiniteElementSpace<'a, T, GeometryDim=D> + DistanceQuery<'a, Point<T, D>>,
+        Space: GeometricFiniteElementSpace<'a, T, GeometryDim = D> + DistanceQuery<'a, Point<T, D>>,
         DefaultAllocator: FiniteElementAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
     {
         todo!("Reimplement this function or scrap it in favor of a different design?");

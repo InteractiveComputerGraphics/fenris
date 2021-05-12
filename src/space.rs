@@ -1,7 +1,5 @@
-use crate::allocators::{FiniteElementAllocator};
-use crate::element::{
-    MatrixSliceMut,
-};
+use crate::allocators::FiniteElementAllocator;
+use crate::element::MatrixSliceMut;
 use crate::geometry::GeometryCollection;
 use crate::nalgebra::{Dynamic, MatrixMN, U1};
 use crate::SmallDim;

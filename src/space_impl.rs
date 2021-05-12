@@ -1,11 +1,9 @@
-use crate::allocators::{ElementConnectivityAllocator};
+use crate::allocators::ElementConnectivityAllocator;
 use crate::connectivity::CellConnectivity;
 use crate::element::{ElementConnectivity, FiniteElement, MatrixSliceMut, ReferenceFiniteElement};
 use crate::mesh::Mesh;
 use crate::nalgebra::{Dynamic, MatrixMN, U1};
-use crate::space::{
-    FiniteElementConnectivity, FiniteElementSpace, GeometricFiniteElementSpace,
-};
+use crate::space::{FiniteElementConnectivity, FiniteElementSpace, GeometricFiniteElementSpace};
 use crate::SmallDim;
 use nalgebra::{DefaultAllocator, DimName, Point, Scalar};
 
