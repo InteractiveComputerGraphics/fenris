@@ -2,7 +2,6 @@ use crate::allocators::ElementConnectivityAllocator;
 use crate::connectivity::CellConnectivity;
 use crate::element::{ElementConnectivity, FiniteElement, MatrixSliceMut, ReferenceFiniteElement};
 use crate::mesh::Mesh;
-use crate::model::NodalModel;
 use crate::nalgebra::{Dynamic, MatrixMN, U1};
 use crate::space::{
     FiniteElementConnectivity, FiniteElementSpace, FiniteElementSpace2, GeometricFiniteElementSpace,
@@ -161,35 +160,4 @@ where
             .unwrap();
         element.diameter()
     }
-}
-
-impl<T, D, C> FiniteElementSpace<T> for NodalModel<T, D, C>
-where
-    T: Scalar,
-    D: DimName,
-    C: ElementConnectivity<T, GeometryDim = D>,
-    DefaultAllocator: ElementConnectivityAllocator<T, C>,
-{
-    type Connectivity = C;
-
-    fn vertices(&self) -> &[Point<T, D>] {
-        self.vertices()
-    }
-
-    fn num_connectivities(&self) -> usize {
-        self.connectivity().len()
-    }
-
-    fn get_connectivity(&self, index: usize) -> Option<&Self::Connectivity> {
-        self.connectivity().get(index)
-    }
-}
-
-impl<'a, T, D, C> GeometricFiniteElementSpace<'a, T> for NodalModel<T, D, C>
-where
-    T: Scalar,
-    D: DimName,
-    C: CellConnectivity<T, D> + ElementConnectivity<T, GeometryDim = D>,
-    DefaultAllocator: ElementConnectivityAllocator<T, C>,
-{
 }

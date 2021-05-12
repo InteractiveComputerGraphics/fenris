@@ -1,185 +1,15 @@
 use crate::allocators::ElementConnectivityAllocator;
-use crate::assembly::global::color_nodes;
-use crate::connectivity::{
-    CellConnectivity, Connectivity, Quad4d2Connectivity, Quad9d2Connectivity, Tet4Connectivity,
-    Tri3d2Connectivity, Tri6d2Connectivity,
-};
+use crate::connectivity::Connectivity;
 use crate::element::{map_physical_coordinates, ElementConnectivity, ReferenceFiniteElement};
-use crate::geometry::{Distance, DistanceQuery, GeometryCollection};
-use crate::mesh::Mesh;
-use crate::quadrature::QuadraturePair;
+use crate::geometry::DistanceQuery;
 use crate::space::GeometricFiniteElementSpace;
 use itertools::izip;
 use nalgebra::allocator::Allocator;
 use nalgebra::{
     DVector, DefaultAllocator, DimMin, DimName, Dynamic, MatrixMN, MatrixSliceMut, Point,
-    RealField, Scalar, VectorN, U1, U2, U3,
+    RealField, VectorN, U1,
 };
-use paradis::DisjointSubsets;
 use serde::{Deserialize, Serialize};
-
-/// A finite element model consisting of vertices (physical nodes) and physical elements
-/// that are defined by their connectivity to the vertices.
-///
-/// This generalizes the usual finite element bases, such as standard Lagrangian polynomial
-/// finite elements on quads/hex/tri/tet meshes.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(bound(
-    serialize = "T: Serialize,\
-                 <DefaultAllocator as Allocator<T, D>>::Buffer: Serialize,\
-                 Connectivity: Serialize",
-    deserialize = "T: Deserialize<'de>,\
-                   <DefaultAllocator as Allocator<T, D>>::Buffer: Deserialize<'de>,\
-                   Connectivity: Deserialize<'de>"
-))]
-pub struct NodalModel<T, D, Connectivity>
-where
-    T: Scalar,
-    D: DimName,
-    DefaultAllocator: Allocator<T, D>,
-{
-    mesh: Mesh<T, D, Connectivity>,
-
-    mass_quadrature: Option<QuadraturePair<T, D>>,
-    stiffness_quadrature: Option<QuadraturePair<T, D>>,
-    elliptic_quadrature: Option<QuadraturePair<T, D>>,
-
-    // Colors for parallel assembly
-    colors: Vec<DisjointSubsets>,
-}
-
-pub type NodalModel2d<T, C> = NodalModel<T, U2, C>;
-pub type NodalModel3d<T, C> = NodalModel<T, U3, C>;
-
-impl<T, D, C> NodalModel<T, D, C>
-where
-    T: Scalar,
-    D: DimName,
-    DefaultAllocator: Allocator<T, D>,
-{
-    pub fn mesh(&self) -> &Mesh<T, D, C> {
-        &self.mesh
-    }
-
-    pub fn connectivity(&self) -> &[C] {
-        self.mesh.connectivity()
-    }
-
-    pub fn vertices(&self) -> &[Point<T, D>] {
-        self.mesh.vertices()
-    }
-
-    pub fn mass_quadrature(&self) -> Option<&QuadraturePair<T, D>> {
-        self.mass_quadrature.as_ref()
-    }
-
-    pub fn stiffness_quadrature(&self) -> Option<&QuadraturePair<T, D>> {
-        self.stiffness_quadrature.as_ref()
-    }
-
-    pub fn elliptic_quadrature(&self) -> Option<&QuadraturePair<T, D>> {
-        self.elliptic_quadrature.as_ref()
-    }
-
-    pub fn colors(&self) -> &[DisjointSubsets] {
-        &self.colors
-    }
-
-    /// Constructs a new model from the given mesh and quadrature.
-    ///
-    /// The same quadrature is used for all quadrature kinds.
-    ///
-    /// TODO: Remove/deprecate this method. It is currently only here for legacy reasons.
-    pub fn from_mesh_and_quadrature(
-        mesh: Mesh<T, D, C>,
-        quadrature: (Vec<T>, Vec<VectorN<T, D>>),
-    ) -> Self
-    where
-        C: Connectivity,
-    {
-        let colors = color_nodes(mesh.connectivity());
-        Self {
-            mesh,
-            mass_quadrature: Some(quadrature.clone()),
-            stiffness_quadrature: Some(quadrature.clone()),
-            elliptic_quadrature: Some(quadrature.clone()),
-            colors,
-        }
-    }
-
-    /// Constructs a new model from the given mesh, without attaching any quadrature.
-    pub fn from_mesh(mesh: Mesh<T, D, C>) -> Self
-    where
-        C: Connectivity,
-    {
-        let colors = color_nodes(mesh.connectivity());
-        Self {
-            mesh,
-            mass_quadrature: None,
-            stiffness_quadrature: None,
-            elliptic_quadrature: None,
-            colors,
-        }
-    }
-
-    pub fn with_mass_quadrature(self, mass_quadrature: QuadraturePair<T, D>) -> Self {
-        Self {
-            mass_quadrature: Some(mass_quadrature),
-            ..self
-        }
-    }
-
-    pub fn with_stiffness_quadrature(self, stiffness_quadrature: QuadraturePair<T, D>) -> Self {
-        Self {
-            stiffness_quadrature: Some(stiffness_quadrature),
-            ..self
-        }
-    }
-
-    pub fn with_elliptic_quadrature(self, elliptic_quadrature: QuadraturePair<T, D>) -> Self {
-        Self {
-            elliptic_quadrature: Some(elliptic_quadrature),
-            ..self
-        }
-    }
-}
-
-pub type Quad4Model<T> = NodalModel2d<T, Quad4d2Connectivity>;
-pub type Tri3d2Model<T> = NodalModel2d<T, Tri3d2Connectivity>;
-pub type Tri6d2Model<T> = NodalModel2d<T, Tri6d2Connectivity>;
-pub type Quad9Model<T> = NodalModel2d<T, Quad9d2Connectivity>;
-pub type Tet4Model<T> = NodalModel3d<T, Tet4Connectivity>;
-
-impl<'a, T, D, C> GeometryCollection<'a> for NodalModel<T, D, C>
-where
-    T: Scalar,
-    D: DimName,
-    C: CellConnectivity<T, D>,
-    DefaultAllocator: Allocator<T, D>,
-{
-    type Geometry = C::Cell;
-
-    fn num_geometries(&self) -> usize {
-        self.connectivity().len()
-    }
-
-    fn get_geometry(&'a self, index: usize) -> Option<Self::Geometry> {
-        self.connectivity().get(index)?.cell(self.vertices())
-    }
-}
-
-impl<'a, T, D, C, QueryGeometry> DistanceQuery<'a, QueryGeometry> for NodalModel<T, D, C>
-where
-    T: RealField,
-    D: DimName,
-    C: CellConnectivity<T, D>,
-    Mesh<T, D, C>: DistanceQuery<'a, QueryGeometry>,
-    DefaultAllocator: Allocator<T, D>,
-{
-    fn nearest(&'a self, query_geometry: &'a QueryGeometry) -> Option<usize> {
-        self.mesh.nearest(query_geometry)
-    }
-}
 
 /// Interpolates solution variables onto a fixed set of interpolation points.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -327,33 +157,6 @@ impl<T> FiniteElementInterpolator<T> {
     }
 }
 
-impl<T, D, Connectivity> NodalModel<T, D, Connectivity>
-where
-    T: RealField,
-    D: DimName + DimMin<D, Output = D>,
-    Connectivity:
-        CellConnectivity<T, D> + ElementConnectivity<T, GeometryDim = D, ReferenceDim = D>,
-    Connectivity::Cell: Distance<T, Point<T, D>>,
-    Mesh<T, D, Connectivity>:
-        for<'a> GeometricFiniteElementSpace<'a, T, Connectivity = Connectivity>,
-    DefaultAllocator: ElementConnectivityAllocator<T, Connectivity>,
-{
-    /// Creates an interpolator that interpolates solution variables at the given
-    /// interpolation points.
-    ///
-    /// Returns an error if the elements can not be converted to convex polygons,
-    /// or if an interpolation point is outside of the computational domain,
-    /// or if mapping a physical coordinate to a reference coordinate for the given
-    /// element fails.
-    /// TODO: Return proper error differentiating the different failure cases.
-    pub fn make_interpolator(
-        &self,
-        interpolation_points: &[Point<T, D>],
-    ) -> Result<FiniteElementInterpolator<T>, Box<dyn std::error::Error>> {
-        FiniteElementInterpolator::interpolate_space(&self.mesh, interpolation_points)
-    }
-}
-
 pub trait MakeInterpolator<T, D>
 where
     T: RealField,
@@ -364,23 +167,4 @@ where
         &self,
         interpolation_points: &[Point<T, D>],
     ) -> Result<FiniteElementInterpolator<T>, Box<dyn std::error::Error>>;
-}
-
-impl<T, D, Connectivity> MakeInterpolator<T, D> for NodalModel<T, D, Connectivity>
-where
-    T: RealField,
-    D: DimName + DimMin<D, Output = D>,
-    Connectivity:
-        CellConnectivity<T, D> + ElementConnectivity<T, GeometryDim = D, ReferenceDim = D>,
-    Connectivity::Cell: Distance<T, Point<T, D>>,
-    Mesh<T, D, Connectivity>:
-        for<'a> GeometricFiniteElementSpace<'a, T, Connectivity = Connectivity>,
-    DefaultAllocator: ElementConnectivityAllocator<T, Connectivity>,
-{
-    fn make_interpolator(
-        &self,
-        interpolation_points: &[Point<T, D>],
-    ) -> Result<FiniteElementInterpolator<T>, Box<dyn std::error::Error>> {
-        self.make_interpolator(interpolation_points)
-    }
 }
