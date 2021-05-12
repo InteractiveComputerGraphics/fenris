@@ -1,14 +1,8 @@
-use crate::allocators::ElementConnectivityAllocator;
-use crate::connectivity::Connectivity;
-use crate::element::{map_physical_coordinates, ElementConnectivity, ReferenceFiniteElement};
+use crate::allocators::{FiniteElementAllocator};
 use crate::geometry::DistanceQuery;
 use crate::space::GeometricFiniteElementSpace;
-use itertools::izip;
 use nalgebra::allocator::Allocator;
-use nalgebra::{
-    DVector, DefaultAllocator, DimMin, DimName, Dynamic, MatrixMN, MatrixSliceMut, Point,
-    RealField, VectorN, U1,
-};
+use nalgebra::{DVector, DefaultAllocator, DimMin, DimName, Point, RealField, VectorN, U1};
 use serde::{Deserialize, Serialize};
 
 /// Interpolates solution variables onto a fixed set of interpolation points.
@@ -110,50 +104,50 @@ impl<T> FiniteElementInterpolator<T> {
 
 impl<T> FiniteElementInterpolator<T> {
     pub fn interpolate_space<'a, Space, D>(
-        mesh: &'a Space,
-        interpolation_points: &'a [Point<T, D>],
+        _space: &'a Space,
+        _interpolation_points: &'a [Point<T, D>],
     ) -> Result<Self, Box<dyn std::error::Error>>
     where
         T: RealField,
         D: DimName + DimMin<D, Output = D>,
-        Space: GeometricFiniteElementSpace<'a, T> + DistanceQuery<'a, Point<T, D>>,
-        Space::Connectivity: ElementConnectivity<T, GeometryDim = D, ReferenceDim = D>,
-        DefaultAllocator: ElementConnectivityAllocator<T, Space::Connectivity>,
+        Space: GeometricFiniteElementSpace<'a, T, GeometryDim=D> + DistanceQuery<'a, Point<T, D>>,
+        DefaultAllocator: FiniteElementAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
     {
-        let mut supported_node_offsets = Vec::new();
-        let mut node_values = Vec::new();
-
-        let mut basis_buffer = MatrixMN::<_, U1, Dynamic>::zeros(0);
-
-        for point in interpolation_points {
-            let point_node_support_begin = node_values.len();
-            supported_node_offsets.push(point_node_support_begin);
-
-            if mesh.num_connectivities() > 0 {
-                let element_idx = mesh
-                    .nearest(point)
-                    .expect("Logic error: Mesh should have non-zero number of cells/elements.");
-                let conn = mesh.get_connectivity(element_idx).unwrap();
-                let element = mesh.get_element(element_idx).unwrap();
-
-                let xi = map_physical_coordinates(&element, point)
-                    .map_err(|_| "Failed to map physical coordinates to reference coordinates.")?;
-
-                basis_buffer.resize_horizontally_mut(element.num_nodes(), T::zero());
-                element.populate_basis(MatrixSliceMut::from(&mut basis_buffer), &xi.coords);
-                for (index, v) in izip!(conn.vertex_indices(), basis_buffer.iter()) {
-                    node_values.push((v.clone(), index.clone()));
-                }
-            }
-        }
-
-        supported_node_offsets.push(node_values.len());
-        assert_eq!(interpolation_points.len() + 1, supported_node_offsets.len());
-
-        Ok(FiniteElementInterpolator::from_compressed_values(
-            node_values,
-            supported_node_offsets,
-        ))
+        todo!("Reimplement this function or scrap it in favor of a different design?");
+        // let mut supported_node_offsets = Vec::new();
+        // let mut node_values = Vec::new();
+        //
+        // let mut basis_buffer = MatrixMN::<_, U1, Dynamic>::zeros(0);
+        //
+        // for point in interpolation_points {
+        //     let point_node_support_begin = node_values.len();
+        //     supported_node_offsets.push(point_node_support_begin);
+        //
+        //     if !mesh.connectivity().is_empty() > 0 {
+        //         let element_idx = mesh
+        //             .nearest(point)
+        //             .expect("Logic error: Mesh should have non-zero number of cells/elements.");
+        //         let conn = mesh.get_connectivity(element_idx).unwrap();
+        //         let element = mesh.get_element(element_idx).unwrap();
+        //
+        //         let xi = map_physical_coordinates(&element, point)
+        //             .map_err(|_| "Failed to map physical coordinates to reference coordinates.")?;
+        //
+        //         basis_buffer.resize_horizontally_mut(element.num_nodes(), T::zero());
+        //         element.populate_basis(MatrixSliceMut::from(&mut basis_buffer), &xi.coords);
+        //         for (index, v) in izip!(conn.vertex_indices(), basis_buffer.iter()) {
+        //             node_values.push((v.clone(), index.clone()));
+        //         }
+        //     }
+        // }
+        //
+        // supported_node_offsets.push(node_values.len());
+        // assert_eq!(interpolation_points.len() + 1, supported_node_offsets.len());
+        //
+        // Ok(FiniteElementInterpolator::from_compressed_values(
+        //     node_values,
+        //     supported_node_offsets,
+        // ))
     }
 }
 

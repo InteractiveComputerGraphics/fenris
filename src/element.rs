@@ -31,7 +31,6 @@ use crate::allocators::{
     FiniteElementAllocator, ReferenceFiniteElementAllocator, VolumeFiniteElementAllocator,
 };
 use crate::connectivity::Segment2d2Connectivity;
-use crate::space::FiniteElementSpace;
 
 /// TODO: Contribute these defaults to `nalgebra`
 pub type MatrixSlice<'a, T, R, C> = nalgebra::base::MatrixSlice<'a, T, R, C, U1, R>;
@@ -248,11 +247,8 @@ where
 }
 
 // TODO: Move these?
-pub type ElementForSpace<T, Space> =
-    ElementForConnectivity<T, <Space as FiniteElementSpace<T>>::Connectivity>;
 pub type ElementForConnectivity<T, Connectivity> =
     <Connectivity as ElementConnectivity<T>>::Element;
-pub type ConnectivityForSpace<T, Space> = <Space as FiniteElementSpace<T>>::Connectivity;
 
 pub type ConnectivityGeometryDim<T, Conn> = <Conn as ElementConnectivity<T>>::GeometryDim;
 pub type ConnectivityReferenceDim<T, Conn> = <Conn as ElementConnectivity<T>>::ReferenceDim;

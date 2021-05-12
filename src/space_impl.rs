@@ -1,41 +1,20 @@
-use crate::allocators::ElementConnectivityAllocator;
+use crate::allocators::{ElementConnectivityAllocator};
 use crate::connectivity::CellConnectivity;
 use crate::element::{ElementConnectivity, FiniteElement, MatrixSliceMut, ReferenceFiniteElement};
 use crate::mesh::Mesh;
 use crate::nalgebra::{Dynamic, MatrixMN, U1};
 use crate::space::{
-    FiniteElementConnectivity, FiniteElementSpace, FiniteElementSpace2, GeometricFiniteElementSpace,
+    FiniteElementConnectivity, FiniteElementSpace2, GeometricFiniteElementSpace,
 };
 use crate::SmallDim;
 use nalgebra::{DefaultAllocator, DimName, Point, Scalar};
 
-impl<T, D, C> FiniteElementSpace<T> for Mesh<T, D, C>
-where
-    T: Scalar,
-    D: DimName,
-    C: ElementConnectivity<T, GeometryDim = D>,
-    DefaultAllocator: ElementConnectivityAllocator<T, C>,
-{
-    type Connectivity = C;
-
-    fn vertices(&self) -> &[Point<T, D>] {
-        self.vertices()
-    }
-
-    fn num_connectivities(&self) -> usize {
-        self.connectivity().len()
-    }
-
-    fn get_connectivity(&self, index: usize) -> Option<&Self::Connectivity> {
-        self.connectivity().get(index)
-    }
-}
-
 impl<'a, T, D, C> GeometricFiniteElementSpace<'a, T> for Mesh<T, D, C>
 where
     T: Scalar,
-    D: DimName,
+    D: SmallDim,
     C: CellConnectivity<T, D> + ElementConnectivity<T, GeometryDim = D>,
+    C::ReferenceDim: SmallDim,
     DefaultAllocator: ElementConnectivityAllocator<T, C>,
 {
 }
@@ -48,7 +27,7 @@ where
     DefaultAllocator: ElementConnectivityAllocator<T, C>,
 {
     fn num_elements(&self) -> usize {
-        self.num_connectivities()
+        self.connectivity().len()
     }
 
     fn num_nodes(&self) -> usize {
@@ -56,7 +35,8 @@ where
     }
 
     fn element_node_count(&self, element_index: usize) -> usize {
-        self.get_connectivity(element_index)
+        self.connectivity()
+            .get(element_index)
             .expect("Element index out of bounds")
             .vertex_indices()
             .len()
@@ -64,7 +44,8 @@ where
 
     fn populate_element_nodes(&self, nodes: &mut [usize], element_index: usize) {
         let indices = self
-            .get_connectivity(element_index)
+            .connectivity()
+            .get(element_index)
             .expect("Element index out of bounds")
             .vertex_indices();
         assert_eq!(
@@ -94,7 +75,8 @@ where
         reference_coords: &Point<T, Self::ReferenceDim>,
     ) {
         let element = self
-            .get_connectivity(element_index)
+            .connectivity()
+            .get(element_index)
             .expect("Element index out of bounds")
             .element(self.vertices())
             .unwrap();
@@ -113,7 +95,8 @@ where
         reference_coords: &Point<T, Self::ReferenceDim>,
     ) {
         let element = self
-            .get_connectivity(element_index)
+            .connectivity()
+            .get(element_index)
             .expect("Element index out of bounds")
             .element(self.vertices())
             .unwrap();
@@ -132,7 +115,8 @@ where
     ) -> MatrixMN<T, Self::GeometryDim, Self::ReferenceDim> {
         // TODO: Avoid this repetition
         let element = self
-            .get_connectivity(element_index)
+            .connectivity()
+            .get(element_index)
             .expect("Element index out of bounds")
             .element(self.vertices())
             .unwrap();
@@ -145,7 +129,8 @@ where
         reference_coords: &Point<T, Self::ReferenceDim>,
     ) -> Point<T, Self::GeometryDim> {
         let element = self
-            .get_connectivity(element_index)
+            .connectivity()
+            .get(element_index)
             .expect("Element index out of bounds")
             .element(self.vertices())
             .unwrap();
@@ -154,7 +139,8 @@ where
 
     fn diameter(&self, element_index: usize) -> T {
         let element = self
-            .get_connectivity(element_index)
+            .connectivity()
+            .get(element_index)
             .expect("Element index out of bounds")
             .element(self.vertices())
             .unwrap();
