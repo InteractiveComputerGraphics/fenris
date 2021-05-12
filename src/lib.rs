@@ -2,7 +2,6 @@ use nalgebra::{DimMin, DimName};
 
 pub mod allocators;
 pub mod assembly;
-pub mod assembly2;
 pub mod connectivity;
 pub mod element;
 pub mod error;

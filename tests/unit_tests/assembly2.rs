@@ -1,4 +1,4 @@
-pub use fenris::assembly2::gather_global_to_local;
+pub use fenris::assembly::global::gather_global_to_local;
 use fenris::nalgebra::{min, DVector};
 use proptest::collection::vec;
 use proptest::num::i32;

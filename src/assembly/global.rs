@@ -1,14 +1,16 @@
-use crate::assembly::local::{ElementConnectivityAssembler, ElementMatrixAssembler};
+use std::cell::RefCell;
+use std::collections::BTreeSet;
+use std::error::Error;
+use std::ops::AddAssign;
+use std::sync::Arc;
 
-use crate::connectivity::Connectivity;
-
+use itertools::izip;
 use nalgebra::base::storage::Storage;
 use nalgebra::{
     DMatrix, DMatrixSliceMut, DVectorSliceMut, DimName, Dynamic, Matrix, RealField, Scalar, U1,
 };
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
-
 use thread_local::ThreadLocal;
 
 use fenris_sparse::{CsrMatrix, CsrRowMut, SparsityPattern};
@@ -17,10 +19,16 @@ use paradis::adapter::BlockAdapter;
 use paradis::coloring::sequential_greedy_coloring;
 use paradis::DisjointSubsets;
 
-use std::cell::RefCell;
-use std::collections::BTreeSet;
-use std::error::Error;
-use std::sync::Arc;
+use crate::allocators::{BiDimAllocator, SmallDimAllocator};
+use crate::assembly::local::{
+    ElementConnectivityAssembler, ElementMatrixAssembler, ElementVectorAssembler, QuadratureTable,
+};
+use crate::connectivity::Connectivity;
+use crate::element::{MatrixSlice, MatrixSliceMut};
+use crate::nalgebra::allocator::Allocator;
+use crate::nalgebra::{DVector, DVectorSlice, DefaultAllocator, Point};
+use crate::space::FiniteElementSpace;
+use crate::SmallDim;
 
 /// An assembler for CSR matrices.
 #[derive(Debug, Clone)]
@@ -505,4 +513,288 @@ pub fn color_nodes<C: Connectivity>(connectivity: &[C]) -> Vec<DisjointSubsets> 
     }
 
     sequential_greedy_coloring(&nested)
+}
+
+#[derive(Debug)]
+struct SerialVectorAssemblerWorkspace<T: Scalar> {
+    vector: DVector<T>,
+    nodes: Vec<usize>,
+}
+
+impl<T: RealField> Default for SerialVectorAssemblerWorkspace<T> {
+    fn default() -> Self {
+        Self {
+            vector: DVector::zeros(0),
+            nodes: vec![],
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct SerialVectorAssembler<T: Scalar> {
+    workspace: RefCell<SerialVectorAssemblerWorkspace<T>>,
+}
+
+impl<T: RealField> Default for SerialVectorAssembler<T> {
+    fn default() -> Self {
+        Self {
+            workspace: RefCell::new(SerialVectorAssemblerWorkspace::default()),
+        }
+    }
+}
+
+impl<T: RealField> SerialVectorAssembler<T> {
+    pub fn assemble_vector_into<'a>(
+        &self,
+        output: impl Into<DVectorSliceMut<'a, T>>,
+        element_assembler: &dyn ElementVectorAssembler<T>,
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+        // TODO: Move impl into _ method to remove the impl Into<> compilation overhead
+        let mut output = output.into();
+        let num_elements = element_assembler.num_elements();
+        let n = element_assembler.num_nodes();
+        let s = element_assembler.solution_dim();
+        assert_eq!(output.len(), s * n, "Output dimensions mismatch");
+
+        let mut workspace = self.workspace.borrow_mut();
+
+        for i in 0..num_elements {
+            let element_node_count = element_assembler.element_node_count(i);
+            workspace.nodes.resize(element_node_count, usize::MAX);
+            workspace
+                .vector
+                .resize_vertically_mut(s * element_node_count, T::zero());
+            element_assembler.populate_element_nodes(&mut workspace.nodes, i);
+            element_assembler.assemble_element_vector_into(i, (&mut workspace.vector).into())?;
+            add_local_to_global(&workspace.vector, &mut output, &workspace.nodes, s);
+        }
+
+        Ok(())
+    }
+
+    pub fn assemble_vector(
+        &self,
+        element_assembler: &dyn ElementVectorAssembler<T>,
+    ) -> Result<DVector<T>, Box<dyn Error + Send + Sync>> {
+        let n = element_assembler.num_nodes();
+        let mut result = DVector::zeros(element_assembler.solution_dim() * n);
+        self.assemble_vector_into(&mut result, element_assembler)?;
+        Ok(result)
+    }
+}
+
+// TODO: Maybe move to some other module?
+pub fn gather_global_to_local<'a, T: Scalar>(
+    global: impl Into<DVectorSlice<'a, T>>,
+    local: impl Into<DVectorSliceMut<'a, T>>,
+    indices: &[usize],
+    solution_dim: usize,
+) {
+    gather_global_to_local_(global.into(), local.into(), indices, solution_dim)
+}
+
+fn gather_global_to_local_<T: Scalar>(
+    global: DVectorSlice<T>,
+    mut local: DVectorSliceMut<T>,
+    indices: &[usize],
+    solution_dim: usize,
+) {
+    assert_eq!(
+        local.len(),
+        indices.len() * solution_dim,
+        "Size of local vector must be compatible with solutio mdim and index count"
+    );
+    let s = solution_dim;
+    for (i_local, i_global) in indices.iter().enumerate() {
+        local
+            .index_mut((s * i_local..s * i_local + s, 0))
+            .copy_from(&global.index((s * i_global..s * i_global + s, 0)));
+    }
+}
+
+pub fn add_local_to_global<'a, T: RealField>(
+    local: impl Into<DVectorSlice<'a, T>>,
+    global: impl Into<DVectorSliceMut<'a, T>>,
+    indices: &[usize],
+    solution_dim: usize,
+) {
+    add_local_to_global_(local.into(), global.into(), indices, solution_dim)
+}
+
+fn add_local_to_global_<'a, T: RealField>(
+    local: DVectorSlice<'a, T>,
+    mut global: DVectorSliceMut<'a, T>,
+    indices: &[usize],
+    solution_dim: usize,
+) {
+    assert_eq!(
+        local.len(),
+        indices.len() * solution_dim,
+        "Size of local vector must be compatible with solution dim and index count"
+    );
+    let s = solution_dim;
+    for (i_local, i_global) in indices.iter().enumerate() {
+        global
+            .index_mut((s * i_global..s * i_global + s, 0))
+            .add_assign(&local.index((s * i_local..s * i_local + s, 0)));
+    }
+}
+
+/// A buffer for storing intermediate quadrature data.
+#[derive(Debug)]
+pub struct QuadratureBuffer<T, D, Data>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>,
+{
+    quad_weights: Vec<T>,
+    quad_points: Vec<Point<T, D>>,
+    quad_data: Vec<Data>,
+}
+
+impl<T, D, Data> Default for QuadratureBuffer<T, D, Data>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>,
+{
+    fn default() -> Self {
+        Self {
+            quad_weights: Vec::new(),
+            quad_points: Vec::new(),
+            quad_data: Vec::new(),
+        }
+    }
+}
+
+impl<T, GeometryDim, Data> QuadratureBuffer<T, GeometryDim, Data>
+where
+    T: RealField,
+    GeometryDim: SmallDim,
+    Data: Default + Clone,
+    DefaultAllocator: SmallDimAllocator<T, GeometryDim>,
+{
+    /// Resizes the internal buffer storages to the given size.
+    pub fn resize(&mut self, quadrature_size: usize) {
+        self.quad_points.resize(quadrature_size, Point::origin());
+        self.quad_weights.resize(quadrature_size, T::zero());
+        self.quad_data.resize(quadrature_size, Data::default());
+    }
+
+    /// Populates the buffer by querying a quadrature table with the given element index.
+    pub fn populate_element_quadrature_from_table(
+        &mut self,
+        element_index: usize,
+        table: &dyn QuadratureTable<T, GeometryDim, Data = Data>,
+    ) {
+        let quadrature_size = table.element_quadrature_size(element_index);
+        self.resize(quadrature_size);
+        table.populate_element_quadrature_and_data(
+            element_index,
+            &mut self.quad_points,
+            &mut self.quad_weights,
+            &mut self.quad_data,
+        );
+    }
+
+    /// Calls a closure for each quadrature point currently in the workspace.
+    pub fn for_each_quadrature_point<F>(&self, mut f: F) -> Result<(), Box<dyn Error + Sync + Send>>
+    where
+        F: FnMut(T, &Point<T, GeometryDim>, &Data) -> Result<(), Box<dyn Error + Sync + Send>>,
+    {
+        assert_eq!(self.quad_weights.len(), self.quad_points.len());
+        assert_eq!(self.quad_weights.len(), self.quad_data.len());
+        let iter = izip!(&self.quad_weights, &self.quad_points, &self.quad_data);
+        for (&w, xi, data) in iter {
+            f(w, xi, data)?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct BasisFunctionBuffer<T: Scalar> {
+    element_nodes: Vec<usize>,
+    element_basis_values: DMatrix<T>,
+    element_basis_gradients: DMatrix<T>,
+}
+
+impl<T: RealField> Default for BasisFunctionBuffer<T> {
+    fn default() -> Self {
+        Self {
+            element_nodes: Vec::new(),
+            element_basis_values: DMatrix::zeros(0, 0),
+            element_basis_gradients: DMatrix::zeros(0, 0),
+        }
+    }
+}
+
+impl<T: RealField> BasisFunctionBuffer<T> {
+    pub fn resize(&mut self, node_count: usize, reference_dim: usize) {
+        self.element_nodes.resize(node_count, usize::MAX);
+        self.element_basis_values
+            .resize_mut(1, node_count, T::zero());
+        self.element_basis_gradients
+            .resize_mut(reference_dim, node_count, T::zero());
+    }
+
+    pub fn populate_element_nodes_from_space<Space>(&mut self, element_index: usize, space: &Space)
+    where
+        Space: FiniteElementSpace<T>,
+        DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
+    {
+        let node_count = space.element_node_count(element_index);
+        self.resize(node_count, Space::ReferenceDim::dim());
+        space.populate_element_nodes(&mut self.element_nodes, element_index);
+    }
+
+    /// TODO: Document that populate_element_nodes should be called first
+    pub fn populate_element_basis_values_from_space<Space>(
+        &mut self,
+        element_index: usize,
+        space: &Space,
+        reference_coords: &Point<T, Space::ReferenceDim>,
+    ) where
+        Space: FiniteElementSpace<T>,
+        DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
+    {
+        space.populate_element_basis(
+            element_index,
+            MatrixSliceMut::from(&mut self.element_basis_values),
+            reference_coords,
+        );
+    }
+
+    pub fn populate_element_basis_gradients_from_space<Space>(
+        &mut self,
+        element_index: usize,
+        space: &Space,
+        reference_coords: &Point<T, Space::ReferenceDim>,
+    ) where
+        Space: FiniteElementSpace<T>,
+        DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
+    {
+        space.populate_element_gradients(
+            element_index,
+            MatrixSliceMut::from(&mut self.element_basis_gradients),
+            reference_coords,
+        );
+    }
+
+    pub fn element_nodes(&self) -> &[usize] {
+        &self.element_nodes
+    }
+
+    pub fn element_basis_values<D: DimName>(&self) -> MatrixSlice<T, U1, Dynamic> {
+        MatrixSlice::from(&self.element_basis_values)
+    }
+
+    pub fn element_basis_values_mut<D: DimName>(&mut self) -> MatrixSliceMut<T, U1, Dynamic> {
+        MatrixSliceMut::from(&mut self.element_basis_values)
+    }
+
+    pub fn element_gradients_mut<D: DimName>(&mut self) -> MatrixSliceMut<T, D, Dynamic> {
+        MatrixSliceMut::from(&mut self.element_basis_gradients)
+    }
 }
