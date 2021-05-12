@@ -10,7 +10,7 @@ use crate::nalgebra::{
     DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic,
     MatrixMN, MatrixSliceMN, Point, RealField, Scalar, VectorN, U1,
 };
-use crate::space::{FiniteElementConnectivity, FiniteElementSpace2, VolumetricFiniteElementSpace};
+use crate::space::{FiniteElementConnectivity, FiniteElementSpace, VolumetricFiniteElementSpace};
 use crate::workspace::Workspace;
 use crate::SmallDim;
 use itertools::izip;
@@ -790,7 +790,7 @@ impl<T: RealField> BasisFunctionBuffer<T> {
 
     pub fn populate_element_nodes_from_space<Space>(&mut self, element_index: usize, space: &Space)
     where
-        Space: FiniteElementSpace2<T>,
+        Space: FiniteElementSpace<T>,
         DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
     {
         let node_count = space.element_node_count(element_index);
@@ -805,7 +805,7 @@ impl<T: RealField> BasisFunctionBuffer<T> {
         space: &Space,
         reference_coords: &Point<T, Space::ReferenceDim>,
     ) where
-        Space: FiniteElementSpace2<T>,
+        Space: FiniteElementSpace<T>,
         DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
     {
         space.populate_element_basis(
@@ -821,7 +821,7 @@ impl<T: RealField> BasisFunctionBuffer<T> {
         space: &Space,
         reference_coords: &Point<T, Space::ReferenceDim>,
     ) where
-        Space: FiniteElementSpace2<T>,
+        Space: FiniteElementSpace<T>,
         DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
     {
         space.populate_element_gradients(

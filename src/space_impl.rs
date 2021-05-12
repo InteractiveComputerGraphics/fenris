@@ -4,7 +4,7 @@ use crate::element::{ElementConnectivity, FiniteElement, MatrixSliceMut, Referen
 use crate::mesh::Mesh;
 use crate::nalgebra::{Dynamic, MatrixMN, U1};
 use crate::space::{
-    FiniteElementConnectivity, FiniteElementSpace2, GeometricFiniteElementSpace,
+    FiniteElementConnectivity, FiniteElementSpace, GeometricFiniteElementSpace,
 };
 use crate::SmallDim;
 use nalgebra::{DefaultAllocator, DimName, Point, Scalar};
@@ -57,7 +57,7 @@ where
     }
 }
 
-impl<T, D, C> FiniteElementSpace2<T> for Mesh<T, D, C>
+impl<T, D, C> FiniteElementSpace<T> for Mesh<T, D, C>
 where
     T: Scalar,
     D: SmallDim,

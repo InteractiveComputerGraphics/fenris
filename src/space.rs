@@ -19,7 +19,7 @@ pub trait FiniteElementConnectivity {
 }
 
 /// The "new" FiniteElementSpace trait. Currently playground for new design
-pub trait FiniteElementSpace2<T: Scalar>: FiniteElementConnectivity
+pub trait FiniteElementSpace<T: Scalar>: FiniteElementConnectivity
 where
     DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
@@ -66,7 +66,7 @@ where
 
 /// A finite element space where `GeometryDim == ReferenceDim`.
 pub trait VolumetricFiniteElementSpace<T>:
-    FiniteElementSpace2<T, GeometryDim = <Self as FiniteElementSpace2<T>>::ReferenceDim>
+    FiniteElementSpace<T, GeometryDim = <Self as FiniteElementSpace<T>>::ReferenceDim>
 where
     T: Scalar,
     DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
@@ -76,7 +76,7 @@ where
 impl<T, S> VolumetricFiniteElementSpace<T> for S
 where
     T: Scalar,
-    S: FiniteElementSpace2<T, GeometryDim = <Self as FiniteElementSpace2<T>>::ReferenceDim>,
+    S: FiniteElementSpace<T, GeometryDim = <Self as FiniteElementSpace<T>>::ReferenceDim>,
     DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
 }
@@ -87,7 +87,7 @@ where
 /// also be interpreted as a collection of geometry objects, with a 1:1 correspondence between
 /// elements and geometries.
 pub trait GeometricFiniteElementSpace<'a, T>:
-    FiniteElementSpace2<T> + GeometryCollection<'a>
+    FiniteElementSpace<T> + GeometryCollection<'a>
 where
     T: Scalar,
     DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
