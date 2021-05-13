@@ -1,4 +1,4 @@
-use nalgebra::{Point, Vector1};
+use nalgebra::Vector1;
 
 use eyre::eyre;
 use fenris::assembly::global::{
@@ -65,8 +65,7 @@ fn main() -> eyre::Result<()> {
     let op = PoissonOperator2d;
 
     let (weights, points) = quad_quadrature_strength_5_f64();
-    // TODO: Use Point for quadratures
-    let points = points.into_iter().map(Point::from).collect();
+    let points = points.into_iter().collect();
     let quadrature = UniformQuadratureTable::from_points_and_weights(points, weights);
 
     let u = DVector::<f64>::zeros(mesh.vertices().len());
