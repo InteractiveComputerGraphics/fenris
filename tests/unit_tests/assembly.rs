@@ -349,7 +349,7 @@ fn apply_homogeneous_dirichlet_bc_matrix_simple_example() {
 fn apply_homogeneous_dirichlet_bc_csr_simple_example() {
     let mut matrix = CsrMatrix::from(&DMatrix::repeat(8, 8, 2.0));
 
-    apply_homogeneous_dirichlet_bc_csr::<_, U2>(&mut matrix, &[0, 2]);
+    apply_homogeneous_dirichlet_bc_csr(&mut matrix, &[0, 2], 2);
 
     // Note: We don't enforce exactly what values the matrix should take on
     // the diagonal entries, only that they are somewhere between the

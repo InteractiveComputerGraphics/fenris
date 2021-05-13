@@ -343,14 +343,14 @@ impl<T: RealField + Send> CsrParAssembler<T> {
     }
 }
 
-pub fn apply_homogeneous_dirichlet_bc_csr<T, SolutionDim>(
+pub fn apply_homogeneous_dirichlet_bc_csr<T>(
     matrix: &mut CsrMatrix<T>,
     nodes: &[usize],
+    solution_dim: usize,
 ) where
     T: RealField,
-    SolutionDim: DimName,
 {
-    let d = SolutionDim::dim();
+    let d = solution_dim;
 
     // Determine an appropriately scale element to put on the diagonal
     // (Simply setting 1 would ignore the scaling of the entries of the matrix, leading

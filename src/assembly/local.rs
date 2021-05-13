@@ -263,12 +263,12 @@ where
 pub trait Operator {
     type SolutionDim: SmallDim;
 
-    /// The data associated with the operator.
+    /// The parameters associated with the operator.
     ///
     /// Typically this encodes material information, such as density, stiffness and other physical
     /// quantities. This is intended to be paired with data associated with individual
     /// quadrature points during numerical integration.
-    type Data: Default + Clone + 'static;
+    type Parameters: Default + Clone + 'static;
 }
 
 pub trait EllipticOperator<T, GeometryDim>: Operator
@@ -281,7 +281,7 @@ where
     fn compute_elliptic_term(
         &self,
         gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
-        data: &Self::Data,
+        data: &Self::Parameters,
     ) -> MatrixMN<T, GeometryDim, Self::SolutionDim>;
 }
 
@@ -294,7 +294,7 @@ where
     fn contract(
         &self,
         gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
-        data: &Self::Data,
+        data: &Self::Parameters,
         a: &VectorN<T, GeometryDim>,
         b: &VectorN<T, GeometryDim>,
     ) -> MatrixMN<T, Self::SolutionDim, Self::SolutionDim>;
@@ -313,7 +313,7 @@ where
     fn contract_multiple_into(
         &self,
         output: &mut DMatrixSliceMut<T>,
-        data: &Self::Data,
+        data: &Self::Parameters,
         gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
         a: &MatrixSliceMN<T, GeometryDim, Dynamic>,
     ) {
@@ -373,7 +373,7 @@ impl ElementEllipticAssemblerBuilder<(), (), (), ()> {
 }
 
 impl<Op, QTable, U> ElementEllipticAssemblerBuilder<(), Op, QTable, U> {
-    pub fn with_space<Space>(
+    pub fn with_finite_element_space<Space>(
         self,
         space: &Space,
     ) -> ElementEllipticAssemblerBuilder<&Space, Op, QTable, U> {
@@ -387,7 +387,10 @@ impl<Op, QTable, U> ElementEllipticAssemblerBuilder<(), Op, QTable, U> {
 }
 
 impl<Space, QTable, U> ElementEllipticAssemblerBuilder<Space, (), QTable, U> {
-    pub fn with_op<Op>(self, op: &Op) -> ElementEllipticAssemblerBuilder<Space, &Op, QTable, U> {
+    pub fn with_operator<Op>(
+        self,
+        op: &Op,
+    ) -> ElementEllipticAssemblerBuilder<Space, &Op, QTable, U> {
         ElementEllipticAssemblerBuilder {
             space: self.space,
             op,
@@ -445,25 +448,11 @@ where
 
 #[derive(Debug)]
 pub struct ElementEllipticAssembler<'a, T: Scalar, Space, Op, QTable> {
-    // TODO: Create builder?
-    pub space: &'a Space,
-    pub op: &'a Op,
-    pub qtable: &'a QTable,
-    pub u: DVectorSlice<'a, T>,
+    space: &'a Space,
+    op: &'a Op,
+    qtable: &'a QTable,
+    u: DVectorSlice<'a, T>,
 }
-
-impl<'a, T: Scalar> ElementEllipticAssembler<'static, T, (), (), ()> {
-    pub fn new() -> Self {
-        Self {
-            space: &(),
-            op: &(),
-            qtable: &(),
-            u: DVectorSlice::from_slice(&[], 0),
-        }
-    }
-}
-
-impl<'a, T, Space, Op, QTable> ElementEllipticAssembler<'a, T, Space, Op, QTable> where T: Scalar {}
 
 impl<'a, T, Space, Op, QTable> ElementConnectivityAssembler
     for ElementEllipticAssembler<'a, T, Space, Op, QTable>
@@ -570,7 +559,7 @@ where
     T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
     Op: Operator,
-    QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Data>,
+    QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters>,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Op::SolutionDim>,
 {
     /// Calls the given function with a mutable reference to a thread-local workspace.
@@ -578,14 +567,14 @@ where
     /// Helper method that abstracts away the boilerplate of obtaining the workspace.
     fn with_workspace<F, R>(&self, f: F) -> R
     where
-        F: FnOnce(&mut EllipticAssemblerWorkspace<T, Space::GeometryDim, Op::Data>) -> R,
+        F: FnOnce(&mut EllipticAssemblerWorkspace<T, Space::GeometryDim, Op::Parameters>) -> R,
     {
         Self::WORKSPACE.with(|workspace| {
             // First get through the RefCell
             let mut ws = workspace.borrow_mut();
             // Then get the concrete type from the type-erased workspace
             let ws =
-                ws.get_or_default::<EllipticAssemblerWorkspace<T, Space::GeometryDim, Op::Data>>();
+                ws.get_or_default::<EllipticAssemblerWorkspace<T, Space::GeometryDim, Op::Parameters>>();
             f(ws)
         })
     }
@@ -596,7 +585,7 @@ where
     fn for_each_quadrature_point<F>(&self, element_index: usize, mut f: F) -> eyre::Result<()>
     where
         F: FnMut(
-            ForEachQuadraturePoint<T, Space::GeometryDim, Op::SolutionDim, Op::Data>,
+            ForEachQuadraturePoint<T, Space::GeometryDim, Op::SolutionDim, Op::Parameters>,
         ) -> eyre::Result<()>,
     {
         self.with_workspace(|ws| {
@@ -662,7 +651,7 @@ where
     T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
     Op: EllipticOperator<T, Space::GeometryDim>,
-    QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Data>,
+    QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters>,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Op::SolutionDim>,
 {
     #[allow(non_snake_case)]
@@ -704,7 +693,7 @@ where
     T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
     Op: EllipticContraction<T, Space::GeometryDim>,
-    QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Data>,
+    QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters>,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Op::SolutionDim>,
 {
     #[allow(non_snake_case)]
@@ -878,7 +867,7 @@ where
     fn evaluate(
         &self,
         coords: &Point<T, GeometryDim>,
-        data: &Self::Data,
+        data: &Self::Parameters,
     ) -> VectorN<T, Self::SolutionDim>;
 }
 
@@ -899,7 +888,7 @@ impl ElementSourceAssemblerBuilder<(), (), ()> {
 }
 
 impl<SpaceRef, SourceRef, QTableRef> ElementSourceAssemblerBuilder<SpaceRef, SourceRef, QTableRef> {
-    pub fn with_space<Space>(
+    pub fn with_finite_element_space<Space>(
         self,
         space: &Space,
     ) -> ElementSourceAssemblerBuilder<&Space, SourceRef, QTableRef> {
@@ -944,10 +933,9 @@ impl<'a, Space, Source, QTable> ElementSourceAssemblerBuilder<&'a Space, &'a Sou
 }
 
 pub struct ElementSourceAssembler<'a, Space, Source, QTable> {
-    // TODO: Create builder API instead of having pub fields
-    pub space: &'a Space,
-    pub qtable: &'a QTable,
-    pub source: &'a Source,
+    space: &'a Space,
+    qtable: &'a QTable,
+    source: &'a Source,
 }
 
 thread_local! { static SOURCE_WORKSPACE: RefCell<Workspace> = RefCell::new(Workspace::default()) }
@@ -1009,7 +997,7 @@ where
     T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
     Source: SourceFunction<T, Space::GeometryDim>,
-    QTable: QuadratureTable<T, Space::ReferenceDim, Data = Source::Data>,
+    QTable: QuadratureTable<T, Space::ReferenceDim, Data = Source::Parameters>,
     DefaultAllocator:
         TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Source::SolutionDim>,
 {
@@ -1020,7 +1008,7 @@ where
     ) -> eyre::Result<()> {
         SOURCE_WORKSPACE.with(|ws| {
             // TODO: Is it possible to simplify retrieving a mutable reference to the workspace?
-            let mut ws: RefMut<SourceTermWorkspace<T, Space::ReferenceDim, Source::Data>> =
+            let mut ws: RefMut<SourceTermWorkspace<T, Space::ReferenceDim, Source::Parameters>> =
                 RefMut::map(ws.borrow_mut(), |ws| ws.get_or_default());
             let ws: &mut SourceTermWorkspace<_, _, _> = &mut *ws;
             let basis_buffer = &mut ws.basis_buffer;
