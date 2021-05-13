@@ -116,9 +116,7 @@ fn main() -> eyre::Result<()> {
     FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
         .with_title("Poisson 2D")
         .with_point_scalar_attributes("u", u.as_slice())
-        .try_export("poisson2d.vtu")
-        // TODO: Return error instead of unwrapping
-        .unwrap();
+        .try_export("poisson2d.vtu")?;
 
     Ok(())
 }
