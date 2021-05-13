@@ -1,0 +1,7 @@
+[package]
+name = "polyquad-parse"
+version = "0.1.0"
+authors = ["Andreas Longva"]
+edition = "2018"
+
+[dependencies]
