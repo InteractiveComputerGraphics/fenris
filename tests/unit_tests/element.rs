@@ -16,8 +16,8 @@ use fenris::quadrature::{
 use fenris_optimize::calculus::{approximate_jacobian, VectorFunctionBuilder};
 
 use nalgebra::{
-    DVectorSlice, Dynamic, MatrixMN, Point2, Point3, RowVector3, RowVector4, RowVector6,
-    RowVectorN, Vector1, Vector2, Vector3, U1, U10, U2, U20, U27, U3, U4, U6, U8, U9,
+    DVectorSlice, Dynamic, MatrixMN, Point, Point1, Point2, Point3, RowVector3, RowVector4,
+    RowVector6, RowVectorN, Vector1, Vector2, Vector3, U1, U10, U2, U20, U27, U3, U4, U6, U8, U9,
 };
 
 use fenris::util::proptest::point2_f64_strategy;
@@ -39,17 +39,17 @@ fn map_reference_coords_quad2d() {
     let quad = Quad2d(vertices);
     let quad = Quad4d2Element::from(quad);
 
-    let x0 = quad.map_reference_coords(&Vector2::new(-1.0, -1.0));
-    assert!(x0.relative_eq(&vertices[0].coords, 1e-10, 1e-10));
+    let x0 = quad.map_reference_coords(&Point2::new(-1.0, -1.0));
+    assert!(x0.coords.relative_eq(&vertices[0].coords, 1e-10, 1e-10));
 
-    let x1 = quad.map_reference_coords(&Vector2::new(1.0, -1.0));
-    assert!(x1.relative_eq(&vertices[1].coords, 1e-10, 1e-10));
+    let x1 = quad.map_reference_coords(&Point2::new(1.0, -1.0));
+    assert!(x1.coords.relative_eq(&vertices[1].coords, 1e-10, 1e-10));
 
-    let x2 = quad.map_reference_coords(&Vector2::new(1.0, 1.0));
-    assert!(x2.relative_eq(&vertices[2].coords, 1e-10, 1e-10));
+    let x2 = quad.map_reference_coords(&Point2::new(1.0, 1.0));
+    assert!(x2.coords.relative_eq(&vertices[2].coords, 1e-10, 1e-10));
 
-    let x3 = quad.map_reference_coords(&Vector2::new(-1.0, 1.0));
-    assert!(x3.relative_eq(&vertices[3].coords, 1e-10, 1e-10));
+    let x3 = quad.map_reference_coords(&Point2::new(-1.0, 1.0));
+    assert!(x3.coords.relative_eq(&vertices[3].coords, 1e-10, 1e-10));
 }
 
 #[test]
@@ -58,17 +58,21 @@ fn map_reference_coords_edge2d() {
     let b = Point2::new(10.0, 4.0);
     let edge = Segment2d2Element::from(LineSegment2d::new(a, b));
 
-    let x0 = edge.map_reference_coords(&Vector1::new(-1.0));
-    assert!(x0.relative_eq(&a.coords, 1e-10, 1e-10));
+    let x0 = edge.map_reference_coords(&Point1::new(-1.0));
+    assert!(x0.coords.relative_eq(&a.coords, 1e-10, 1e-10));
 
-    let x1 = edge.map_reference_coords(&Vector1::new(1.0));
-    assert!(x1.relative_eq(&b.coords, 1e-10, 1e-10));
+    let x1 = edge.map_reference_coords(&Point1::new(1.0));
+    assert!(x1.coords.relative_eq(&b.coords, 1e-10, 1e-10));
 
-    let x2 = edge.map_reference_coords(&Vector1::new(0.0));
-    assert!(x2.relative_eq(&((a.coords + b.coords) / 2.0), 1e-10, 1e-10));
+    let x2 = edge.map_reference_coords(&Point1::new(0.0));
+    assert!(x2
+        .coords
+        .relative_eq(&((a.coords + b.coords) / 2.0), 1e-10, 1e-10));
 
-    let x3 = edge.map_reference_coords(&Vector1::new(0.5));
-    assert!(x3.relative_eq(&(0.25 * a.coords + 0.75 * b.coords), 1e-10, 1e-10));
+    let x3 = edge.map_reference_coords(&Point1::new(0.5));
+    assert!(x3
+        .coords
+        .relative_eq(&(0.25 * a.coords + 0.75 * b.coords), 1e-10, 1e-10));
 }
 
 #[test]
@@ -111,7 +115,7 @@ fn tri3d2_lagrange_property() {
     let element = Tri3d2Element::reference();
 
     for (i, xi) in element.vertices().into_iter().enumerate() {
-        let phi = element.evaluate_basis(&xi.coords);
+        let phi = element.evaluate_basis(&xi);
 
         let mut expected = MatrixMN::<f64, U1, U3>::zeros();
         expected[i] = 1.0;
@@ -128,7 +132,7 @@ fn tri6d2_lagrange_property() {
     let element = Tri6d2Element::reference();
 
     for (i, xi) in element.vertices().into_iter().enumerate() {
-        let phi = element.evaluate_basis(&xi.coords);
+        let phi = element.evaluate_basis(&xi);
 
         let mut expected = MatrixMN::<f64, U1, U6>::zeros();
         expected[i] = 1.0;
@@ -145,7 +149,7 @@ fn quad9_lagrange_property() {
     let element = Quad9d2Element::reference();
 
     for (i, xi) in element.vertices().into_iter().enumerate() {
-        let phi = element.evaluate_basis(&xi.coords);
+        let phi = element.evaluate_basis(&xi);
 
         let mut expected = MatrixMN::<f64, U1, U9>::zeros();
         expected[i] = 1.0;
@@ -162,7 +166,7 @@ fn tet4_lagrange_property() {
     let element = Tet4Element::reference();
 
     for (i, xi) in element.vertices().into_iter().enumerate() {
-        let phi = element.evaluate_basis(&xi.coords);
+        let phi = element.evaluate_basis(&xi);
 
         let mut expected = MatrixMN::<f64, U1, U4>::zeros();
         expected[i] = 1.0;
@@ -179,7 +183,7 @@ fn tet10_lagrange_property() {
     let element = Tet10Element::reference();
 
     for (i, xi) in element.vertices().into_iter().enumerate() {
-        let phi = element.evaluate_basis(&xi.coords);
+        let phi = element.evaluate_basis(&xi);
 
         let mut expected = MatrixMN::<f64, U1, U10>::zeros();
         expected[i] = 1.0;
@@ -196,7 +200,7 @@ fn hex8_lagrange_property() {
     let element = Hex8Element::reference();
 
     for (i, xi) in element.vertices().into_iter().enumerate() {
-        let phi = element.evaluate_basis(&xi.coords);
+        let phi = element.evaluate_basis(&xi);
 
         let mut expected = MatrixMN::<f64, U1, U8>::zeros();
         expected[i] = 1.0;
@@ -213,7 +217,7 @@ fn hex27_lagrange_property() {
     let element = Hex27Element::reference();
 
     for (i, xi) in element.vertices().into_iter().enumerate() {
-        let phi = element.evaluate_basis(&xi.coords);
+        let phi = element.evaluate_basis(&xi);
 
         let mut expected = MatrixMN::<f64, U1, U27>::zeros();
         expected[i] = 1.0;
@@ -230,7 +234,7 @@ fn hex20_lagrange_property() {
     let element = Hex20Element::reference();
 
     for (i, xi) in element.vertices().into_iter().enumerate() {
-        let phi = element.evaluate_basis(&xi.coords);
+        let phi = element.evaluate_basis(&xi);
 
         let mut expected = MatrixMN::<f64, U1, U20>::zeros();
         expected[i] = 1.0;
@@ -394,7 +398,7 @@ macro_rules! partition_of_unity_test {
         proptest! {
             #[test]
             fn $test_name(xi in $ref_domain_strategy) {
-                let xi = xi.coords;
+                let xi = xi;
                 let element = $ref_element;
                 let phi = element.evaluate_basis(&xi);
                 let phi_sum: f64 = phi.sum();
@@ -411,7 +415,7 @@ macro_rules! partition_of_unity_gradient_test {
             #[test]
             fn $test_name(xi in $ref_domain_strategy) {
                 // Since the sum of basis functions is 1, the sum of the gradients must be 0
-                let xi = xi.coords;
+                let xi = xi;
                 let element = $ref_element;
                 let grad = element.gradients(&xi);
                 let grad_sum = grad.column_sum();
@@ -592,7 +596,7 @@ proptest! {
     ) {
         let segment = LineSegment2d::new(a, b);
         let element = Segment2d2Element::from(segment);
-        let xi = Vector1::new(xi);
+        let xi = Point1::new(xi);
 
         // Finite difference parameter
         let h = 1e-6;
@@ -622,13 +626,13 @@ proptest! {
         prop_assume!(segment.length() > 0.0);
 
         let element = Segment2d2Element::from(segment);
-        let xi = Vector1::new(xi);
+        let xi = Point1::new(xi);
         let x = element.map_reference_coords(&xi);
         // Perturb the surface point in the direction normal to the surface. This checks
         // that the projection actually still manages to correctly reproduce the original point.
         let x_perturbed = &x + eps * segment.normal_dir();
         let xi_proj = project_physical_coordinates(&element, &Point2::from(x_perturbed)).unwrap();
-        let x_reconstructed = element.map_reference_coords(&xi_proj.coords);
+        let x_reconstructed = element.map_reference_coords(&xi_proj);
 
         prop_assert!((x_reconstructed - x).norm() <= 1e-12);
     }
@@ -636,7 +640,7 @@ proptest! {
     #[test]
     fn tet4_partition_of_unity(xi in point_in_tet_ref_domain()) {
         let element = Tet4Element::reference();
-        let phi = element.evaluate_basis(&xi.coords);
+        let phi = element.evaluate_basis(&xi);
         let phi_sum: f64 = phi.sum();
 
         dbg!(phi_sum);
@@ -646,7 +650,7 @@ proptest! {
     #[test]
     fn tet10_partition_of_unity(xi in point_in_tet_ref_domain()) {
         let element = Tet10Element::reference();
-        let phi = element.evaluate_basis(&xi.coords);
+        let phi = element.evaluate_basis(&xi);
         let phi_sum: f64 = phi.sum();
 
         dbg!(phi_sum);
@@ -656,7 +660,7 @@ proptest! {
     #[test]
     fn hex8_partition_of_unity(xi in point_in_hex_ref_domain()) {
         let element = Hex8Element::reference();
-        let phi = element.evaluate_basis(&xi.coords);
+        let phi = element.evaluate_basis(&xi);
         let phi_sum: f64 = phi.sum();
 
         dbg!(phi_sum);
@@ -666,7 +670,7 @@ proptest! {
     #[test]
     fn tet4_partition_of_unity_gradient((x, y, z) in (-1.0 ..= 1.0, -1.0 ..= 1.0, -1.0 ..= 1.0)) {
         // Since the sum of basis functions is 1, the sum of the gradients must be 0
-        let xi = Vector3::new(x, y, z);
+        let xi = Point3::new(x, y, z);
         let element = Tet4Element::reference();
         let grad = element.gradients(&xi);
         let grad_sum = grad.column_sum();
@@ -677,7 +681,7 @@ proptest! {
     #[test]
     fn tet10_partition_of_unity_gradient((x, y, z) in (-1.0 ..= 1.0, -1.0 ..= 1.0, -1.0 ..= 1.0)) {
         // Since the sum of basis functions is 1, the sum of the gradients must be 0
-        let xi = Vector3::new(x, y, z);
+        let xi = Point3::new(x, y, z);
         let element = Tet10Element::reference();
         let grad = element.gradients(&xi);
         let grad_sum = grad.column_sum();
@@ -723,10 +727,11 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(3).with_function(move |x, xi| {
-            x.copy_from(&elem.evaluate_basis(&xi.fixed_slice::<U2, U1>(0, 0).clone_owned()).transpose());
+            let xi = Point::from(xi.fixed_slice::<U2, U1>(0, 0).clone_owned());
+            x.copy_from(&elem.evaluate_basis(&xi).transpose());
         });
 
-        let grad = elem.gradients(&xi.coords);
+        let grad = elem.gradients(&xi);
         let grad_approx = approximate_jacobian(f, &DVectorSlice::<_, Dynamic>::from(&xi.coords).clone_owned(), &h).transpose();
 
         assert_approx_matrix_eq!(grad, &grad_approx, abstol=1e-5);
@@ -744,10 +749,11 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(6).with_function(move |x, xi| {
-            x.copy_from(&elem.evaluate_basis(&xi.fixed_slice::<U2, U1>(0, 0).clone_owned()).transpose());
+            let xi = Point::from(xi.fixed_slice::<U2, U1>(0, 0).clone_owned());
+            x.copy_from(&elem.evaluate_basis(&xi).transpose());
         });
 
-        let grad = elem.gradients(&xi.coords);
+        let grad = elem.gradients(&xi);
         let grad_approx = approximate_jacobian(f, &DVectorSlice::<_, Dynamic>::from(&xi.coords).clone_owned(), &h).transpose();
 
         assert_approx_matrix_eq!(grad, &grad_approx, abstol=1e-5);
@@ -762,10 +768,11 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(4).with_function(move |x, xi| {
-            x.copy_from(&tet.evaluate_basis(&xi.fixed_slice::<U3, U1>(0, 0).clone_owned()).transpose());
+            let xi = Point::from(xi.fixed_slice::<U3, U1>(0, 0).clone_owned());
+            x.copy_from(&tet.evaluate_basis(&xi).transpose());
         });
 
-        let grad = tet.gradients(&xi.coords);
+        let grad = tet.gradients(&xi);
         let grad_approx = approximate_jacobian(f, &DVectorSlice::<_, Dynamic>::from(&xi.coords).clone_owned(), &h).transpose();
 
         assert_approx_matrix_eq!(grad, &grad_approx, abstol=1e-5);
@@ -781,10 +788,11 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(10).with_function(move |x, xi| {
-            x.copy_from(&tet.evaluate_basis(&xi.fixed_slice::<U3, U1>(0, 0).clone_owned()).transpose());
+            let xi = Point::from(xi.fixed_slice::<U3, U1>(0, 0).clone_owned());
+            x.copy_from(&tet.evaluate_basis(&xi).transpose());
         });
 
-        let grad = tet.gradients(&xi.coords);
+        let grad = tet.gradients(&xi);
         let grad_approx = approximate_jacobian(f, &DVectorSlice::<_, Dynamic>::from(&xi.coords).clone_owned(), &h).transpose();
 
         assert_approx_matrix_eq!(grad, &grad_approx, abstol=1e-5);
@@ -800,10 +808,11 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(27).with_function(move |x, xi| {
-            x.copy_from(&hex.evaluate_basis(&xi.fixed_slice::<U3, U1>(0, 0).clone_owned()).transpose());
+            let xi = Point::from(xi.fixed_slice::<U3, U1>(0, 0).clone_owned());
+            x.copy_from(&hex.evaluate_basis(&xi).transpose());
         });
 
-        let grad = hex.gradients(&xi.coords);
+        let grad = hex.gradients(&xi);
         let xi = DVectorSlice::<_, Dynamic>::from(&xi.coords).clone_owned();
         let grad_approx = approximate_jacobian(f, &xi, &h).transpose();
 
@@ -820,10 +829,11 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(20).with_function(move |x, xi| {
-            x.copy_from(&hex.evaluate_basis(&xi.fixed_slice::<U3, U1>(0, 0).clone_owned()).transpose());
+            let xi = Point::from(xi.fixed_slice::<U3, U1>(0, 0).clone_owned());
+            x.copy_from(&hex.evaluate_basis(&xi).transpose());
         });
 
-        let grad = hex.gradients(&xi.coords);
+        let grad = hex.gradients(&xi);
         let xi = DVectorSlice::<_, Dynamic>::from(&xi.coords).clone_owned();
         let grad_approx = approximate_jacobian(f, &xi, &h).transpose();
 
@@ -838,10 +848,11 @@ proptest! {
         let h = 1e-6;
         // Function is x = f(xi)
         let f = VectorFunctionBuilder::with_dimension(3).with_function(move |x, xi| {
-            x.copy_from(&tet.map_reference_coords(&xi.fixed_slice::<U3, U1>(0, 0).clone_owned()));
+            let xi = Point::from(xi.fixed_slice::<U3, U1>(0, 0).clone_owned());
+            x.copy_from(&dbg!(tet.map_reference_coords(&xi).coords));
         });
 
-        let j = tet.reference_jacobian(&xi.coords);
+        let j = tet.reference_jacobian(&xi);
         let j_approx = approximate_jacobian(f, &DVectorSlice::<_, Dynamic>::from(&xi.coords).clone_owned(), &h);
         assert_approx_matrix_eq!(j, &j_approx, abstol=1e-5);
     }
@@ -850,7 +861,7 @@ proptest! {
     fn tet4_element_jacobian_has_non_negative_jacobian(
         (tet, xi) in (any::<Tet4Element<f64>>(), point_in_tet_ref_domain())
     ) {
-        let j = tet.reference_jacobian(&xi.coords);
+        let j = tet.reference_jacobian(&xi);
         prop_assert!(dbg!(j.determinant()) >= 0.0);
     }
 }

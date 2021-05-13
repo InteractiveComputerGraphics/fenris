@@ -6,9 +6,7 @@ use crate::connectivity::{
 use crate::element::{ElementConnectivity, FiniteElement};
 use crate::mesh::{Mesh, Mesh2d, Mesh3d, Tet4Mesh};
 use nalgebra::allocator::Allocator;
-use nalgebra::{
-    DefaultAllocator, DimName, Point, Point2, Point3, RealField, Scalar, Vector2, Vector3, U3,
-};
+use nalgebra::{DefaultAllocator, DimName, Point, Point2, Point3, RealField, Scalar, U3};
 
 use crate::geometry::polymesh::{PolyMesh, PolyMesh3d};
 use crate::geometry::{OrientationTestResult, Triangle};
@@ -144,16 +142,16 @@ where
             }
         };
 
-        add_face_node(&[0, 1, 2, 3], Vector3::new(0.0, 0.0, -1.0));
-        add_face_node(&[0, 1, 4, 5], Vector3::new(0.0, -1.0, 0.0));
-        add_face_node(&[0, 3, 4, 7], Vector3::new(-1.0, 0.0, 0.0));
-        add_face_node(&[1, 2, 5, 6], Vector3::new(1.0, 0.0, 0.0));
-        add_face_node(&[2, 3, 6, 7], Vector3::new(0.0, 1.0, 0.0));
-        add_face_node(&[4, 5, 6, 7], Vector3::new(0.0, 0.0, 1.0));
+        add_face_node(&[0, 1, 2, 3], Point3::new(0.0, 0.0, -1.0));
+        add_face_node(&[0, 1, 4, 5], Point3::new(0.0, -1.0, 0.0));
+        add_face_node(&[0, 3, 4, 7], Point3::new(-1.0, 0.0, 0.0));
+        add_face_node(&[1, 2, 5, 6], Point3::new(1.0, 0.0, 0.0));
+        add_face_node(&[2, 3, 6, 7], Point3::new(0.0, 1.0, 0.0));
+        add_face_node(&[4, 5, 6, 7], Point3::new(0.0, 0.0, 1.0));
 
         // Add center node
         {
-            let reference_vertex = Vector3::new(0.0, 0.0, 0.0);
+            let reference_vertex = Point3::origin();
             let vertex = element.map_reference_coords(&reference_vertex);
             parents.push(global_indices);
             child_indices.push(0);
@@ -434,7 +432,7 @@ where
 
             // Add the midpoint of the cell
             let element = connectivity.element(initial_mesh.vertices()).unwrap();
-            let midpoint = Point2::from(element.map_reference_coords(&Vector2::zeros()));
+            let midpoint = Point2::from(element.map_reference_coords(&Point2::origin()));
             quad9_vertex_indices[8] = vertices.len();
             vertices.push(midpoint);
 

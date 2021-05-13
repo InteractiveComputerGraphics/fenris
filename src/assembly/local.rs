@@ -123,7 +123,7 @@ where
             MatrixSlice::from(&gradients),
             MatrixSlice::from(u_element),
         );
-        let f = function(&X, &u, &u_grad);
+        let f = function(&X.coords, &u, &u_grad);
         f_e += f * w * J_det.abs();
     }
 

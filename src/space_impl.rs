@@ -83,7 +83,7 @@ where
             element.num_nodes(),
             "Incompatible slice shape for basis values"
         );
-        element.populate_basis(basis_values, &reference_coords.coords)
+        element.populate_basis(basis_values, &reference_coords)
     }
 
     fn populate_element_gradients(
@@ -103,7 +103,7 @@ where
             (C::ReferenceDim::dim(), element.num_nodes()),
             "Incompatible slice shape for basis gradients"
         );
-        element.populate_basis_gradients(gradients, &reference_coords.coords)
+        element.populate_basis_gradients(gradients, &reference_coords)
     }
 
     fn element_reference_jacobian(
@@ -118,7 +118,7 @@ where
             .expect("Element index out of bounds")
             .element(self.vertices())
             .unwrap();
-        element.reference_jacobian(&reference_coords.coords)
+        element.reference_jacobian(&reference_coords)
     }
 
     fn map_element_reference_coords(
@@ -132,7 +132,7 @@ where
             .expect("Element index out of bounds")
             .element(self.vertices())
             .unwrap();
-        Point::from(element.map_reference_coords(&reference_coords.coords))
+        Point::from(element.map_reference_coords(&reference_coords))
     }
 
     fn diameter(&self, element_index: usize) -> T {

@@ -1,13 +1,11 @@
-use nalgebra::{
-    DefaultAllocator, DimName, RealField, Scalar, Vector2, Vector3, VectorN, U1, U2, U3,
-};
+use nalgebra::{DefaultAllocator, DimName, Point, Point2, Point3, RealField, Scalar, U2, U3};
 use std::ops::{Add, AddAssign, Deref, Mul};
 
 use nalgebra::allocator::Allocator;
 use num::Zero;
 use numeric_literals::replace_float_literals;
 
-pub type QuadraturePair<T, D> = (Vec<T>, Vec<VectorN<T, D>>);
+pub type QuadraturePair<T, D> = (Vec<T>, Vec<Point<T, D>>);
 pub type QuadraturePair2d<T> = QuadraturePair<T, U2>;
 pub type QuadraturePair3d<T> = QuadraturePair<T, U3>;
 
@@ -18,12 +16,12 @@ where
     DefaultAllocator: Allocator<T, D>,
 {
     fn weights(&self) -> &[T];
-    fn points(&self) -> &[VectorN<T, D>];
+    fn points(&self) -> &[Point<T, D>];
 
     /// Approximates the integral of the given function using this quadrature rule.
     fn integrate<U, Function>(&self, f: Function) -> U
     where
-        Function: Fn(&VectorN<T, D>) -> U,
+        Function: Fn(&Point<T, D>) -> U,
         U: Zero + Mul<T, Output = U> + Add<T, Output = U> + AddAssign<U>,
     {
         let mut integral = U::zero();
@@ -53,14 +51,14 @@ where
     T: Scalar,
     D: DimName,
     A: Deref<Target = [T]>,
-    B: Deref<Target = [VectorN<T, D>]>,
-    DefaultAllocator: Allocator<T, D, U1>,
+    B: Deref<Target = [Point<T, D>]>,
+    DefaultAllocator: Allocator<T, D>,
 {
     fn weights(&self) -> &[T] {
         self.0.deref()
     }
 
-    fn points(&self) -> &[VectorN<T, D>] {
+    fn points(&self) -> &[Point<T, D>] {
         self.1.deref()
     }
 }
@@ -70,13 +68,13 @@ where
     T: Scalar,
     D: DimName,
     X: Quadrature<T, D>,
-    DefaultAllocator: Allocator<T, D, U1>,
+    DefaultAllocator: Allocator<T, D>,
 {
     fn weights(&self) -> &[T] {
         X::weights(self)
     }
 
-    fn points(&self) -> &[VectorN<T, D>] {
+    fn points(&self) -> &[Point<T, D>] {
         X::points(self)
     }
 }
@@ -87,7 +85,7 @@ where
 /// TODO: Generalize to other types and quadrature rules!
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::excessive_precision)]
-pub fn quad_quadrature_strength_5_f64() -> (Vec<f64>, Vec<Vector2<f64>>) {
+pub fn quad_quadrature_strength_5_f64() -> (Vec<f64>, Vec<Point2<f64>>) {
     let mut w = Vec::new();
     let mut p = Vec::new();
     p.reserve(8);
@@ -98,30 +96,30 @@ pub fn quad_quadrature_strength_5_f64() -> (Vec<f64>, Vec<Vector2<f64>>) {
     // "On the identification of symmetric quadrature rules for finite element methods"
 
     w.push(0.8163265306122448979591836734693877551);
-    p.push(Vector2::new(0.68313005106397322554806924536807013272, 0.0));
+    p.push(Point2::new(0.68313005106397322554806924536807013272, 0.0));
     w.push(0.8163265306122448979591836734693877551);
-    p.push(Vector2::new(0.0, 0.68313005106397322554806924536807013272));
+    p.push(Point2::new(0.0, 0.68313005106397322554806924536807013272));
     w.push(0.8163265306122448979591836734693877551);
-    p.push(Vector2::new(-0.68313005106397322554806924536807013272, 0.0));
+    p.push(Point2::new(-0.68313005106397322554806924536807013272, 0.0));
     w.push(0.8163265306122448979591836734693877551);
-    p.push(Vector2::new(0.0, -0.68313005106397322554806924536807013272));
+    p.push(Point2::new(0.0, -0.68313005106397322554806924536807013272));
     w.push(0.1836734693877551020408163265306122449);
-    p.push(Vector2::new(
+    p.push(Point2::new(
         0.8819171036881968635005385845464201419,
         0.8819171036881968635005385845464201419,
     ));
     w.push(0.1836734693877551020408163265306122449);
-    p.push(Vector2::new(
+    p.push(Point2::new(
         0.8819171036881968635005385845464201419,
         -0.8819171036881968635005385845464201419,
     ));
     w.push(0.1836734693877551020408163265306122449);
-    p.push(Vector2::new(
+    p.push(Point2::new(
         -0.8819171036881968635005385845464201419,
         0.8819171036881968635005385845464201419,
     ));
     w.push(0.1836734693877551020408163265306122449);
-    p.push(Vector2::new(
+    p.push(Point2::new(
         -0.8819171036881968635005385845464201419,
         -0.8819171036881968635005385845464201419,
     ));
@@ -136,7 +134,7 @@ pub fn quad_quadrature_strength_5_f64() -> (Vec<f64>, Vec<Vector2<f64>>) {
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::excessive_precision)]
 #[replace_float_literals(T::from_f64(literal).expect("Literal must be representable by T"))]
-pub fn quad_quadrature_strength_5<T>() -> (Vec<T>, Vec<Vector2<T>>)
+pub fn quad_quadrature_strength_5<T>() -> (Vec<T>, Vec<Point2<T>>)
 where
     T: RealField,
 {
@@ -150,30 +148,30 @@ where
     // "On the identification of symmetric quadrature rules for finite element methods"
 
     w.push(0.8163265306122448979591836734693877551);
-    p.push(Vector2::new(0.68313005106397322554806924536807013272, 0.0));
+    p.push(Point2::new(0.68313005106397322554806924536807013272, 0.0));
     w.push(0.8163265306122448979591836734693877551);
-    p.push(Vector2::new(0.0, 0.68313005106397322554806924536807013272));
+    p.push(Point2::new(0.0, 0.68313005106397322554806924536807013272));
     w.push(0.8163265306122448979591836734693877551);
-    p.push(Vector2::new(-0.68313005106397322554806924536807013272, 0.0));
+    p.push(Point2::new(-0.68313005106397322554806924536807013272, 0.0));
     w.push(0.8163265306122448979591836734693877551);
-    p.push(Vector2::new(0.0, -0.68313005106397322554806924536807013272));
+    p.push(Point2::new(0.0, -0.68313005106397322554806924536807013272));
     w.push(0.1836734693877551020408163265306122449);
-    p.push(Vector2::new(
+    p.push(Point2::new(
         0.8819171036881968635005385845464201419,
         0.8819171036881968635005385845464201419,
     ));
     w.push(0.1836734693877551020408163265306122449);
-    p.push(Vector2::new(
+    p.push(Point2::new(
         0.8819171036881968635005385845464201419,
         -0.8819171036881968635005385845464201419,
     ));
     w.push(0.1836734693877551020408163265306122449);
-    p.push(Vector2::new(
+    p.push(Point2::new(
         -0.8819171036881968635005385845464201419,
         0.8819171036881968635005385845464201419,
     ));
     w.push(0.1836734693877551020408163265306122449);
-    p.push(Vector2::new(
+    p.push(Point2::new(
         -0.8819171036881968635005385845464201419,
         -0.8819171036881968635005385845464201419,
     ));
@@ -183,7 +181,7 @@ where
 
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::excessive_precision)]
-pub fn tri_vertex_quadrature<T>() -> (Vec<T>, Vec<Vector2<T>>)
+pub fn tri_vertex_quadrature<T>() -> (Vec<T>, Vec<Point2<T>>)
 where
     T: RealField,
 {
@@ -203,7 +201,7 @@ where
     let p = x
         .into_iter()
         .zip(y.into_iter())
-        .map(|(x, y)| Vector2::new(x, y))
+        .map(|(x, y)| Point2::new(x, y))
         .collect();
 
     (w, p)
@@ -211,7 +209,7 @@ where
 
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::excessive_precision)]
-pub fn tri_quadrature_strength_5_f64() -> (Vec<f64>, Vec<Vector2<f64>>) {
+pub fn tri_quadrature_strength_5_f64() -> (Vec<f64>, Vec<Point2<f64>>) {
     let x = vec![
         -0.33333333333333333333333333333333333333,
         -0.79742698535308732239802527616975234389,
@@ -243,7 +241,7 @@ pub fn tri_quadrature_strength_5_f64() -> (Vec<f64>, Vec<Vector2<f64>>) {
     let p = x
         .into_iter()
         .zip(y.into_iter())
-        .map(|(x, y)| Vector2::new(x, y))
+        .map(|(x, y)| Point2::new(x, y))
         .collect();
 
     (w, p)
@@ -251,7 +249,7 @@ pub fn tri_quadrature_strength_5_f64() -> (Vec<f64>, Vec<Vector2<f64>>) {
 
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::excessive_precision)]
-pub fn tri_quadrature_strength_5<T>() -> (Vec<T>, Vec<Vector2<T>>)
+pub fn tri_quadrature_strength_5<T>() -> (Vec<T>, Vec<Point2<T>>)
 where
     T: RealField,
 {
@@ -297,7 +295,7 @@ where
     let p = x
         .into_iter()
         .zip(y.into_iter())
-        .map(|(x, y)| Vector2::new(x, y))
+        .map(|(x, y)| Point2::new(x, y))
         .collect();
 
     (w, p)
@@ -305,7 +303,7 @@ where
 
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::excessive_precision)]
-pub fn tri_quadrature_strength_11<T>() -> (Vec<T>, Vec<Vector2<T>>)
+pub fn tri_quadrature_strength_11<T>() -> (Vec<T>, Vec<Point2<T>>)
 where
     T: RealField,
 {
@@ -412,7 +410,7 @@ where
     let p = x
         .into_iter()
         .zip(y.into_iter())
-        .map(|(x, y)| Vector2::new(x, y))
+        .map(|(x, y)| Point2::new(x, y))
         .collect();
 
     (w, p)
@@ -420,7 +418,7 @@ where
 
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::excessive_precision)]
-pub fn quad_quadrature_strength_11<T>() -> (Vec<T>, Vec<Vector2<T>>)
+pub fn quad_quadrature_strength_11<T>() -> (Vec<T>, Vec<Point2<T>>)
 where
     T: RealField,
 {
@@ -529,7 +527,7 @@ where
     let p = x
         .into_iter()
         .zip(y.into_iter())
-        .map(|(x, y)| Vector2::new(x, y))
+        .map(|(x, y)| Point2::new(x, y))
         .collect();
 
     (w, p)
@@ -538,7 +536,7 @@ where
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::excessive_precision)]
 #[replace_float_literals(T::from_f64(literal).unwrap())]
-pub fn tet_quadrature_strength_1<T>() -> (Vec<T>, Vec<Vector3<T>>)
+pub fn tet_quadrature_strength_1<T>() -> (Vec<T>, Vec<Point3<T>>)
 where
     T: RealField,
 {
@@ -551,7 +549,7 @@ where
         .into_iter()
         .zip(y.into_iter())
         .zip(z.into_iter())
-        .map(|((x, y), z)| Vector3::new(x, y, z))
+        .map(|((x, y), z)| Point3::new(x, y, z))
         .collect();
 
     (w, p)
@@ -560,7 +558,7 @@ where
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::excessive_precision)]
 #[replace_float_literals(T::from_f64(literal).unwrap())]
-pub fn tet_quadrature_strength_2<T>() -> (Vec<T>, Vec<Vector3<T>>)
+pub fn tet_quadrature_strength_2<T>() -> (Vec<T>, Vec<Point3<T>>)
 where
     T: RealField,
 {
@@ -593,7 +591,7 @@ where
         .into_iter()
         .zip(y.into_iter())
         .zip(z.into_iter())
-        .map(|((x, y), z)| Vector3::new(x, y, z))
+        .map(|((x, y), z)| Point3::new(x, y, z))
         .collect();
 
     (w, p)
@@ -602,7 +600,7 @@ where
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::excessive_precision)]
 #[replace_float_literals(T::from_f64(literal).unwrap())]
-pub fn tet_quadrature_strength_3<T>() -> (Vec<T>, Vec<Vector3<T>>)
+pub fn tet_quadrature_strength_3<T>() -> (Vec<T>, Vec<Point3<T>>)
 where
     T: RealField,
 {
@@ -654,7 +652,7 @@ where
         .into_iter()
         .zip(y.into_iter())
         .zip(z.into_iter())
-        .map(|((x, y), z)| Vector3::new(x, y, z))
+        .map(|((x, y), z)| Point3::new(x, y, z))
         .collect();
 
     (w, p)
@@ -663,7 +661,7 @@ where
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::excessive_precision)]
 #[replace_float_literals(T::from_f64(literal).unwrap())]
-pub fn tet_quadrature_strength_5<T>() -> (Vec<T>, Vec<Vector3<T>>)
+pub fn tet_quadrature_strength_5<T>() -> (Vec<T>, Vec<Point3<T>>)
 where
     T: RealField,
 {
@@ -739,7 +737,7 @@ where
         .into_iter()
         .zip(y.into_iter())
         .zip(z.into_iter())
-        .map(|((x, y), z)| Vector3::new(x, y, z))
+        .map(|((x, y), z)| Point3::new(x, y, z))
         .collect();
 
     (w, p)
@@ -748,7 +746,7 @@ where
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::excessive_precision)]
 #[replace_float_literals(T::from_f64(literal).unwrap())]
-pub fn tet_quadrature_strength_10<T>() -> (Vec<T>, Vec<Vector3<T>>)
+pub fn tet_quadrature_strength_10<T>() -> (Vec<T>, Vec<Point3<T>>)
 where
     T: RealField,
 {
@@ -1092,7 +1090,7 @@ where
         .into_iter()
         .zip(y.into_iter())
         .zip(z.into_iter())
-        .map(|((x, y), z)| Vector3::new(x, y, z))
+        .map(|((x, y), z)| Point3::new(x, y, z))
         .collect();
 
     (w, p)
@@ -1101,7 +1099,7 @@ where
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::excessive_precision)]
 #[replace_float_literals(T::from_f64(literal).unwrap())]
-pub fn hex_quadrature_strength_3<T>() -> (Vec<T>, Vec<Vector3<T>>)
+pub fn hex_quadrature_strength_3<T>() -> (Vec<T>, Vec<Point3<T>>)
 where
     T: RealField,
 {
@@ -1124,7 +1122,7 @@ where
         .into_iter()
         .zip(y.into_iter())
         .zip(z.into_iter())
-        .map(|((x, y), z)| Vector3::new(x, y, z))
+        .map(|((x, y), z)| Point3::new(x, y, z))
         .collect();
 
     (w, p)
@@ -1133,7 +1131,7 @@ where
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::excessive_precision)]
 #[replace_float_literals(T::from_f64(literal).unwrap())]
-pub fn hex_quadrature_strength_5<T>() -> (Vec<T>, Vec<Vector3<T>>)
+pub fn hex_quadrature_strength_5<T>() -> (Vec<T>, Vec<Point3<T>>)
 where
     T: RealField,
 {
@@ -1209,7 +1207,7 @@ where
         .into_iter()
         .zip(y.into_iter())
         .zip(z.into_iter())
-        .map(|((x, y), z)| Vector3::new(x, y, z))
+        .map(|((x, y), z)| Point3::new(x, y, z))
         .collect();
 
     (w, p)
@@ -1218,7 +1216,7 @@ where
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::excessive_precision)]
 #[replace_float_literals(T::from_f64(literal).unwrap())]
-pub fn hex_quadrature_strength_11<T>() -> (Vec<T>, Vec<Vector3<T>>)
+pub fn hex_quadrature_strength_11<T>() -> (Vec<T>, Vec<Point3<T>>)
 where
     T: RealField,
 {
@@ -1598,7 +1596,7 @@ where
         .into_iter()
         .zip(y.into_iter())
         .zip(z.into_iter())
-        .map(|((x, y), z)| Vector3::new(x, y, z))
+        .map(|((x, y), z)| Point3::new(x, y, z))
         .collect();
 
     (w, p)

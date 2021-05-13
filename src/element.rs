@@ -1,7 +1,7 @@
 use nalgebra::allocator::Allocator;
 use nalgebra::{
     distance, DVectorSlice, DVectorSliceMut, DimName, Dynamic, Matrix1x6, Matrix2x6, Matrix3,
-    Matrix3x4, Point2, Point3, Vector1, Vector3,
+    Matrix3x4, Point2, Point3, Vector3,
 };
 use nalgebra::{
     DefaultAllocator, DimMin, Matrix1x3, Matrix1x4, Matrix2, Matrix2x3, Matrix2x4, MatrixMN,
@@ -31,6 +31,7 @@ use crate::allocators::{
     FiniteElementAllocator, ReferenceFiniteElementAllocator, VolumeFiniteElementAllocator,
 };
 use crate::connectivity::Segment2d2Connectivity;
+use crate::nalgebra::Point1;
 
 /// TODO: Contribute these defaults to `nalgebra`
 pub type MatrixSlice<'a, T, R, C> = nalgebra::base::MatrixSlice<'a, T, R, C, U1, R>;
@@ -54,7 +55,7 @@ where
     fn populate_basis(
         &self,
         result: MatrixSliceMut<T, U1, Dynamic>,
-        reference_coords: &VectorN<T, Self::ReferenceDim>,
+        reference_coords: &Point<T, Self::ReferenceDim>,
     );
 
     /// Given nodal weights, construct a matrix whose columns are the
@@ -62,7 +63,7 @@ where
     fn populate_basis_gradients(
         &self,
         result: MatrixSliceMut<T, Self::ReferenceDim, Dynamic>,
-        reference_coords: &VectorN<T, Self::ReferenceDim>,
+        reference_coords: &Point<T, Self::ReferenceDim>,
     );
 }
 
@@ -89,14 +90,14 @@ where
     /// in a row vector where each entry is the value of the corresponding basis function.
     fn evaluate_basis(
         &self,
-        reference_coords: &VectorN<T, Self::ReferenceDim>,
+        reference_coords: &Point<T, Self::ReferenceDim>,
     ) -> MatrixMN<T, U1, Self::NodalDim>;
 
     /// Given nodal weights, construct a matrix whose columns are the
     /// gradients of each shape function in the element.
     fn gradients(
         &self,
-        reference_coords: &VectorN<T, Self::ReferenceDim>,
+        reference_coords: &Point<T, Self::ReferenceDim>,
     ) -> MatrixMN<T, Self::ReferenceDim, Self::NodalDim>;
 }
 
@@ -117,7 +118,7 @@ where
     fn populate_basis(
         &self,
         mut result: MatrixSliceMut<T, U1, Dynamic>,
-        reference_coords: &VectorN<T, E::ReferenceDim>,
+        reference_coords: &Point<T, E::ReferenceDim>,
     ) {
         let basis_values = E::evaluate_basis(self, reference_coords);
         result.copy_from(&basis_values);
@@ -126,7 +127,7 @@ where
     fn populate_basis_gradients(
         &self,
         mut result: MatrixSliceMut<T, E::ReferenceDim, Dynamic>,
-        reference_coords: &VectorN<T, E::ReferenceDim>,
+        reference_coords: &Point<T, E::ReferenceDim>,
     ) {
         let gradients = E::gradients(self, reference_coords);
         result.copy_from(&gradients);
@@ -144,14 +145,14 @@ where
     /// element at the given reference coordinates.
     fn reference_jacobian(
         &self,
-        reference_coords: &VectorN<T, Self::ReferenceDim>,
+        reference_coords: &Point<T, Self::ReferenceDim>,
     ) -> MatrixMN<T, Self::GeometryDim, Self::ReferenceDim>;
 
     /// Maps reference coordinates to physical coordinates in the element.
     fn map_reference_coords(
         &self,
-        reference_coords: &VectorN<T, Self::ReferenceDim>,
-    ) -> VectorN<T, Self::GeometryDim>;
+        reference_coords: &Point<T, Self::ReferenceDim>,
+    ) -> Point<T, Self::GeometryDim>;
 
     /// The diameter of the finite element.
     ///
@@ -243,7 +244,7 @@ where
     DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
     /// Compute the normal at the point associated with the provided reference coordinate.
-    fn normal(&self, xi: &VectorN<T, Self::ReferenceDim>) -> VectorN<T, Self::GeometryDim>;
+    fn normal(&self, xi: &Point<T, Self::ReferenceDim>) -> VectorN<T, Self::GeometryDim>;
 }
 
 // TODO: Move these?
@@ -341,11 +342,11 @@ where
 
     #[rustfmt::skip]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn evaluate_basis(&self, xi: &Vector2<T>) -> Matrix1x4<T> {
+    fn evaluate_basis(&self, xi: &Point2<T>) -> Matrix1x4<T> {
         // We define the shape functions as N_{alpha, beta} evaluated at xi such that
         //  N_{alpha, beta}([alpha, beta]) = 1
         // with alpha, beta = 1 or -1
-        let phi = |alpha, beta, xi: &Vector2<T>| (1.0 + alpha * xi[0]) * (1.0 + beta * xi[1]) / 4.0;
+        let phi = |alpha, beta, xi: &Point2<T>| (1.0 + alpha * xi[0]) * (1.0 + beta * xi[1]) / 4.0;
         Matrix1x4::from_row_slice(&[
             phi(-1.0, -1.0, xi),
             phi( 1.0, -1.0, xi),
@@ -356,8 +357,8 @@ where
 
     #[rustfmt::skip]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn gradients(&self, xi: &Vector2<T>) -> Matrix2x4<T> {
-        let phi_grad = |alpha, beta, xi: &Vector2<T>|
+    fn gradients(&self, xi: &Point2<T>) -> Matrix2x4<T> {
+        let phi_grad = |alpha, beta, xi: &Point2<T>|
             Vector2::new(
                 alpha * (1.0 + beta * xi[1]) / 4.0,
                 beta * (1.0 + alpha * xi[0]) / 4.0,
@@ -379,15 +380,15 @@ where
     type GeometryDim = U2;
 
     #[allow(non_snake_case)]
-    fn map_reference_coords(&self, xi: &Vector2<T>) -> Vector2<T> {
+    fn map_reference_coords(&self, xi: &Point2<T>) -> Point2<T> {
         // TODO: Store this X matrix directly in Self?
         let X: Matrix2x4<T> = Matrix2x4::from_fn(|i, j| self.vertices[j][i]);
         let N = self.evaluate_basis(xi);
-        &X * &N.transpose()
+        Point::from(&X * &N.transpose())
     }
 
     #[allow(non_snake_case)]
-    fn reference_jacobian(&self, xi: &Vector2<T>) -> Matrix2<T> {
+    fn reference_jacobian(&self, xi: &Point2<T>) -> Matrix2<T> {
         // TODO: Avoid redundant computation of gradient matrix by
         // offering a function which simultaneously computes the gradient matrix and the
         // Jacobian
@@ -484,7 +485,7 @@ where
 
     #[rustfmt::skip]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn evaluate_basis(&self, xi: &Vector2<T>) -> Matrix1x3<T> {
+    fn evaluate_basis(&self, xi: &Point2<T>) -> Matrix1x3<T> {
         Matrix1x3::from_row_slice(&[
             -0.5 * xi.x - 0.5 * xi.y,
             0.5 * xi.x + 0.5,
@@ -494,7 +495,7 @@ where
 
     #[rustfmt::skip]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn gradients(&self, _: &Vector2<T>) -> Matrix2x3<T> {
+    fn gradients(&self, _: &Point2<T>) -> Matrix2x3<T> {
         // TODO: Precompute gradients
         Matrix2x3::from_columns(&[
             Vector2::new(-0.5, -0.5),
@@ -511,18 +512,18 @@ where
     type GeometryDim = U2;
 
     #[allow(non_snake_case)]
-    fn reference_jacobian(&self, xi: &Vector2<T>) -> Matrix2<T> {
+    fn reference_jacobian(&self, xi: &Point2<T>) -> Matrix2<T> {
         let X: Matrix2x3<T> = Matrix2x3::from_fn(|i, j| self.vertices[j][i]);
         let G = self.gradients(xi);
         X * G.transpose()
     }
 
     #[allow(non_snake_case)]
-    fn map_reference_coords(&self, xi: &Vector2<T>) -> Vector2<T> {
+    fn map_reference_coords(&self, xi: &Point2<T>) -> Point2<T> {
         // TODO: Store this X matrix directly in Self...?
         let X: Matrix2x3<T> = Matrix2x3::from_fn(|i, j| self.vertices[j][i]);
         let N = self.evaluate_basis(xi);
-        &X * &N.transpose()
+        Point::from(&X * &N.transpose())
     }
 
     // TODO: Write tests for diameter
@@ -648,7 +649,7 @@ where
 
     #[rustfmt::skip]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn evaluate_basis(&self, xi: &Vector2<T>) -> Matrix1x6<T> {
+    fn evaluate_basis(&self, xi: &Point2<T>) -> Matrix1x6<T> {
         // We express the basis functions of Tri6 as products of
         // the Tri3 basis functions.
         let psi = self.tri3.evaluate_basis(xi);
@@ -664,7 +665,7 @@ where
 
     #[rustfmt::skip]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn gradients(&self, xi: &Vector2<T>) -> Matrix2x6<T> {
+    fn gradients(&self, xi: &Point2<T>) -> Matrix2x6<T> {
         // Similarly to `evaluate_basis`, we may implement the gradients of
         // Tri6 with the help of the function values and gradients of Tri3
         let psi = self.tri3.evaluate_basis(xi);
@@ -694,11 +695,11 @@ where
 {
     type GeometryDim = U2;
 
-    fn reference_jacobian(&self, xi: &Vector2<T>) -> Matrix2<T> {
+    fn reference_jacobian(&self, xi: &Point2<T>) -> Matrix2<T> {
         self.tri3.reference_jacobian(xi)
     }
 
-    fn map_reference_coords(&self, xi: &Vector2<T>) -> Vector2<T> {
+    fn map_reference_coords(&self, xi: &Point2<T>) -> Point2<T> {
         self.tri3.map_reference_coords(xi)
     }
 
@@ -811,7 +812,7 @@ where
 
     #[rustfmt::skip]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn evaluate_basis(&self, xi: &Vector2<T>) -> MatrixMN<T, U1, U9> {
+    fn evaluate_basis(&self, xi: &Point2<T>) -> MatrixMN<T, U1, U9> {
         // We define the shape functions as N_{alpha, beta} evaluated at xi such that
         //  N_{alpha, beta}([alpha, beta]) = 1
         // with alpha, beta = 1 or -1.
@@ -819,7 +820,7 @@ where
         //  N_{alpha, beta) (xi, eta) = N_alpha(xi) * N_beta(eta).
 
         let phi_1d = quad9_phi_1d;
-        let phi = |alpha, beta, xi: &Vector2<T>| {
+        let phi = |alpha, beta, xi: &Point2<T>| {
             let x = xi[0];
             let y = xi[1];
             phi_1d(alpha, x) * phi_1d(beta, y)
@@ -840,7 +841,7 @@ where
 
     #[rustfmt::skip]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn gradients(&self, xi: &Vector2<T>) -> MatrixMN<T, U2, U9> {
+    fn gradients(&self, xi: &Point2<T>) -> MatrixMN<T, U2, U9> {
         // See the implementation of `evaluate_basis` for a definition of the basis functions.
         let phi_1d = quad9_phi_1d::<T>;
         let phi_grad_1d = |alpha, xi| {
@@ -850,7 +851,7 @@ where
             2.0 * a * xi + b
         };
 
-        let phi_grad = |alpha, beta, xi: &Vector2<T>| {
+        let phi_grad = |alpha, beta, xi: &Point2<T>| {
             let x = xi[0];
             let y = xi[1];
             Vector2::new(
@@ -880,12 +881,12 @@ where
     type GeometryDim = U2;
 
     #[allow(non_snake_case)]
-    fn reference_jacobian(&self, xi: &Vector2<T>) -> Matrix2<T> {
+    fn reference_jacobian(&self, xi: &Point2<T>) -> Matrix2<T> {
         self.quad.reference_jacobian(xi)
     }
 
     #[allow(non_snake_case)]
-    fn map_reference_coords(&self, xi: &Vector2<T>) -> Vector2<T> {
+    fn map_reference_coords(&self, xi: &Point2<T>) -> Point2<T> {
         self.quad.map_reference_coords(xi)
     }
 
@@ -953,7 +954,7 @@ where
 
     #[rustfmt::skip]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn evaluate_basis(&self, xi: &Vector1<T>) -> MatrixMN<T, U1, U2> {
+    fn evaluate_basis(&self, xi: &Point1<T>) -> MatrixMN<T, U1, U2> {
         // xi is a scalar
         let xi = xi.x;
         let phi_1 = (1.0 - xi) / 2.0;
@@ -963,7 +964,7 @@ where
 
     #[rustfmt::skip]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn gradients(&self, _xi: &Vector1<T>) -> MatrixMN<T, U1, U2> {
+    fn gradients(&self, _xi: &Point1<T>) -> MatrixMN<T, U1, U2> {
         MatrixMN::<_, U1, U2>::new(-0.5, 0.5)
     }
 }
@@ -976,7 +977,7 @@ where
 
     #[allow(non_snake_case)]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn reference_jacobian(&self, _xi: &Vector1<T>) -> Vector2<T> {
+    fn reference_jacobian(&self, _xi: &Point1<T>) -> Vector2<T> {
         let a = &self.segment.from().coords;
         let b = &self.segment.to().coords;
         (b - a) / 2.0
@@ -984,11 +985,11 @@ where
 
     #[allow(non_snake_case)]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn map_reference_coords(&self, xi: &Vector1<T>) -> Vector2<T> {
+    fn map_reference_coords(&self, xi: &Point1<T>) -> Point2<T> {
         let a = &self.segment.from().coords;
         let b = &self.segment.to().coords;
         let phi = self.evaluate_basis(xi);
-        a * phi[0] + b * phi[1]
+        Point::from(a * phi[0] + b * phi[1])
     }
 
     fn diameter(&self) -> T {
@@ -1000,7 +1001,7 @@ impl<T> SurfaceFiniteElement<T> for Segment2d2Element<T>
 where
     T: RealField,
 {
-    fn normal(&self, _xi: &Vector1<T>) -> Vector2<T> {
+    fn normal(&self, _xi: &Point1<T>) -> Vector2<T> {
         self.segment.normal_dir().normalize()
     }
 }
@@ -1088,7 +1089,7 @@ where
     type NodalDim = U4;
 
     #[rustfmt::skip]
-    fn evaluate_basis(&self, xi: &Vector3<T>) -> Matrix1x4<T> {
+    fn evaluate_basis(&self, xi: &Point3<T>) -> Matrix1x4<T> {
         Matrix1x4::from_row_slice(&[
             -0.5 * xi.x - 0.5 * xi.y - 0.5 * xi.z - 0.5,
             0.5 * xi.x + 0.5,
@@ -1098,7 +1099,7 @@ where
     }
 
     #[rustfmt::skip]
-    fn gradients(&self, _reference_coords: &Vector3<T>) -> Matrix3x4<T> {
+    fn gradients(&self, _reference_coords: &Point3<T>) -> Matrix3x4<T> {
         Matrix3x4::from_columns(&[
             Vector3::new(-0.5, -0.5, -0.5),
             Vector3::new(0.5, 0.0, 0.0),
@@ -1115,7 +1116,7 @@ where
     type GeometryDim = U3;
 
     #[allow(non_snake_case)]
-    fn reference_jacobian(&self, xi: &Vector3<T>) -> Matrix3<T> {
+    fn reference_jacobian(&self, xi: &Point3<T>) -> Matrix3<T> {
         // TODO: Could store this matrix directly in the element, in order
         // to avoid repeated computation
         let X = Matrix3x4::from_fn(|i, j| self.vertices[j][i]);
@@ -1124,11 +1125,11 @@ where
     }
 
     #[allow(non_snake_case)]
-    fn map_reference_coords(&self, xi: &Vector3<T>) -> Vector3<T> {
+    fn map_reference_coords(&self, xi: &Point3<T>) -> Point3<T> {
         // TODO: Store this X matrix directly in Self...?
         let X = Matrix3x4::from_fn(|i, j| self.vertices[j][i]);
         let N = self.evaluate_basis(xi);
-        &X * &N.transpose()
+        Point::from(&X * &N.transpose())
     }
 
     // TODO: Write tests for diameter
@@ -1232,11 +1233,11 @@ where
 
     #[rustfmt::skip]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn evaluate_basis(&self, xi: &Vector3<T>) -> MatrixMN<T, U1, U8> {
+    fn evaluate_basis(&self, xi: &Point3<T>) -> MatrixMN<T, U1, U8> {
         // We define the shape functions as N_{alpha, beta, gamma} evaluated at xi such that
         //  N_{alpha, beta, gamma}([alpha, beta, gamma]) = 1,
         let phi_1d = phi_linear_1d;
-        let phi = |alpha, beta, gamma, xi: &Vector3<T>|
+        let phi = |alpha, beta, gamma, xi: &Point3<T>|
             phi_1d(alpha, xi[0]) * phi_1d(beta, xi[1]) * phi_1d(gamma, xi[2]);
         MatrixMN::<_, U1, U8>::from_row_slice(&[
             phi(-1.0, -1.0, -1.0, xi),
@@ -1252,10 +1253,10 @@ where
 
     #[rustfmt::skip]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn gradients(&self, xi: &Vector3<T>) -> MatrixMN<T, U3, U8> {
+    fn gradients(&self, xi: &Point3<T>) -> MatrixMN<T, U3, U8> {
         let phi_1d = phi_linear_1d;
         let grad_1d = phi_linear_1d_grad;
-        let phi_grad = |alpha, beta, gamma, xi: &Vector3<T>|
+        let phi_grad = |alpha, beta, gamma, xi: &Point3<T>|
             Vector3::new(
                 grad_1d(alpha) * phi_1d(beta, xi[1]) * phi_1d(gamma, xi[2]),
                 phi_1d(alpha, xi[0]) * grad_1d(beta) * phi_1d(gamma, xi[2]),
@@ -1282,15 +1283,15 @@ where
     type GeometryDim = U3;
 
     #[allow(non_snake_case)]
-    fn map_reference_coords(&self, xi: &Vector3<T>) -> Vector3<T> {
+    fn map_reference_coords(&self, xi: &Point3<T>) -> Point3<T> {
         // TODO: Store this X matrix directly in Self...?
         let X = MatrixMN::<_, U3, U8>::from_fn(|i, j| self.vertices[j][i]);
         let N = self.evaluate_basis(xi);
-        &X * &N.transpose()
+        Point::from(&X * &N.transpose())
     }
 
     #[allow(non_snake_case)]
-    fn reference_jacobian(&self, xi: &Vector3<T>) -> Matrix3<T> {
+    fn reference_jacobian(&self, xi: &Point3<T>) -> Matrix3<T> {
         // TODO: Could store this matrix directly in the element, in order
         // to avoid repeated computation
         let X = MatrixMN::<_, U3, U8>::from_fn(|i, j| self.vertices[j][i]);
@@ -1412,11 +1413,11 @@ where
 
     #[rustfmt::skip]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn evaluate_basis(&self, xi: &Vector3<T>) -> MatrixMN<T, U1, U27> {
+    fn evaluate_basis(&self, xi: &Point3<T>) -> MatrixMN<T, U1, U27> {
         // We define the shape functions as N_{alpha, beta, gamma} evaluated at xi such that
         //  N_{alpha, beta, gamma}([alpha, beta, gamma]) = 1,
         let phi_1d = phi_quadratic_1d;
-        let phi = |alpha, beta, gamma, xi: &Vector3<T>|
+        let phi = |alpha, beta, gamma, xi: &Point3<T>|
             phi_1d(alpha, xi[0]) * phi_1d(beta, xi[1]) * phi_1d(gamma, xi[2]);
         MatrixMN::<_, U1, U27>::from_row_slice(&[
             // Vertex nodes
@@ -1458,10 +1459,10 @@ where
 
     #[rustfmt::skip]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn gradients(&self, xi: &Vector3<T>) -> MatrixMN<T, U3, U27> {
+    fn gradients(&self, xi: &Point3<T>) -> MatrixMN<T, U3, U27> {
         let phi_1d = phi_quadratic_1d;
         let grad_1d = phi_quadratic_1d_grad;
-        let phi_grad = |alpha, beta, gamma, xi: &Vector3<T>|
+        let phi_grad = |alpha, beta, gamma, xi: &Point3<T>|
             Vector3::new(
                 grad_1d(alpha, xi[0]) * phi_1d(beta, xi[1]) * phi_1d(gamma, xi[2]),
                 phi_1d(alpha, xi[0]) * grad_1d(beta, xi[1]) * phi_1d(gamma, xi[2]),
@@ -1513,14 +1514,11 @@ where
 {
     type GeometryDim = U3;
 
-    fn reference_jacobian(&self, reference_coords: &Vector3<T>) -> Matrix3<T> {
+    fn reference_jacobian(&self, reference_coords: &Point3<T>) -> Matrix3<T> {
         self.hex8.reference_jacobian(reference_coords)
     }
 
-    fn map_reference_coords(
-        &self,
-        reference_coords: &VectorN<T, Self::ReferenceDim>,
-    ) -> Vector3<T> {
+    fn map_reference_coords(&self, reference_coords: &Point<T, Self::ReferenceDim>) -> Point3<T> {
         self.hex8.map_reference_coords(reference_coords)
     }
 
@@ -1606,7 +1604,7 @@ where
 
     #[rustfmt::skip]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn evaluate_basis(&self, xi: &Vector3<T>) -> MatrixMN<T, U1, U20> {
+    fn evaluate_basis(&self, xi: &Point3<T>) -> MatrixMN<T, U1, U20> {
         // We define the shape functions as N_{alpha, beta, gamma} evaluated at xi such that
         //  N_{alpha, beta, gamma}([alpha, beta, gamma]) = 1,
         // but we define corner and edge nodes separately.
@@ -1614,13 +1612,13 @@ where
         // Formulas are adapted from the following website:
         // http://www.softeng.rl.ac.uk/st/projects/felib4/Docs/html/Level-0/brk20/brk20.html
 
-        let phi_corner = |alpha, beta, gamma, xi: &Vector3<T>|
+        let phi_corner = |alpha, beta, gamma, xi: &Point3<T>|
             (1.0 / 8.0) * (1.0 + alpha * xi[0])
                 * (1.0 + beta * xi[1])
                 * (1.0 + gamma * xi[2])
                 * (alpha * xi[0] + beta * xi[1] + gamma * xi[2] - 2.0);
 
-        let phi_edge = |alpha, beta, gamma, xi: &Vector3<T>| {
+        let phi_edge = |alpha, beta, gamma, xi: &Point3<T>| {
             let alpha2 = alpha * alpha;
             let beta2 = beta * beta;
             let gamma2 = gamma * gamma;
@@ -1659,8 +1657,8 @@ where
 
     #[rustfmt::skip]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn gradients(&self, xi: &Vector3<T>) -> MatrixMN<T, U3, U20> {
-        let phi_grad_corner = |alpha, beta, gamma, xi: &Vector3<T>| {
+    fn gradients(&self, xi: &Point3<T>) -> MatrixMN<T, U3, U20> {
+        let phi_grad_corner = |alpha, beta, gamma, xi: &Point3<T>| {
             // Decompose shape function as phi(xi) = (1/8) * f(xi) * g(xi),
             // with
             //  f(xi) = sum_i (alpha_i xi_i) - 2
@@ -1676,7 +1674,7 @@ where
             )
         };
 
-        let phi_grad_edge = |alpha, beta, gamma, xi: &Vector3<T>| {
+        let phi_grad_edge = |alpha, beta, gamma, xi: &Point3<T>| {
             // Decompose shape function as phi(xi) = (1/8) * h(xi) * g(xi),
             // with
             //  h(xi) = product_i (1.0 - (1.0 - alpha_i^2) xi_i^2)
@@ -1744,14 +1742,11 @@ where
 {
     type GeometryDim = U3;
 
-    fn reference_jacobian(&self, reference_coords: &Vector3<T>) -> Matrix3<T> {
+    fn reference_jacobian(&self, reference_coords: &Point3<T>) -> Matrix3<T> {
         self.hex8.reference_jacobian(reference_coords)
     }
 
-    fn map_reference_coords(
-        &self,
-        reference_coords: &VectorN<T, Self::ReferenceDim>,
-    ) -> Vector3<T> {
+    fn map_reference_coords(&self, reference_coords: &Point<T, Self::ReferenceDim>) -> Point3<T> {
         self.hex8.map_reference_coords(reference_coords)
     }
 
@@ -1831,7 +1826,7 @@ where
 
     #[rustfmt::skip]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn evaluate_basis(&self, xi: &Vector2<T>) -> Matrix1x3<T> {
+    fn evaluate_basis(&self, xi: &Point2<T>) -> Matrix1x3<T> {
         // TODO: Reuse implementation from Trid2Element instead
         Matrix1x3::from_row_slice(&[
             -0.5 * xi[0] - 0.5 * xi[1],
@@ -1842,7 +1837,7 @@ where
 
     #[rustfmt::skip]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-    fn gradients(&self, _: &Vector2<T>) -> Matrix2x3<T> {
+    fn gradients(&self, _: &Point2<T>) -> Matrix2x3<T> {
         // TODO: Reuse implementation from Trid2Element instead
         // TODO: Precompute gradients
         Matrix2x3::from_columns(&[
@@ -1860,18 +1855,18 @@ where
     type GeometryDim = U3;
 
     #[allow(non_snake_case)]
-    fn reference_jacobian(&self, xi: &Vector2<T>) -> Matrix3x2<T> {
+    fn reference_jacobian(&self, xi: &Point2<T>) -> Matrix3x2<T> {
         let X: Matrix3<T> = Matrix3::from_fn(|i, j| self.triangle.0[j][i]);
         let G = self.gradients(xi);
         X * G.transpose()
     }
 
     #[allow(non_snake_case)]
-    fn map_reference_coords(&self, xi: &Vector2<T>) -> Vector3<T> {
+    fn map_reference_coords(&self, xi: &Point2<T>) -> Point3<T> {
         // TODO: Store this X matrix directly in Self...?
         let X: Matrix3<T> = Matrix3::from_fn(|i, j| self.triangle.0[j][i]);
         let N = self.evaluate_basis(xi);
-        &X * &N.transpose()
+        Point::from(&X * &N.transpose())
     }
 
     // TODO: Write tests for diameter
@@ -1889,7 +1884,7 @@ impl<T> SurfaceFiniteElement<T> for Tri3d3Element<T>
 where
     T: RealField,
 {
-    fn normal(&self, _xi: &Vector2<T>) -> Vector3<T> {
+    fn normal(&self, _xi: &Point2<T>) -> Vector3<T> {
         self.triangle.normal()
     }
 }
@@ -1982,7 +1977,7 @@ where
     type NodalDim = U10;
 
     #[rustfmt::skip]
-    fn evaluate_basis(&self, xi: &Vector3<T>) -> MatrixMN<T, U1, U10> {
+    fn evaluate_basis(&self, xi: &Point3<T>) -> MatrixMN<T, U1, U10> {
         // We express the basis functions of Tet10 as products of
         // the Tet4 basis functions.
         let psi = self.tet4.evaluate_basis(xi);
@@ -2001,7 +1996,7 @@ where
     }
 
     #[rustfmt::skip]
-    fn gradients(&self, xi: &Vector3<T>) -> MatrixMN<T, U3, U10> {
+    fn gradients(&self, xi: &Point3<T>) -> MatrixMN<T, U3, U10> {
         // Similarly to `evaluate_basis`, we may implement the gradients of
         // Tet10 with the help of the function values and gradients of Tet4
         let psi = self.tet4.evaluate_basis(xi);
@@ -2036,12 +2031,12 @@ where
     type GeometryDim = U3;
 
     #[allow(non_snake_case)]
-    fn reference_jacobian(&self, xi: &Vector3<T>) -> Matrix3<T> {
+    fn reference_jacobian(&self, xi: &Point3<T>) -> Matrix3<T> {
         self.tet4.reference_jacobian(xi)
     }
 
     #[allow(non_snake_case)]
-    fn map_reference_coords(&self, xi: &Vector3<T>) -> Vector3<T> {
+    fn map_reference_coords(&self, xi: &Point3<T>) -> Point3<T> {
         self.tet4.map_reference_coords(xi)
     }
 
@@ -2070,12 +2065,12 @@ where
     let f = VectorFunctionBuilder::with_dimension(GeometryDim::dim())
         .with_function(|f, xi| {
             // Need to create stack-allocated xi
-            let xi = xi.fixed_slice::<GeometryDim, U1>(0, 0).clone_owned();
-            f.copy_from(&(element.map_reference_coords(&xi) - &x.coords));
+            let xi = Point::from(xi.fixed_slice::<GeometryDim, U1>(0, 0).clone_owned());
+            f.copy_from(&(element.map_reference_coords(&xi).coords - &x.coords));
         })
         .with_jacobian_solver(
             |sol: &mut DVectorSliceMut<T>, xi: &DVectorSlice<T>, rhs: &DVectorSlice<T>| {
-                let xi = xi.fixed_slice::<GeometryDim, U1>(0, 0).clone_owned();
+                let xi = Point::from(xi.fixed_slice::<GeometryDim, U1>(0, 0).clone_owned());
                 let j = element.reference_jacobian(&xi);
                 let lu = j.full_piv_lu();
                 sol.copy_from(rhs);
@@ -2173,8 +2168,8 @@ where
     // minimum is exactly that of a projection onto the surface.
 
     let x = &x.coords;
-    let mut xi = VectorN::<T, Element::ReferenceDim>::zeros();
-    let mut f = element.map_reference_coords(&xi);
+    let mut xi = Point::<T, Element::ReferenceDim>::origin();
+    let mut f = element.map_reference_coords(&xi).coords;
     let mut j = element.reference_jacobian(&xi);
     let mut jT = j.transpose();
 
@@ -2193,7 +2188,7 @@ where
             ));
         }
 
-        f = element.map_reference_coords(&xi);
+        f = element.map_reference_coords(&xi).coords;
         j = element.reference_jacobian(&xi);
         jT = j.transpose();
         iter += 1;
