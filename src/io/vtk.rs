@@ -357,7 +357,7 @@ where
     }
 
     // TODO: Different error type
-    pub fn try_build(&self) -> Result<DataSet, Box<dyn std::error::Error>>
+    pub fn try_build(&self) -> eyre::Result<DataSet>
     where
         C: VtkCellConnectivity,
     {
@@ -396,8 +396,6 @@ where
             cell_types.push(cell.cell_type());
         }
 
-        // TODO: Attributes
-
         let piece = UnstructuredGridPiece {
             points: points.into(),
             cells: Cells {
@@ -418,7 +416,7 @@ where
     }
 
     /// Convenience function for directly exporting the dataset to a file.
-    pub fn try_export(&self, filename: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error>>
+    pub fn try_export(&self, filename: impl AsRef<Path>) -> eyre::Result<()>
     where
         C: VtkCellConnectivity,
     {

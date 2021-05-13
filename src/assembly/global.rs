@@ -123,7 +123,7 @@ impl<T: RealField> CsrAssembler<T> {
     pub fn assemble(
         &self,
         element_assembler: &dyn ElementMatrixAssembler<T>,
-    ) -> Result<CsrMatrix<T>, Box<dyn Error + Send + Sync>> {
+    ) -> eyre::Result<CsrMatrix<T>> {
         let pattern = self.assemble_pattern(element_assembler.as_connectivity_assembler());
         let initial_matrix_values = vec![T::zero(); pattern.nnz()];
         let mut matrix =
@@ -136,7 +136,7 @@ impl<T: RealField> CsrAssembler<T> {
         &self,
         csr: &mut CsrMatrix<T>,
         element_assembler: &dyn ElementMatrixAssembler<T>,
-    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+    ) -> eyre::Result<()> {
         // Reuse previously allocated buffers
         let ws = &mut *self.workspace.borrow_mut();
         let connectivity_permutation = &mut ws.connectivity_permutation;
@@ -548,7 +548,7 @@ impl<T: RealField> SerialVectorAssembler<T> {
         &self,
         output: impl Into<DVectorSliceMut<'a, T>>,
         element_assembler: &dyn ElementVectorAssembler<T>,
-    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+    ) -> eyre::Result<()> {
         // TODO: Move impl into _ method to remove the impl Into<> compilation overhead
         let mut output = output.into();
         let num_elements = element_assembler.num_elements();
@@ -575,7 +575,7 @@ impl<T: RealField> SerialVectorAssembler<T> {
     pub fn assemble_vector(
         &self,
         element_assembler: &dyn ElementVectorAssembler<T>,
-    ) -> Result<DVector<T>, Box<dyn Error + Send + Sync>> {
+    ) -> eyre::Result<DVector<T>> {
         let n = element_assembler.num_nodes();
         let mut result = DVector::zeros(element_assembler.solution_dim() * n);
         self.assemble_vector_into(&mut result, element_assembler)?;
@@ -699,9 +699,9 @@ where
     }
 
     /// Calls a closure for each quadrature point currently in the workspace.
-    pub fn for_each_quadrature_point<F>(&self, mut f: F) -> Result<(), Box<dyn Error + Sync + Send>>
+    pub fn for_each_quadrature_point<F>(&self, mut f: F) -> eyre::Result<()>
     where
-        F: FnMut(T, &Point<T, GeometryDim>, &Data) -> Result<(), Box<dyn Error + Sync + Send>>,
+        F: FnMut(T, &Point<T, GeometryDim>, &Data) -> eyre::Result<()>,
     {
         assert_eq!(self.quad_weights.len(), self.quad_points.len());
         assert_eq!(self.quad_weights.len(), self.quad_data.len());

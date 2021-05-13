@@ -1,7 +1,6 @@
-use std::error::Error;
-
 use nalgebra::{Point, Vector1};
 
+use eyre::eyre;
 use fenris::assembly::global::{
     apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, CsrAssembler,
     SerialVectorAssembler,
@@ -59,7 +58,7 @@ impl SourceFunction<f64, U2> for Source {
     }
 }
 
-fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
+fn main() -> eyre::Result<()> {
     // TODO: Make it easy to construct triangle meshes as well.
     // Need to make it easy to convert between different meshes, such as Quad2d -> Tri2d
     let mesh: QuadMesh2d<f64> = create_unit_square_uniform_quad_mesh_2d(4);
@@ -109,7 +108,7 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     let a = a.build_dense();
     let cholesky = a
         .cholesky()
-        .ok_or_else(|| Box::<dyn Error + Sync + Send>::from("Failed to solve linear system"))?;
+        .ok_or_else(|| eyre!("Failed to solve linear system"))?;
     let u = cholesky.solve(&b);
 
     println!("{}", u);

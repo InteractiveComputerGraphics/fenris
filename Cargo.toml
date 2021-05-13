@@ -25,6 +25,7 @@ log = "0.4"
 paradis = { path = "paradis" }
 rustc-hash = "1.1.0"
 thread_local = "1.1.2"
+eyre = "0.6"
 fenris-sparse = { path = "fenris-sparse" }
 fenris-geometry = { path = "fenris-geometry", features = [ "proptest", "vtkio" ] }
 fenris-optimize = { path = "fenris-optimize" }

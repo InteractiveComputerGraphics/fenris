@@ -1,7 +1,7 @@
 use std::cell::{RefCell, RefMut};
-use std::error::Error;
 use std::ops::AddAssign;
 
+use eyre::eyre;
 use itertools::izip;
 use nalgebra::base::allocator::Allocator;
 use nalgebra::{
@@ -69,7 +69,7 @@ pub trait ElementMatrixAssembler<T: Scalar>: ElementConnectivityAssembler {
         &self,
         element_index: usize,
         output: DMatrixSliceMut<T>,
-    ) -> Result<(), Box<dyn Error + Send + Sync>>;
+    ) -> eyre::Result<()>;
 
     fn as_connectivity_assembler(&self) -> &dyn ElementConnectivityAssembler;
 }
@@ -349,7 +349,7 @@ pub trait ElementVectorAssembler<T: Scalar>: ElementConnectivityAssembler {
         &self,
         element_index: usize,
         output: DVectorSliceMut<T>,
-    ) -> Result<(), Box<dyn Error + Send + Sync>>;
+    ) -> eyre::Result<()>;
 }
 
 /// TODO: The builder here is pretty complex. Is it possible to simplify without losing too
@@ -593,15 +593,11 @@ where
     /// Populates element quantities into workspace buffers and calls the provided function
     /// per quadrature point.
     #[allow(non_snake_case)]
-    fn for_each_quadrature_point<F>(
-        &self,
-        element_index: usize,
-        mut f: F,
-    ) -> Result<(), Box<dyn Error + Send + Sync>>
+    fn for_each_quadrature_point<F>(&self, element_index: usize, mut f: F) -> eyre::Result<()>
     where
         F: FnMut(
             ForEachQuadraturePoint<T, Space::GeometryDim, Op::SolutionDim, Op::Data>,
-        ) -> Result<(), Box<dyn Error + Send + Sync>>,
+        ) -> eyre::Result<()>,
     {
         self.with_workspace(|ws| {
             let quadrature_size = self.qtable.element_quadrature_size(element_index);
@@ -640,9 +636,9 @@ where
                 // Jacobian
                 let J = self.space.element_reference_jacobian(element_index, &xi);
                 let J_det = J.determinant();
-                let J_inv = J.try_inverse().ok_or_else(|| {
-                    Box::<dyn Error + Send + Sync>::from("Singular element Jacobian encountered")
-                })?;
+                let J_inv = J
+                    .try_inverse()
+                    .ok_or_else(|| eyre!("Singular element Jacobian encountered"))?;
                 let J_inv_t = J_inv.transpose();
 
                 f(ForEachQuadraturePoint {
@@ -674,7 +670,7 @@ where
         &self,
         element_index: usize,
         mut output: DVectorSliceMut<T>,
-    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+    ) -> eyre::Result<()> {
         let s = self.solution_dim();
         let n = self.element_node_count(element_index);
         assert_eq!(output.len(), s * n, "Output vector dimension mismatch");
@@ -716,7 +712,7 @@ where
         &self,
         element_index: usize,
         mut output: DMatrixSliceMut<T, U1, Dynamic>,
-    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+    ) -> eyre::Result<()> {
         let s = self.solution_dim();
         let n = self.element_node_count(element_index);
         assert_eq!(output.nrows(), s * n, "Output matrix dimension mismatch");
@@ -1021,7 +1017,7 @@ where
         &self,
         element_index: usize,
         mut output: DVectorSliceMut<T>,
-    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+    ) -> eyre::Result<()> {
         SOURCE_WORKSPACE.with(|ws| {
             // TODO: Is it possible to simplify retrieving a mutable reference to the workspace?
             let mut ws: RefMut<SourceTermWorkspace<T, Space::ReferenceDim, Source::Data>> =
