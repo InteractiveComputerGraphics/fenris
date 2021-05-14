@@ -1,4 +1,4 @@
-use polyquad_parse::{parse2d, Rule2d};
+use polyquad_parse::{parse2d, parse3d, ParseError};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use std::ffi::OsStr;
@@ -11,8 +11,12 @@ fn main() {
     let out_dir = env::var_os("OUT_DIR").unwrap();
     let out_dir = Path::new(&out_dir);
 
-    generate_polyquad_rules(&out_dir, "tri", "rules/polyquad/expanded/tri");
-    generate_polyquad_rules(&out_dir, "quad", "rules/polyquad/expanded/quad");
+    generate_polyquad_rules::<2>(&out_dir, "tri", &Path::new("rules/polyquad/expanded/tri"));
+    generate_polyquad_rules::<2>(&out_dir, "quad", &Path::new("rules/polyquad/expanded/quad"));
+    generate_polyquad_rules::<3>(&out_dir, "tet", &Path::new("rules/polyquad/expanded/tet"));
+    generate_polyquad_rules::<3>(&out_dir, "hex", &Path::new("rules/polyquad/expanded/hex"));
+    generate_polyquad_rules::<3>(&out_dir, "pri", &Path::new("rules/polyquad/expanded/pri"));
+    generate_polyquad_rules::<3>(&out_dir, "pyr", &Path::new("rules/polyquad/expanded/pyr"));
 
     println!("cargo:rerun-if-changed=rules/");
     println!("cargo:rerun-if-changed=build.rs");
@@ -27,9 +31,12 @@ pub struct PolyquadRuleFile {
     path: PathBuf,
 }
 
-pub struct PolyquadRule2d {
+pub type QuadratureRule<const D: usize> = (Vec<f64>, Vec<[f64; D]>);
+
+pub struct PolyquadRule<const D: usize> {
     strength: usize,
-    rule: Rule2d,
+    weights: Vec<f64>,
+    points: Vec<[f64; D]>,
 }
 
 /// Try to parse a filename like "2-5" into the respective strength (2) and quadrature size (5).
@@ -82,7 +89,28 @@ fn find_polyquad_rule_files_in_dir(dir: impl AsRef<Path>) -> io::Result<Vec<Poly
     Ok(rule_files)
 }
 
-fn load_polyquad_rules(rule_dir: impl AsRef<Path>) -> Vec<PolyquadRule2d> {
+struct Parser;
+
+pub trait PolyquadParser<const D: usize> {
+    fn parse(data: &str) -> Result<QuadratureRule<D>, ParseError>;
+}
+
+impl PolyquadParser<2> for Parser {
+    fn parse(data: &str) -> Result<QuadratureRule<2>, ParseError> {
+        parse2d(data).map(|rule| (rule.weights, rule.points))
+    }
+}
+
+impl PolyquadParser<3> for Parser {
+    fn parse(data: &str) -> Result<QuadratureRule<3>, ParseError> {
+        parse3d(data).map(|rule| (rule.weights, rule.points))
+    }
+}
+
+fn load_polyquad_rules<const D: usize>(rule_dir: &Path) -> Vec<PolyquadRule<D>>
+where
+    Parser: PolyquadParser<D>,
+{
     let rule_files = find_polyquad_rule_files_in_dir(rule_dir).expect("Could not find rule files");
     let mut rules = Vec::new();
     for rule_file in rule_files {
@@ -90,23 +118,24 @@ fn load_polyquad_rules(rule_dir: impl AsRef<Path>) -> Vec<PolyquadRule2d> {
             "Failed to load rule file {}",
             rule_file.path.display()
         ));
-        let rule = parse2d(&data).expect(&format!(
+        let (weights, points) = Parser::parse(&data).expect(&format!(
             "Failed to parse polyquad rule file {}",
             rule_file.path.display()
         ));
         assert_eq!(
             rule_file.size,
-            rule.weights.len(),
+            weights.len(),
             "Mismatch between expected size and actual size of quadrature rule"
         );
         assert_eq!(
-            rule.weights.len(),
-            rule.points.len(),
+            weights.len(),
+            points.len(),
             "Mismatch between number of weights and points in quadrature rule."
         );
-        rules.push(PolyquadRule2d {
+        rules.push(PolyquadRule {
             strength: rule_file.strength,
-            rule,
+            weights,
+            points,
         });
     }
 
@@ -114,16 +143,32 @@ fn load_polyquad_rules(rule_dir: impl AsRef<Path>) -> Vec<PolyquadRule2d> {
     rules
 }
 
-fn generate_source_tokens_for_rules(domain_name: &str, rules: Vec<PolyquadRule2d>) -> TokenStream {
+fn generate_source_tokens_for_rules<const D: usize>(
+    domain_name: &str,
+    rules: Vec<PolyquadRule<D>>,
+) -> TokenStream {
+    let return_type = format_ident!("Rule{}d", D);
+
     let quadrature_tokens = rules.iter().map(|rule| {
         let strength = rule.strength;
         let fn_name = format_ident!("{}_{}", domain_name, strength);
-        let weights = &rule.rule.weights;
-        let points_tokens = rule.rule.points.iter().map(|&[x, y]| quote!([#x, #y]));
+        let weights = &rule.weights;
+        let points_tokens = rule.points.iter().map(|point| {
+            let x = point[0];
+            let y = point[1];
+            match point.len() {
+                2 => quote!([#x, #y]),
+                3 => {
+                    let z = point[2];
+                    quote!([#x, #y, #z])
+                }
+                _ => panic!("Unsupported dimension"),
+            }
+        });
 
         quote! {
             /// Auto-generated code.
-            pub fn #fn_name() -> crate::Rule2d {
+            pub fn #fn_name() -> crate::#return_type {
                 let weights = vec![#(#weights),*];
                 let points = vec![#(#points_tokens),*];
                 (weights, points)
@@ -131,33 +176,23 @@ fn generate_source_tokens_for_rules(domain_name: &str, rules: Vec<PolyquadRule2d
         }
     });
 
-    let match_cases: TokenStream = rules
-        .iter()
-        .map(|rule| {
-            let strength = rule.strength;
-            let fn_name = format_ident!("{}_{}", domain_name, strength);
-            quote! { #strength => Ok(#fn_name()), }
-        })
-        .collect();
-
-    let select_fn = format_ident!("{}_select_exact", domain_name);
-    let select_exact_tokens: TokenStream = quote! {
-        pub fn #select_fn(strength: usize)
-            -> Result<crate::Rule2d, crate::polyquad::StrengthNotAvailable> {
-            match strength {
-                #match_cases
-                _ => Err(crate::polyquad::StrengthNotAvailable)
-            }
-        }
-    };
-
     let select_minimum_strength_tokens: TokenStream = {
         let max_strength = rules.iter().map(|rule| rule.strength).max().unwrap();
         let select_min_fn = format_ident!("{}_select_minimum", domain_name);
+
+        let match_cases: TokenStream = rules
+            .iter()
+            .map(|rule| {
+                let strength = rule.strength;
+                let fn_name = format_ident!("{}_{}", domain_name, strength);
+                quote! { #strength => Ok(#fn_name()), }
+            })
+            .collect();
+
         quote! {
             /// Auto-generated code
             pub fn #select_min_fn(strength: usize)
-                -> Result<crate::Rule2d, crate::polyquad::StrengthNotAvailable> {
+                -> Result<crate::#return_type, crate::polyquad::StrengthNotAvailable> {
                 match strength {
                     #match_cases
                     s if s <= #max_strength => #select_min_fn(strength + 1),
@@ -169,7 +204,6 @@ fn generate_source_tokens_for_rules(domain_name: &str, rules: Vec<PolyquadRule2d
 
     // Combine all tokens into a single TokenStream
     once(select_minimum_strength_tokens)
-        .chain(once(select_exact_tokens))
         .chain(quadrature_tokens)
         .collect()
 }
@@ -184,8 +218,11 @@ fn write_tokens_to_file(tokens: &TokenStream, path: impl AsRef<Path>) {
 
 /// Generates code for the polyquad quadrature rules defined in the given directory and
 /// with the given domain name (tri, tet etc.).
-fn generate_polyquad_rules(out_dir: &Path, domain_name: &str, rule_dir: impl AsRef<Path>) {
-    let rules = load_polyquad_rules(rule_dir);
+fn generate_polyquad_rules<const D: usize>(out_dir: &Path, domain_name: &str, rule_dir: &Path)
+where
+    Parser: PolyquadParser<D>,
+{
+    let rules = load_polyquad_rules::<D>(rule_dir.as_ref());
     let source_file = out_dir.join(&format!("polyquad/{}.rs", domain_name));
     let code_tokens = generate_source_tokens_for_rules(domain_name, rules);
     write_tokens_to_file(&code_tokens, &source_file);
