@@ -1,11 +1,22 @@
 use polyquad_parse::{parse2d, Rule2d};
-use std::path::{PathBuf, Path};
-use std::fs::{read_dir, read_to_string};
-use std::{io, env};
-use std::ffi::OsStr;
-use std::iter::once;
-use quote::{format_ident, quote};
 use proc_macro2::TokenStream;
+use quote::{format_ident, quote};
+use std::ffi::OsStr;
+use std::fs::{read_dir, read_to_string};
+use std::iter::once;
+use std::path::{Path, PathBuf};
+use std::{env, io};
+
+fn main() {
+    let out_dir = env::var_os("OUT_DIR").unwrap();
+    let out_dir = Path::new(&out_dir);
+
+    generate_polyquad_rules(&out_dir, "rules/polyquad/expanded/tri", "tri");
+    generate_polyquad_rules(&out_dir, "rules/polyquad/expanded/quad", "quad");
+
+    println!("cargo:rerun-if-changed=rules/");
+    println!("cargo:rerun-if-changed=build.rs");
+}
 
 #[derive(Debug)]
 pub struct PolyquadRuleFile {
@@ -13,12 +24,12 @@ pub struct PolyquadRuleFile {
     strength: usize,
     /// Number of quadrature points
     size: usize,
-    path: PathBuf
+    path: PathBuf,
 }
 
 pub struct PolyquadRule2d {
     strength: usize,
-    rule: Rule2d
+    rule: Rule2d,
 }
 
 fn try_match_stem_to_strength_and_size(stem: &OsStr) -> Result<(usize, usize), ()> {
@@ -57,14 +68,13 @@ fn find_polyquad_rule_files_in_dir(dir: impl AsRef<Path>) -> io::Result<Vec<Poly
                         rule_files.push(PolyquadRuleFile {
                             strength,
                             size,
-                            path: filepath
+                            path: filepath,
                         });
                     }
-                },
+                }
                 // Ignore the file if it does not fit the pattern
                 _ => {}
             }
-
         }
     }
 
@@ -72,21 +82,30 @@ fn find_polyquad_rule_files_in_dir(dir: impl AsRef<Path>) -> io::Result<Vec<Poly
 }
 
 fn generate_polyquad_rules(out_dir: &Path, rule_dir: impl AsRef<Path>, domain_name: &str) {
-    let rule_files = find_polyquad_rule_files_in_dir(rule_dir)
-        .expect("Could not find rule files");
+    let rule_files = find_polyquad_rule_files_in_dir(rule_dir).expect("Could not find rule files");
     let mut rules = Vec::new();
     for rule_file in rule_files {
-        let data = read_to_string(&rule_file.path)
-            .expect(&format!("Failed to load rule file {}", rule_file.path.display()));
-        let rule = parse2d(&data)
-            .expect(&format!("Failed to parse polyquad rule file {}", rule_file.path.display()));
-        assert_eq!(rule_file.size, rule.weights.len(),
-                   "Mismatch between expected size and actual size of quadrature rule");
-        assert_eq!(rule.weights.len(), rule.points.len(),
-                   "Mismatch between number of weights and points in quadrature rule.");
+        let data = read_to_string(&rule_file.path).expect(&format!(
+            "Failed to load rule file {}",
+            rule_file.path.display()
+        ));
+        let rule = parse2d(&data).expect(&format!(
+            "Failed to parse polyquad rule file {}",
+            rule_file.path.display()
+        ));
+        assert_eq!(
+            rule_file.size,
+            rule.weights.len(),
+            "Mismatch between expected size and actual size of quadrature rule"
+        );
+        assert_eq!(
+            rule.weights.len(),
+            rule.points.len(),
+            "Mismatch between number of weights and points in quadrature rule."
+        );
         rules.push(PolyquadRule2d {
             strength: rule_file.strength,
-            rule
+            rule,
         });
     }
 
@@ -94,26 +113,21 @@ fn generate_polyquad_rules(out_dir: &Path, rule_dir: impl AsRef<Path>, domain_na
 
     let source_file = out_dir.join(&format!("polyquad/{}.rs", domain_name));
 
-    let quadrature_tokens = rules
-        .iter()
-        .map(|rule| {
-            let strength = rule.strength;
-            let fn_name = format_ident!("{}_{}", domain_name, strength);
-            let weights = &rule.rule.weights;
-            let points_tokens = rule.rule.points
-                .iter()
-                .map(|&[x, y]| quote!([#x, #y]));
+    let quadrature_tokens = rules.iter().map(|rule| {
+        let strength = rule.strength;
+        let fn_name = format_ident!("{}_{}", domain_name, strength);
+        let weights = &rule.rule.weights;
+        let points_tokens = rule.rule.points.iter().map(|&[x, y]| quote!([#x, #y]));
 
-            let tokens: TokenStream = quote! {
-                /// Auto-generated code.
-                pub fn #fn_name() -> crate::Rule2d {
-                    let weights = vec![#(#weights),*];
-                    let points = vec![#(#points_tokens),*];
-                    (weights, points)
-                }
-            };
-            tokens
-        });
+        quote! {
+            /// Auto-generated code.
+            pub fn #fn_name() -> crate::Rule2d {
+                let weights = vec![#(#weights),*];
+                let points = vec![#(#points_tokens),*];
+                (weights, points)
+            }
+        }
+    });
 
     let match_cases: TokenStream = rules
         .iter()
@@ -121,7 +135,8 @@ fn generate_polyquad_rules(out_dir: &Path, rule_dir: impl AsRef<Path>, domain_na
             let strength = rule.strength;
             let fn_name = format_ident!("{}_{}", domain_name, strength);
             quote! { #strength => Ok(#fn_name()), }
-        }).collect();
+        })
+        .collect();
 
     let select_fn = format_ident!("{}_select_exact", domain_name);
     let select_exact_tokens: TokenStream = quote! {
@@ -158,8 +173,7 @@ fn generate_polyquad_rules(out_dir: &Path, rule_dir: impl AsRef<Path>, domain_na
     let code = format!("{:#}", code_tokens);
     std::fs::create_dir_all(source_file.parent().unwrap())
         .expect("Failed to create directory for generated output code");
-    std::fs::write(&source_file, &code)
-        .expect("Failed to write source code for quadrature rule");
+    std::fs::write(&source_file, &code).expect("Failed to write source code for quadrature rule");
 
     format_file(&source_file);
 }
@@ -170,20 +184,11 @@ fn format_file(path: &Path) {
         .output();
     if let Err(err) = rustfmt_result {
         eprintln!("Failed to run rustfmt on file {}: {}", path.display(), err);
-        let warning = format!("Failed to run rustfmt on generated file {}.\
+        let warning = format!(
+            "Failed to run rustfmt on generated file {}.\
                                Re-run with `-vv` for more output.",
-                              path.display());
+            path.display()
+        );
         println!("cargo:warning={}", warning);
     }
-}
-
-fn main() {
-    let out_dir = env::var_os("OUT_DIR").unwrap();
-    let out_dir = Path::new(&out_dir);
-
-    generate_polyquad_rules(&out_dir, "rules/polyquad/expanded/tri", "tri");
-    generate_polyquad_rules(&out_dir, "rules/polyquad/expanded/quad", "quad");
-
-    println!("cargo:rerun-if-changed=rules/");
-    println!("cargo:rerun-if-changed=build.rs");
 }

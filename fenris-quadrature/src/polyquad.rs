@@ -11,8 +11,6 @@
 //! [paper]: https://www.sciencedirect.com/science/article/pii/S0898122115001224#f000035
 //! TODO: Explain reference domains etc.
 
-use crate::Rule2d;
-
 #[derive(Debug)]
 pub struct StrengthNotAvailable;
 

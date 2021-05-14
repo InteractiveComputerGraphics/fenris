@@ -23,7 +23,7 @@ pub type Point3 = [f64; 3];
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParseError {
-    error: String
+    error: String,
 }
 
 impl ParseError {
@@ -32,18 +32,22 @@ impl ParseError {
     }
 
     fn float_parse_error(str: &str, label: &str, error: impl Error) -> Self {
-        ParseError::from_string(format!("Failed to parse {} ({}) as f64: {}", str, label, error))
+        ParseError::from_string(format!(
+            "Failed to parse {} ({}) as f64: {}",
+            str, label, error
+        ))
     }
 
     fn unexpected_entries(num_entries_found: usize, num_entries_expected: usize) -> Self {
-        ParseError::from_string(format!("Found {} entries in line, but expected {}",
-                                        num_entries_found, num_entries_expected))
+        ParseError::from_string(format!(
+            "Found {} entries in line, but expected {}",
+            num_entries_found, num_entries_expected
+        ))
     }
 }
 
 fn try_parse_f64(str: &str, label: &str) -> Result<f64, ParseError> {
-    str
-        .parse::<f64>()
+    str.parse::<f64>()
         .map_err(|err| ParseError::float_parse_error(str, label, err))
 }
 
@@ -58,33 +62,32 @@ impl std::error::Error for ParseError {}
 #[derive(Clone, Default, PartialEq)]
 pub struct Rule2d {
     pub points: Vec<Point2>,
-    pub weights: Vec<f64>
+    pub weights: Vec<f64>,
 }
 
 #[derive(Clone, Default, PartialEq)]
 pub struct Rule3d {
     pub points: Vec<Point3>,
-    pub weights: Vec<f64>
+    pub weights: Vec<f64>,
 }
 
-fn parse_helper(data: &str, labels: &[&str], mut handler: impl FnMut(&[f64]) -> Result<(), ParseError>)
-         -> Result<(), ParseError> {
-    // TODO: Remove trim once we have a working impl
-    let data = data.trim_start();
-
+fn parse_helper(
+    data: &str,
+    labels: &[&str],
+    mut handler: impl FnMut(&[f64]) -> Result<(), ParseError>,
+) -> Result<(), ParseError> {
     let mut line_numbers = Vec::new();
 
     for line in data.lines() {
-        let mut iter = line
-            .split_ascii_whitespace()
-            .peekable();
+        let mut iter = line.split_ascii_whitespace().peekable();
 
         // Skip empty lines
         if iter.peek().is_some() {
             line_numbers.clear();
 
             for (i, entry) in iter.enumerate() {
-                let coord_entry = try_parse_f64(entry, labels[i])?;
+                let label = labels.get(i).unwrap_or_else(|| &"unlabeled entry");
+                let coord_entry = try_parse_f64(entry, label)?;
                 line_numbers.push(coord_entry);
             }
 
@@ -103,17 +106,18 @@ fn parse_helper(data: &str, labels: &[&str], mut handler: impl FnMut(&[f64]) -> 
 /// where `x`, `y` and `weights` are floating-point numbers.
 pub fn parse2d(data: &str) -> Result<Rule2d, ParseError> {
     let mut rule = Rule2d::default();
-    parse_helper(data, &["x coordinate", "y coordinate", "weight"],
-        |entries| {
-            match entries {
-                [x, y, w] => {
-                    rule.points.push([*x, *y]);
-                    rule.weights.push(*w);
-                    Ok(())
-                },
-                _ => Err(ParseError::unexpected_entries(entries.len(), 3))
+    parse_helper(
+        data,
+        &["x coordinate", "y coordinate", "weight"],
+        |entries| match entries {
+            [x, y, w] => {
+                rule.points.push([*x, *y]);
+                rule.weights.push(*w);
+                Ok(())
             }
-        })?;
+            _ => Err(ParseError::unexpected_entries(entries.len(), 3)),
+        },
+    )?;
     Ok(rule)
 }
 
@@ -127,17 +131,13 @@ pub fn parse2d(data: &str) -> Result<Rule2d, ParseError> {
 pub fn parse3d(data: &str) -> Result<Rule3d, ParseError> {
     let mut rule = Rule3d::default();
     let labels = &["x coordinate", "y coordinate", "z coordinate", "weight"];
-    parse_helper(data,
-                 labels,
-                 |entries| {
-                     match entries {
-                         [x, y, z, w] => {
-                             rule.points.push([*x, *y, *z]);
-                             rule.weights.push(*w);
-                             Ok(())
-                         },
-                         _ => Err(ParseError::unexpected_entries(entries.len(), 4))
-                     }
-                 })?;
+    parse_helper(data, labels, |entries| match entries {
+        [x, y, z, w] => {
+            rule.points.push([*x, *y, *z]);
+            rule.weights.push(*w);
+            Ok(())
+        }
+        _ => Err(ParseError::unexpected_entries(entries.len(), 4)),
+    })?;
     Ok(rule)
 }
