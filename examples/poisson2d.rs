@@ -6,8 +6,8 @@ use fenris::assembly::global::{
     SerialVectorAssembler,
 };
 use fenris::assembly::local::{
-    ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, EllipticContraction,
-    EllipticOperator, Operator, SourceFunction, UniformQuadratureTable,
+    ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, EllipticContraction, Operator,
+    SourceFunction, UniformQuadratureTable,
 };
 use fenris::io::vtk::FiniteElementMeshDataSetBuilder;
 use fenris::mesh::QuadMesh2d;
@@ -109,17 +109,6 @@ impl Operator for LaplaceOperator2d {
     // There are no parameters (density, stiffness, temperature etc.) associated with the Laplace
     // operator
     type Parameters = ();
-}
-
-impl EllipticOperator<f64, U2> for LaplaceOperator2d {
-    // TODO: Document
-    fn compute_elliptic_term(
-        &self,
-        gradient: &MatrixMN<f64, U2, Self::SolutionDim>,
-        _data: &Self::Parameters,
-    ) -> MatrixMN<f64, U2, Self::SolutionDim> {
-        *gradient
-    }
 }
 
 impl EllipticContraction<f64, U2> for LaplaceOperator2d {

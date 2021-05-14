@@ -285,7 +285,7 @@ where
     ) -> MatrixMN<T, GeometryDim, Self::SolutionDim>;
 }
 
-pub trait EllipticContraction<T, GeometryDim>: EllipticOperator<T, GeometryDim>
+pub trait EllipticContraction<T, GeometryDim>: Operator
 where
     T: RealField,
     GeometryDim: SmallDim,
