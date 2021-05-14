@@ -8,12 +8,11 @@
 //! Computers & Mathematics with Applications 69, no. 10 (2015): 1232-1241.
 //! ```
 //!
+//! TODO: Document maximum strengths for various domains
+//!
 //! [paper]: https://www.sciencedirect.com/science/article/pii/S0898122115001224#f000035
 
-use crate::{Rule2d, Rule3d};
-
-#[derive(Debug)]
-pub struct StrengthNotAvailable;
+use crate::{Error, Rule2d, Rule3d};
 
 /// Attempt to create a quadrature rule for the reference triangle with the provided strength.
 ///
@@ -24,7 +23,7 @@ pub struct StrengthNotAvailable;
 /// # Errors
 ///
 /// Returns an error if there is no quadrature rule available with sufficient strength.
-pub fn triangle(strength: usize) -> Result<Rule2d, StrengthNotAvailable> {
+pub fn triangle(strength: usize) -> Result<Rule2d, Error> {
     tri_select_minimum(strength)
 }
 
@@ -37,7 +36,7 @@ pub fn triangle(strength: usize) -> Result<Rule2d, StrengthNotAvailable> {
 /// # Errors
 ///
 /// Returns an error if there is no quadrature rule available with sufficient strength.
-pub fn quadrilateral(strength: usize) -> Result<Rule2d, StrengthNotAvailable> {
+pub fn quadrilateral(strength: usize) -> Result<Rule2d, Error> {
     quad_select_minimum(strength)
 }
 
@@ -50,7 +49,7 @@ pub fn quadrilateral(strength: usize) -> Result<Rule2d, StrengthNotAvailable> {
 /// # Errors
 ///
 /// Returns an error if there is no quadrature rule available with sufficient strength.
-pub fn tetrahedron(strength: usize) -> Result<Rule3d, StrengthNotAvailable> {
+pub fn tetrahedron(strength: usize) -> Result<Rule3d, Error> {
     tet_select_minimum(strength)
 }
 
@@ -63,7 +62,7 @@ pub fn tetrahedron(strength: usize) -> Result<Rule3d, StrengthNotAvailable> {
 /// # Errors
 ///
 /// Returns an error if there is no quadrature rule available with sufficient strength.
-pub fn hexahedron(strength: usize) -> Result<Rule3d, StrengthNotAvailable> {
+pub fn hexahedron(strength: usize) -> Result<Rule3d, Error> {
     hex_select_minimum(strength)
 }
 
@@ -76,7 +75,7 @@ pub fn hexahedron(strength: usize) -> Result<Rule3d, StrengthNotAvailable> {
 /// # Errors
 ///
 /// Returns an error if there is no quadrature rule available with sufficient strength.
-pub fn prism(strength: usize) -> Result<Rule3d, StrengthNotAvailable> {
+pub fn prism(strength: usize) -> Result<Rule3d, Error> {
     pri_select_minimum(strength)
 }
 
@@ -89,7 +88,7 @@ pub fn prism(strength: usize) -> Result<Rule3d, StrengthNotAvailable> {
 /// # Errors
 ///
 /// Returns an error if there is no quadrature rule available with sufficient strength.
-pub fn pyramid(strength: usize) -> Result<Rule3d, StrengthNotAvailable> {
+pub fn pyramid(strength: usize) -> Result<Rule3d, Error> {
     pyr_select_minimum(strength)
 }
 

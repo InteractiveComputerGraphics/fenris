@@ -192,11 +192,11 @@ fn generate_source_tokens_for_rules<const D: usize>(
         quote! {
             /// Auto-generated code
             fn #select_min_fn(strength: usize)
-                -> Result<crate::#return_type, crate::polyquad::StrengthNotAvailable> {
+                -> Result<crate::#return_type, crate::Error> {
                 match strength {
                     #match_cases
                     s if s <= #max_strength => #select_min_fn(strength + 1),
-                    _ => Err(crate::polyquad::StrengthNotAvailable)
+                    _ => Err(crate::Error::NoRuleAvailable)
                 }
             }
         }
