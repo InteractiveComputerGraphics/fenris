@@ -9,10 +9,7 @@ use fenris::geometry::proptest_strategies::{
     clockwise_triangle2d_strategy_f64, nondegenerate_convex_quad2d_strategy_f64,
 };
 use fenris::geometry::{LineSegment2d, Quad2d, Triangle2d};
-use fenris::quadrature::{
-    hex_quadrature_strength_11, quad_quadrature_strength_11, tet_quadrature_strength_10,
-    tri_quadrature_strength_5,
-};
+use fenris::quadrature;
 use fenris_optimize::calculus::{approximate_jacobian, VectorFunctionBuilder};
 
 use nalgebra::{
@@ -264,7 +261,7 @@ fn quad4_bilinear_function_exact_error() {
         RowVector4::from_columns(&quad.0.iter().map(|x| u_exact(x)).collect::<Vec<_>>());
 
     // TODO: Use lower strength quadrature
-    let quadrature = quad_quadrature_strength_11();
+    let quadrature = quadrature::total_order::quadrilateral(11).unwrap();
     let error = estimate_element_L2_error(
         &mut ErrorWorkspace::default(),
         &element,
@@ -304,7 +301,7 @@ fn hex27_triquadratic_function_exact_error() {
     let u_weights = RowVectorN::<_, U27>::from_columns(&cols);
 
     // TODO: Use lower strength quadrature
-    let quadrature = hex_quadrature_strength_11();
+    let quadrature = quadrature::total_order::hexahedron(11).unwrap();
     let error = estimate_element_L2_error(
         &mut ErrorWorkspace::default(),
         &element,
@@ -345,7 +342,7 @@ fn hex20_quadratic_function_exact_error() {
     let u_weights = RowVectorN::<_, U20>::from_columns(&cols);
 
     // TODO: Use lower strength quadrature
-    let quadrature = hex_quadrature_strength_11();
+    let quadrature = quadrature::total_order::hexahedron(11).unwrap();
     let error = estimate_element_L2_error(
         &mut ErrorWorkspace::default(),
         &element,
@@ -506,7 +503,7 @@ proptest! {
         let u_weights = RowVector3::from_columns(&tri.0.iter().map(|x| u_exact(x)).collect::<Vec<_>>());
 
         // TODO: Use lower strength quadrature
-        let quadrature = tri_quadrature_strength_5();
+        let quadrature = quadrature::total_order::triangle(5).unwrap();
         let error = estimate_element_L2_error(
             &mut ErrorWorkspace::default(),
             &element,
@@ -527,7 +524,7 @@ proptest! {
         let u_weights = RowVector6::from_columns(&element.vertices().iter().map(|x| u_exact(x)).collect::<Vec<_>>());
 
         // TODO: Use lower strength quadrature
-        let quadrature = tri_quadrature_strength_5();
+        let quadrature = quadrature::total_order::triangle(5).unwrap();
         let error = estimate_element_L2_error(
             &mut ErrorWorkspace::default(),
             &element,
@@ -548,7 +545,7 @@ proptest! {
         let u_weights = RowVector6::from_columns(&element.vertices().iter().map(|x| u_exact(x)).collect::<Vec<_>>());
 
         // TODO: Use lower strength quadrature
-        let quadrature = tri_quadrature_strength_5();
+        let quadrature = quadrature::total_order::triangle(5).unwrap();
         let error = estimate_element_L2_error(
             &mut ErrorWorkspace::default(),
             &element,
@@ -579,7 +576,7 @@ proptest! {
                                                     .map(|x| u_exact(x))
                                                     .collect::<Vec<_>>());
 
-        let quadrature = quad_quadrature_strength_11();
+        let quadrature = quadrature::total_order::quadrilateral(11).unwrap();
         let error = estimate_element_L2_error(
             &mut ErrorWorkspace::default(),
             &element,
@@ -705,7 +702,7 @@ proptest! {
                                                     .map(|x| u_exact(x))
                                                     .collect::<Vec<_>>());
 
-        let quadrature = tet_quadrature_strength_10();
+        let quadrature = quadrature::total_order::tetrahedron(10).unwrap();
         let error = estimate_element_L2_error(
             &mut ErrorWorkspace::default(),
             &element, |p, _| u_exact(p),

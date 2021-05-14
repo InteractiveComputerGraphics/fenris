@@ -13,7 +13,7 @@ use fenris::io::vtk::FiniteElementMeshDataSetBuilder;
 use fenris::mesh::QuadMesh2d;
 use fenris::nalgebra::{DVector, MatrixMN, Point2, VectorN, U1, U2};
 use fenris::procedural::create_unit_square_uniform_quad_mesh_2d;
-use fenris::quadrature::quad_quadrature_strength_5_f64;
+use fenris::quadrature;
 use fenris_sparse::CsrMatrix;
 
 fn main() -> eyre::Result<()> {
@@ -33,8 +33,8 @@ fn main() -> eyre::Result<()> {
 }
 
 fn assemble_linear_system(mesh: &QuadMesh2d<f64>) -> eyre::Result<(CsrMatrix<f64>, DVector<f64>)> {
-    // TODO: Use different quadrature
-    let (weights, points) = quad_quadrature_strength_5_f64();
+    // TODO: Use different quadrature (tensor product)
+    let (weights, points) = quadrature::total_order::quadrilateral(5)?;
     // A quadrature table is responsible for providing each element with a quadrature rule.
     // Since we want the same quadrature rule per element, we use a uniform quadrature table.
     let quadrature = UniformQuadratureTable::from_points_and_weights(points, weights);

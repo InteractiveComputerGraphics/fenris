@@ -15,7 +15,7 @@ use fenris::assembly::local::{assemble_generalized_element_mass, ElementConnecti
 use fenris::connectivity::Quad4d2Connectivity;
 use fenris::element::{ElementConnectivity, MatrixSliceMut, Quad4d2Element};
 use fenris::geometry::Quad2d;
-use fenris::quadrature::quad_quadrature_strength_5_f64;
+use fenris::quadrature;
 use fenris_sparse::{CsrMatrix, SparsityPattern};
 
 // #[derive(Debug, Copy, Clone)]
@@ -85,7 +85,7 @@ where
 fn analytic_comparison_of_element_mass_matrix_for_reference_element() {
     let density = 3.0;
 
-    let quadrature = quad_quadrature_strength_5_f64();
+    let quadrature = quadrature::total_order::quadrilateral(5).unwrap();
     let quad = Quad4d2Element::from(reference_quad());
 
     let ndof = 8;
