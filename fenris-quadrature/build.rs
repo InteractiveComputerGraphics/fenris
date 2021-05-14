@@ -11,8 +11,8 @@ fn main() {
     let out_dir = env::var_os("OUT_DIR").unwrap();
     let out_dir = Path::new(&out_dir);
 
-    generate_polyquad_rules(&out_dir, "rules/polyquad/expanded/tri", "tri");
-    generate_polyquad_rules(&out_dir, "rules/polyquad/expanded/quad", "quad");
+    generate_polyquad_rules(&out_dir, "tri", "rules/polyquad/expanded/tri");
+    generate_polyquad_rules(&out_dir, "quad", "rules/polyquad/expanded/quad");
 
     println!("cargo:rerun-if-changed=rules/");
     println!("cargo:rerun-if-changed=build.rs");
@@ -32,6 +32,7 @@ pub struct PolyquadRule2d {
     rule: Rule2d,
 }
 
+/// Try to parse a filename like "2-5" into the respective strength (2) and quadrature size (5).
 fn try_match_stem_to_strength_and_size(stem: &OsStr) -> Result<(usize, usize), ()> {
     let stem = stem.to_string_lossy();
     let mut iter = stem.split("-");
@@ -81,7 +82,7 @@ fn find_polyquad_rule_files_in_dir(dir: impl AsRef<Path>) -> io::Result<Vec<Poly
     Ok(rule_files)
 }
 
-fn generate_polyquad_rules(out_dir: &Path, rule_dir: impl AsRef<Path>, domain_name: &str) {
+fn load_polyquad_rules(rule_dir: impl AsRef<Path>) -> Vec<PolyquadRule2d> {
     let rule_files = find_polyquad_rule_files_in_dir(rule_dir).expect("Could not find rule files");
     let mut rules = Vec::new();
     for rule_file in rule_files {
@@ -110,9 +111,10 @@ fn generate_polyquad_rules(out_dir: &Path, rule_dir: impl AsRef<Path>, domain_na
     }
 
     rules.sort_by_key(|rule| rule.strength);
+    rules
+}
 
-    let source_file = out_dir.join(&format!("polyquad/{}.rs", domain_name));
-
+fn generate_source_tokens_for_rules(domain_name: &str, rules: Vec<PolyquadRule2d>) -> TokenStream {
     let quadrature_tokens = rules.iter().map(|rule| {
         let strength = rule.strength;
         let fn_name = format_ident!("{}_{}", domain_name, strength);
@@ -165,16 +167,28 @@ fn generate_polyquad_rules(out_dir: &Path, rule_dir: impl AsRef<Path>, domain_na
         }
     };
 
-    let code_tokens: TokenStream = once(select_minimum_strength_tokens)
+    // Combine all tokens into a single TokenStream
+    once(select_minimum_strength_tokens)
         .chain(once(select_exact_tokens))
         .chain(quadrature_tokens)
-        .collect();
+        .collect()
+}
 
-    let code = format!("{:#}", code_tokens);
-    std::fs::create_dir_all(source_file.parent().unwrap())
+fn write_tokens_to_file(tokens: &TokenStream, path: impl AsRef<Path>) {
+    let code = format!("{:#}", tokens);
+    let path = path.as_ref();
+    std::fs::create_dir_all(path.parent().unwrap())
         .expect("Failed to create directory for generated output code");
-    std::fs::write(&source_file, &code).expect("Failed to write source code for quadrature rule");
+    std::fs::write(&path, &code).expect("Failed to write source code for quadrature rule");
+}
 
+/// Generates code for the polyquad quadrature rules defined in the given directory and
+/// with the given domain name (tri, tet etc.).
+fn generate_polyquad_rules(out_dir: &Path, domain_name: &str, rule_dir: impl AsRef<Path>) {
+    let rules = load_polyquad_rules(rule_dir);
+    let source_file = out_dir.join(&format!("polyquad/{}.rs", domain_name));
+    let code_tokens = generate_source_tokens_for_rules(domain_name, rules);
+    write_tokens_to_file(&code_tokens, &source_file);
     format_file(&source_file);
 }
 
