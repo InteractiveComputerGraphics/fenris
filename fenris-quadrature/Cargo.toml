@@ -1,0 +1,12 @@
+[package]
+name = "fenris-quadrature"
+version = "0.1.0"
+authors = ["Andreas Longva"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[build-dependencies]
+polyquad-parse = { path = "../polyquad-parse", version = "0.1" }
+quote = "1.0.9"
+proc-macro2 = "1.0"

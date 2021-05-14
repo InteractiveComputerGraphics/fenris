@@ -1,0 +1,21 @@
+Title: On the Identification of Symmetric Quadrature Rules for Finite
+       Element Methods
+Authors: F. D. Witherden and P. E. Vincent
+Contact: <freddie.witherden08@imperial.ac.uk>
+
+All rules are provided in two formats: the `compact' representation
+used internally by polyquad and the more common `expanded'
+representation.   In the latter format each line of a rule is of the form:
+
+   <x>     <y>     <weight>
+
+or
+
+   <x>     <y>     <z>     <weight>
+
+depending on if the domain is two or three dimensional.  Weights are
+specified such that they sum to the volume of the reference domain (as
+defined in the paper).  Files are named according to: <strength>-<node
+count>.txt.  If, for a given strength q, the number of nodes required
+is equivalent to that of the strength q + 1 rule, we omit the strength
+q rule.

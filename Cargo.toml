@@ -45,5 +45,5 @@ fenris-sparse-proptest = { path = "fenris-sparse/fenris-sparse-proptest" }
 #fenris-solid = { path = "../fenris-solid" }
 
 [workspace]
-members = ["fenris-geometry", "fenris-optimize", "fenris-sparse", "nested-vec", "paradis" ]
+members = ["fenris-quadrature", "fenris-geometry", "fenris-optimize", "fenris-sparse", "nested-vec", "paradis", "polyquad-parse" ]
 #members = ["nested-vec" ]
