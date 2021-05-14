@@ -23,7 +23,7 @@ fn main() {
 }
 
 #[derive(Debug)]
-pub struct PolyquadRuleFile {
+struct PolyquadRuleFile {
     /// Polynomial strength
     strength: usize,
     /// Number of quadrature points
@@ -31,9 +31,9 @@ pub struct PolyquadRuleFile {
     path: PathBuf,
 }
 
-pub type QuadratureRule<const D: usize> = (Vec<f64>, Vec<[f64; D]>);
+type QuadratureRule<const D: usize> = (Vec<f64>, Vec<[f64; D]>);
 
-pub struct PolyquadRule<const D: usize> {
+struct PolyquadRule<const D: usize> {
     strength: usize,
     weights: Vec<f64>,
     points: Vec<[f64; D]>,
@@ -91,7 +91,7 @@ fn find_polyquad_rule_files_in_dir(dir: impl AsRef<Path>) -> io::Result<Vec<Poly
 
 struct Parser;
 
-pub trait PolyquadParser<const D: usize> {
+trait PolyquadParser<const D: usize> {
     fn parse(data: &str) -> Result<QuadratureRule<D>, ParseError>;
 }
 
@@ -168,7 +168,7 @@ fn generate_source_tokens_for_rules<const D: usize>(
 
         quote! {
             /// Auto-generated code.
-            pub fn #fn_name() -> crate::#return_type {
+            fn #fn_name() -> crate::#return_type {
                 let weights = vec![#(#weights),*];
                 let points = vec![#(#points_tokens),*];
                 (weights, points)
@@ -191,7 +191,7 @@ fn generate_source_tokens_for_rules<const D: usize>(
 
         quote! {
             /// Auto-generated code
-            pub fn #select_min_fn(strength: usize)
+            fn #select_min_fn(strength: usize)
                 -> Result<crate::#return_type, crate::polyquad::StrengthNotAvailable> {
                 match strength {
                     #match_cases
