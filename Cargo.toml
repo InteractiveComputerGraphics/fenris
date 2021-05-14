@@ -29,6 +29,7 @@ eyre = "0.6"
 fenris-sparse = { path = "fenris-sparse" }
 fenris-geometry = { path = "fenris-geometry", features = [ "proptest", "vtkio" ] }
 fenris-optimize = { path = "fenris-optimize" }
+fenris-quadrature = { path = "fenris-quadrature" }
 
 [dev-dependencies]
 proptest = "1.0"

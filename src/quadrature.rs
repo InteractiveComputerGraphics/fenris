@@ -5,6 +5,13 @@ use nalgebra::allocator::Allocator;
 use num::Zero;
 use numeric_literals::replace_float_literals;
 
+/// Errors returned by quadrature methods.
+///
+/// TODO: How to prevent collapse?
+pub use fenris_quadrature::Error as QuadratureError;
+
+pub mod total_order;
+
 pub type QuadraturePair<T, D> = (Vec<T>, Vec<Point<T, D>>);
 pub type QuadraturePair2d<T> = QuadraturePair<T, U2>;
 pub type QuadraturePair3d<T> = QuadraturePair<T, U3>;
