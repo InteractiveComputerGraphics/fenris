@@ -36,14 +36,20 @@ impl Display for Error {
 
 impl std::error::Error for Error {}
 
-/// A two-dimensional point
-pub type Point2 = [f64; 2];
+/// A D-dimensional point.
+pub type Point<const D: usize> = [f64; D];
+
+/// A two-dimensional point.
+pub type Point2 = Point<2>;
 
 /// A three-dimensional point.
-pub type Point3 = [f64; 3];
+pub type Point3 = Point<3>;
+
+/// A D-dimensional rule.
+pub type Rule<const D: usize> = (Vec<f64>, Vec<Point<D>>);
 
 /// A two-dimensional quadrature rule.
-pub type Rule2d = (Vec<f64>, Vec<Point2>);
+pub type Rule2d = Rule<2>;
 
 /// A three-dimensional rule.
-pub type Rule3d = (Vec<f64>, Vec<Point3>);
+pub type Rule3d = Rule<3>;

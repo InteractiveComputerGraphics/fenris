@@ -6,6 +6,7 @@ edition = "2018"
 
 [dev-dependencies]
 matrixcompare = "0.3.0"
+nalgebra = "0.26.2"
 
 [build-dependencies]
 polyquad-parse = { path = "../polyquad-parse", version = "0.1" }
