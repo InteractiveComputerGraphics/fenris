@@ -14,7 +14,7 @@
 //!
 //! [paper]: https://www.sciencedirect.com/science/article/pii/S0898122115001224#f000035
 
-use crate::{Error, Rule2d, Rule3d};
+use crate::{Error, Rule};
 
 /// Attempt to create a quadrature rule for the reference triangle with the provided strength.
 ///
@@ -25,7 +25,7 @@ use crate::{Error, Rule2d, Rule3d};
 /// # Errors
 ///
 /// Returns an error if there is no quadrature rule available with sufficient strength.
-pub fn triangle(strength: usize) -> Result<Rule2d, Error> {
+pub fn triangle(strength: usize) -> Result<Rule<2>, Error> {
     tri_select_minimum(strength)
 }
 
@@ -38,7 +38,7 @@ pub fn triangle(strength: usize) -> Result<Rule2d, Error> {
 /// # Errors
 ///
 /// Returns an error if there is no quadrature rule available with sufficient strength.
-pub fn quadrilateral(strength: usize) -> Result<Rule2d, Error> {
+pub fn quadrilateral(strength: usize) -> Result<Rule<2>, Error> {
     quad_select_minimum(strength)
 }
 
@@ -51,7 +51,7 @@ pub fn quadrilateral(strength: usize) -> Result<Rule2d, Error> {
 /// # Errors
 ///
 /// Returns an error if there is no quadrature rule available with sufficient strength.
-pub fn tetrahedron(strength: usize) -> Result<Rule3d, Error> {
+pub fn tetrahedron(strength: usize) -> Result<Rule<3>, Error> {
     tet_select_minimum(strength)
 }
 
@@ -64,7 +64,7 @@ pub fn tetrahedron(strength: usize) -> Result<Rule3d, Error> {
 /// # Errors
 ///
 /// Returns an error if there is no quadrature rule available with sufficient strength.
-pub fn hexahedron(strength: usize) -> Result<Rule3d, Error> {
+pub fn hexahedron(strength: usize) -> Result<Rule<3>, Error> {
     hex_select_minimum(strength)
 }
 
@@ -77,7 +77,7 @@ pub fn hexahedron(strength: usize) -> Result<Rule3d, Error> {
 /// # Errors
 ///
 /// Returns an error if there is no quadrature rule available with sufficient strength.
-pub fn prism(strength: usize) -> Result<Rule3d, Error> {
+pub fn prism(strength: usize) -> Result<Rule<3>, Error> {
     pri_select_minimum(strength)
 }
 
@@ -90,7 +90,7 @@ pub fn prism(strength: usize) -> Result<Rule3d, Error> {
 /// # Errors
 ///
 /// Returns an error if there is no quadrature rule available with sufficient strength.
-pub fn pyramid(strength: usize) -> Result<Rule3d, Error> {
+pub fn pyramid(strength: usize) -> Result<Rule<3>, Error> {
     pyr_select_minimum(strength)
 }
 

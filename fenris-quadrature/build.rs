@@ -147,8 +147,6 @@ fn generate_source_tokens_for_rules<const D: usize>(
     domain_name: &str,
     rules: Vec<PolyquadRule<D>>,
 ) -> TokenStream {
-    let return_type = format_ident!("Rule{}d", D);
-
     let quadrature_tokens = rules.iter().map(|rule| {
         let strength = rule.strength;
         let fn_name = format_ident!("{}_{}", domain_name, strength);
@@ -168,7 +166,7 @@ fn generate_source_tokens_for_rules<const D: usize>(
 
         quote! {
             /// Auto-generated code.
-            fn #fn_name() -> crate::#return_type {
+            fn #fn_name() -> crate::Rule<#D> {
                 let weights = vec![#(#weights),*];
                 let points = vec![#(#points_tokens),*];
                 (weights, points)
@@ -192,7 +190,7 @@ fn generate_source_tokens_for_rules<const D: usize>(
         quote! {
             /// Auto-generated code
             fn #select_min_fn(strength: usize)
-                -> Result<crate::#return_type, crate::Error> {
+                -> Result<crate::Rule<#D>, crate::Error> {
                 match strength {
                     #match_cases
                     s if s <= #max_strength => #select_min_fn(strength + 1),

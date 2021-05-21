@@ -1,7 +1,7 @@
 use fenris_quadrature::polyquad::{
     hexahedron, prism, pyramid, quadrilateral, tetrahedron, triangle,
 };
-use fenris_quadrature::{Error, Rule2d, Rule3d};
+use fenris_quadrature::{Error, Rule};
 
 use matrixcompare::assert_scalar_eq;
 use nalgebra::{SVector, Vector3};
@@ -171,7 +171,7 @@ fn is_even(i: usize) -> bool {
 
 fn test_2d_rules_satisfy_prescribed_accuracy(
     max_strength: usize,
-    rule_generator: impl Fn(usize) -> Rule2d,
+    rule_generator: impl Fn(usize) -> Rule<2>,
     monomial_integral: impl Fn(usize, usize) -> f64,
 ) {
     for strength in 0..=max_strength {
@@ -204,7 +204,7 @@ fn test_2d_rules_satisfy_prescribed_accuracy(
 
 fn test_3d_rules_satisfy_prescribed_accuracy(
     max_strength: usize,
-    rule_generator: impl Fn(usize) -> Rule3d,
+    rule_generator: impl Fn(usize) -> Rule<3>,
     monomial_integral: impl Fn(usize, usize, usize) -> f64,
 ) {
     for strength in 0..=max_strength {

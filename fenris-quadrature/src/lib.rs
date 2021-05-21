@@ -5,6 +5,9 @@
 //! of `fenris`.
 //!
 //! TODO: Document conventions for reference domains
+//!
+//! TODO: Document how quadratures work, e.g. the concept of a reference domain and that
+//! quadrature rules are specific to a reference domain
 
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -38,23 +41,10 @@ impl std::error::Error for Error {}
 /// A D-dimensional point.
 pub type Point<const D: usize> = [f64; D];
 
-/// A two-dimensional point.
-pub type Point2 = Point<2>;
-
-/// A three-dimensional point.
-pub type Point3 = Point<3>;
-
-/// A D-dimensional rule.
+/// A D-dimensional quadrature rule.
+///
+/// A quadrature rule consists of weights and points.
 pub type Rule<const D: usize> = (Vec<f64>, Vec<Point<D>>);
-
-/// A one-dimensional quadrature rule.
-pub type Rule1d = Rule<1>;
-
-/// A two-dimensional quadrature rule.
-pub type Rule2d = Rule<2>;
-
-/// A three-dimensional rule.
-pub type Rule3d = Rule<3>;
 
 /// Integrates the given function with the given quadrature rule.
 ///
