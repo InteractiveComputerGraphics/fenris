@@ -5,13 +5,12 @@
 //! of `fenris`.
 //!
 //! TODO: Document conventions for reference domains
-//!
-//! TODO: Tests!
 
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
 pub mod polyquad;
+pub mod univariate;
 
 /// Library-wide error type.
 #[derive(Debug, Clone, PartialEq)]
@@ -48,8 +47,35 @@ pub type Point3 = Point<3>;
 /// A D-dimensional rule.
 pub type Rule<const D: usize> = (Vec<f64>, Vec<Point<D>>);
 
+/// A one-dimensional quadrature rule.
+pub type Rule1d = Rule<1>;
+
 /// A two-dimensional quadrature rule.
 pub type Rule2d = Rule<2>;
 
 /// A three-dimensional rule.
 pub type Rule3d = Rule<3>;
+
+/// Integrates the given function with the given quadrature rule.
+///
+/// # Examples
+///
+/// ```rust
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// use matrixcompare::assert_scalar_eq;
+/// use fenris_quadrature::integrate;
+///
+/// // Integrate f over the reference triangle
+/// let f = |x, y| x * x * y;
+///
+/// // The total order of f is 3, so we obtain a quadrature rule with strength 3
+/// let rule = fenris_quadrature::polyquad::triangle(3)?;
+/// let integral = integrate(&rule, |&[x, y]| f(x, y));
+/// let expected_integral = -2.0 / 15.0;
+/// assert_scalar_eq!(integral, expected_integral, comp=abs, tol=1e-14);
+/// # Ok(()) }
+/// ```
+pub fn integrate<const D: usize>(rule: &Rule<D>, f: impl Fn(&Point<D>) -> f64) -> f64 {
+    let (weights, points) = rule;
+    weights.iter().zip(points).map(|(w, p)| w * f(p)).sum()
+}
