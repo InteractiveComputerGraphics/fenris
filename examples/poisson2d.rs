@@ -33,10 +33,9 @@ fn main() -> eyre::Result<()> {
 }
 
 fn assemble_linear_system(mesh: &QuadMesh2d<f64>) -> eyre::Result<(CsrMatrix<f64>, DVector<f64>)> {
-    // TODO: Use different quadrature (tensor product)
-    let (weights, points) = quadrature::total_order::quadrilateral(5)?;
     // A quadrature table is responsible for providing each element with a quadrature rule.
     // Since we want the same quadrature rule per element, we use a uniform quadrature table.
+    let (weights, points) = quadrature::tensor::quadrilateral_gauss(2);
     let quadrature = UniformQuadratureTable::from_points_and_weights(points, weights);
 
     // TODO: This isn't actually needed. Get rid of it by introducing a separate trait
