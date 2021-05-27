@@ -1,5 +1,5 @@
-use fenris_quadrature::tensor::{quadrilateral_gauss, hexahedron_gauss};
 use fenris_quadrature::integrate;
+use fenris_quadrature::tensor::{hexahedron_gauss, quadrilateral_gauss};
 use matrixcompare::assert_scalar_eq;
 
 #[test]
@@ -16,9 +16,10 @@ fn quadrilateral_gauss_rules_satisfy_expected_accuracy() {
         // Integrate all monomials of per-dimension degree <= expected polynomial degree that
         // can be exactly integrated
         for alpha in 0..=expected_polynomial_degree as i32 {
-            for beta in 0 ..=expected_polynomial_degree as i32 {
+            for beta in 0..=expected_polynomial_degree as i32 {
                 let monomial = |x: f64, y: f64| x.powi(alpha) * y.powi(beta);
-                let monomial_integral_1d = |alpha| (1.0 - (-1.0f64).powi(alpha + 1)) / (alpha as f64 + 1.0);
+                let monomial_integral_1d =
+                    |alpha| (1.0 - (-1.0f64).powi(alpha + 1)) / (alpha as f64 + 1.0);
                 let monomial_integral_2d = monomial_integral_1d(alpha) * monomial_integral_1d(beta);
                 let estimated_integral = integrate(&rule, |&[x, y]| monomial(x, y));
 
@@ -47,19 +48,23 @@ fn hexahedral_gauss_rules_satisfy_expected_accuracy() {
         // Integrate all monomials of per-dimension degree <= expected polynomial degree that
         // can be exactly integrated
         for alpha in 0..=expected_polynomial_degree as i32 {
-            for beta in 0 ..=expected_polynomial_degree as i32 {
-                for gamma in 0 ..=expected_polynomial_degree as i32 {
-                    let monomial = |x: f64, y: f64, z: f64| x.powi(alpha) * y.powi(beta) * z.powi(gamma);
-                    let monomial_integral_1d = |alpha| (1.0 - (-1.0f64).powi(alpha + 1)) / (alpha as f64 + 1.0);
-                    let monomial_integral_2d = monomial_integral_1d(alpha) * monomial_integral_1d(beta) * monomial_integral_1d(gamma);
+            for beta in 0..=expected_polynomial_degree as i32 {
+                for gamma in 0..=expected_polynomial_degree as i32 {
+                    let monomial =
+                        |x: f64, y: f64, z: f64| x.powi(alpha) * y.powi(beta) * z.powi(gamma);
+                    let monomial_integral_1d =
+                        |alpha| (1.0 - (-1.0f64).powi(alpha + 1)) / (alpha as f64 + 1.0);
+                    let monomial_integral_2d = monomial_integral_1d(alpha)
+                        * monomial_integral_1d(beta)
+                        * monomial_integral_1d(gamma);
                     let estimated_integral = integrate(&rule, |&[x, y, z]| monomial(x, y, z));
 
                     assert_scalar_eq!(
-                    estimated_integral,
-                    monomial_integral_2d,
-                    comp = abs,
-                    tol = 1e-13
-                );
+                        estimated_integral,
+                        monomial_integral_2d,
+                        comp = abs,
+                        tol = 1e-13
+                    );
                 }
             }
         }

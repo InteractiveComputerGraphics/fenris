@@ -3,8 +3,8 @@
 //! For quadrilaterals and hexahedra, quadrature rules can be constructed as tensor products
 //! of 1D rules. This module provides rules constructed in this fashion.
 
-use crate::Rule;
 use crate::univariate::gauss;
+use crate::Rule;
 
 /// A Gauss quadrature rule for the reference quadrilateral.
 ///

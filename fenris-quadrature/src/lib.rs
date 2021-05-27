@@ -9,8 +9,8 @@ doc = ::embed_doc_image::embed_image!("ref_quad", "assets/reference_quad.svg"),
 doc = ::embed_doc_image::embed_image!("ref_pyramid", "assets/reference_pyramid.svg"),
 doc = ::embed_doc_image::embed_image!("ref_prism", "assets/reference_prism.svg")))]
 #![cfg_attr(
-not(feature = "doc-images"),
-doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust version >= 1.54 \
+    not(feature = "doc-images"),
+    doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust version >= 1.54 \
            to enable."
 )]
 //!
@@ -71,8 +71,8 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 
 pub mod polyquad;
-pub mod univariate;
 pub mod tensor;
+pub mod univariate;
 
 /// Library-wide error type.
 #[derive(Debug, Clone, PartialEq)]
