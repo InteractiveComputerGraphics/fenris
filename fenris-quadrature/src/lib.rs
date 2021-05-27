@@ -72,6 +72,7 @@ use std::fmt::{Display, Formatter};
 
 pub mod polyquad;
 pub mod univariate;
+pub mod tensor;
 
 /// Library-wide error type.
 #[derive(Debug, Clone, PartialEq)]
