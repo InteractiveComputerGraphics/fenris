@@ -4,6 +4,13 @@ version = "0.1.0"
 authors = ["Andreas Longva"]
 edition = "2018"
 
+[features]
+doc-images = []
+
+[dependencies]
+# TODO: Make this optional along with a "doc-images" feature
+embed-doc-image = "0.1.4"
+
 [dev-dependencies]
 matrixcompare = "0.3.0"
 nalgebra = "0.26.2"

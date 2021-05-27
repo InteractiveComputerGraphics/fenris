@@ -1,8 +1,37 @@
 //! Quadrature rules for finite element reference domains.
 //!
+#![cfg_attr(feature = "doc-images",
+cfg_attr(all(),
+doc = ::embed_doc_image::embed_image!("ref_hex", "assets/reference_hex.svg")))]
+#![cfg_attr(
+not(feature = "doc-images"),
+doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust version >= 1.54 \
+           to enable."
+)]
+//!
 //! The main purpose of this crate is to support the `fenris` FEM library. However, it has been
 //! designed so that the quadrature rules available here may be used completely independently
 //! of `fenris`.
+//!
+//! # Reference domains
+//!
+//! ## Segment
+//!
+//! ## Triangle
+//!
+//! ## Quadrilateral
+//!
+//! ## Hexahedron
+//!
+//! ![Reference hexahedron][ref_hex]
+//!
+//! ## Tetrahedron
+//!
+//! ## Pyramid
+//!
+//! ## Prism
+//!
+//! ![Reference hexahedron][ref_hex]
 //!
 //! TODO: Document conventions for reference domains
 //!
