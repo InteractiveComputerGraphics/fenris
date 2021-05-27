@@ -1,6 +1,6 @@
 import three;
 
-currentprojection=perspective(5,3,2,center=true);
+currentprojection=orthographic(5,3,2,center=true);
 
 size(8cm);
 size3(5cm,5cm,5cm);
@@ -19,18 +19,15 @@ draw((-1, -1, -1) -- (-1, 1, -1),dotted);
 draw((-1, -1, -1) -- (-1, -1, 1),dotted);
 
 // Draw unobstructed edges
-draw((1, -1, -1) -- (1, 1, -1) -- (1, 1, 1) -- (1, -1, 1) -- cycle);
-draw((1, 1, -1) -- (-1, 1, -1) -- (-1, 1, 1) -- (1, 1, 1));
-draw((-1, 1, 1) -- (-1, -1, 1) -- (1, -1, 1));
+draw((1, -1, -1) -- (-1, 1, -1) -- (-1, 1, 1) -- (1, -1, 1) -- cycle);
+draw((1, -1, 1) -- (-1, 1, 1) -- (-1, -1, 1) -- cycle);
 
 // Draw text labels
 pen labelpen = rgb(0, 0, 0.75);
 label("$O$",(0,0,0),NW);
 label("(-1, -1, -1)", (-1, -1, -1), S, labelpen);
-label("(1, -1, -1)", (1, -1, -1), W, labelpen);
-label("(1, 1, -1)", (1, 1, -1), SE, labelpen);
+label("(1, -1, -1)", (1, -1, -1), SW, labelpen);
 label("(-1, 1, -1)", (-1, 1, -1), E, labelpen);
 label("(-1, -1, 1)", (-1, -1, 1), NW, labelpen);
 label("(1, -1, 1)", (1, -1, 1), W, labelpen);
-label("(1, 1, 1)", (1, 1, 1), SE, labelpen);
 label("(-1, 1, 1)", (-1, 1, 1), E, labelpen);

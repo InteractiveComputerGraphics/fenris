@@ -2,7 +2,12 @@
 //!
 #![cfg_attr(feature = "doc-images",
 cfg_attr(all(),
-doc = ::embed_doc_image::embed_image!("ref_hex", "assets/reference_hex.svg")))]
+doc = ::embed_doc_image::embed_image!("ref_hex", "assets/reference_hex.svg"),
+doc = ::embed_doc_image::embed_image!("ref_tet", "assets/reference_tet.svg"),
+doc = ::embed_doc_image::embed_image!("ref_tri", "assets/reference_tri.svg"),
+doc = ::embed_doc_image::embed_image!("ref_quad", "assets/reference_quad.svg"),
+doc = ::embed_doc_image::embed_image!("ref_pyramid", "assets/reference_pyramid.svg"),
+doc = ::embed_doc_image::embed_image!("ref_prism", "assets/reference_prism.svg")))]
 #![cfg_attr(
 not(feature = "doc-images"),
 doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust version >= 1.54 \
@@ -19,7 +24,11 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!
 //! ## Triangle
 //!
+//! ![Reference triangle][ref_tri]
+//!
 //! ## Quadrilateral
+//!
+//! ![Reference quadrilateral][ref_quad]
 //!
 //! ## Hexahedron
 //!
@@ -27,11 +36,15 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!
 //! ## Tetrahedron
 //!
+//! ![Reference tetrahedron][ref_tet]
+//!
 //! ## Pyramid
+//!
+//! ![Reference pyramid][ref_pyramid]
 //!
 //! ## Prism
 //!
-//! ![Reference hexahedron][ref_hex]
+//! ![Reference prism][ref_prism]
 //!
 //! TODO: Document conventions for reference domains
 //!
