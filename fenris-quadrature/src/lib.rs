@@ -20,33 +20,49 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!
 //! # Reference domains
 //!
-//! ## Segment
+//! ## Segment (1D)
 //!
-//! ## Triangle
+//! The reference domain in 1D is the interval `[-1, 1]`.
+//!
+//! ## Triangle (2D)
+//!
+//! The reference triangle is comprised of the vertices `(-1, -1)`, `(1, -1)` and `(-1, 1)`.
 //!
 //! ![Reference triangle][ref_tri]
 //!
-//! ## Quadrilateral
+//! ## Quadrilateral (2D)
+//!
+//! The reference quadrilateral is the square `[-1, 1]^2`, comprised of the vertices
+//! `(-1, -1)`, `(1, -1)`, `(1, 1)` and `(-1, 1)`.
 //!
 //! ![Reference quadrilateral][ref_quad]
 //!
-//! ## Hexahedron
+//! ## Hexahedron (3D)
+//!
+//! The reference hexahedron is the box `[-1, 1]^3`.
 //!
 //! ![Reference hexahedron][ref_hex]
 //!
-//! ## Tetrahedron
+//! ## Tetrahedron (3D)
+//!
+//! The reference tetrahedron is comprised of the vertices `(-1, -1, -1)`, `(1, -1, -1)`,
+//! `(-1, 1, -1)` and `(-1, -1, 1)`.
 //!
 //! ![Reference tetrahedron][ref_tet]
 //!
-//! ## Pyramid
+//! ## Pyramid (3D)
+//!
+//! The reference pyramid is comprised of the vertices `(-1, -1, -1)`, `(1, -1, -1)`, `(1, 1, -1)`,
+//! `(-1, 1, -1)` and `(0, 0, 1)`.
 //!
 //! ![Reference pyramid][ref_pyramid]
 //!
-//! ## Prism
+//! ## Prism (3D)
+//!
+//! The reference prism is comprised of the vertices `(-1, -1, -1)`, `(1, -1, -1)`, `(-1, 1, -1)`,
+//! `(-1, -1, 1)`, `(1, -1, 1)` and `(-1, 1, 1)`.
 //!
 //! ![Reference prism][ref_prism]
-//!
-//! TODO: Document conventions for reference domains
 //!
 //! TODO: Document how quadratures work, e.g. the concept of a reference domain and that
 //! quadrature rules are specific to a reference domain
