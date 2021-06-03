@@ -991,12 +991,12 @@ where
 }
 
 #[derive(Copy)]
-pub struct CsrParallelAccess<'a, T> {
+pub struct CsrParallelRowAccess<'a, T> {
     sparsity_pattern: &'a SparsityPattern,
     values_ptr: *mut T,
 }
 
-impl<'a, T> Clone for CsrParallelAccess<'a, T> {
+impl<'a, T> Clone for CsrParallelRowAccess<'a, T> {
     fn clone(&self) -> Self {
         Self {
             sparsity_pattern: self.sparsity_pattern,
@@ -1005,10 +1005,10 @@ impl<'a, T> Clone for CsrParallelAccess<'a, T> {
     }
 }
 
-unsafe impl<'a, T: 'a + Sync> Sync for CsrParallelAccess<'a, T> {}
-unsafe impl<'a, T: 'a + Send> Send for CsrParallelAccess<'a, T> {}
+unsafe impl<'a, T: 'a + Sync> Sync for CsrParallelRowAccess<'a, T> {}
+unsafe impl<'a, T: 'a + Send> Send for CsrParallelRowAccess<'a, T> {}
 
-unsafe impl<'a, 'b, T: 'a + Sync + Send> ParallelIndexedAccess<'b> for CsrParallelAccess<'a, T>
+unsafe impl<'a, 'b, T: 'a + Sync + Send> ParallelIndexedAccess<'b> for CsrParallelRowAccess<'a, T>
 where
     'a: 'b,
 {
@@ -1043,11 +1043,11 @@ where
 }
 
 unsafe impl<'a, T: 'a + Sync + Send> ParallelIndexedCollection<'a> for CsrMatrix<T> {
-    type Access = CsrParallelAccess<'a, T>;
+    type Access = CsrParallelRowAccess<'a, T>;
 
     unsafe fn create_access(&'a mut self) -> Self::Access {
         let pattern = self.sparsity_pattern.as_ref();
-        CsrParallelAccess {
+        CsrParallelRowAccess {
             sparsity_pattern: pattern,
             values_ptr: self.v.as_mut_ptr(),
         }
