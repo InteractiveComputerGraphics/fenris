@@ -1,5 +1,3 @@
-use crate::spmv_csr;
-use crate::CsrMatrix;
 use core::fmt;
 use nalgebra::base::constraint::AreMultipliable;
 use nalgebra::constraint::{DimEq, ShapeConstraint};
@@ -8,6 +6,9 @@ use nalgebra::{
     ClosedAdd, ClosedMul, DVector, DVectorSlice, DVectorSliceMut, Dim, Dynamic, Matrix, RealField,
     Scalar, U1,
 };
+use nalgebra_sparse::ops::serial::spmm_csr_dense;
+use nalgebra_sparse::ops::Op;
+use nalgebra_sparse::CsrMatrix;
 use num::{One, Zero};
 use std::error::Error;
 use std::marker::PhantomData;
@@ -46,7 +47,7 @@ where
     T: Scalar + Zero + One + ClosedMul + ClosedAdd,
 {
     fn apply(&self, mut y: DVectorSliceMut<T>, x: DVectorSlice<T>) -> Result<(), Box<dyn Error>> {
-        spmv_csr(T::zero(), &mut y, T::one(), self, &x);
+        spmm_csr_dense(T::zero(), &mut y, T::one(), Op::NoOp(self), Op::NoOp(&x));
         Ok(())
     }
 }

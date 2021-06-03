@@ -16,7 +16,7 @@ use fenris::connectivity::Quad4d2Connectivity;
 use fenris::element::{ElementConnectivity, MatrixSliceMut, Quad4d2Element};
 use fenris::geometry::Quad2d;
 use fenris::quadrature;
-use fenris_sparse::{CsrMatrix, SparsityPattern};
+use nalgebra_sparse::{pattern::SparsityPattern, CsrMatrix};
 
 // #[derive(Debug, Copy, Clone)]
 // struct MockIdentityMaterial;
@@ -367,7 +367,7 @@ fn apply_homogeneous_dirichlet_bc_csr_simple_example() {
     ]);
 
     // TODO: Assert that the sparsity pattern is as expected
-    assert_eq!(matrix.build_dense(), expected)
+    assert_eq!(DMatrix::from(&matrix), expected)
 
     // TODO: Design a more elaborate test that also checks for appropriate diagonal scaling
     // of the diagonal elements
@@ -658,7 +658,8 @@ fn csr_assemble_mock_pattern() {
         };
         let csr_assembler = CsrAssembler::<i32>::default();
         let pattern = csr_assembler.assemble_pattern(&element_assembler);
-        let expected_pattern = SparsityPattern::from_offsets_and_indices(0, 0, vec![0], vec![]);
+        let expected_pattern =
+            SparsityPattern::try_from_offsets_and_indices(0, 0, vec![0], vec![]).unwrap();
         assert_eq!(pattern, expected_pattern);
     }
 
@@ -672,7 +673,7 @@ fn csr_assemble_mock_pattern() {
         let csr_assembler = CsrAssembler::<i32>::default();
         let pattern = csr_assembler.assemble_pattern(&element_assembler);
         let expected_pattern =
-            SparsityPattern::from_offsets_and_indices(10, 10, vec![0; 11], vec![]);
+            SparsityPattern::try_from_offsets_and_indices(10, 10, vec![0; 11], vec![]).unwrap();
         assert_eq!(pattern, expected_pattern);
     }
 
@@ -690,12 +691,13 @@ fn csr_assemble_mock_pattern() {
         };
         let csr_assembler = CsrAssembler::<i32>::default();
         let pattern = csr_assembler.assemble_pattern(&element_assembler);
-        let expected_pattern = SparsityPattern::from_offsets_and_indices(
+        let expected_pattern = SparsityPattern::try_from_offsets_and_indices(
             6,
             6,
             vec![0, 3, 6, 10, 13, 15, 15],
             vec![0, 1, 2, 0, 1, 2, 0, 1, 2, 3, 2, 3, 4, 3, 4],
-        );
+        )
+        .unwrap();
         assert_eq!(pattern, expected_pattern);
     }
 
@@ -713,7 +715,7 @@ fn csr_assemble_mock_pattern() {
         };
         let csr_assembler = CsrParAssembler::<i32>::default();
         let pattern = csr_assembler.assemble_pattern(&element_assembler);
-        let expected_pattern = SparsityPattern::from_offsets_and_indices(
+        let expected_pattern = SparsityPattern::try_from_offsets_and_indices(
             12,
             12,
             vec![0, 6, 12, 18, 24, 32, 40, 46, 52, 56, 60, 60, 60],
@@ -722,7 +724,8 @@ fn csr_assemble_mock_pattern() {
                 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 4, 5, 6, 7, 8, 9, 4, 5, 6, 7, 8, 9, 6, 7, 8, 9,
                 6, 7, 8, 9,
             ],
-        );
+        )
+        .unwrap();
         assert_eq!(pattern, expected_pattern);
     }
 
@@ -742,7 +745,8 @@ fn csr_par_assemble_mock_pattern() {
         };
         let csr_assembler = CsrParAssembler::<i32>::default();
         let pattern = csr_assembler.assemble_pattern(&element_assembler);
-        let expected_pattern = SparsityPattern::from_offsets_and_indices(0, 0, vec![0], vec![]);
+        let expected_pattern =
+            SparsityPattern::try_from_offsets_and_indices(0, 0, vec![0], vec![]).unwrap();
         assert_eq!(pattern, expected_pattern);
     }
 
@@ -756,7 +760,7 @@ fn csr_par_assemble_mock_pattern() {
         let csr_assembler = CsrParAssembler::<i32>::default();
         let pattern = csr_assembler.assemble_pattern(&element_assembler);
         let expected_pattern =
-            SparsityPattern::from_offsets_and_indices(10, 10, vec![0; 11], vec![]);
+            SparsityPattern::try_from_offsets_and_indices(10, 10, vec![0; 11], vec![]).unwrap();
         assert_eq!(pattern, expected_pattern);
     }
 
@@ -774,12 +778,13 @@ fn csr_par_assemble_mock_pattern() {
         };
         let csr_assembler = CsrParAssembler::<i32>::default();
         let pattern = csr_assembler.assemble_pattern(&element_assembler);
-        let expected_pattern = SparsityPattern::from_offsets_and_indices(
+        let expected_pattern = SparsityPattern::try_from_offsets_and_indices(
             6,
             6,
             vec![0, 3, 6, 10, 13, 15, 15],
             vec![0, 1, 2, 0, 1, 2, 0, 1, 2, 3, 2, 3, 4, 3, 4],
-        );
+        )
+        .unwrap();
         assert_eq!(pattern, expected_pattern);
     }
 
@@ -797,7 +802,7 @@ fn csr_par_assemble_mock_pattern() {
         };
         let csr_assembler = CsrParAssembler::<i32>::default();
         let pattern = csr_assembler.assemble_pattern(&element_assembler);
-        let expected_pattern = SparsityPattern::from_offsets_and_indices(
+        let expected_pattern = SparsityPattern::try_from_offsets_and_indices(
             12,
             12,
             vec![0, 6, 12, 18, 24, 32, 40, 46, 52, 56, 60, 60, 60],
@@ -806,7 +811,8 @@ fn csr_par_assemble_mock_pattern() {
                 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 4, 5, 6, 7, 8, 9, 4, 5, 6, 7, 8, 9, 6, 7, 8, 9,
                 6, 7, 8, 9,
             ],
-        );
+        )
+        .unwrap();
         assert_eq!(pattern, expected_pattern);
     }
 

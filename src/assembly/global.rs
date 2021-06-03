@@ -2,7 +2,6 @@ use std::cell::RefCell;
 use std::collections::BTreeSet;
 use std::error::Error;
 use std::ops::AddAssign;
-use std::sync::Arc;
 
 use itertools::izip;
 use nalgebra::base::storage::Storage;
@@ -13,7 +12,7 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterato
 use rayon::slice::ParallelSliceMut;
 use thread_local::ThreadLocal;
 
-use fenris_sparse::{CsrMatrix, CsrRowMut, SparsityPattern};
+use nalgebra_sparse::{pattern::SparsityPattern, CsrMatrix};
 use nested_vec::NestedVec;
 use paradis::adapter::BlockAdapter;
 use paradis::coloring::sequential_greedy_coloring;
@@ -29,6 +28,7 @@ use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{DVector, DVectorSlice, DefaultAllocator, Point};
 use crate::space::FiniteElementSpace;
 use crate::SmallDim;
+use fenris_sparse::ParallelCsrRowCollection;
 
 /// An assembler for CSR matrices.
 #[derive(Debug, Clone)]
@@ -115,7 +115,9 @@ impl<T: Scalar> CsrAssembler<T> {
             offsets.push(column_indices.len());
         }
 
-        SparsityPattern::from_offsets_and_indices(num_rows, num_rows, offsets, column_indices)
+        // TODO: Avoid validation?
+        SparsityPattern::try_from_offsets_and_indices(num_rows, num_rows, offsets, column_indices)
+            .expect("Pattern data must be valid")
     }
 }
 
@@ -126,8 +128,8 @@ impl<T: RealField> CsrAssembler<T> {
     ) -> eyre::Result<CsrMatrix<T>> {
         let pattern = self.assemble_pattern(element_assembler.as_connectivity_assembler());
         let initial_matrix_values = vec![T::zero(); pattern.nnz()];
-        let mut matrix =
-            CsrMatrix::from_pattern_and_values(Arc::new(pattern), initial_matrix_values);
+        let mut matrix = CsrMatrix::try_from_pattern_and_values(pattern, initial_matrix_values)
+            .expect("CSR data must be valid by definition");
         self.assemble_into_csr(&mut matrix, element_assembler)?;
         Ok(matrix)
     }
@@ -166,10 +168,12 @@ impl<T: RealField> CsrAssembler<T> {
                     let local_row_index = sdim * local_node_idx + i;
                     let global_row_index = sdim * *global_node_idx + i;
                     let mut csr_row = csr.row_mut(global_row_index);
+                    let (cols, values) = csr_row.cols_and_values_mut();
 
                     let a_row = element_matrix.row(local_row_index);
                     add_element_row_to_csr_row(
-                        &mut csr_row,
+                        values,
+                        cols,
                         &element_global_nodes,
                         &connectivity_permutation,
                         sdim,
@@ -274,7 +278,14 @@ impl<T: Scalar + Send> CsrParAssembler<T> {
             row_offsets.push(column_indices.len());
         }
 
-        SparsityPattern::from_offsets_and_indices(num_rows, num_rows, row_offsets, column_indices)
+        // TODO: Avoid validation?
+        SparsityPattern::try_from_offsets_and_indices(
+            num_rows,
+            num_rows,
+            row_offsets,
+            column_indices,
+        )
+        .expect("Pattern data must be valid by definition")
     }
 }
 
@@ -288,7 +299,8 @@ impl<T: RealField + Send> CsrParAssembler<T> {
         let sdim = element_assembler.solution_dim();
 
         for color in colors {
-            let mut block_adapter = BlockAdapter::with_block_size(csr, sdim);
+            let mut csr_rows = ParallelCsrRowCollection(csr);
+            let mut block_adapter = BlockAdapter::with_block_size(&mut csr_rows, sdim);
             color
                 .subsets_par_iter(&mut block_adapter)
                 .map(|mut subset| {
@@ -322,10 +334,12 @@ impl<T: RealField + Send> CsrParAssembler<T> {
                         for i in 0..sdim {
                             let local_row_index = sdim * local_node_idx + i;
                             let mut csr_row = csr_block_row.get_mut(i).unwrap();
+                            let (cols, values) = csr_row.cols_and_values_mut();
 
                             let a_row = ws.element_matrix.row(local_row_index);
                             add_element_row_to_csr_row(
-                                &mut csr_row,
+                                values,
+                                cols,
                                 &ws.element_global_nodes,
                                 &ws.connectivity_permutation,
                                 sdim,
@@ -359,8 +373,11 @@ pub fn apply_homogeneous_dirichlet_bc_csr<T>(
     // Here we just take the first non-zero diagonal entry as a representative scale.
     // This is cheap and I think reasonably safe option
     let scale = matrix
-        .diag_iter()
-        .skip_while(|&x| x == T::zero())
+        .triplet_iter()
+        // Only consider diagonal elements
+        .filter(|(i, j, _)| i == j)
+        .map(|(_, _, v)| v)
+        .skip_while(|&x| x == &T::zero())
         .map(|x| x.abs())
         .next()
         .unwrap_or(T::one());
@@ -383,7 +400,7 @@ pub fn apply_homogeneous_dirichlet_bc_csr<T>(
             let row_idx = d * node + i;
             dirichlet_membership[row_idx] = true;
             let mut row = matrix.row_mut(row_idx);
-            let (cols, values) = row.columns_and_values_mut();
+            let (cols, values) = row.cols_and_values_mut();
 
             for (&col_idx, val) in cols.iter().zip(values) {
                 if col_idx == row_idx {
@@ -406,7 +423,7 @@ pub fn apply_homogeneous_dirichlet_bc_csr<T>(
         let row_is_dirichlet = dirichlet_membership[row_index];
         if !row_is_dirichlet {
             let mut row = matrix.row_mut(row_index);
-            let (cols, values) = row.columns_and_values_mut();
+            let (cols, values) = row.cols_and_values_mut();
             for (local_idx, &global_idx) in cols.iter().enumerate() {
                 let col_is_dirichlet = dirichlet_membership[global_idx];
                 if col_is_dirichlet {
@@ -471,7 +488,8 @@ pub fn apply_homogeneous_dirichlet_bc_rhs<'a, T>(
 /// `dim`: The solution dimension.
 /// `local_row`: The local row of the element matrix that should be added to the CSR matrix.
 fn add_element_row_to_csr_row<T, S>(
-    row: &mut CsrRowMut<T>,
+    row_values: &mut [T],
+    row_col_indices: &[usize],
     node_connectivity: &[usize],
     sorted_permutation: &[usize],
     dim: usize,
@@ -484,9 +502,8 @@ fn add_element_row_to_csr_row<T, S>(
     assert_eq!(node_connectivity.len() * dim, local_row.ncols());
     assert!(dim >= 1);
 
-    let (column_indices, values) = row.columns_and_values_mut();
-
-    let mut csr_col_idx_iter = column_indices.iter().copied().enumerate();
+    let (col_indices, values) = (row_col_indices, row_values);
+    let mut csr_col_idx_iter = col_indices.iter().copied().enumerate();
 
     for &node_local_idx in sorted_permutation {
         let node_global_idx = node_connectivity[node_local_idx];

@@ -1,7 +1,6 @@
 use crate::assembly::global::CsrParAssembler;
 use crate::connectivity::Connectivity;
 use crate::mesh::Mesh;
-use fenris_sparse::{CooMatrix, CsrMatrix};
 use itertools::Itertools;
 use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{DimEq, ShapeConstraint};
@@ -11,6 +10,7 @@ use nalgebra::{
     Matrix, Matrix3, MatrixMN, MatrixN, MatrixSlice, MatrixSliceMut, Quaternion, RealField, Scalar,
     SliceStorage, SliceStorageMut, SquareMatrix, UnitQuaternion, Vector, Vector3, VectorN, U1,
 };
+use nalgebra_sparse::{CooMatrix, CsrMatrix};
 use num::Zero;
 use numeric_literals::replace_float_literals;
 use std::error::Error;
@@ -18,9 +18,7 @@ use std::fmt::Display;
 use std::fmt::LowerExp;
 use std::fs::File;
 use std::io::{BufWriter, Write};
-use std::ops::Add;
 use std::path::Path;
-use std::sync::Arc;
 
 /// Creates a column-major slice from the given matrix.
 ///
@@ -315,7 +313,8 @@ where
 {
     let pattern = CsrParAssembler::<usize>::default().assemble_pattern(mesh);
     let nnz = pattern.nnz();
-    let node_matrix = CsrMatrix::from_pattern_and_values(Arc::new(pattern), vec![1.0f64; nnz]);
+    let node_matrix = CsrMatrix::try_from_pattern_and_values(pattern, vec![1.0f64; nnz])
+        .expect("CSR data must be valid by definition");
 
     dump_csr_matrix_to_mm_file(node_path.as_ref(), &node_matrix)
         .map_err(|err| err as Box<dyn Error>)?;
@@ -329,8 +328,11 @@ where
         }
     }
 
-    dump_csr_matrix_to_mm_file(element_path.as_ref(), &element_node_matrix.to_csr(Add::add))
-        .map_err(|err| err as Box<dyn Error>)?;
+    dump_csr_matrix_to_mm_file(
+        element_path.as_ref(),
+        &CsrMatrix::from(&element_node_matrix),
+    )
+    .map_err(|err| err as Box<dyn Error>)?;
     Ok(())
 }
 
@@ -358,7 +360,7 @@ pub fn dump_csr_matrix_to_mm_file<T: Scalar + LowerExp>(
         matrix.nnz()
     )?;
 
-    for (i, j, v) in matrix.iter() {
+    for (i, j, v) in matrix.triplet_iter() {
         // Indices have to be stored as 1-based
         writeln!(writer, "{} {} {:.e}", i + 1, j + 1, v)?;
     }

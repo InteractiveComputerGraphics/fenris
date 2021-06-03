@@ -31,6 +31,7 @@ mod mesh_convert;
 mod space_impl;
 
 pub extern crate nalgebra;
+pub extern crate nalgebra_sparse;
 pub extern crate nested_vec;
 pub extern crate vtkio;
 

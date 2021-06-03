@@ -9,6 +9,7 @@ default = [ "proptest" ]
 
 [dependencies]
 nalgebra = { version = "0.25", features = [ "serde-serialize" ] }
+nalgebra-sparse = "0.1.0"
 alga = { version = "0.9", default-features = false }
 vtkio = "0.6"
 num = "0.2"
@@ -39,7 +40,6 @@ mkl-corrode = { git = "https://github.com/Andlon/mkl-corrode.git", rev="26a0d49d
 paste = "0.1.7"
 criterion = "0.3.2"
 util = { path = "util" }
-fenris-sparse-proptest = { path = "fenris-sparse/fenris-sparse-proptest" }
 
 # Many of our integration tests depend on fenris-solid for historical reasons
 # TODO: Fix this

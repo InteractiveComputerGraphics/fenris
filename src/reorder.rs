@@ -2,9 +2,9 @@ use crate::assembly::global::CsrParAssembler;
 use crate::connectivity::{Connectivity, ConnectivityMut};
 use crate::mesh::Mesh;
 use core::fmt;
-use fenris_sparse::SparsityPattern;
 use nalgebra::allocator::Allocator;
 use nalgebra::{DefaultAllocator, DimName, Scalar};
+use nalgebra_sparse::pattern::SparsityPattern;
 use std::collections::VecDeque;
 use std::error::Error;
 use std::marker::PhantomData;
@@ -176,11 +176,7 @@ pub fn cuthill_mckee(sparsity_pattern: &SparsityPattern) -> Permutation {
         "Matrix must be square."
     );
 
-    let adjacent_vertices = |vertex_idx| {
-        sparsity_pattern
-            .lane(vertex_idx)
-            .expect("Vertex must be in bounds")
-    };
+    let adjacent_vertices = |vertex_idx| sparsity_pattern.lane(vertex_idx);
     let vertex_degree = |vertex_idx| adjacent_vertices(vertex_idx).len();
 
     let mut queue = VecDeque::new();

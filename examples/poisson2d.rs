@@ -11,10 +11,10 @@ use fenris::assembly::local::{
 };
 use fenris::io::vtk::FiniteElementMeshDataSetBuilder;
 use fenris::mesh::QuadMesh2d;
-use fenris::nalgebra::{DVector, MatrixMN, Point2, VectorN, U1, U2};
+use fenris::nalgebra::{DMatrix, DVector, MatrixMN, Point2, VectorN, U1, U2};
+use fenris::nalgebra_sparse::CsrMatrix;
 use fenris::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::quadrature;
-use fenris_sparse::CsrMatrix;
 
 fn main() -> eyre::Result<()> {
     // TODO: Make it easy to construct triangle meshes as well.
@@ -89,7 +89,7 @@ fn assemble_linear_system(mesh: &QuadMesh2d<f64>) -> eyre::Result<(CsrMatrix<f64
 
 fn solve_linear_system(matrix: &CsrMatrix<f64>, rhs: &DVector<f64>) -> eyre::Result<DVector<f64>> {
     // TODO: Use sparse solver
-    let matrix = matrix.build_dense();
+    let matrix = DMatrix::from(matrix);
     // The discrete Laplace operator is positive definite (given appropriate boundary conditions),
     // so we can use a Cholesky factorization
     let cholesky = matrix
