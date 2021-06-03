@@ -16,13 +16,13 @@ use std::collections::HashSet;
 use std::fmt;
 use std::fmt::Debug;
 
-pub struct SubsetAccess<'a, Access> {
+pub struct SubsetAccess<'data, Access> {
     subset_label: usize,
-    global_indices: &'a [usize],
+    global_indices: &'data [usize],
     access: Access,
 }
 
-impl<'a, Access> SubsetAccess<'a, Access> {
+impl<'data, Access> SubsetAccess<'data, Access> {
     pub fn global_indices(&self) -> &[usize] {
         &self.global_indices
     }
@@ -35,10 +35,10 @@ impl<'a, Access> SubsetAccess<'a, Access> {
         self.global_indices().len()
     }
 
-    pub fn get<'b>(&'b self, local_index: usize) -> <Access as ParallelAccess<'b>>::Record
+    pub fn get<'b>(&'b self, local_index: usize) -> <Access as ParallelIndexedAccess<'b>>::Record
     where
-        'a: 'b,
-        Access: ParallelAccess<'b>,
+        'data: 'b,
+        Access: ParallelIndexedAccess<'b>,
     {
         let global_index = self.global_indices[local_index];
         unsafe { self.access.get_unchecked(global_index) }
@@ -47,10 +47,10 @@ impl<'a, Access> SubsetAccess<'a, Access> {
     pub fn get_mut<'b>(
         &'b mut self,
         local_index: usize,
-    ) -> <Access as ParallelAccess<'b>>::RecordMut
+    ) -> <Access as ParallelIndexedAccess<'b>>::RecordMut
     where
-        'a: 'b,
-        Access: ParallelAccess<'b>,
+        'data: 'b,
+        Access: ParallelIndexedAccess<'b>,
     {
         let global_index = self.global_indices[local_index];
         unsafe { self.access.get_unchecked_mut(global_index) }
@@ -58,23 +58,112 @@ impl<'a, Access> SubsetAccess<'a, Access> {
 }
 
 // TODO: Does this trait need to be unsafe, or does it suffice to have unsafe methods?
-// I suppose it cannot technically be `Sync`/`Send` without requiring some
-// `Unsafe` in most cases though
-pub unsafe trait ParallelAccess<'a>: Sync + Send + Clone {
+/// Facilitates parallel access to (mutable) records stored in the collection.
+///
+/// The trait provides parallel access to (possibly mutable) *records*, defined by the
+/// associated types [`Record`][`ParallelIndexedAccess::Record`] and
+/// [`RecordMut`][`ParallelIndexedAccess::RecordMut`].
+///
+/// # Safety
+///
+/// An implementor must ensure that it is sound for multiple threads to access a single record
+/// *immutably*, provided that no thread accesses the same record mutably.
+///
+/// An implementor must furthermore ensure that it is sound for multiple threads to access
+/// *disjoint* records mutably.
+///
+/// It is the responsibility of the consumer that:
+///
+/// - If any thread accesses a record mutably, then no other thread must access the same record.
+/// - A mutable record must always be exclusive, even on a single thread.
+///   In particular, a single thread is not permitted to obtain two records associated with the
+///   same index in the collection if either record is mutable.
+///
+/// TODO: Make the invariants more precise
+///
+/// TODO: Can consider a slightly different API in which each thread must obtain its own access.
+pub unsafe trait ParallelIndexedAccess<'record>: Sync + Send + Clone {
     type Record;
     type RecordMut;
 
-    unsafe fn get_unchecked(&'a self, global_index: usize) -> Self::Record;
-    unsafe fn get_unchecked_mut(&'a self, global_index: usize) -> Self::RecordMut;
+    unsafe fn get_unchecked(&self, index: usize) -> Self::Record;
+    unsafe fn get_unchecked_mut(&self, index: usize) -> Self::RecordMut;
 }
 
-pub unsafe trait ParallelStorage<'a> {
-    // TODO: Can we do without the Clone bound?
-    type Access: Send + Clone;
+/// An indexed collection that exposes parallel indexed access to its contents.
+///
+/// The typical pattern for a generic parallel algorithm is to take any collection satisfying
+/// this trait as input, at which point we can guarantee that we are able to create the only
+/// parallel access to the collection.
+///
+/// # Examples
+///
+/// Let's consider a contrived example in which we want to multiply every number in a list by 2,
+/// and we want to multiply even and odd numbers on two separate threads. This is of course a
+/// *very bad* idea, for a number of reasons, but it does serve as a very simple example of
+/// a *sound* use of parallelism that nonetheless falls outside of what we can accomplish with
+/// safe Rust.
+///
+/// Although we'll have to use some `unsafe` code to accomplish this, the task sounds fairly
+/// trivial. However, we would soon discover that the only safe way of accessing different
+/// (scattered) elements of a slice mutably in parallel is through careful pointer manipulation.
+/// This is generally error prone and hard to get right.
+///
+/// The abstractions made available by `paradis` significantly simplifies this. Since slices
+/// implement the [`ParallelIndexedCollection`] trait, we can obtain *parallel access* to its
+/// elements, which lets us (unsafely) obtain access to any element in the slice without
+/// working with pointer arithmetic. We are of course wholly responsible for making sure that
+/// we never access the same element from two threads.
+///
+/// ```rust
+/// use paradis::{ParallelIndexedCollection, ParallelIndexedAccess};
+/// use crossbeam::scope;
+///
+/// fn par_double_all_numbers(numbers: &mut [i32]) {
+///     let n = numbers.len();
+///
+///     // Since creating an access takes a mutable reference to [i32], we know that we are the
+///     // only ones to hold a parallel access to the data throughout the program, so we can
+///     // soundly manipulate its data in parallel, provided we take some care
+///     let access = unsafe { numbers.create_access() };
+///
+///     // The standard library does not have a concept of scoped threads,
+///     // so we use crossbeam::scope for this purpose.
+///     // Otherwise we wouldn't be able to use our access across threads.
+///     scope(|s| {
+///         s.spawn(|_| {
+///             // Transform the even numbers
+///             for i in (0 .. n).step_by(2) {
+///                 unsafe { *access.get_unchecked_mut(i) *= 2; }
+///             }
+///         });
+///         s.spawn(|_| {
+///             // Transform the odd numbers
+///             for i in (1 .. n).step_by(2) {
+///                 unsafe { *access.get_unchecked_mut(i) *= 2; }
+///             }
+///         });
+///     }).expect("One of our threads panicked!");
+/// }
+///
+/// fn main() {
+///     let mut numbers = [0, 1, 2, 3, 4, 5, 6, 7];
+///     par_double_all_numbers(&mut numbers);
+///     assert_eq!(numbers, [0, 2, 4, 6, 8, 10, 12, 14]);
+/// }
+/// ```
+///
+/// # Safety
+///
+/// This trait is unsafe because the soundness of consuming code relies on the correctness of
+/// the implementation of [`ParallelIndexedCollection::len`].
+/// Consumers of this trait are permitted to access records
+/// (accessed through [`ParallelIndexedCollection::Access`]) with indices `[0, len)`. Therefore,
+/// an incorrect length may lead to unsoundness.
+pub unsafe trait ParallelIndexedCollection<'a> {
+    type Access;
 
-    // TODO: should this be unsafe, since the ParallelAccess trait needs Sync + Send,
-    // which may not really be sound from a "safe" perspective?
-    fn create_access(&'a mut self) -> Self::Access;
+    unsafe fn create_access(&'a mut self) -> Self::Access;
     fn len(&self) -> usize;
 }
 
@@ -182,7 +271,7 @@ impl DisjointSubsets {
         storage: &'a mut Storage,
     ) -> DisjointSubsetsParIter<'a, Storage::Access>
     where
-        Storage: ?Sized + ParallelStorage<'a>,
+        Storage: ?Sized + ParallelIndexedCollection<'a>,
     {
         assert!(
             self.max_index.is_none() || storage.len() > self.max_index.unwrap(),
@@ -190,7 +279,7 @@ impl DisjointSubsets {
         );
         // Sanity check: if we don't have a max index, then we also cannot have any subsets
         debug_assert_eq!(self.max_index.is_none(), self.subsets.len() == 0);
-        let access = storage.create_access();
+        let access = unsafe { storage.create_access() };
 
         DisjointSubsetsParIter {
             access,
@@ -368,7 +457,7 @@ impl<'a, Access: Clone> DoubleEndedIterator for DisjointSubsetsIter<'a, Access> 
 mod tests {
     use super::DisjointSubsets;
     use super::DisjointSubsetsIter;
-    use super::ParallelStorage;
+    use super::ParallelIndexedCollection;
     use nested_vec::NestedVec;
     use proptest::collection::{btree_set, vec};
     use proptest::prelude::*;
@@ -389,7 +478,7 @@ mod tests {
             let mut data = vec![10, 11, 12, 13, 14, 15, 16];
             let data_slice = data.as_mut_slice();
 
-            let access = data_slice.create_access();
+            let access = unsafe { data_slice.create_access() };
 
             let mut iter = DisjointSubsetsIter {
                 access,
@@ -418,7 +507,7 @@ mod tests {
             let mut data = vec![10, 11, 12, 13, 14, 15, 16];
             let data_slice = data.as_mut_slice();
 
-            let access = data_slice.create_access();
+            let access = unsafe { data_slice.create_access() };
 
             let mut iter = DisjointSubsetsIter {
                 access,
@@ -444,7 +533,7 @@ mod tests {
             let mut data = vec![10, 11, 12, 13, 14, 15, 16];
             let data_slice = data.as_mut_slice();
 
-            let access = data_slice.create_access();
+            let access = unsafe { data_slice.create_access() };
 
             let mut iter = DisjointSubsetsIter {
                 access,
@@ -473,7 +562,7 @@ mod tests {
             let mut data = vec![10, 11, 12, 13, 14, 15, 16];
             let data_slice = data.as_mut_slice();
 
-            let access = data_slice.create_access();
+            let access = unsafe { data_slice.create_access() };
 
             let mut iter = DisjointSubsetsIter {
                 access,
@@ -499,7 +588,7 @@ mod tests {
             let mut data = vec![10, 11, 12, 13, 14, 15, 16];
             let data_slice = data.as_mut_slice();
 
-            let access = data_slice.create_access();
+            let access = unsafe { data_slice.create_access() };
 
             let mut iter = DisjointSubsetsIter {
                 access,

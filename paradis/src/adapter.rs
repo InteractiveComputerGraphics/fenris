@@ -1,4 +1,4 @@
-use crate::{ParallelAccess, ParallelStorage};
+use crate::{ParallelIndexedAccess, ParallelIndexedCollection};
 use std::marker::PhantomData;
 
 /// An adapter that facilitates blocked storage.
@@ -26,7 +26,8 @@ use std::marker::PhantomData;
 ///     vec![0, 2],
 ///     vec![4, 6]
 /// ];
-/// let subsets = DisjointSubsets::try_from_disjoint_subsets(&subsets).unwrap();
+/// let labels = vec![1, 2, 3];
+/// let subsets = DisjointSubsets::try_from_disjoint_subsets(&subsets, labels).unwrap();
 ///
 /// let mut adapter = BlockAdapter::with_block_size(data.as_mut_slice(), 3);
 /// subsets.subsets_par_iter(&mut adapter)
@@ -42,30 +43,25 @@ use std::marker::PhantomData;
 ///
 /// assert_eq!(data, vec![1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3]);
 /// ```
-///
-///
-///
-///
-///
 #[derive(Debug)]
-pub struct BlockAdapter<'a, Storage: ?Sized> {
-    storage: &'a mut Storage,
+pub struct BlockAdapter<'a, Collection: ?Sized> {
+    collection: &'a mut Collection,
     block_size: usize,
 }
 
-impl<'a, Storage> BlockAdapter<'a, Storage>
+impl<'a, Collection> BlockAdapter<'a, Collection>
 where
-    Storage: ?Sized + ParallelStorage<'a>,
+    Collection: ?Sized + ParallelIndexedCollection<'a>,
 {
-    pub fn with_block_size(storage: &'a mut Storage, block_size: usize) -> Self {
+    pub fn with_block_size(collection: &'a mut Collection, block_size: usize) -> Self {
         assert!(block_size > 0);
         assert_eq!(
-            storage.len() % block_size,
+            collection.len() % block_size,
             0,
-            "Storage length must be divisible by block size."
+            "Collection length must be divisible by block size."
         );
         Self {
-            storage,
+            collection,
             block_size,
         }
     }
@@ -82,7 +78,7 @@ pub struct Block<'a, Access> {
 impl<'a, 'b, Access> Block<'a, Access>
 where
     'a: 'b,
-    Access: ParallelAccess<'b>,
+    Access: ParallelIndexedAccess<'b>,
 {
     pub fn len(&self) -> usize {
         self.block_size
@@ -113,7 +109,7 @@ pub struct BlockMut<'a, Access> {
 impl<'a, 'b, Access> BlockMut<'a, Access>
 where
     'a: 'b,
-    Access: ParallelAccess<'b>,
+    Access: ParallelIndexedAccess<'b>,
 {
     pub fn len(&self) -> usize {
         self.block_size
@@ -153,14 +149,15 @@ pub struct BlockAccess<Access> {
     block_size: usize,
 }
 
-unsafe impl<'a, Access> ParallelAccess<'a> for BlockAccess<Access>
+unsafe impl<'a, 'b, Access> ParallelIndexedAccess<'b> for BlockAccess<Access>
 where
-    Access: 'a + ParallelAccess<'a>,
+    'a: 'b,
+    Access: 'a + ParallelIndexedAccess<'a>,
 {
-    type Record = Block<'a, Access>;
-    type RecordMut = BlockMut<'a, Access>;
+    type Record = Block<'b, Access>;
+    type RecordMut = BlockMut<'b, Access>;
 
-    unsafe fn get_unchecked(&'a self, global_index: usize) -> Self::Record {
+    unsafe fn get_unchecked(&self, global_index: usize) -> Self::Record {
         Block {
             access: self.access.clone(),
             start_idx: self.block_size * global_index,
@@ -169,7 +166,7 @@ where
         }
     }
 
-    unsafe fn get_unchecked_mut(&'a self, global_index: usize) -> Self::RecordMut {
+    unsafe fn get_unchecked_mut(&self, global_index: usize) -> Self::RecordMut {
         BlockMut {
             access: self.access.clone(),
             start_idx: self.block_size * global_index,
@@ -179,21 +176,21 @@ where
     }
 }
 
-unsafe impl<'a, Storage> ParallelStorage<'a> for BlockAdapter<'a, Storage>
+unsafe impl<'a, Collection> ParallelIndexedCollection<'a> for BlockAdapter<'a, Collection>
 where
-    Storage: ?Sized + ParallelStorage<'a>,
+    Collection: ?Sized + ParallelIndexedCollection<'a>,
 {
-    type Access = BlockAccess<Storage::Access>;
+    type Access = BlockAccess<Collection::Access>;
 
-    fn create_access(&'a mut self) -> Self::Access {
+    unsafe fn create_access(&'a mut self) -> Self::Access {
         BlockAccess {
-            access: self.storage.create_access(),
+            access: self.collection.create_access(),
             block_size: self.block_size,
         }
     }
 
     fn len(&self) -> usize {
-        self.storage.len() / self.block_size
+        self.collection.len() / self.block_size
     }
 }
 

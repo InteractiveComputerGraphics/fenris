@@ -13,7 +13,7 @@ use itertools::{izip, Itertools};
 use nalgebra::allocator::Allocator;
 use nalgebra::base::storage::Storage;
 use nalgebra::storage::StorageMut;
-use paradis::{ParallelAccess, ParallelStorage};
+use paradis::{ParallelIndexedAccess, ParallelIndexedCollection};
 use rayon::prelude::*;
 use std::cmp::max;
 use std::mem::swap;
@@ -1008,14 +1008,14 @@ impl<'a, T> Clone for CsrParallelAccess<'a, T> {
 unsafe impl<'a, T: 'a + Sync> Sync for CsrParallelAccess<'a, T> {}
 unsafe impl<'a, T: 'a + Send> Send for CsrParallelAccess<'a, T> {}
 
-unsafe impl<'a, 'b, T: 'a + Sync + Send> ParallelAccess<'b> for CsrParallelAccess<'a, T>
+unsafe impl<'a, 'b, T: 'a + Sync + Send> ParallelIndexedAccess<'b> for CsrParallelAccess<'a, T>
 where
     'a: 'b,
 {
-    type Record = CsrRow<'a, T>;
+    type Record = CsrRow<'b, T>;
     type RecordMut = CsrRowMut<'b, T>;
 
-    unsafe fn get_unchecked(&'b self, global_index: usize) -> Self::Record {
+    unsafe fn get_unchecked(&self, global_index: usize) -> Self::Record {
         let major_offsets = self.sparsity_pattern.major_offsets();
         let row_begin = *major_offsets.get_unchecked(global_index);
         let row_end = *major_offsets.get_unchecked(global_index + 1);
@@ -1029,7 +1029,7 @@ where
         }
     }
 
-    unsafe fn get_unchecked_mut(&'b self, global_index: usize) -> Self::RecordMut {
+    unsafe fn get_unchecked_mut(&self, global_index: usize) -> Self::RecordMut {
         let major_offsets = self.sparsity_pattern.major_offsets();
         let row_begin = *major_offsets.get_unchecked(global_index);
         let row_end = *major_offsets.get_unchecked(global_index + 1);
@@ -1042,10 +1042,10 @@ where
     }
 }
 
-unsafe impl<'a, T: 'a + Sync + Send> ParallelStorage<'a> for CsrMatrix<T> {
+unsafe impl<'a, T: 'a + Sync + Send> ParallelIndexedCollection<'a> for CsrMatrix<T> {
     type Access = CsrParallelAccess<'a, T>;
 
-    fn create_access(&'a mut self) -> Self::Access {
+    unsafe fn create_access(&'a mut self) -> Self::Access {
         let pattern = self.sparsity_pattern.as_ref();
         CsrParallelAccess {
             sparsity_pattern: pattern,
