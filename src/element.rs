@@ -32,6 +32,7 @@ use crate::allocators::{
 };
 use crate::connectivity::Segment2d2Connectivity;
 use crate::nalgebra::Point1;
+use crate::SmallDim;
 
 /// TODO: Contribute these defaults to `nalgebra`
 pub type MatrixSlice<'a, T, R, C> = nalgebra::base::MatrixSlice<'a, T, R, C, U1, R>;
@@ -42,7 +43,7 @@ where
     T: Scalar,
     DefaultAllocator: ReferenceFiniteElementAllocator<T, Self::ReferenceDim>,
 {
-    type ReferenceDim: DimName;
+    type ReferenceDim: SmallDim;
 
     /// Returns the number of nodes in the element.
     fn num_nodes(&self) -> usize;
@@ -83,8 +84,8 @@ where
         + Allocator<T, U1, Self::NodalDim>
         + Allocator<T, Self::ReferenceDim, Self::NodalDim>,
 {
-    type ReferenceDim: DimName;
-    type NodalDim: DimName;
+    type ReferenceDim: SmallDim;
+    type NodalDim: SmallDim;
 
     /// Evaluates each basis function at the given reference coordinates. The result is given
     /// in a row vector where each entry is the value of the corresponding basis function.
@@ -139,7 +140,7 @@ where
     T: Scalar,
     DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
-    type GeometryDim: DimName;
+    type GeometryDim: SmallDim;
 
     /// Compute the Jacobian of the transformation from the reference element to the given
     /// element at the given reference coordinates.
