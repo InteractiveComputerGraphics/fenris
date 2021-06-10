@@ -55,7 +55,7 @@ where
     /// number of columns (==nodes)
     fn populate_basis(
         &self,
-        result: MatrixSliceMut<T, U1, Dynamic>,
+        basis_values: MatrixSliceMut<T, U1, Dynamic>,
         reference_coords: &Point<T, Self::ReferenceDim>,
     );
 
@@ -63,7 +63,7 @@ where
     /// gradients of each shape function in the element.
     fn populate_basis_gradients(
         &self,
-        result: MatrixSliceMut<T, Self::ReferenceDim, Dynamic>,
+        basis_gradients: MatrixSliceMut<T, Self::ReferenceDim, Dynamic>,
         reference_coords: &Point<T, Self::ReferenceDim>,
     );
 }
@@ -102,36 +102,52 @@ where
     ) -> MatrixMN<T, Self::ReferenceDim, Self::NodalDim>;
 }
 
-impl<T, E> ReferenceFiniteElement<T> for E
-where
-    T: Scalar,
-    E: FixedNodesReferenceFiniteElement<T>,
-    DefaultAllocator: ReferenceFiniteElementAllocator<T, E::ReferenceDim>
-        + Allocator<T, U1, E::NodalDim>
-        + Allocator<T, E::ReferenceDim, E::NodalDim>,
-{
-    type ReferenceDim = <Self as FixedNodesReferenceFiniteElement<T>>::ReferenceDim;
+/// Implements `ReferenceFiniteElement` for any element that implements
+/// `FixedNodesReferenceFiniteElement`.
+///
+/// This could be done with a blanket impl, but this prevents
+/// us from implementing `ReferenceFiniteElement` in some generic contexts, so we instead
+/// invoke this macro for each element that this applies to. This is a temporary solution
+/// that we use because it would take some work reworking the tests in order to remove the
+/// `FixedNodesReferenceFiniteElement` trait altogether.
+macro_rules! impl_reference_finite_element_for_fixed {
+    ($element:ty) => {
+        impl<T> ReferenceFiniteElement<T> for $element
+        where
+            T: Scalar,
+            $element: FixedNodesReferenceFiniteElement<T>,
+            DefaultAllocator: ReferenceFiniteElementAllocator<T, <$element as FixedNodesReferenceFiniteElement<T>>::ReferenceDim>
+                + Allocator<T, U1, <$element as FixedNodesReferenceFiniteElement<T>>::NodalDim>
+                + Allocator<T, <$element as FixedNodesReferenceFiniteElement<T>>::ReferenceDim,
+                               <$element as FixedNodesReferenceFiniteElement<T>>::NodalDim>,
+        {
+            type ReferenceDim = <Self as FixedNodesReferenceFiniteElement<T>>::ReferenceDim;
 
-    fn num_nodes(&self) -> usize {
-        E::NodalDim::dim()
-    }
+            fn num_nodes(&self) -> usize {
+                <$element as FixedNodesReferenceFiniteElement<T>>::NodalDim::dim()
+            }
 
-    fn populate_basis(
-        &self,
-        mut result: MatrixSliceMut<T, U1, Dynamic>,
-        reference_coords: &Point<T, E::ReferenceDim>,
-    ) {
-        let basis_values = E::evaluate_basis(self, reference_coords);
-        result.copy_from(&basis_values);
-    }
+            fn populate_basis(
+                &self,
+                mut result: MatrixSliceMut<T, U1, Dynamic>,
+                reference_coords: &Point<T, Self::ReferenceDim>,
+            ) {
+                let basis_values = <$element as FixedNodesReferenceFiniteElement<T>>
+                    ::evaluate_basis(self, reference_coords);
+                result.copy_from(&basis_values);
+            }
 
-    fn populate_basis_gradients(
-        &self,
-        mut result: MatrixSliceMut<T, E::ReferenceDim, Dynamic>,
-        reference_coords: &Point<T, E::ReferenceDim>,
-    ) {
-        let gradients = E::gradients(self, reference_coords);
-        result.copy_from(&gradients);
+            fn populate_basis_gradients(
+                &self,
+                mut result: MatrixSliceMut<T, Self::ReferenceDim, Dynamic>,
+                reference_coords: &Point<T, Self::ReferenceDim>,
+            ) {
+                let gradients = <$element as FixedNodesReferenceFiniteElement<T>>
+                    ::gradients(self, reference_coords);
+                result.copy_from(&gradients);
+            }
+        }
+
     }
 }
 
@@ -374,6 +390,8 @@ where
     }
 }
 
+impl_reference_finite_element_for_fixed!(Quad4d2Element<T>);
+
 impl<T> FiniteElement<T> for Quad4d2Element<T>
 where
     T: RealField,
@@ -505,6 +523,8 @@ where
         ])
     }
 }
+
+impl_reference_finite_element_for_fixed!(Tri3d2Element<T>);
 
 impl<T> FiniteElement<T> for Tri3d2Element<T>
 where
@@ -689,6 +709,8 @@ where
         ])
     }
 }
+
+impl_reference_finite_element_for_fixed!(Tri6d2Element<T>);
 
 impl<T> FiniteElement<T> for Tri6d2Element<T>
 where
@@ -875,6 +897,8 @@ where
     }
 }
 
+impl_reference_finite_element_for_fixed!(Quad9d2Element<T>);
+
 impl<T> FiniteElement<T> for Quad9d2Element<T>
 where
     T: RealField,
@@ -969,6 +993,8 @@ where
         MatrixMN::<_, U1, U2>::new(-0.5, 0.5)
     }
 }
+
+impl_reference_finite_element_for_fixed!(Segment2d2Element<T>);
 
 impl<T> FiniteElement<T> for Segment2d2Element<T>
 where
@@ -1109,6 +1135,8 @@ where
         ])
     }
 }
+
+impl_reference_finite_element_for_fixed!(Tet4Element<T>);
 
 impl<T> FiniteElement<T> for Tet4Element<T>
 where
@@ -1276,6 +1304,8 @@ where
         ])
     }
 }
+
+impl_reference_finite_element_for_fixed!(Hex8Element<T>);
 
 impl<T> FiniteElement<T> for Hex8Element<T>
 where
@@ -1509,6 +1539,8 @@ where
     }
 }
 
+impl_reference_finite_element_for_fixed!(Hex27Element<T>);
+
 impl<T> FiniteElement<T> for Hex27Element<T>
 where
     T: RealField,
@@ -1737,6 +1769,8 @@ where
     }
 }
 
+impl_reference_finite_element_for_fixed!(Hex20Element<T>);
+
 impl<T> FiniteElement<T> for Hex20Element<T>
 where
     T: RealField,
@@ -1848,6 +1882,8 @@ where
         ])
     }
 }
+
+impl_reference_finite_element_for_fixed!(Tri3d3Element<T>);
 
 impl<T> FiniteElement<T> for Tri3d3Element<T>
 where
@@ -2024,6 +2060,8 @@ where
         ])
     }
 }
+
+impl_reference_finite_element_for_fixed!(Tet10Element<T>);
 
 impl<T> FiniteElement<T> for Tet10Element<T>
 where
