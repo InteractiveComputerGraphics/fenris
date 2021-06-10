@@ -1,5 +1,5 @@
 use crate::allocators::FiniteElementAllocator;
-use crate::element::MatrixSliceMut;
+use crate::element::{MatrixSliceMut, FiniteElement, ReferenceFiniteElement};
 use crate::geometry::GeometryCollection;
 use crate::nalgebra::{Dynamic, MatrixMN, U1};
 use crate::SmallDim;
@@ -90,4 +90,60 @@ where
     T: Scalar,
     DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
+}
+
+/// A convenience wrapper for producing a [`FiniteElement`] from an indexed element in a
+/// [`FiniteElementSpace`].
+#[derive(Debug)]
+pub struct ElementInSpace<'a, Space> {
+    space: &'a Space,
+    element_index: usize,
+}
+
+impl<'a, Space> ElementInSpace<'a, Space> {
+    pub fn from_space_and_element_index(space: &'a Space, element_index: usize) -> Self {
+        Self { space, element_index }
+    }
+}
+
+impl<'a, T, Space> ReferenceFiniteElement<T> for ElementInSpace<'a, Space>
+where
+    T: Scalar,
+    Space: FiniteElementSpace<T>,
+    DefaultAllocator: FiniteElementAllocator<T, Space::GeometryDim, Space::ReferenceDim>
+{
+    type ReferenceDim = Space::ReferenceDim;
+
+    fn num_nodes(&self) -> usize {
+        self.space.element_node_count(self.element_index)
+    }
+
+    fn populate_basis(&self, basis_values: MatrixSliceMut<T, U1, Dynamic>, reference_coords: &Point<T, Self::ReferenceDim>) {
+        self.space.populate_element_basis(self.element_index, basis_values, reference_coords)
+    }
+
+    fn populate_basis_gradients(&self, basis_gradients: MatrixSliceMut<T, Self::ReferenceDim, Dynamic>, reference_coords: &Point<T, Self::ReferenceDim>) {
+        self.space.populate_element_gradients(self.element_index, basis_gradients, reference_coords)
+    }
+}
+
+impl<'a, T, Space> FiniteElement<T> for ElementInSpace<'a, Space>
+where
+    T: Scalar,
+    Space: FiniteElementSpace<T>,
+    DefaultAllocator: FiniteElementAllocator<T, Space::GeometryDim, Space::ReferenceDim>
+{
+    type GeometryDim = Space::GeometryDim;
+
+    fn reference_jacobian(&self, reference_coords: &Point<T, Self::ReferenceDim>) -> MatrixMN<T, Self::GeometryDim, Self::ReferenceDim> {
+        self.space.element_reference_jacobian(self.element_index, reference_coords)
+    }
+
+    fn map_reference_coords(&self, reference_coords: &Point<T, Self::ReferenceDim>) -> Point<T, Self::GeometryDim> {
+        self.space.map_element_reference_coords(self.element_index, reference_coords)
+    }
+
+    fn diameter(&self) -> T {
+        self.space.diameter(self.element_index)
+    }
 }
