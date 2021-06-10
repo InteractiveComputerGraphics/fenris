@@ -9,10 +9,7 @@ use nalgebra::{
     RealField, Scalar, VectorN, U1,
 };
 
-use crate::allocators::{
-    BiDimAllocator, FiniteElementMatrixAllocator, SmallDimAllocator, TriDimAllocator,
-    VolumeFiniteElementAllocator,
-};
+use crate::allocators::{BiDimAllocator, FiniteElementMatrixAllocator, SmallDimAllocator, TriDimAllocator, VolumeFiniteElementAllocator};
 use crate::assembly::global;
 use crate::assembly::global::{BasisFunctionBuffer, QuadratureBuffer};
 use crate::connectivity::Connectivity;
@@ -20,7 +17,7 @@ use crate::element::{MatrixSlice, MatrixSliceMut, VolumetricFiniteElement};
 use crate::mesh::Mesh;
 use crate::nalgebra::{DVector, DVectorSlice, DVectorSliceMut, MatrixSliceMutMN, Point};
 use crate::quadrature::Quadrature;
-use crate::space::{FiniteElementConnectivity, VolumetricFiniteElementSpace};
+use crate::space::{FiniteElementConnectivity, VolumetricFiniteElementSpace, ElementInSpace};
 use crate::workspace::Workspace;
 use crate::SmallDim;
 
@@ -1004,7 +1001,7 @@ where
     fn assemble_element_vector_into(
         &self,
         element_index: usize,
-        mut output: DVectorSliceMut<T>,
+        output: DVectorSliceMut<T>,
     ) -> eyre::Result<()> {
         SOURCE_WORKSPACE.with(|ws| {
             // TODO: Is it possible to simplify retrieving a mutable reference to the workspace?
@@ -1020,45 +1017,75 @@ where
             // TODO: Use QuadratureBuffer in the elliptic assembler trait impls too
             quad_buffer.populate_element_quadrature_from_table(element_index, self.qtable);
 
-            // Reshape output into an `s x n` matrix, so that each column corresponds to the
-            // output associated with a node
-            let n = basis_buffer.element_nodes().len();
-            assert_eq!(
-                output.len(),
-                n * Source::SolutionDim::dim(),
-                "Length of output vector must be consistent with number of nodes and solution dim"
-            );
-            let mut output = MatrixSliceMutMN::from_slice_generic(
-                output.as_mut_slice(),
-                Source::SolutionDim::name(),
-                Dynamic::new(n),
-            );
+            let element = ElementInSpace::from_space_and_element_index(self.space, element_index);
 
-            quad_buffer.for_each_quadrature_point(|w, xi, data| {
-                basis_buffer.populate_element_basis_values_from_space(
-                    element_index,
-                    self.space,
-                    xi,
-                );
-
-                let x = self.space.map_element_reference_coords(element_index, xi);
-                let j = self.space.element_reference_jacobian(element_index, xi);
-                let f = self.source.evaluate(&x, data);
-
-                // The output contribution for quadrature point q is
-                //  w * |det J| * [ f_1 f_2 f_3, ... ]
-                // where f_I = f * phi_I is the output associated with node I, and phi_I is the
-                // basis values of node I.
-                // Then the contribution is given by
-                //  w * |det J| * [ f * phi_1, f * phi_2, ... ] = w * |det J| * f * phi,
-                // where phi is a row vector of basis values
-                let phi = basis_buffer.element_basis_values::<Space::ReferenceDim>();
-                output.gemm(w * j.determinant().abs(), &f, &phi, T::one());
-
-                Ok(())
-            })?;
+            assemble_element_source_term(output,
+                                         &element,
+                                         self.source,
+                                         quad_buffer.weights(),
+                                         quad_buffer.points(),
+                                         quad_buffer.data(),
+                                         basis_buffer.element_basis_values_mut());
 
             Ok(())
         })
+    }
+}
+
+/// Assemble the local source term vector associated with a particular finite element and source.
+///
+/// TODO: Write more docs once we have KaTeX rendering
+pub fn assemble_element_source_term<T, Element, Source>(
+    mut output: DVectorSliceMut<T>,
+    element: &Element,
+    source: &Source,
+    quadrature_weights: &[T],
+    quadrature_points: &[Point<T, Element::ReferenceDim>],
+    quadrature_data: &[Source::Parameters],
+    mut basis_values_buffer: MatrixSliceMutMN<T, U1, Dynamic>,
+)
+where
+    T: RealField,
+    // We only support volumetric elements atm
+    Element: VolumetricFiniteElement<T>,
+    Source: SourceFunction<T, Element::GeometryDim>,
+    DefaultAllocator: BiDimAllocator<T, Element::GeometryDim, Source::SolutionDim>
+{
+    assert_eq!(quadrature_weights.len(), quadrature_points.len());
+    assert_eq!(quadrature_points.len(), quadrature_data.len());
+    assert_eq!(basis_values_buffer.len(), element.num_nodes());
+
+    // Reshape output into an `s x n` matrix, so that each column corresponds to the
+    // output associated with a node
+    let n = element.num_nodes();
+    assert_eq!(
+        output.len(),
+        n * Source::SolutionDim::dim(),
+        "Length of output vector must be consistent with number of nodes and solution dim"
+    );
+    let mut output = MatrixSliceMutMN::from_slice_generic(
+        output.as_mut_slice(),
+        Source::SolutionDim::name(),
+        Dynamic::new(n),
+    );
+
+    let quadrature_iter = izip!(quadrature_weights, quadrature_points, quadrature_data);
+
+    for (weight, point, data) in quadrature_iter {
+        element.populate_basis(MatrixSliceMutMN::from(&mut basis_values_buffer), point);
+
+        let x = element.map_reference_coords(point);
+        let j = element.reference_jacobian(point);
+        let f = source.evaluate(&x, data);
+
+        // The output contribution for quadrature point q is
+        //  w * |det J| * [ f_1 f_2 f_3, ... ]
+        // where f_I = f * phi_I is the output associated with node I, and phi_I is the
+        // basis values of node I.
+        // Then the contribution is given by
+        //  w * |det J| * [ f * phi_1, f * phi_2, ... ] = w * |det J| * f * phi,
+        // where phi is a row vector of basis values
+        let phi = &basis_values_buffer;
+        output.gemm(*weight * j.determinant().abs(), &f, &phi, T::one());
     }
 }

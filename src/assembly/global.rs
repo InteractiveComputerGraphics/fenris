@@ -658,6 +658,8 @@ fn add_local_to_global_<'a, T: RealField>(
 }
 
 /// A buffer for storing intermediate quadrature data.
+///
+/// TODO: Move to local assembly???
 #[derive(Debug)]
 pub struct QuadratureBuffer<T, D, Data>
 where
@@ -715,6 +717,18 @@ where
         );
     }
 
+    pub fn weights(&self) -> &[T] {
+        &self.quad_weights
+    }
+
+    pub fn points(&self) -> &[Point<T, GeometryDim>] {
+        &self.quad_points
+    }
+
+    pub fn data(&self) -> &[Data] {
+        &self.quad_data
+    }
+
     /// Calls a closure for each quadrature point currently in the workspace.
     pub fn for_each_quadrature_point<F>(&self, mut f: F) -> eyre::Result<()>
     where
@@ -730,6 +744,7 @@ where
     }
 }
 
+/// TODO: Move to local assembly?
 #[derive(Debug)]
 pub struct BasisFunctionBuffer<T: Scalar> {
     element_nodes: Vec<usize>,
@@ -803,11 +818,11 @@ impl<T: RealField> BasisFunctionBuffer<T> {
         &self.element_nodes
     }
 
-    pub fn element_basis_values<D: DimName>(&self) -> MatrixSlice<T, U1, Dynamic> {
+    pub fn element_basis_values(&self) -> MatrixSlice<T, U1, Dynamic> {
         MatrixSlice::from(&self.element_basis_values)
     }
 
-    pub fn element_basis_values_mut<D: DimName>(&mut self) -> MatrixSliceMut<T, U1, Dynamic> {
+    pub fn element_basis_values_mut(&mut self) -> MatrixSliceMut<T, U1, Dynamic> {
         MatrixSliceMut::from(&mut self.element_basis_values)
     }
 
