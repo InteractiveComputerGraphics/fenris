@@ -4,6 +4,10 @@ version = "0.1.0"
 authors = ["Andreas Longva <longva@cs.rwth-aachen.de>"]
 edition = "2018"
 
+[package.metadata.docs.rs]
+# For rendering KaTeX on docs.rs
+rustdoc-args = [ "--html-in-header assets/doc-header.html"]
+
 [features]
 default = [ "proptest" ]
 

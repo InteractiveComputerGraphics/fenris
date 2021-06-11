@@ -1,3 +1,8 @@
+//! A composable library for Finite Element computations.
+//!
+//! **Although featureful, the library API is completely unstable, the functionality is not
+//! sufficiently well tested and documentation is sparse. Production usage strongly discouraged
+//! at this point.**
 use nalgebra::{DimMin, DimName};
 
 pub mod allocators;

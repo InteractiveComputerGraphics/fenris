@@ -1019,13 +1019,13 @@ where
 
             let element = ElementInSpace::from_space_and_element_index(self.space, element_index);
 
-            assemble_element_source_term(output,
-                                         &element,
-                                         self.source,
-                                         quad_buffer.weights(),
-                                         quad_buffer.points(),
-                                         quad_buffer.data(),
-                                         basis_buffer.element_basis_values_mut());
+            assemble_element_source_vector(output,
+                                           &element,
+                                           self.source,
+                                           quad_buffer.weights(),
+                                           quad_buffer.points(),
+                                           quad_buffer.data(),
+                                           basis_buffer.element_basis_values_mut());
 
             Ok(())
         })
@@ -1034,8 +1034,11 @@ where
 
 /// Assemble the local source term vector associated with a particular finite element and source.
 ///
-/// TODO: Write more docs once we have KaTeX rendering
-pub fn assemble_element_source_term<T, Element, Source>(
+/// Assembles the local vector associated with the $(f, v)$ term in the weak form of many PDEs.
+/// For example, the weak form of the Poisson equation (assuming suitable boundary conditions) is
+/// $$ a(u, v) = (f, v) \qquad \forall v \in V,$$
+/// where $f: \mathbb{R}^d \rightarrow \mathbb{R}^s$ is the *source function*.
+pub fn assemble_element_source_vector<T, Element, Source>(
     mut output: DVectorSliceMut<T>,
     element: &Element,
     source: &Source,
