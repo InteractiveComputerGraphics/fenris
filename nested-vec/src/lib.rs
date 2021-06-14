@@ -3,6 +3,7 @@ use std::fmt;
 use std::fmt::Debug;
 use std::ops::Range;
 
+// TODO: Manually implement Deserialize to avoid soundness hole
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NestedVec<T> {
     data: Vec<T>,
