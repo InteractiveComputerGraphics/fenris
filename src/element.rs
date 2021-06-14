@@ -55,7 +55,7 @@ where
     /// number of columns (==nodes)
     fn populate_basis(
         &self,
-        basis_values: MatrixSliceMut<T, U1, Dynamic>,
+        basis_values: &mut [T],
         reference_coords: &Point<T, Self::ReferenceDim>,
     );
 
@@ -129,12 +129,12 @@ macro_rules! impl_reference_finite_element_for_fixed {
 
             fn populate_basis(
                 &self,
-                mut result: MatrixSliceMut<T, U1, Dynamic>,
+                result: &mut [T],
                 reference_coords: &Point<T, Self::ReferenceDim>,
             ) {
                 let basis_values = <$element as FixedNodesReferenceFiniteElement<T>>
                     ::evaluate_basis(self, reference_coords);
-                result.copy_from(&basis_values);
+                result.clone_from_slice(&basis_values.as_slice());
             }
 
             fn populate_basis_gradients(
@@ -179,6 +179,7 @@ where
     /// where K is the element and h is the diameter.
     fn diameter(&self) -> T;
 }
+
 
 /// TODO: Do we *really* need the Debug bound?
 pub trait ElementConnectivity<T>: Debug + Connectivity

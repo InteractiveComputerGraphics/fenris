@@ -1,25 +1,23 @@
 //! Functionality for error estimation.
 
 use crate::allocators::VolumeFiniteElementAllocator;
-use crate::element::{FiniteElement, MatrixSlice, MatrixSliceMut};
+use crate::element::{FiniteElement, MatrixSlice};
 use crate::quadrature::Quadrature;
 use nalgebra::allocator::Allocator;
-use nalgebra::{
-    DMatrix, DefaultAllocator, DimMin, DimName, Dynamic, Point, RealField, Scalar, VectorN, U1,
-};
+use nalgebra::{DefaultAllocator, DimMin, DimName, Dynamic, Point, RealField, Scalar, VectorN, U1, VectorSliceN};
 
 #[derive(Debug, Clone)]
 pub struct ErrorWorkspace<T: Scalar> {
     // Intermediate buffers used in computation
-    basis: DMatrix<T>,
-    basis_tr: DMatrix<T>,
+    basis: Vec<T>,
+    basis_tr: Vec<T>
 }
 
 impl<T: RealField> Default for ErrorWorkspace<T> {
     fn default() -> Self {
         Self {
-            basis: DMatrix::zeros(0, 0),
-            basis_tr: DMatrix::zeros(0, 0),
+            basis: Vec::new(),
+            basis_tr: Vec::new(),
         }
     }
 }
@@ -53,22 +51,22 @@ where
     let points = quadrature.points();
 
     use itertools::izip;
+    let n = element.num_nodes();
 
     workspace
         .basis
-        .resize_mut(1, element.num_nodes(), T::zero());
+        .resize(n, T::zero());
     workspace
         .basis_tr
-        .resize_mut(element.num_nodes(), 1, T::zero());
-    let mut basis = MatrixSliceMut::<_, U1, Dynamic>::from(&mut workspace.basis);
-    let mut basis_transposed = MatrixSliceMut::<_, Dynamic, U1>::from(&mut workspace.basis_tr);
+        .resize(n, T::zero());
 
+    // TODO: There is no reason to store the transposed here
     let mut result = T::zero();
     for (i, (w, xi)) in izip!(weights, points).enumerate() {
         let x = element.map_reference_coords(xi);
         let j = element.reference_jacobian(xi);
-        element.populate_basis(MatrixSliceMut::from(&mut basis), xi);
-        basis_transposed.tr_copy_from(&basis);
+        element.populate_basis(&mut workspace.basis, xi);
+        let basis_transposed = VectorSliceN::from_slice_generic(&workspace.basis, Dynamic::new(n), U1);
 
         let u_h = &u_weights * &basis_transposed;
         let u_at_x = u(&Point::from(x), i);

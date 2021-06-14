@@ -92,7 +92,7 @@ pub fn assemble_generalized_element_mass<T, SolutionDim, Element, Q>(
 {
     // TODO: Avoid allocation!!!
     let mut m_element_scalar = DMatrix::zeros(element.num_nodes(), element.num_nodes());
-    let mut basis_values = DMatrix::zeros(1, element.num_nodes());
+    let mut basis_values = vec![T::zero(); element.num_nodes()];
 
     let weights = quadrature.weights();
     let points = quadrature.points();
@@ -104,8 +104,8 @@ pub fn assemble_generalized_element_mass<T, SolutionDim, Element, Q>(
         let J = element.reference_jacobian(xi);
         let J_det = J.determinant();
 
-        element.populate_basis(MatrixSliceMut::from(&mut basis_values), xi);
-        let phi = MatrixSlice::<_, U1, Dynamic>::from(&basis_values);
+        element.populate_basis(&mut basis_values, xi);
+        let phi = &basis_values;
 
         for i in 0..num_nodes {
             for j in 0..num_nodes {
@@ -971,7 +971,7 @@ pub fn assemble_element_source_vector<T, Element, Source>(
     quadrature_weights: &[T],
     quadrature_points: &[Point<T, Element::ReferenceDim>],
     quadrature_data: &[Source::Parameters],
-    mut basis_values_buffer: MatrixSliceMutMN<T, U1, Dynamic>,
+    basis_values_buffer: &mut [T],
 )
 where
     T: RealField,
@@ -1001,7 +1001,7 @@ where
     let quadrature_iter = izip!(quadrature_weights, quadrature_points, quadrature_data);
 
     for (weight, point, data) in quadrature_iter {
-        element.populate_basis(MatrixSliceMutMN::from(&mut basis_values_buffer), point);
+        element.populate_basis(&mut *basis_values_buffer, point);
 
         let x = element.map_reference_coords(point);
         let j = element.reference_jacobian(point);
@@ -1014,7 +1014,7 @@ where
         // Then the contribution is given by
         //  w * |det J| * [ f * phi_1, f * phi_2, ... ] = w * |det J| * f * phi,
         // where phi is a row vector of basis values
-        let phi = &basis_values_buffer;
+        let phi = MatrixSlice::from_slice_generic(&*basis_values_buffer, U1, Dynamic::new(n));
         output.gemm(*weight * j.determinant().abs(), &f, &phi, T::one());
     }
 }

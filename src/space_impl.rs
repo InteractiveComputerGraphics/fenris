@@ -2,7 +2,7 @@ use crate::allocators::ElementConnectivityAllocator;
 use crate::connectivity::CellConnectivity;
 use crate::element::{ElementConnectivity, FiniteElement, MatrixSliceMut, ReferenceFiniteElement};
 use crate::mesh::Mesh;
-use crate::nalgebra::{Dynamic, MatrixMN, U1};
+use crate::nalgebra::{Dynamic, MatrixMN};
 use crate::space::{FiniteElementConnectivity, FiniteElementSpace, GeometricFiniteElementSpace};
 use crate::SmallDim;
 use nalgebra::{DefaultAllocator, DimName, Point, Scalar};
@@ -69,7 +69,7 @@ where
     fn populate_element_basis(
         &self,
         element_index: usize,
-        basis_values: MatrixSliceMut<T, U1, Dynamic>,
+        basis_values: &mut [T],
         reference_coords: &Point<T, Self::ReferenceDim>,
     ) {
         let element = self

@@ -1,7 +1,7 @@
 use crate::allocators::FiniteElementAllocator;
 use crate::element::{MatrixSliceMut, FiniteElement, ReferenceFiniteElement};
 use crate::geometry::GeometryCollection;
-use crate::nalgebra::{Dynamic, MatrixMN, U1};
+use crate::nalgebra::{Dynamic, MatrixMN};
 use crate::SmallDim;
 use nalgebra::{DefaultAllocator, Point, Scalar};
 
@@ -27,7 +27,7 @@ where
     fn populate_element_basis(
         &self,
         element_index: usize,
-        basis_values: MatrixSliceMut<T, U1, Dynamic>,
+        basis_values: &mut [T],
         reference_coords: &Point<T, Self::ReferenceDim>,
     );
 
@@ -118,7 +118,7 @@ where
         self.space.element_node_count(self.element_index)
     }
 
-    fn populate_basis(&self, basis_values: MatrixSliceMut<T, U1, Dynamic>, reference_coords: &Point<T, Self::ReferenceDim>) {
+    fn populate_basis(&self, basis_values: &mut [T], reference_coords: &Point<T, Self::ReferenceDim>) {
         self.space.populate_element_basis(self.element_index, basis_values, reference_coords)
     }
 

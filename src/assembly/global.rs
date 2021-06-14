@@ -23,7 +23,7 @@ use crate::assembly::local::{
     ElementConnectivityAssembler, ElementMatrixAssembler, ElementVectorAssembler, QuadratureTable,
 };
 use crate::connectivity::Connectivity;
-use crate::element::{MatrixSlice, MatrixSliceMut};
+use crate::element::{MatrixSliceMut};
 use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{DVector, DVectorSlice, DefaultAllocator, Point};
 use crate::space::FiniteElementSpace;
@@ -748,7 +748,7 @@ where
 #[derive(Debug)]
 pub struct BasisFunctionBuffer<T: Scalar> {
     element_nodes: Vec<usize>,
-    element_basis_values: DMatrix<T>,
+    element_basis_values: Vec<T>,
     element_basis_gradients: DMatrix<T>,
 }
 
@@ -756,7 +756,7 @@ impl<T: RealField> Default for BasisFunctionBuffer<T> {
     fn default() -> Self {
         Self {
             element_nodes: Vec::new(),
-            element_basis_values: DMatrix::zeros(0, 0),
+            element_basis_values: Vec::new(),
             element_basis_gradients: DMatrix::zeros(0, 0),
         }
     }
@@ -766,7 +766,7 @@ impl<T: RealField> BasisFunctionBuffer<T> {
     pub fn resize(&mut self, node_count: usize, reference_dim: usize) {
         self.element_nodes.resize(node_count, usize::MAX);
         self.element_basis_values
-            .resize_mut(1, node_count, T::zero());
+            .resize(node_count, T::zero());
         self.element_basis_gradients
             .resize_mut(reference_dim, node_count, T::zero());
     }
@@ -793,7 +793,7 @@ impl<T: RealField> BasisFunctionBuffer<T> {
     {
         space.populate_element_basis(
             element_index,
-            MatrixSliceMut::from(&mut self.element_basis_values),
+            &mut self.element_basis_values,
             reference_coords,
         );
     }
@@ -818,12 +818,12 @@ impl<T: RealField> BasisFunctionBuffer<T> {
         &self.element_nodes
     }
 
-    pub fn element_basis_values(&self) -> MatrixSlice<T, U1, Dynamic> {
-        MatrixSlice::from(&self.element_basis_values)
+    pub fn element_basis_values(&self) -> &[T] {
+        &self.element_basis_values
     }
 
-    pub fn element_basis_values_mut(&mut self) -> MatrixSliceMut<T, U1, Dynamic> {
-        MatrixSliceMut::from(&mut self.element_basis_values)
+    pub fn element_basis_values_mut(&mut self) -> &mut [T] {
+        &mut self.element_basis_values
     }
 
     pub fn element_gradients_mut<D: DimName>(&mut self) -> MatrixSliceMut<T, D, Dynamic> {
