@@ -116,10 +116,15 @@ macro_rules! impl_reference_finite_element_for_fixed {
         where
             T: Scalar,
             $element: FixedNodesReferenceFiniteElement<T>,
-            DefaultAllocator: ReferenceFiniteElementAllocator<T, <$element as FixedNodesReferenceFiniteElement<T>>::ReferenceDim>
-                + Allocator<T, U1, <$element as FixedNodesReferenceFiniteElement<T>>::NodalDim>
-                + Allocator<T, <$element as FixedNodesReferenceFiniteElement<T>>::ReferenceDim,
-                               <$element as FixedNodesReferenceFiniteElement<T>>::NodalDim>,
+            DefaultAllocator: ReferenceFiniteElementAllocator<
+                    T,
+                    <$element as FixedNodesReferenceFiniteElement<T>>::ReferenceDim,
+                > + Allocator<T, U1, <$element as FixedNodesReferenceFiniteElement<T>>::NodalDim>
+                + Allocator<
+                    T,
+                    <$element as FixedNodesReferenceFiniteElement<T>>::ReferenceDim,
+                    <$element as FixedNodesReferenceFiniteElement<T>>::NodalDim,
+                >,
         {
             type ReferenceDim = <Self as FixedNodesReferenceFiniteElement<T>>::ReferenceDim;
 
@@ -132,8 +137,11 @@ macro_rules! impl_reference_finite_element_for_fixed {
                 result: &mut [T],
                 reference_coords: &Point<T, Self::ReferenceDim>,
             ) {
-                let basis_values = <$element as FixedNodesReferenceFiniteElement<T>>
-                    ::evaluate_basis(self, reference_coords);
+                let basis_values =
+                    <$element as FixedNodesReferenceFiniteElement<T>>::evaluate_basis(
+                        self,
+                        reference_coords,
+                    );
                 result.clone_from_slice(&basis_values.as_slice());
             }
 
@@ -142,13 +150,14 @@ macro_rules! impl_reference_finite_element_for_fixed {
                 mut result: MatrixSliceMut<T, Self::ReferenceDim, Dynamic>,
                 reference_coords: &Point<T, Self::ReferenceDim>,
             ) {
-                let gradients = <$element as FixedNodesReferenceFiniteElement<T>>
-                    ::gradients(self, reference_coords);
+                let gradients = <$element as FixedNodesReferenceFiniteElement<T>>::gradients(
+                    self,
+                    reference_coords,
+                );
                 result.copy_from(&gradients);
             }
         }
-
-    }
+    };
 }
 
 pub trait FiniteElement<T>: ReferenceFiniteElement<T>
@@ -179,7 +188,6 @@ where
     /// where K is the element and h is the diameter.
     fn diameter(&self) -> T;
 }
-
 
 /// TODO: Do we *really* need the Debug bound?
 pub trait ElementConnectivity<T>: Debug + Connectivity

@@ -9,7 +9,9 @@ use nalgebra::{
     RealField, Scalar, VectorN, U1,
 };
 
-use crate::allocators::{BiDimAllocator, FiniteElementMatrixAllocator, SmallDimAllocator, TriDimAllocator};
+use crate::allocators::{
+    BiDimAllocator, FiniteElementMatrixAllocator, SmallDimAllocator, TriDimAllocator,
+};
 use crate::assembly::global;
 use crate::assembly::global::{BasisFunctionBuffer, QuadratureBuffer};
 use crate::connectivity::Connectivity;
@@ -17,7 +19,7 @@ use crate::element::{MatrixSlice, MatrixSliceMut, VolumetricFiniteElement};
 use crate::mesh::Mesh;
 use crate::nalgebra::{DVector, DVectorSlice, DVectorSliceMut, MatrixSliceMutMN, Point};
 use crate::quadrature::Quadrature;
-use crate::space::{FiniteElementConnectivity, VolumetricFiniteElementSpace, ElementInSpace};
+use crate::space::{ElementInSpace, FiniteElementConnectivity, VolumetricFiniteElementSpace};
 use crate::workspace::Workspace;
 use crate::SmallDim;
 
@@ -929,13 +931,15 @@ where
 
             let element = ElementInSpace::from_space_and_element_index(self.space, element_index);
 
-            assemble_element_source_vector(output,
-                                           &element,
-                                           self.source,
-                                           quad_buffer.weights(),
-                                           quad_buffer.points(),
-                                           quad_buffer.data(),
-                                           basis_buffer.element_basis_values_mut());
+            assemble_element_source_vector(
+                output,
+                &element,
+                self.source,
+                quad_buffer.weights(),
+                quad_buffer.points(),
+                quad_buffer.data(),
+                basis_buffer.element_basis_values_mut(),
+            );
 
             Ok(())
         })
@@ -972,13 +976,12 @@ pub fn assemble_element_source_vector<T, Element, Source>(
     quadrature_points: &[Point<T, Element::ReferenceDim>],
     quadrature_data: &[Source::Parameters],
     basis_values_buffer: &mut [T],
-)
-where
+) where
     T: RealField,
     // We only support volumetric elements atm
     Element: VolumetricFiniteElement<T>,
     Source: SourceFunction<T, Element::GeometryDim>,
-    DefaultAllocator: BiDimAllocator<T, Element::GeometryDim, Source::SolutionDim>
+    DefaultAllocator: BiDimAllocator<T, Element::GeometryDim, Source::SolutionDim>,
 {
     assert_eq!(quadrature_weights.len(), quadrature_points.len());
     assert_eq!(quadrature_points.len(), quadrature_data.len());

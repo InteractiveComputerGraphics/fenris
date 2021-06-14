@@ -43,8 +43,6 @@ where
     connectivity: Vec<Connectivity>,
 }
 
-
-
 /// Index-based data structure for conforming meshes (i.e. no hanging nodes).
 pub type Mesh2d<T, Connectivity> = Mesh<T, U2, Connectivity>;
 pub type Mesh3d<T, Connectivity> = Mesh<T, U3, Connectivity>;

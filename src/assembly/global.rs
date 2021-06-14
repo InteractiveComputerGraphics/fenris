@@ -23,7 +23,7 @@ use crate::assembly::local::{
     ElementConnectivityAssembler, ElementMatrixAssembler, ElementVectorAssembler, QuadratureTable,
 };
 use crate::connectivity::Connectivity;
-use crate::element::{MatrixSliceMut};
+use crate::element::MatrixSliceMut;
 use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{DVector, DVectorSlice, DefaultAllocator, Point};
 use crate::space::FiniteElementSpace;
@@ -765,8 +765,7 @@ impl<T: RealField> Default for BasisFunctionBuffer<T> {
 impl<T: RealField> BasisFunctionBuffer<T> {
     pub fn resize(&mut self, node_count: usize, reference_dim: usize) {
         self.element_nodes.resize(node_count, usize::MAX);
-        self.element_basis_values
-            .resize(node_count, T::zero());
+        self.element_basis_values.resize(node_count, T::zero());
         self.element_basis_gradients
             .resize_mut(reference_dim, node_count, T::zero());
     }
