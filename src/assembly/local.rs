@@ -929,6 +929,9 @@ impl<'a, Space, Source, QTable> ElementSourceAssemblerBuilder<&'a Space, &'a Sou
     }
 }
 
+/// An element assembler for source functions.
+///
+/// TODO: Docs
 pub struct ElementSourceAssembler<'a, Space, Source, QTable> {
     space: &'a Space,
     qtable: &'a QTable,
@@ -1034,10 +1037,26 @@ where
 
 /// Assemble the local source term vector associated with a particular finite element and source.
 ///
-/// Assembles the local vector associated with the $(f, v)$ term in the weak form of many PDEs.
+/// Assembles the local vector for the provided element associated with the $(f, v)$ term in the
+/// weak form of many PDEs using the given quadrature.
 /// For example, the weak form of the Poisson equation (assuming suitable boundary conditions) is
 /// $$ a(u, v) = (f, v) \qquad \forall v \in V,$$
 /// where $f: \mathbb{R}^d \rightarrow \mathbb{R}^s$ is the *source function*.
+///
+/// A working array for storing basis function values must be provided.
+///
+/// **This is a low-level routine**. Most users will not need to call this function directly,
+/// and are instead more likely to use [`ElementSourceAssembler`]. Refer to its documentation
+/// for a more detailed account of source functions.
+///
+/// # Panics
+///
+/// The size of the output vector must be equal to `n * s`, where `n` is the number of
+/// nodes in the element and `s` is the solution dimension.
+///
+/// Panics if the quadrature weights, points and data arrays do not have the same length.
+///
+/// The basis values buffer must have size `n`.
 pub fn assemble_element_source_vector<T, Element, Source>(
     mut output: DVectorSliceMut<T>,
     element: &Element,
