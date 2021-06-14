@@ -1,26 +1,17 @@
-use crate::geometry::{
-    AxisAlignedBoundingBox, BoundedGeometry, Distance, DistanceQuery, GeneralPolygon,
-    GeometryCollection, LineSegment2d,
-};
-use arrayvec::ArrayVec;
-use nalgebra::{DefaultAllocator, DimName, Point, RealField, Scalar, Vector2, VectorN, U2, U3};
+use crate::geometry::{AxisAlignedBoundingBox, BoundedGeometry, GeometryCollection};
+use nalgebra::{DefaultAllocator, DimName, Point, RealField, Scalar, VectorN, U2, U3};
 use nested_vec::NestedVec;
-use std::collections::hash_map::Entry as HashMapEntry;
 use std::collections::{BTreeMap, HashMap};
 use std::iter::once;
 
 use crate::connectivity::{
     CellConnectivity, Connectivity, ConnectivityMut, Hex20Connectivity, Hex27Connectivity,
-    Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity, Segment2d2Connectivity,
+    Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity,
     Tet10Connectivity, Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity,
     Tri6d2Connectivity,
 };
-use crate::geometry::Orientation::Counterclockwise;
-use fenris_geometry::polymesh::PolyMesh;
 use nalgebra::allocator::Allocator;
 use serde::{Deserialize, Serialize};
-use std::cmp::min;
-use std::error::Error;
 
 /// Index-based data structure for conforming meshes (i.e. no hanging nodes).
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -98,36 +89,36 @@ where
     }
 }
 
-impl<T, D, C> Mesh<T, D, C>
-where
-    T: Scalar,
-    D: DimName,
-    C: ConnectivityMut,
-    DefaultAllocator: Allocator<T, D>,
-{
-    /// Creates a new mesh with each cell disconnected from all its neighbors.
-    ///
-    /// In other words, each vertex is only referenced exactly once, and the result is
-    /// effectively a "soup" of cells.
-    pub fn disconnect_cells(&self) -> Self {
-        let old_vertices = self.vertices();
-        let mut new_vertices = Vec::new();
-        let mut new_connectivity = Vec::new();
-
-        for conn in self.connectivity() {
-            let mut new_conn = conn.clone();
-
-            for v_idx in new_conn.vertex_indices_mut() {
-                let new_vertex_idx = new_vertices.len();
-                new_vertices.push(old_vertices[*v_idx].clone());
-                *v_idx = new_vertex_idx;
-            }
-            new_connectivity.push(new_conn);
-        }
-
-        Self::from_vertices_and_connectivity(new_vertices, new_connectivity)
-    }
-}
+// impl<T, D, C> Mesh<T, D, C>
+// where
+//     T: Scalar,
+//     D: DimName,
+//     C: ConnectivityMut,
+//     DefaultAllocator: Allocator<T, D>,
+// {
+//     /// Creates a new mesh with each cell disconnected from all its neighbors.
+//     ///
+//     /// In other words, each vertex is only referenced exactly once, and the result is
+//     /// effectively a "soup" of cells.
+//     pub fn disconnect_cells(&self) -> Self {
+//         let old_vertices = self.vertices();
+//         let mut new_vertices = Vec::new();
+//         let mut new_connectivity = Vec::new();
+//
+//         for conn in self.connectivity() {
+//             let mut new_conn = conn.clone();
+//
+//             for v_idx in new_conn.vertex_indices_mut() {
+//                 let new_vertex_idx = new_vertices.len();
+//                 new_vertices.push(old_vertices[*v_idx].clone());
+//                 *v_idx = new_vertex_idx;
+//             }
+//             new_connectivity.push(new_conn);
+//         }
+//
+//         Self::from_vertices_and_connectivity(new_vertices, new_connectivity)
+//     }
+// }
 
 impl<T, D, Connectivity> Mesh<T, D, Connectivity>
 where
@@ -357,167 +348,167 @@ where
     }
 }
 
-impl<T, Cell> Mesh2d<T, Cell>
-where
-    T: RealField,
-    Cell: Connectivity<FaceConnectivity = Segment2d2Connectivity>,
-{
-    pub fn extract_contour(&self) -> Result<GeneralPolygon<T>, Box<dyn Error>> {
-        let boundary_edges = self
-            .find_boundary_faces()
-            .into_iter()
-            .map(|(edge, _, _)| edge);
+// impl<T, Cell> Mesh2d<T, Cell>
+// where
+//     T: RealField,
+//     Cell: Connectivity<FaceConnectivity = Segment2d2Connectivity>,
+// {
+//     pub fn extract_contour(&self) -> Result<GeneralPolygon<T>, Box<dyn Error>> {
+//         let boundary_edges = self
+//             .find_boundary_faces()
+//             .into_iter()
+//             .map(|(edge, _, _)| edge);
+//
+//         // For a "proper" mesh, any vertex may be connected to exactly two other vertices.
+//         // We build a "path" of vertices by associating each vertex with its neighbor
+//         // whose index is the smallest, and visiting each vertex once.
+//         let mut neighbors = HashMap::new();
+//         let mut smallest_index = std::usize::MAX;
+//
+//         let mut insert_neighbor = |vertex_index, neighbor_index| {
+//             if vertex_index == neighbor_index {
+//                 Err(format!(
+//                     "Cannot extract contour: vertex {} has edge to itself.",
+//                     vertex_index
+//                 ))
+//             } else {
+//                 neighbors
+//                     .entry(vertex_index)
+//                     .or_insert_with(|| ArrayVec::<[_; 2]>::new())
+//                     .try_push(neighbor_index)
+//                     .map_err(|_| {
+//                         format!(
+//                             "Cannot extract contour: vertex {} has more than two neighbors.",
+//                             vertex_index
+//                         )
+//                     })
+//             }
+//         };
+//
+//         for edge in boundary_edges {
+//             let Segment2d2Connectivity([a, b]) = edge;
+//             insert_neighbor(a, b)?;
+//             insert_neighbor(b, a)?;
+//             smallest_index = min(smallest_index, a);
+//             smallest_index = min(smallest_index, b);
+//         }
+//
+//         let num_vertices = neighbors.len();
+//         let mut take_next = |vertex_index, prev_index| {
+//             debug_assert_ne!(vertex_index, prev_index);
+//             let vertex_neighbors = neighbors
+//                 .get_mut(&vertex_index)
+//                 .expect("All vertices have neighbors");
+//
+//             const ERROR_MSG: &str =
+//                 "Cannot extract contour: There is no closed path connecting vertices.";
+//
+//             if vertex_neighbors.is_empty() {
+//                 Err(ERROR_MSG)
+//             } else {
+//                 let neighbor_idx = vertex_neighbors
+//                     .iter()
+//                     .cloned()
+//                     .enumerate()
+//                     .filter(|(_, vertex_idx)| *vertex_idx != prev_index)
+//                     .map(|(i, _)| i)
+//                     .next();
+//
+//                 if let Some(neighbor_idx) = neighbor_idx {
+//                     let neighbor = vertex_neighbors[neighbor_idx];
+//                     vertex_neighbors.remove(neighbor_idx);
+//                     Ok(neighbor)
+//                 } else {
+//                     Err(ERROR_MSG)
+//                 }
+//             }
+//         };
+//
+//         // Given a current vertex and the previous vertex, we find the next vertex by
+//         // picking the neighbor of "current" which is not equal to the previous.
+//         // In order to start this sequence, we must first choose an arbitrary "next" vertex
+//         // out of the two neighbors of "prev"
+//         let mut vertices = Vec::with_capacity(num_vertices);
+//         let mut prev_vertex_index = smallest_index;
+//         let mut current_vertex_index = take_next(prev_vertex_index, std::usize::MAX)?;
+//         vertices.push(self.vertices()[prev_vertex_index]);
+//
+//         while current_vertex_index != smallest_index {
+//             let next_vertex_index = take_next(current_vertex_index, prev_vertex_index)?;
+//             prev_vertex_index = current_vertex_index;
+//             current_vertex_index = next_vertex_index;
+//             vertices.push(self.vertices()[prev_vertex_index]);
+//         }
+//
+//         // TODO: What if we have a hole in the polygon? Should eventually also support this,
+//         // but for the moment we are limited to simple polygons.
+//         let mut polygon = GeneralPolygon::from_vertices(vertices);
+//         polygon.orient(Counterclockwise);
+//
+//         Ok(polygon)
+//     }
+// }
 
-        // For a "proper" mesh, any vertex may be connected to exactly two other vertices.
-        // We build a "path" of vertices by associating each vertex with its neighbor
-        // whose index is the smallest, and visiting each vertex once.
-        let mut neighbors = HashMap::new();
-        let mut smallest_index = std::usize::MAX;
+// impl<T, D, C> Mesh<T, D, C>
+// where
+//     T: Scalar,
+//     D: DimName,
+//     C: Connectivity,
+//     C::FaceConnectivity: Connectivity + ConnectivityMut,
+//     DefaultAllocator: Allocator<T, D>,
+// {
+//     /// Creates a mesh that consists of all unique faces of this mesh.
+//     /// Face normals are only preserved for boundary faces.
+//     pub fn extract_face_soup(&self) -> Mesh<T, D, C::FaceConnectivity> {
+//         let mut unique_connectivity = HashMap::new();
+//         let mut faces = Vec::new();
+//
+//         for cell_conn in self.connectivity.iter() {
+//             let num_faces = cell_conn.num_faces();
+//             for i in 0..num_faces {
+//                 let face_conn = cell_conn.get_face_connectivity(i).unwrap();
+//
+//                 let mut vertex_indices = face_conn.vertex_indices().to_vec();
+//                 vertex_indices.sort_unstable();
+//
+//                 if let HashMapEntry::Vacant(entry) = unique_connectivity.entry(vertex_indices) {
+//                     entry.insert(faces.len());
+//                     faces.push(face_conn);
+//                 }
+//             }
+//         }
+//
+//         let new_mesh = Mesh::from_vertices_and_connectivity(self.vertices.clone(), faces);
+//         let cells_to_keep: Vec<_> = (0..new_mesh.connectivity().len()).collect();
+//         // Remove unconnected vertices
+//         new_mesh.keep_cells(&cells_to_keep)
+//     }
+// }
 
-        let mut insert_neighbor = |vertex_index, neighbor_index| {
-            if vertex_index == neighbor_index {
-                Err(format!(
-                    "Cannot extract contour: vertex {} has edge to itself.",
-                    vertex_index
-                ))
-            } else {
-                neighbors
-                    .entry(vertex_index)
-                    .or_insert_with(|| ArrayVec::<[_; 2]>::new())
-                    .try_push(neighbor_index)
-                    .map_err(|_| {
-                        format!(
-                            "Cannot extract contour: vertex {} has more than two neighbors.",
-                            vertex_index
-                        )
-                    })
-            }
-        };
-
-        for edge in boundary_edges {
-            let Segment2d2Connectivity([a, b]) = edge;
-            insert_neighbor(a, b)?;
-            insert_neighbor(b, a)?;
-            smallest_index = min(smallest_index, a);
-            smallest_index = min(smallest_index, b);
-        }
-
-        let num_vertices = neighbors.len();
-        let mut take_next = |vertex_index, prev_index| {
-            debug_assert_ne!(vertex_index, prev_index);
-            let vertex_neighbors = neighbors
-                .get_mut(&vertex_index)
-                .expect("All vertices have neighbors");
-
-            const ERROR_MSG: &str =
-                "Cannot extract contour: There is no closed path connecting vertices.";
-
-            if vertex_neighbors.is_empty() {
-                Err(ERROR_MSG)
-            } else {
-                let neighbor_idx = vertex_neighbors
-                    .iter()
-                    .cloned()
-                    .enumerate()
-                    .filter(|(_, vertex_idx)| *vertex_idx != prev_index)
-                    .map(|(i, _)| i)
-                    .next();
-
-                if let Some(neighbor_idx) = neighbor_idx {
-                    let neighbor = vertex_neighbors[neighbor_idx];
-                    vertex_neighbors.remove(neighbor_idx);
-                    Ok(neighbor)
-                } else {
-                    Err(ERROR_MSG)
-                }
-            }
-        };
-
-        // Given a current vertex and the previous vertex, we find the next vertex by
-        // picking the neighbor of "current" which is not equal to the previous.
-        // In order to start this sequence, we must first choose an arbitrary "next" vertex
-        // out of the two neighbors of "prev"
-        let mut vertices = Vec::with_capacity(num_vertices);
-        let mut prev_vertex_index = smallest_index;
-        let mut current_vertex_index = take_next(prev_vertex_index, std::usize::MAX)?;
-        vertices.push(self.vertices()[prev_vertex_index]);
-
-        while current_vertex_index != smallest_index {
-            let next_vertex_index = take_next(current_vertex_index, prev_vertex_index)?;
-            prev_vertex_index = current_vertex_index;
-            current_vertex_index = next_vertex_index;
-            vertices.push(self.vertices()[prev_vertex_index]);
-        }
-
-        // TODO: What if we have a hole in the polygon? Should eventually also support this,
-        // but for the moment we are limited to simple polygons.
-        let mut polygon = GeneralPolygon::from_vertices(vertices);
-        polygon.orient(Counterclockwise);
-
-        Ok(polygon)
-    }
-}
-
-impl<T, D, C> Mesh<T, D, C>
-where
-    T: Scalar,
-    D: DimName,
-    C: Connectivity,
-    C::FaceConnectivity: Connectivity + ConnectivityMut,
-    DefaultAllocator: Allocator<T, D>,
-{
-    /// Creates a mesh that consists of all unique faces of this mesh.
-    /// Face normals are only preserved for boundary faces.
-    pub fn extract_face_soup(&self) -> Mesh<T, D, C::FaceConnectivity> {
-        let mut unique_connectivity = HashMap::new();
-        let mut faces = Vec::new();
-
-        for cell_conn in self.connectivity.iter() {
-            let num_faces = cell_conn.num_faces();
-            for i in 0..num_faces {
-                let face_conn = cell_conn.get_face_connectivity(i).unwrap();
-
-                let mut vertex_indices = face_conn.vertex_indices().to_vec();
-                vertex_indices.sort_unstable();
-
-                if let HashMapEntry::Vacant(entry) = unique_connectivity.entry(vertex_indices) {
-                    entry.insert(faces.len());
-                    faces.push(face_conn);
-                }
-            }
-        }
-
-        let new_mesh = Mesh::from_vertices_and_connectivity(self.vertices.clone(), faces);
-        let cells_to_keep: Vec<_> = (0..new_mesh.connectivity().len()).collect();
-        // Remove unconnected vertices
-        new_mesh.keep_cells(&cells_to_keep)
-    }
-}
-
-impl<T, D, C> Mesh<T, D, C>
-where
-    T: Scalar,
-    D: DimName,
-    C: Connectivity,
-    C::FaceConnectivity: ConnectivityMut,
-    DefaultAllocator: Allocator<T, D>,
-{
-    /// Constructs a new mesh from the surface cells of the mesh.
-    ///
-    /// The orientation of the faces are preserved.
-    pub fn extract_surface_mesh(&self) -> Mesh<T, D, C::FaceConnectivity> {
-        let connectivity = self
-            .find_boundary_faces()
-            .into_iter()
-            .map(|(face, _, _)| face)
-            .collect();
-
-        // TODO: This is rather inefficient
-        let new_mesh = Mesh::from_vertices_and_connectivity(self.vertices.clone(), connectivity);
-        let cells_to_keep: Vec<_> = (0..new_mesh.connectivity().len()).collect();
-        new_mesh.keep_cells(&cells_to_keep)
-    }
-}
+// impl<T, D, C> Mesh<T, D, C>
+// where
+//     T: Scalar,
+//     D: DimName,
+//     C: Connectivity,
+//     C::FaceConnectivity: ConnectivityMut,
+//     DefaultAllocator: Allocator<T, D>,
+// {
+//     /// Constructs a new mesh from the surface cells of the mesh.
+//     ///
+//     /// The orientation of the faces are preserved.
+//     pub fn extract_surface_mesh(&self) -> Mesh<T, D, C::FaceConnectivity> {
+//         let connectivity = self
+//             .find_boundary_faces()
+//             .into_iter()
+//             .map(|(face, _, _)| face)
+//             .collect();
+//
+//         // TODO: This is rather inefficient
+//         let new_mesh = Mesh::from_vertices_and_connectivity(self.vertices.clone(), connectivity);
+//         let cells_to_keep: Vec<_> = (0..new_mesh.connectivity().len()).collect();
+//         new_mesh.keep_cells(&cells_to_keep)
+//     }
+// }
 
 impl<'a, T, D, C> GeometryCollection<'a> for Mesh<T, D, C>
 where
@@ -539,127 +530,127 @@ where
     }
 }
 
-impl<'a, T, D, C, QueryGeometry> DistanceQuery<'a, QueryGeometry> for Mesh<T, D, C>
-where
-    T: RealField,
-    D: DimName,
-    C: CellConnectivity<T, D>,
-    C::Cell: Distance<T, QueryGeometry>,
-    DefaultAllocator: Allocator<T, D>,
-{
-    fn nearest(&'a self, query_geometry: &'a QueryGeometry) -> Option<usize> {
-        let (_, min_index) = (0..self.num_geometries())
-            .map(|idx| {
-                let geometry = self.get_geometry(idx).expect(
-                    "num_geometries must report the correct number of available geometries",
-                );
-                (idx, geometry)
-            })
-            .fold(
-                (T::max_value(), None),
-                |(mut min_dist, mut min_index), (idx, geometry)| {
-                    let dist = geometry.distance(query_geometry);
-                    // TODO: Square distance?
-                    if dist < min_dist {
-                        min_index = Some(idx);
-                        min_dist = dist;
-                    }
-                    (min_dist, min_index)
-                },
-            );
-        min_index
-    }
-}
+// impl<'a, T, D, C, QueryGeometry> DistanceQuery<'a, QueryGeometry> for Mesh<T, D, C>
+// where
+//     T: RealField,
+//     D: DimName,
+//     C: CellConnectivity<T, D>,
+//     C::Cell: Distance<T, QueryGeometry>,
+//     DefaultAllocator: Allocator<T, D>,
+// {
+//     fn nearest(&'a self, query_geometry: &'a QueryGeometry) -> Option<usize> {
+//         let (_, min_index) = (0..self.num_geometries())
+//             .map(|idx| {
+//                 let geometry = self.get_geometry(idx).expect(
+//                     "num_geometries must report the correct number of available geometries",
+//                 );
+//                 (idx, geometry)
+//             })
+//             .fold(
+//                 (T::max_value(), None),
+//                 |(mut min_dist, mut min_index), (idx, geometry)| {
+//                     let dist = geometry.distance(query_geometry);
+//                     // TODO: Square distance?
+//                     if dist < min_dist {
+//                         min_index = Some(idx);
+//                         min_dist = dist;
+//                     }
+//                     (min_dist, min_index)
+//                 },
+//             );
+//         min_index
+//     }
+// }
 
-pub trait PlanarFace<T>
-where
-    T: Scalar,
-    DefaultAllocator: Allocator<T, Self::Dimension>,
-{
-    type Dimension: DimName;
+// pub trait PlanarFace<T>
+// where
+//     T: Scalar,
+//     DefaultAllocator: Allocator<T, Self::Dimension>,
+// {
+//     type Dimension: DimName;
+//
+//     fn normal(&self) -> VectorN<T, Self::Dimension>;
+// }
+//
+// impl<T> PlanarFace<T> for LineSegment2d<T>
+// where
+//     T: RealField,
+// {
+//     type Dimension = U2;
+//
+//     fn normal(&self) -> Vector2<T> {
+//         self.normal_dir().normalize()
+//     }
+// }
 
-    fn normal(&self) -> VectorN<T, Self::Dimension>;
-}
-
-impl<T> PlanarFace<T> for LineSegment2d<T>
-where
-    T: RealField,
-{
-    type Dimension = U2;
-
-    fn normal(&self) -> Vector2<T> {
-        self.normal_dir().normalize()
-    }
-}
-
-/// Creates a poly mesh by joining the face connectivity of each cell to a polygon
-/// (only works if the cells are topologically 2D)
-pub fn poly_mesh_from_surface_mesh<T, C, D>(mesh: &Mesh<T, D, C>) -> PolyMesh<T, D>
-where
-    T: Scalar,
-    C: Connectivity,
-    D: DimName,
-    DefaultAllocator: Allocator<T, D>,
-{
-    // TODO: Implement using the From trait?
-
-    let mut old_to_new_vertex_indices: HashMap<usize, usize> =
-        HashMap::with_capacity(mesh.vertices().len());
-    let mut faces = NestedVec::new();
-
-    // Convert cells to polygonal faces by extracting the cells face connectivity
-    for cell in mesh.connectivity() {
-        let num_faces = cell.num_faces();
-        let mut polygon = Vec::new();
-        for i in 0..num_faces {
-            let face_connectivity = cell.get_face_connectivity(i).unwrap();
-            let new_vertices: Vec<_> = face_connectivity
-                .vertex_indices()
-                .iter()
-                .copied()
-                .map(|v_old| {
-                    let v_new = old_to_new_vertex_indices.len();
-                    *old_to_new_vertex_indices.entry(v_old).or_insert(v_new)
-                })
-                .collect();
-            polygon.extend(new_vertices);
-        }
-        // Remove the last vertex if it is the same as the first
-        if let (Some(first), Some(last)) = (polygon.first(), polygon.last()) {
-            if *first == *last {
-                polygon.pop();
-            }
-        }
-        // Remove repeating vertices (because of the concatenation of faces)
-        polygon.dedup();
-
-        faces.push(polygon.as_slice());
-    }
-
-    // Reorder the old vertex indices into the order used by the extracted faces
-    let old_vertex_indices = {
-        let mut old_to_new_vertex_indices: Vec<(_, _)> =
-            old_to_new_vertex_indices.into_iter().collect();
-        old_to_new_vertex_indices
-            .sort_unstable_by(|(_, v_new_a), (_, v_new_b)| v_new_a.cmp(v_new_b));
-        let old_vertex_indices: Vec<_> = old_to_new_vertex_indices
-            .into_iter()
-            .map(|(v_old, _)| v_old)
-            .collect();
-        old_vertex_indices
-    };
-
-    // Extract the subset of vertices required by the faces
-    let mut vertices = Vec::with_capacity(old_vertex_indices.len());
-    for v_old in old_vertex_indices {
-        vertices.push(
-            mesh.vertices()
-                .get(v_old)
-                .expect("missing vertex of cell face")
-                .clone(),
-        )
-    }
-
-    let cells = NestedVec::new();
-    PolyMesh::from_poly_data(vertices, faces, cells)
-}
+// /// Creates a poly mesh by joining the face connectivity of each cell to a polygon
+// /// (only works if the cells are topologically 2D)
+// pub fn poly_mesh_from_surface_mesh<T, C, D>(mesh: &Mesh<T, D, C>) -> PolyMesh<T, D>
+// where
+//     T: Scalar,
+//     C: Connectivity,
+//     D: DimName,
+//     DefaultAllocator: Allocator<T, D>,
+// {
+//     // TODO: Implement using the From trait?
+//
+//     let mut old_to_new_vertex_indices: HashMap<usize, usize> =
+//         HashMap::with_capacity(mesh.vertices().len());
+//     let mut faces = NestedVec::new();
+//
+//     // Convert cells to polygonal faces by extracting the cells face connectivity
+//     for cell in mesh.connectivity() {
+//         let num_faces = cell.num_faces();
+//         let mut polygon = Vec::new();
+//         for i in 0..num_faces {
+//             let face_connectivity = cell.get_face_connectivity(i).unwrap();
+//             let new_vertices: Vec<_> = face_connectivity
+//                 .vertex_indices()
+//                 .iter()
+//                 .copied()
+//                 .map(|v_old| {
+//                     let v_new = old_to_new_vertex_indices.len();
+//                     *old_to_new_vertex_indices.entry(v_old).or_insert(v_new)
+//                 })
+//                 .collect();
+//             polygon.extend(new_vertices);
+//         }
+//         // Remove the last vertex if it is the same as the first
+//         if let (Some(first), Some(last)) = (polygon.first(), polygon.last()) {
+//             if *first == *last {
+//                 polygon.pop();
+//             }
+//         }
+//         // Remove repeating vertices (because of the concatenation of faces)
+//         polygon.dedup();
+//
+//         faces.push(polygon.as_slice());
+//     }
+//
+//     // Reorder the old vertex indices into the order used by the extracted faces
+//     let old_vertex_indices = {
+//         let mut old_to_new_vertex_indices: Vec<(_, _)> =
+//             old_to_new_vertex_indices.into_iter().collect();
+//         old_to_new_vertex_indices
+//             .sort_unstable_by(|(_, v_new_a), (_, v_new_b)| v_new_a.cmp(v_new_b));
+//         let old_vertex_indices: Vec<_> = old_to_new_vertex_indices
+//             .into_iter()
+//             .map(|(v_old, _)| v_old)
+//             .collect();
+//         old_vertex_indices
+//     };
+//
+//     // Extract the subset of vertices required by the faces
+//     let mut vertices = Vec::with_capacity(old_vertex_indices.len());
+//     for v_old in old_vertex_indices {
+//         vertices.push(
+//             mesh.vertices()
+//                 .get(v_old)
+//                 .expect("missing vertex of cell face")
+//                 .clone(),
+//         )
+//     }
+//
+//     let cells = NestedVec::new();
+//     PolyMesh::from_poly_data(vertices, faces, cells)
+// }
