@@ -9,7 +9,7 @@ use nalgebra::{
     RealField, Scalar, VectorN, U1,
 };
 
-use crate::allocators::{BiDimAllocator, FiniteElementMatrixAllocator, SmallDimAllocator, TriDimAllocator, VolumeFiniteElementAllocator};
+use crate::allocators::{BiDimAllocator, FiniteElementMatrixAllocator, SmallDimAllocator, TriDimAllocator};
 use crate::assembly::global;
 use crate::assembly::global::{BasisFunctionBuffer, QuadratureBuffer};
 use crate::connectivity::Connectivity;
@@ -69,62 +69,6 @@ pub trait ElementMatrixAssembler<T: Scalar>: ElementConnectivityAssembler {
     ) -> eyre::Result<()>;
 
     fn as_connectivity_assembler(&self) -> &dyn ElementConnectivityAssembler;
-}
-
-/// Computes the integral of a scalar function f(X, u, grad u) over an element.
-#[allow(non_snake_case)]
-pub fn compute_element_integral<T, SolutionDim, Element, F>(
-    element: &Element,
-    u_element: &MatrixSlice<T, SolutionDim, Dynamic>,
-    quadrature: &impl Quadrature<T, Element::GeometryDim>,
-    function: F,
-) -> T
-where
-    T: RealField,
-    Element: VolumetricFiniteElement<T>,
-    Element::GeometryDim: DimName + DimMin<Element::GeometryDim, Output = Element::GeometryDim>,
-    SolutionDim: DimName,
-    DefaultAllocator: VolumeFiniteElementAllocator<T, Element::GeometryDim>
-        + Allocator<T, Element::GeometryDim, SolutionDim>
-        + Allocator<T, SolutionDim, Element::GeometryDim>
-        + Allocator<T, SolutionDim, U1>,
-    F: Fn(
-        &VectorN<T, Element::GeometryDim>,
-        &VectorN<T, SolutionDim>,
-        &MatrixMN<T, Element::GeometryDim, SolutionDim>,
-    ) -> T,
-{
-    let mut f_e = T::zero();
-
-    let weights = quadrature.weights();
-    let points = quadrature.points();
-
-    // TODO: Avoid allocation!
-    let mut basis_values = MatrixMN::<_, U1, Dynamic>::zeros(element.num_nodes());
-    let mut gradients = MatrixMN::<_, Element::GeometryDim, Dynamic>::zeros(element.num_nodes());
-
-    for (&w, xi) in weights.iter().zip(points) {
-        element.populate_basis(MatrixSliceMut::from(&mut basis_values), xi);
-        element.populate_basis_gradients(MatrixSliceMut::from(&mut gradients), xi);
-
-        // Jacobian
-        let J = element.reference_jacobian(xi);
-
-        let J_det = J.determinant();
-        let J_inv = J.try_inverse().expect("Jacobian must be invertible");
-
-        let X = element.map_reference_coords(xi);
-        let u = mat_mul_mat_transpose(u_element, &basis_values);
-        let u_grad = compute_volume_u_grad(
-            &J_inv.transpose(),
-            MatrixSlice::from(&gradients),
-            MatrixSlice::from(u_element),
-        );
-        let f = function(&X.coords, &u, &u_grad);
-        f_e += f * w * J_det.abs();
-    }
-
-    f_e
 }
 
 /// Assemble the generalized element matrix for the given element.
@@ -218,43 +162,6 @@ where
         u_grad.ger(T::one(), &phi_I_grad_ref, &u_I, T::one());
     }
     jacobian_inv_t * u_grad
-}
-
-/// Computes
-fn mat_mul_mat_transpose<'a, T, R, C>(
-    a: impl Into<MatrixSlice<'a, T, R, Dynamic>>,
-    b: impl Into<MatrixSlice<'a, T, C, Dynamic>>,
-) -> MatrixMN<T, R, C>
-where
-    T: RealField,
-    R: DimName,
-    C: DimName,
-    DefaultAllocator: Allocator<T, R, C>,
-{
-    mat_mul_mat_transpose_(a.into(), b.into())
-}
-
-/// Computes the matrix product `A * B^T` where `A` and `B` have fixed row counts, but
-/// dynamic column counts.
-fn mat_mul_mat_transpose_<'a, T, R, C>(
-    a: MatrixSlice<'a, T, R, Dynamic>,
-    b: MatrixSlice<'a, T, C, Dynamic>,
-) -> MatrixMN<T, R, C>
-where
-    T: RealField,
-    R: DimName,
-    C: DimName,
-    DefaultAllocator: Allocator<T, R, C>,
-{
-    assert_eq!(a.nrows(), b.nrows());
-    let mut result = MatrixMN::<T, R, C>::zeros();
-
-    // Compute A B^T = sum_k a_k * b_k^T   (outer product)
-    // where a_k and b_k represent column k in A and B, respectively
-    for (a_k, b_k) in a.column_iter().zip(b.column_iter()) {
-        result.ger(T::one(), &a_k, &b_k, T::one());
-    }
-    result
 }
 
 pub trait Operator {
