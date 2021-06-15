@@ -606,7 +606,7 @@ where
     fn assemble_element_matrix_into(
         &self,
         element_index: usize,
-        mut output: DMatrixSliceMut<T, U1, Dynamic>,
+        mut output: DMatrixSliceMut<T>,
     ) -> eyre::Result<()> {
         let s = self.solution_dim();
         let n = self.element_node_count(element_index);
@@ -1002,7 +1002,6 @@ pub fn assemble_element_source_vector<T, Element, Source>(
     );
 
     let quadrature_iter = izip!(quadrature_weights, quadrature_points, quadrature_data);
-
     for (weight, point, data) in quadrature_iter {
         element.populate_basis(&mut *basis_values_buffer, point);
 
@@ -1020,4 +1019,139 @@ pub fn assemble_element_source_vector<T, Element, Source>(
         let phi = MatrixSlice::from_slice_generic(&*basis_values_buffer, U1, Dynamic::new(n));
         output.gemm(*weight * j.determinant().abs(), &f, &phi, T::one());
     }
+}
+
+/// TODO: Test and document this
+pub fn assemble_element_stiffness_matrix<T, Element, Contraction>(
+    mut output: DMatrixSliceMut<T>,
+    element: &Element,
+    operator: &Contraction,
+    u_element: DVectorSlice<T>,
+    quadrature_weights: &[T],
+    quadrature_points: &[Point<T, Element::ReferenceDim>],
+    quadrature_data: &[Contraction::Parameters],
+    basis_gradients_buffer: MatrixSliceMutMN<T, Element::ReferenceDim, Dynamic>,
+) -> eyre::Result<()>
+where
+    T: RealField,
+    // We only support volumetric elements atm
+    Element: VolumetricFiniteElement<T>,
+    Contraction: EllipticContraction<T, Element::GeometryDim>,
+    DefaultAllocator: BiDimAllocator<T, Element::GeometryDim, Contraction::SolutionDim>,
+{
+    assert_eq!(quadrature_weights.len(), quadrature_points.len());
+    assert_eq!(quadrature_points.len(), quadrature_data.len());
+    assert_eq!(basis_gradients_buffer.ncols(), element.num_nodes());
+
+    let s = Contraction::SolutionDim::dim();
+    let n = element.num_nodes();
+    assert_eq!(u_element.len(), s * n, "Local element dofs (u_element) dimension mismatch");
+    assert_eq!(output.nrows(), s * n, "Output matrix dimension mismatch");
+    assert_eq!(output.ncols(), s * n, "Output matrix dimension mismatch");
+
+    let mut phi_grad = basis_gradients_buffer;
+
+    let quadrature_iter = izip!(quadrature_weights, quadrature_points, quadrature_data);
+    for (&weight, point, data) in quadrature_iter {
+        let j = element.reference_jacobian(point);
+        let j_det = j.determinant();
+        let j_inv = j
+            .try_inverse()
+            // TODO: Return a "proper" error instead of using eyre
+            .ok_or_else(|| eyre!("Singular element Jacobian encountered"))?;
+        let j_inv_t = j_inv.transpose();
+
+        // First populate gradients with respect to reference coords
+        element.populate_basis_gradients(MatrixSliceMut::from(&mut phi_grad), &point);
+
+        // TODO: Refactor this
+        // We currently have to compute u_grad by providing reference gradients
+        let u_element = MatrixSliceMN::from_slice_generic(u_element.as_slice(),
+                                                          Contraction::SolutionDim::name(),
+                                                          Dynamic::new(n));
+        let u_grad = compute_volume_u_grad(&j_inv_t, &phi_grad, u_element);
+
+        // Transform reference gradients to gradients with respect to physical coords
+        for mut phi_grad in phi_grad.column_iter_mut() {
+            let new_phi_grad = &j_inv_t * &phi_grad;
+            phi_grad.copy_from(&new_phi_grad);
+        }
+
+        // TODO: Scale during the loop up above?
+        // TODO: Or maybe we should extend the contraction trait to allow a scaling factor
+        let scale = weight * j_det.abs();
+        // We need to multiply the contraction result by the scale factor.
+        // We do this implicitly by multiplying the basis gradients by its square root.
+        // This way we don't have to allocate an additional matrix or complicate
+        // the trait.
+        let g = &mut phi_grad;
+        *g *= scale.sqrt();
+
+        operator
+            .contract_multiple_into(&mut output, data, &u_grad, &MatrixSlice::from(&*g));
+    }
+
+    Ok(())
+}
+
+/// TODO: Test and document this
+pub fn assemble_element_stiffness_vector<T, Element, Operator>(
+    mut output: DVectorSliceMut<T>,
+    element: &Element,
+    operator: &Operator,
+    u_element: DVectorSlice<T>,
+    quadrature_weights: &[T],
+    quadrature_points: &[Point<T, Element::ReferenceDim>],
+    quadrature_data: &[Operator::Parameters],
+    basis_gradients_buffer: MatrixSliceMutMN<T, Element::ReferenceDim, Dynamic>,
+) -> eyre::Result<()>
+where
+    T: RealField,
+    // We only support volumetric elements atm
+    Element: VolumetricFiniteElement<T>,
+    Operator: EllipticOperator<T, Element::GeometryDim>,
+    DefaultAllocator: BiDimAllocator<T, Element::GeometryDim, Operator::SolutionDim>,
+{
+    assert_eq!(quadrature_weights.len(), quadrature_points.len());
+    assert_eq!(quadrature_points.len(), quadrature_data.len());
+    assert_eq!(basis_gradients_buffer.ncols(), element.num_nodes());
+
+    let s = Operator::SolutionDim::dim();
+    let n = element.num_nodes();
+    assert_eq!(u_element.len(), s * n, "Local element dofs (u_element) dimension mismatch");
+    assert_eq!(output.nrows(), s * n, "Output matrix dimension mismatch");
+    assert_eq!(output.ncols(), s * n, "Output matrix dimension mismatch");
+
+    let mut phi_grad_ref = basis_gradients_buffer;
+
+    let quadrature_iter = izip!(quadrature_weights, quadrature_points, quadrature_data);
+    for (&weight, point, data) in quadrature_iter {
+        let j = element.reference_jacobian(point);
+        let j_det = j.determinant();
+        let j_inv = j
+            .try_inverse()
+            // TODO: Return a "proper" error instead of using eyre
+            .ok_or_else(|| eyre!("Singular element Jacobian encountered"))?;
+        let j_inv_t = j_inv.transpose();
+
+        // First populate gradients with respect to reference coords
+        element.populate_basis_gradients(MatrixSliceMut::from(&mut phi_grad_ref), &point);
+
+        let u_element = MatrixSliceMN::from_slice_generic(u_element.as_slice(),
+                                                          Operator::SolutionDim::name(),
+                                                          Dynamic::new(n));
+        let u_grad = compute_volume_u_grad(&j_inv_t, &phi_grad_ref, u_element);
+
+        // TODO: Document what's going on here
+        let g = operator.compute_elliptic_term(&u_grad, data);
+        let g_t_j_inv_t = g.transpose() * j_inv_t;
+        output.gemm(
+            weight * j_det.abs(),
+            &g_t_j_inv_t,
+            &phi_grad_ref,
+            T::one(),
+        );
+    }
+
+    Ok(())
 }
