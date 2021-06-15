@@ -6,15 +6,16 @@ use fenris::assembly::global::{
     SerialVectorAssembler,
 };
 use fenris::assembly::local::{
-    ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, EllipticContraction, Operator,
+    ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, Operator,
     SourceFunction, UniformQuadratureTable,
 };
 use fenris::io::vtk::FiniteElementMeshDataSetBuilder;
 use fenris::mesh::QuadMesh2d;
-use fenris::nalgebra::{DMatrix, DVector, MatrixMN, Point2, VectorN, U1, U2};
+use fenris::nalgebra::{DMatrix, DVector, Point2, U1, U2};
 use fenris::nalgebra_sparse::CsrMatrix;
 use fenris::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::quadrature;
+use fenris::assembly::operators::LaplaceOperator;
 
 fn main() -> eyre::Result<()> {
     // TODO: Make it easy to construct triangle meshes as well.
@@ -51,7 +52,7 @@ fn assemble_linear_system(mesh: &QuadMesh2d<f64>) -> eyre::Result<(CsrMatrix<f64
     // for building the local element matrices corresponding to each element
     let laplace_assembler = ElementEllipticAssemblerBuilder::new()
         .with_finite_element_space(mesh)
-        .with_operator(&LaplaceOperator2d)
+        .with_operator(&LaplaceOperator)
         .with_quadrature_table(&quadrature)
         // TODO: If the operator is linear, u is not actually needed...
         // How to reflect this in the API?
@@ -66,7 +67,7 @@ fn assemble_linear_system(mesh: &QuadMesh2d<f64>) -> eyre::Result<(CsrMatrix<f64
     let source_assembler = ElementSourceAssemblerBuilder::new()
         .with_finite_element_space(mesh)
         .with_quadrature_table(&quadrature)
-        .with_source(&Source)
+        .with_source(&PoissonProblemSourceFunction)
         .build();
 
     let mut b_global = vector_assembler.assemble_vector(&source_assembler)?;
@@ -98,39 +99,16 @@ fn solve_linear_system(matrix: &CsrMatrix<f64>, rhs: &DVector<f64>) -> eyre::Res
     Ok(cholesky.solve(rhs))
 }
 
-pub struct LaplaceOperator2d;
+/// Represents the source function `f` in the poisson equation - Delta u = f.
+struct PoissonProblemSourceFunction;
 
-// Declare properties of the Laplace operator
-impl Operator for LaplaceOperator2d {
-    // The Laplace operator operates on scalar values, so the dimension of our solution variable
-    // is 1
-    type SolutionDim = U1;
-    // There are no parameters (density, stiffness, temperature etc.) associated with the Laplace
-    // operator
-    type Parameters = ();
-}
-
-impl EllipticContraction<f64, U2> for LaplaceOperator2d {
-    // TODO: Document
-    fn contract(
-        &self,
-        _gradient: &MatrixMN<f64, U2, Self::SolutionDim>,
-        _data: &Self::Parameters,
-        a: &VectorN<f64, U2>,
-        b: &VectorN<f64, U2>,
-    ) -> MatrixMN<f64, Self::SolutionDim, Self::SolutionDim> {
-        Vector1::new(a.dot(&b))
-    }
-}
-
-struct Source;
-
-impl Operator for Source {
+impl Operator for PoissonProblemSourceFunction {
+    /// f maps R^2 to R^1 (U1)
     type SolutionDim = U1;
     type Parameters = ();
 }
 
-impl SourceFunction<f64, U2> for Source {
+impl SourceFunction<f64, U2> for PoissonProblemSourceFunction {
     fn evaluate(&self, _coords: &Point2<f64>, _data: &Self::Parameters) -> Vector1<f64> {
         // TODO: Use a more interesting function than a constant function
         Vector1::new(1.0)
