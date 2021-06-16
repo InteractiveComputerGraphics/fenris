@@ -3,23 +3,25 @@
 //! The problem is:
 //!   - Delta u = f,
 //! where Delta = nabla^2 is the Laplace operator.
-use fenris::nalgebra::{Point2, Vector2, DVector, U2, VectorN, Vector1, Point, U1, DMatrix};
-use fenris::procedural::create_unit_square_uniform_quad_mesh_2d;
-use fenris::mesh::QuadMesh2d;
-use fenris::nalgebra_sparse::CsrMatrix;
-use fenris::{quadrature};
-use fenris::assembly::local::{UniformQuadratureTable, SourceFunction, Operator, ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder};
-use fenris::assembly::global::{SerialVectorAssembler, CsrAssembler, apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, gather_global_to_local};
-use fenris::assembly::operators::LaplaceOperator;
-use eyre::eyre;
-use fenris::error::{ErrorWorkspace, estimate_element_L2_error_squared};
-use fenris::element::{ElementConnectivity};
-use fenris::connectivity::Connectivity;
-use nalgebra::{MatrixSliceMN, Dynamic, UniformNorm};
-use fenris::nalgebra::coordinates::XY;
 use std::f64::consts::PI;
 use std::ops::Deref;
+
+use eyre::eyre;
+use nalgebra::{Dynamic, MatrixSliceMN, UniformNorm};
+
+use fenris::quadrature;
+use fenris::assembly::global::{apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, CsrAssembler, gather_global_to_local, SerialVectorAssembler};
+use fenris::assembly::local::{ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, SourceFunction, UniformQuadratureTable};
+use fenris::assembly::operators::{LaplaceOperator, Operator};
+use fenris::connectivity::Connectivity;
+use fenris::element::ElementConnectivity;
+use fenris::error::{ErrorWorkspace, estimate_element_L2_error_squared};
 use fenris::io::vtk::FiniteElementMeshDataSetBuilder;
+use fenris::mesh::QuadMesh2d;
+use fenris::nalgebra::{DMatrix, DVector, Point, Point2, U1, U2, Vector1, Vector2, VectorN};
+use fenris::nalgebra::coordinates::XY;
+use fenris::nalgebra_sparse::CsrMatrix;
+use fenris::procedural::create_unit_square_uniform_quad_mesh_2d;
 
 fn sin(x: f64) -> f64 { x.sin() }
 // fn cos(x: f64) -> f64 { x.cos() }

@@ -1,27 +1,27 @@
 use std::cell::{RefCell, RefMut};
-use std::ops::AddAssign;
 
 use eyre::eyre;
 use itertools::izip;
-use nalgebra::base::allocator::Allocator;
 use nalgebra::{
-    DMatrix, DMatrixSliceMut, DefaultAllocator, DimMin, DimName, Dynamic, MatrixMN, MatrixSliceMN,
-    RealField, Scalar, VectorN, U1,
+    DefaultAllocator, DimMin, DimName, DMatrix, DMatrixSliceMut, Dynamic, MatrixMN, MatrixSliceMN,
+    RealField, Scalar, U1, VectorN,
 };
+use nalgebra::base::allocator::Allocator;
 
 use crate::allocators::{
     BiDimAllocator, FiniteElementMatrixAllocator, SmallDimAllocator, TriDimAllocator,
 };
 use crate::assembly::global;
 use crate::assembly::global::{BasisFunctionBuffer, QuadratureBuffer};
+use crate::assembly::operators::{EllipticContraction, EllipticOperator, Operator};
 use crate::connectivity::Connectivity;
 use crate::element::{MatrixSlice, MatrixSliceMut, VolumetricFiniteElement};
 use crate::mesh::Mesh;
 use crate::nalgebra::{DVector, DVectorSlice, DVectorSliceMut, MatrixSliceMutMN, Point};
 use crate::quadrature::Quadrature;
+use crate::SmallDim;
 use crate::space::{ElementInSpace, FiniteElementConnectivity, VolumetricFiniteElementSpace};
 use crate::workspace::Workspace;
-use crate::SmallDim;
 
 pub trait ElementConnectivityAssembler {
     fn solution_dim(&self) -> usize;
@@ -164,90 +164,6 @@ where
         u_grad.ger(T::one(), &phi_I_grad_ref, &u_I, T::one());
     }
     jacobian_inv_t * u_grad
-}
-
-pub trait Operator {
-    type SolutionDim: SmallDim;
-
-    /// The parameters associated with the operator.
-    ///
-    /// Typically this encodes material information, such as density, stiffness and other physical
-    /// quantities. This is intended to be paired with data associated with individual
-    /// quadrature points during numerical integration.
-    type Parameters: Default + Clone + 'static;
-}
-
-pub trait EllipticOperator<T, GeometryDim>: Operator
-where
-    T: Scalar,
-    GeometryDim: SmallDim,
-    DefaultAllocator: Allocator<T, GeometryDim, Self::SolutionDim>,
-{
-    /// TODO: Find better name
-    fn compute_elliptic_term(
-        &self,
-        gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
-        data: &Self::Parameters,
-    ) -> MatrixMN<T, GeometryDim, Self::SolutionDim>;
-}
-
-pub trait EllipticContraction<T, GeometryDim>: Operator
-where
-    T: RealField,
-    GeometryDim: SmallDim,
-    DefaultAllocator: BiDimAllocator<T, GeometryDim, Self::SolutionDim>,
-{
-    fn contract(
-        &self,
-        gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
-        data: &Self::Parameters,
-        a: &VectorN<T, GeometryDim>,
-        b: &VectorN<T, GeometryDim>,
-    ) -> MatrixMN<T, Self::SolutionDim, Self::SolutionDim>;
-
-    /// Compute multiple contractions and store the result in the provided matrix.
-    ///
-    /// The matrix `a` is a `GeometryDim x NodalDim` sized matrix, in which each column
-    /// corresponds to a vector of dimension `GeometryDim`. The output matrix is a square matrix
-    /// with row and col dimensions `SolutionDim * NodalDim`, consisting of `NodalDim x NodalDim`
-    /// block matrices, each with dimension `SolutionDim x SolutionDim`.
-    ///
-    /// Let c(gradient, a, b) denote the contraction of vectors a and b.
-    /// Then the result of c(gradient, a_I, a_J) for each I, J in the range `(0 .. NodalDim)`
-    /// must be *added* to `output_IJ`, where `output_IJ` is the `SolutionDim x SolutionDim`
-    /// block matrix corresponding to nodes `I` and `J`.
-    fn contract_multiple_into(
-        &self,
-        output: &mut DMatrixSliceMut<T>,
-        data: &Self::Parameters,
-        gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
-        a: &MatrixSliceMN<T, GeometryDim, Dynamic>,
-    ) {
-        let num_nodes = a.ncols();
-        let output_dim = num_nodes * Self::SolutionDim::dim();
-        assert_eq!(output_dim, output.nrows());
-        assert_eq!(output_dim, output.ncols());
-
-        let sdim = Self::SolutionDim::dim();
-        for i in 0..num_nodes {
-            for j in i..num_nodes {
-                let a_i = a.fixed_slice::<GeometryDim, U1>(0, i).clone_owned();
-                let a_j = a.fixed_slice::<GeometryDim, U1>(0, j).clone_owned();
-                let contraction = self.contract(gradient, data, &a_i, &a_j);
-                output
-                    .fixed_slice_mut::<Self::SolutionDim, Self::SolutionDim>(i * sdim, j * sdim)
-                    .add_assign(&contraction);
-
-                // TODO: We currently assume symmetry. Should maybe have a method that
-                // says whether it is symmetric or not?
-                if i != j {
-                    output
-                        .fixed_slice_mut::<Self::SolutionDim, Self::SolutionDim>(j * sdim, i * sdim)
-                        .add_assign(&contraction.transpose());
-                }
-            }
-        }
-    }
 }
 
 pub trait ElementVectorAssembler<T: Scalar>: ElementConnectivityAssembler {

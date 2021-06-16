@@ -1,21 +1,21 @@
+use eyre::eyre;
 use nalgebra::Vector1;
 
-use eyre::eyre;
 use fenris::assembly::global::{
     apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, CsrAssembler,
     SerialVectorAssembler,
 };
 use fenris::assembly::local::{
-    ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, Operator,
+    ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder,
     SourceFunction, UniformQuadratureTable,
 };
+use fenris::assembly::operators::{LaplaceOperator, Operator};
 use fenris::io::vtk::FiniteElementMeshDataSetBuilder;
 use fenris::mesh::QuadMesh2d;
 use fenris::nalgebra::{DMatrix, DVector, Point2, U1, U2};
 use fenris::nalgebra_sparse::CsrMatrix;
 use fenris::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::quadrature;
-use fenris::assembly::operators::LaplaceOperator;
 
 fn main() -> eyre::Result<()> {
     // TODO: Make it easy to construct triangle meshes as well.
