@@ -226,25 +226,6 @@ where
                 .copy_from(&u_global.index((sol_dim * i_global..sol_dim * i_global + sol_dim, ..)));
         }
     }
-
-    /// Temporary function to avoid breaking tests.
-    ///
-    /// Instead of populating a matrix, it returns a heap-allocated one. This makes it compatible
-    /// with the old version which worked with compile-time node counts.
-    /// TODO: Remove this once we've rewritten tests
-    fn element_variables<'a, SolutionDim>(
-        &self,
-        u_global: impl Into<DVectorSlice<'a, T>>,
-    ) -> MatrixMN<T, SolutionDim, Dynamic>
-    where
-        T: Zero,
-        SolutionDim: DimName,
-    {
-        let mut u_local = MatrixMN::<_, SolutionDim, Dynamic>::zeros(self.vertex_indices().len());
-        let u_local_slice = MatrixSliceMut::<_, SolutionDim, _>::from(&mut u_local);
-        self.populate_element_variables(u_local_slice, u_global);
-        u_local
-    }
 }
 
 /// A finite element whose geometry dimension and reference dimension coincide.
