@@ -134,6 +134,7 @@ where
     DefaultAllocator: BiDimAllocator<T, GeometryDim, Self::SolutionDim>,
 {
     fn compute_energy(
+        &self,
         gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
         parameters: &Self::Parameters,
     ) -> T;

@@ -13,7 +13,7 @@ use crate::allocators::{
 };
 use crate::assembly::global;
 use crate::assembly::global::{BasisFunctionBuffer, QuadratureBuffer};
-use crate::assembly::operators::{EllipticContraction, EllipticOperator, Operator};
+use crate::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
 use crate::connectivity::Connectivity;
 use crate::element::{MatrixSlice, MatrixSliceMut, VolumetricFiniteElement};
 use crate::mesh::Mesh;
@@ -1078,4 +1078,83 @@ where
     }
 
     Ok(())
+}
+
+/// Numerically integrate the elliptic energy over the given element.
+///
+/// Using the provided weights of `u` associated with the finite element, the provided quadrature
+/// and provided finite element $K$, this function approximates the integral
+///
+/// $$ \int_K \psi(\nabla u_h) \dx. $$
+///
+/// See the documentation for [`EllipticEnergy`] for more information about elliptic energies.
+///
+/// The computation requires a buffer for evaluating gradients. The buffer must be able to
+/// store gradients for each node in the element.
+///
+/// # Panics
+///
+/// Panics if the quadrature data arrays do not have the same lengths.
+///
+/// Panics if the number of columns in the gradient buffer is not equal to the number of nodes
+/// in the element.
+pub fn compute_element_elliptic_energy<T, Element, Operator>(
+    element: &Element,
+    operator: &Operator,
+    u_element: DVectorSlice<T>,
+    quadrature_weights: &[T],
+    quadrature_points: &[Point<T, Element::ReferenceDim>],
+    quadrature_data: &[Operator::Parameters],
+    basis_gradients_buffer: MatrixSliceMutMN<T, Element::ReferenceDim, Dynamic>,
+) -> eyre::Result<T>
+where
+    T: RealField,
+    // We only support volumetric elements atm
+    Element: VolumetricFiniteElement<T>,
+    Operator: EllipticEnergy<T, Element::GeometryDim>,
+    DefaultAllocator: BiDimAllocator<T, Element::GeometryDim, Operator::SolutionDim>,
+{
+    assert_eq!(quadrature_weights.len(), quadrature_points.len());
+    assert_eq!(quadrature_points.len(), quadrature_data.len());
+    assert_eq!(basis_gradients_buffer.ncols(), element.num_nodes());
+
+    let s = Operator::SolutionDim::dim();
+    let n = element.num_nodes();
+    assert_eq!(
+        u_element.len(),
+        s * n,
+        "Local element dofs (u_element) dimension mismatch"
+    );
+
+    let mut phi_grad_ref = basis_gradients_buffer;
+
+    let mut integral = T::zero();
+    let quadrature_iter = izip!(quadrature_weights, quadrature_points, quadrature_data);
+    for (&weight, point, data) in quadrature_iter {
+        // All this stuff is basically the same for energy, vector and matrix. TODO: Consolidate?
+
+        let j = element.reference_jacobian(point);
+        let j_det = j.determinant();
+        let j_inv = j
+            .try_inverse()
+            // TODO: Return a "proper" error instead of using eyre
+            .ok_or_else(|| eyre!("Singular element Jacobian encountered"))?;
+        let j_inv_t = j_inv.transpose();
+
+        // First populate gradients with respect to reference coords
+        element.populate_basis_gradients(MatrixSliceMut::from(&mut phi_grad_ref), &point);
+
+        let u_element = MatrixSliceMN::from_slice_generic(
+            u_element.as_slice(),
+            Operator::SolutionDim::name(),
+            Dynamic::new(n),
+        );
+        let u_grad = compute_volume_u_grad(&j_inv_t, &phi_grad_ref, u_element);
+
+        let psi = operator.compute_energy(&u_grad, data);
+
+        integral += weight * j_det.abs() * psi;
+    }
+
+    Ok(integral)
 }

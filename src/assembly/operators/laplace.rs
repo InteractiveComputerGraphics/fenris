@@ -31,6 +31,7 @@ where
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     fn compute_energy(
+        &self,
         gradient: &MatrixMN<T, D, Self::SolutionDim>,
         _parameters: &Self::Parameters,
     ) -> T {
