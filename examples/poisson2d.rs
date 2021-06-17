@@ -6,8 +6,8 @@ use fenris::assembly::global::{
     SerialVectorAssembler,
 };
 use fenris::assembly::local::{
-    ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder,
-    SourceFunction, UniformQuadratureTable,
+    ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, SourceFunction,
+    UniformQuadratureTable,
 };
 use fenris::assembly::operators::{LaplaceOperator, Operator};
 use fenris::io::vtk::FiniteElementMeshDataSetBuilder;

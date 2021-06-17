@@ -9,21 +9,29 @@ use std::ops::Deref;
 use eyre::eyre;
 use nalgebra::{Dynamic, MatrixSliceMN, UniformNorm};
 
-use fenris::quadrature;
-use fenris::assembly::global::{apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, CsrAssembler, gather_global_to_local, SerialVectorAssembler};
-use fenris::assembly::local::{ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, SourceFunction, UniformQuadratureTable};
+use fenris::assembly::global::{
+    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, gather_global_to_local,
+    CsrAssembler, SerialVectorAssembler,
+};
+use fenris::assembly::local::{
+    ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, SourceFunction,
+    UniformQuadratureTable,
+};
 use fenris::assembly::operators::{LaplaceOperator, Operator};
 use fenris::connectivity::Connectivity;
 use fenris::element::ElementConnectivity;
-use fenris::error::{ErrorWorkspace, estimate_element_L2_error_squared};
+use fenris::error::{estimate_element_L2_error_squared, ErrorWorkspace};
 use fenris::io::vtk::FiniteElementMeshDataSetBuilder;
 use fenris::mesh::QuadMesh2d;
-use fenris::nalgebra::{DMatrix, DVector, Point, Point2, U1, U2, Vector1, Vector2, VectorN};
 use fenris::nalgebra::coordinates::XY;
+use fenris::nalgebra::{DMatrix, DVector, Point, Point2, Vector1, Vector2, VectorN, U1, U2};
 use fenris::nalgebra_sparse::CsrMatrix;
 use fenris::procedural::create_unit_square_uniform_quad_mesh_2d;
+use fenris::quadrature;
 
-fn sin(x: f64) -> f64 { x.sin() }
+fn sin(x: f64) -> f64 {
+    x.sin()
+}
 // fn cos(x: f64) -> f64 { x.cos() }
 
 // Exact solution
@@ -53,7 +61,11 @@ impl Operator for PoissonProblemSourceFunction {
 }
 
 impl SourceFunction<f64, U2> for PoissonProblemSourceFunction {
-    fn evaluate(&self, coords: &Point<f64, U2>, _data: &Self::Parameters) -> VectorN<f64, Self::SolutionDim> {
+    fn evaluate(
+        &self,
+        coords: &Point<f64, U2>,
+        _data: &Self::Parameters,
+    ) -> VectorN<f64, Self::SolutionDim> {
         Vector1::new(f(coords))
     }
 }
@@ -96,7 +108,9 @@ fn assemble_linear_system(mesh: &QuadMesh2d<f64>) -> eyre::Result<(CsrMatrix<f64
         .iter()
         .enumerate()
         // TODO: Clean this up a bit
-        .filter_map(|(idx, x)| ((x.coords - Vector2::new(0.5, 0.5)).apply_norm(&UniformNorm) > 0.4999).then(|| idx))
+        .filter_map(|(idx, x)| {
+            ((x.coords - Vector2::new(0.5, 0.5)).apply_norm(&UniformNorm) > 0.4999).then(|| idx)
+        })
         .collect();
 
     apply_homogeneous_dirichlet_bc_csr(&mut a_global, &dirichlet_nodes, 1);
@@ -129,15 +143,26 @@ fn poisson_2d_quad4() {
         // TODO: Clean all this up
         let mut error_workspace = ErrorWorkspace::default();
         let error_quadrature = quadrature::tensor::quadrilateral_gauss(4);
-        let l2_error = mesh.connectivity()
+        let l2_error = mesh
+            .connectivity()
             .iter()
             .map(|conn| {
                 let num_nodes = conn.vertex_indices().len();
                 let mut u_local = DVector::zeros(num_nodes);
                 gather_global_to_local(&u_h, &mut u_local, conn.vertex_indices(), 1);
                 let element = conn.element(mesh.vertices()).unwrap();
-                let u_h_element = MatrixSliceMN::from_slice_generic(&u_local.as_slice(), U1, Dynamic::new(num_nodes));
-                estimate_element_L2_error_squared(&mut error_workspace, &element, |x, _| Vector1::new(u_exact(x)), u_h_element, &error_quadrature)
+                let u_h_element = MatrixSliceMN::from_slice_generic(
+                    &u_local.as_slice(),
+                    U1,
+                    Dynamic::new(num_nodes),
+                );
+                estimate_element_L2_error_squared(
+                    &mut error_workspace,
+                    &element,
+                    |x, _| Vector1::new(u_exact(x)),
+                    u_h_element,
+                    &error_quadrature,
+                )
             })
             .sum::<f64>()
             .sqrt();
@@ -147,19 +172,25 @@ fn poisson_2d_quad4() {
         FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
             .with_title(format!("Poisson 2D FEM Res {}", cells_per_dim))
             .with_point_scalar_attributes("u_h", u_h.as_slice())
-            .try_export(format!("data/convergence_tests/poisson_2d_mms/poisson2d_mms_approx_res_{}.vtu", cells_per_dim))
+            .try_export(format!(
+                "data/convergence_tests/poisson_2d_mms/poisson2d_mms_approx_res_{}.vtu",
+                cells_per_dim
+            ))
             .unwrap();
 
         // Evaluate u_exact at mesh vertices
-        let u_exact_vector: Vec<_> = mesh.vertices()
-                .iter()
-                .map(|x| u_exact(x))
-                .collect();
+        let u_exact_vector: Vec<_> = mesh.vertices().iter().map(|x| u_exact(x)).collect();
 
         FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
-            .with_title(format!("Poisson 2D FEM Exact solution Res {}", cells_per_dim))
+            .with_title(format!(
+                "Poisson 2D FEM Exact solution Res {}",
+                cells_per_dim
+            ))
             .with_point_scalar_attributes("u_exact", &u_exact_vector)
-            .try_export(format!("data/convergence_tests/poisson_2d_mms/poisson2d_mms_exact_res_{}.vtu", cells_per_dim))
+            .try_export(format!(
+                "data/convergence_tests/poisson_2d_mms/poisson2d_mms_exact_res_{}.vtu",
+                cells_per_dim
+            ))
             .unwrap();
     }
 }

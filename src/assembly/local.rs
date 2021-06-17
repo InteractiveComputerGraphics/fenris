@@ -2,11 +2,11 @@ use std::cell::{RefCell, RefMut};
 
 use eyre::eyre;
 use itertools::izip;
-use nalgebra::{
-    DefaultAllocator, DimMin, DimName, DMatrix, DMatrixSliceMut, Dynamic, MatrixMN, MatrixSliceMN,
-    RealField, Scalar, U1, VectorN,
-};
 use nalgebra::base::allocator::Allocator;
+use nalgebra::{
+    DMatrix, DMatrixSliceMut, DefaultAllocator, DimMin, DimName, Dynamic, MatrixMN, MatrixSliceMN,
+    RealField, Scalar, VectorN, U1,
+};
 
 use crate::allocators::{
     BiDimAllocator, FiniteElementMatrixAllocator, SmallDimAllocator, TriDimAllocator,
@@ -19,9 +19,9 @@ use crate::element::{MatrixSlice, MatrixSliceMut, VolumetricFiniteElement};
 use crate::mesh::Mesh;
 use crate::nalgebra::{DVector, DVectorSlice, DVectorSliceMut, MatrixSliceMutMN, Point};
 use crate::quadrature::Quadrature;
-use crate::SmallDim;
 use crate::space::{ElementInSpace, FiniteElementConnectivity, VolumetricFiniteElementSpace};
 use crate::workspace::Workspace;
+use crate::SmallDim;
 
 pub trait ElementConnectivityAssembler {
     fn solution_dim(&self) -> usize;
@@ -963,7 +963,11 @@ where
 
     let s = Contraction::SolutionDim::dim();
     let n = element.num_nodes();
-    assert_eq!(u_element.len(), s * n, "Local element dofs (u_element) dimension mismatch");
+    assert_eq!(
+        u_element.len(),
+        s * n,
+        "Local element dofs (u_element) dimension mismatch"
+    );
     assert_eq!(output.nrows(), s * n, "Output matrix dimension mismatch");
     assert_eq!(output.ncols(), s * n, "Output matrix dimension mismatch");
 
@@ -984,9 +988,11 @@ where
 
         // TODO: Refactor this
         // We currently have to compute u_grad by providing reference gradients
-        let u_element = MatrixSliceMN::from_slice_generic(u_element.as_slice(),
-                                                          Contraction::SolutionDim::name(),
-                                                          Dynamic::new(n));
+        let u_element = MatrixSliceMN::from_slice_generic(
+            u_element.as_slice(),
+            Contraction::SolutionDim::name(),
+            Dynamic::new(n),
+        );
         let u_grad = compute_volume_u_grad(&j_inv_t, &phi_grad, u_element);
 
         // Transform reference gradients to gradients with respect to physical coords
@@ -1005,8 +1011,7 @@ where
         let g = &mut phi_grad;
         *g *= scale.sqrt();
 
-        operator
-            .contract_multiple_into(&mut output, data, &u_grad, &MatrixSlice::from(&*g));
+        operator.contract_multiple_into(&mut output, data, &u_grad, &MatrixSlice::from(&*g));
     }
 
     Ok(())
@@ -1036,7 +1041,11 @@ where
 
     let s = Operator::SolutionDim::dim();
     let n = element.num_nodes();
-    assert_eq!(u_element.len(), s * n, "Local element dofs (u_element) dimension mismatch");
+    assert_eq!(
+        u_element.len(),
+        s * n,
+        "Local element dofs (u_element) dimension mismatch"
+    );
     assert_eq!(output.nrows(), s * n, "Output matrix dimension mismatch");
     assert_eq!(output.ncols(), s * n, "Output matrix dimension mismatch");
 
@@ -1055,20 +1064,17 @@ where
         // First populate gradients with respect to reference coords
         element.populate_basis_gradients(MatrixSliceMut::from(&mut phi_grad_ref), &point);
 
-        let u_element = MatrixSliceMN::from_slice_generic(u_element.as_slice(),
-                                                          Operator::SolutionDim::name(),
-                                                          Dynamic::new(n));
+        let u_element = MatrixSliceMN::from_slice_generic(
+            u_element.as_slice(),
+            Operator::SolutionDim::name(),
+            Dynamic::new(n),
+        );
         let u_grad = compute_volume_u_grad(&j_inv_t, &phi_grad_ref, u_element);
 
         // TODO: Document what's going on here
         let g = operator.compute_elliptic_term(&u_grad, data);
         let g_t_j_inv_t = g.transpose() * j_inv_t;
-        output.gemm(
-            weight * j_det.abs(),
-            &g_t_j_inv_t,
-            &phi_grad_ref,
-            T::one(),
-        );
+        output.gemm(weight * j_det.abs(), &g_t_j_inv_t, &phi_grad_ref, T::one());
     }
 
     Ok(())

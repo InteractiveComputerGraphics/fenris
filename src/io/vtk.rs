@@ -17,8 +17,8 @@ use std::convert::TryInto;
 use crate::vtkio::model::{Attributes, ByteOrder, DataArray, Piece, Version, Vtk};
 pub use fenris_geometry::vtkio::*;
 use num::ToPrimitive;
-use std::path::Path;
 use std::fs::create_dir_all;
+use std::path::Path;
 
 /// Represents connectivity that is supported by VTK.
 pub trait VtkCellConnectivity: Connectivity {

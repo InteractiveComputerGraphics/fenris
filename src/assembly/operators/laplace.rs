@@ -1,6 +1,6 @@
-use crate::allocators::{SmallDimAllocator, BiDimAllocator};
-use crate::assembly::operators::{EllipticContraction, Operator, EllipticEnergy, EllipticOperator};
-use crate::nalgebra::{DefaultAllocator, MatrixMN, RealField, U1, Vector1, VectorN};
+use crate::allocators::{BiDimAllocator, SmallDimAllocator};
+use crate::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
+use crate::nalgebra::{DefaultAllocator, MatrixMN, RealField, Vector1, VectorN, U1};
 use crate::SmallDim;
 use numeric_literals::replace_float_literals;
 
@@ -27,11 +27,13 @@ impl<T, D> EllipticEnergy<T, D> for LaplaceOperator
 where
     T: RealField,
     D: SmallDim,
-    DefaultAllocator: BiDimAllocator<T, D, Self::SolutionDim>
+    DefaultAllocator: BiDimAllocator<T, D, Self::SolutionDim>,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
-    fn compute_energy(gradient: &MatrixMN<T, D, Self::SolutionDim>,
-                      _parameters: &Self::Parameters) -> T {
+    fn compute_energy(
+        gradient: &MatrixMN<T, D, Self::SolutionDim>,
+        _parameters: &Self::Parameters,
+    ) -> T {
         0.5 * gradient.dot(&gradient)
     }
 }
@@ -40,11 +42,13 @@ impl<T, D> EllipticOperator<T, D> for LaplaceOperator
 where
     T: RealField,
     D: SmallDim,
-    DefaultAllocator: BiDimAllocator<T, D, Self::SolutionDim>
+    DefaultAllocator: BiDimAllocator<T, D, Self::SolutionDim>,
 {
-    fn compute_elliptic_term(&self,
-                             gradient: &MatrixMN<T, D, Self::SolutionDim>,
-                             _data: &Self::Parameters) -> MatrixMN<T, D, Self::SolutionDim> {
+    fn compute_elliptic_term(
+        &self,
+        gradient: &MatrixMN<T, D, Self::SolutionDim>,
+        _data: &Self::Parameters,
+    ) -> MatrixMN<T, D, Self::SolutionDim> {
         gradient.clone()
     }
 }
@@ -53,7 +57,7 @@ impl<T, D> EllipticContraction<T, D> for LaplaceOperator
 where
     T: RealField,
     D: SmallDim,
-    DefaultAllocator: SmallDimAllocator<T, D>
+    DefaultAllocator: SmallDimAllocator<T, D>,
 {
     // TODO: Document
     fn contract(

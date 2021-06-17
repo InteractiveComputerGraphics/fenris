@@ -4,11 +4,14 @@ use proptest::collection::vec;
 use proptest::num::i32;
 use proptest::prelude::*;
 
-use fenris::assembly::global::{apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_matrix, CsrAssembler, CsrParAssembler, gather_global_to_local};
-use fenris::nalgebra::{DMatrix, DVector, U2};
-use fenris::nalgebra_sparse::CsrMatrix;
-use fenris::nalgebra_sparse::pattern::SparsityPattern;
+use fenris::assembly::global::{
+    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_matrix,
+    gather_global_to_local, CsrAssembler, CsrParAssembler,
+};
 use fenris::assembly::local::ElementConnectivityAssembler;
+use fenris::nalgebra::{DMatrix, DVector, U2};
+use fenris::nalgebra_sparse::pattern::SparsityPattern;
+use fenris::nalgebra_sparse::CsrMatrix;
 
 #[test]
 fn apply_homogeneous_dirichlet_bc_matrix_simple_example() {

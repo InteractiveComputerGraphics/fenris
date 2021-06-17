@@ -3,8 +3,8 @@
 // use fenris_solid::ElasticMaterialModel;
 // use fenris_solid::ElasticityModel;
 
-mod local;
 mod global;
+mod local;
 
 // TODO: Re-enable/rewrite tests here as appropriate when possible (most tests rely on some
 // solid mechanics stuff)

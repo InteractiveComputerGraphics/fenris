@@ -1,8 +1,11 @@
 use std::ops::AddAssign;
 
-use crate::allocators::{BiDimAllocator};
-use crate::nalgebra::{DefaultAllocator, DimName, DMatrixSliceMut, Dynamic, MatrixMN, MatrixSliceMN, RealField, Scalar, U1, VectorN};
+use crate::allocators::BiDimAllocator;
 use crate::nalgebra::allocator::Allocator;
+use crate::nalgebra::{
+    DMatrixSliceMut, DefaultAllocator, DimName, Dynamic, MatrixMN, MatrixSliceMN, RealField,
+    Scalar, VectorN, U1,
+};
 use crate::SmallDim;
 
 mod laplace;
@@ -124,12 +127,14 @@ where
 ///
 /// TODO: Extend elliptic energy to have an additional domain dependence,
 /// e.g. $\psi = \psi(x, \nabla u)$.
-pub trait EllipticEnergy<T, GeometryDim> : Operator
+pub trait EllipticEnergy<T, GeometryDim>: Operator
 where
     T: RealField,
     GeometryDim: SmallDim,
     DefaultAllocator: BiDimAllocator<T, GeometryDim, Self::SolutionDim>,
 {
-    fn compute_energy(gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
-                      parameters: &Self::Parameters) -> T;
+    fn compute_energy(
+        gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
+        parameters: &Self::Parameters,
+    ) -> T;
 }
