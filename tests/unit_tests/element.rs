@@ -639,8 +639,6 @@ proptest! {
         let element = Tet4Element::reference();
         let phi = element.evaluate_basis(&xi);
         let phi_sum: f64 = phi.sum();
-
-        dbg!(phi_sum);
         prop_assert!( (phi_sum - 1.0f64).abs() <= 1e-12);
     }
 
@@ -649,8 +647,6 @@ proptest! {
         let element = Tet10Element::reference();
         let phi = element.evaluate_basis(&xi);
         let phi_sum: f64 = phi.sum();
-
-        dbg!(phi_sum);
         prop_assert!( (phi_sum - 1.0f64).abs() <= 1e-12);
     }
 
@@ -659,8 +655,6 @@ proptest! {
         let element = Hex8Element::reference();
         let phi = element.evaluate_basis(&xi);
         let phi_sum: f64 = phi.sum();
-
-        dbg!(phi_sum);
         prop_assert!( (phi_sum - 1.0f64).abs() <= 1e-12);
     }
 
@@ -846,7 +840,7 @@ proptest! {
         // Function is x = f(xi)
         let f = VectorFunctionBuilder::with_dimension(3).with_function(move |x, xi| {
             let xi = Point::from(xi.fixed_slice::<U3, U1>(0, 0).clone_owned());
-            x.copy_from(&dbg!(tet.map_reference_coords(&xi).coords));
+            x.copy_from(&tet.map_reference_coords(&xi).coords);
         });
 
         let j = tet.reference_jacobian(&xi);
@@ -859,6 +853,6 @@ proptest! {
         (tet, xi) in (any::<Tet4Element<f64>>(), point_in_tet_ref_domain())
     ) {
         let j = tet.reference_jacobian(&xi);
-        prop_assert!(dbg!(j.determinant()) >= 0.0);
+        prop_assert!(j.determinant() >= 0.0);
     }
 }
