@@ -147,7 +147,7 @@ fn poisson_2d_quad4() {
         FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
             .with_title(format!("Poisson 2D FEM Res {}", cells_per_dim))
             .with_point_scalar_attributes("u_h", u_h.as_slice())
-            .try_export(format!("poisson2d_mms_approx_res_{}.vtu", cells_per_dim))
+            .try_export(format!("data/convergence_tests/poisson_2d_mms/poisson2d_mms_approx_res_{}.vtu", cells_per_dim))
             .unwrap();
 
         // Evaluate u_exact at mesh vertices

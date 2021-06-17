@@ -18,6 +18,7 @@ use crate::vtkio::model::{Attributes, ByteOrder, DataArray, Piece, Version, Vtk}
 pub use fenris_geometry::vtkio::*;
 use num::ToPrimitive;
 use std::path::Path;
+use std::fs::create_dir_all;
 
 /// Represents connectivity that is supported by VTK.
 pub trait VtkCellConnectivity: Connectivity {
@@ -426,6 +427,9 @@ where
             .map(|os_str| os_str.to_string_lossy().to_string())
             .unwrap_or_else(|| "untitled".to_string());
         let dataset = self.try_build()?;
+        if let Some(parent) = filepath.parent() {
+            create_dir_all(parent)?;
+        }
         Vtk {
             // TODO: What to choose here? Depends on format?
             version: Version { major: 4, minor: 1 },
