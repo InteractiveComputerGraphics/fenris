@@ -7,6 +7,12 @@
 //! whereas global assembly refers to the machinery that is responsible for adding the local
 //! contributions from each element to the global vector or matrix.
 //!
+//! TODO: The documentation here should probably be split up and placed in different locations
+//!
+//! TODO: Here we should probably just write a more concise set of formulas for the
+//! local/global assembly distinction (see below) and leave the detailed elliptic stuff for
+//! a different module.
+//!
 //! TODO: Document more
 //!
 //! # Operators
@@ -83,14 +89,14 @@
 //! In order to assemble the global vector $\\hat g$, we see that each vector $\\hat g_I$ is a
 //! sum of contributions for each element $K$ on which the basis function $\phi_I$ is supported:
 //!
-//! $$ \\hat g_I = \sum_K \int_{K} g_h^T \\; \nabla \phi_I \enspace \mathrm{d} x.$$
+//! $$ \\hat g_I = \sum_K \int_{K} g_h^T \\; \nabla \phi_I \enspace \mathrm{d} x = \sum_K \\hat g_I^K.$$
 //!
 //! As a result, the global vector $\\hat g$ can also be decomposed into a sum of
 //! element-wise contributions. Since only a small number of basis functions are supported on each
 //! element, most entries in these element-wise contributions are zero. The non-zero contributions
-//! form the \emph{local} vector associated with the element. Specifically, given an element $K$
+//! form the *local* vector associated with the element. Specifically, given an element $K$
 //! consisting of nodes $[3, 1, 5, 2]$, we define
-//! $\\hat g^K = (\\hat g_3, \\hat g_1, \\hat g_5, \\hat g_2)$ to be the local contribution
+//! $\\hat g^K = (\\hat g_3^K, \\hat g_1^K, \\hat g_5^K, \\hat g_2^K)$ to be the local contribution
 //! associated with element $K$. The relationship between $\\hat g$ and the local contributions
 //! $\\hat g^K$ is then given by the abstract expression
 //!
@@ -110,17 +116,49 @@
 //! - **Global assembly** is concerned with scattering the local vector $\\hat g^K$ into the
 //!   global vector $\\hat g$.
 //!
-////!
-////!     = \int_{\Omega} (g^T \nabla \phi_I)_i \enspace \mathrm{d} x $$
+//! ### Discrete matrix quantities
 //!
-////! $$ \hat{g}_{Ii} := \int_{\Omega} g(\nabla u_h) : \nabla (\phi_I e_i) \enspace \mathrm{d} x
-////!     = \int_{\Omega} (g^T \nabla \phi_I)_i \enspace \mathrm{d} x $$
+//! Usually we will also need derivatives of (non-linear) vector quantities. For example, when
+//! solving a non-linear problem involving $\\hat g$ with Newton's method, we need to be able
+//! to compute the Jacobian of $\\hat g$. We obtain
 //!
+//! $$ \frac{\partial \\hat g}{\partial \\hat u}
+//!     = \sum_K R_K^T \frac{\partial \\hat g^K}{\partial \\hat u^K} R_K. $$
 //!
-//! TODO: Explain relationship between general weak form and entries in FE vectors. Then go from
-//! there to introduce "elliptic contractions" as a necessary ingredient for assembling
-//! the corresponding matrices
+//! The quantity $\frac{\partial \\hat g^K}{\partial \\hat u^K}$ is a $sN_K \times sN_K$ matrix,
+//! and in the context of our $g$ operator, it represents the **element stiffness matrix** for
+//! element $K$. As before, assembling these local matrix contributions constitute the
+//! *local assembly*, whereas storing the result in the global matrix constitutes the
+//! *global assembly*.
 //!
+//! For our general elliptic operator $g$, we next determine an expression for the associated
+//! element stiffness matrix. To ease notation, we write $G = \nabla u$ and $G_h = \nabla u_h$.
+//! We note that
+//!
+//! $$ \frac{\partial G_h}{\partial u_J} = \sum_j \nabla \phi_J \otimes e_j \otimes e_j.$$
+//!
+//! The derivative $\pd{\\hat g^K}{\\hat u^K}$ can be expressed in terms of
+//! the individual $s \times s$ blocks that correspond to individual pairs of basis functions
+//! $I$ and $J$. With some labor, we find (using Einstein summation notation)
+//!
+//! $$ \pd{\\hat g^K_I}{u_J^K}
+//!     = \int_K \pd{\phi_I}{x_k} \pd{g_{ki}}{G_{mj}} \pd{\phi_J}{x_m} e_i \otimes e_j \dx
+//!     = \int_K \mathcal{C}_g(\nabla \phi_I, \nabla \phi_J) \dx, $$
+//!
+//! where the *contraction operator*
+//! $\mathcal{C}_g: \mathbb{R}^d \times \mathbb{R}^d \rightarrow \mathbb{R}^{s \times s}$
+//! defined by
+//!
+//! $$ \\mathcal{C}\_{g} (a, b) := a_k \pd{g_{ki}}{G_{mj}} b_m \enspace e_i \otimes e_j $$
+//!
+//! encodes the derivative information of $g$ independent of FE basis functions. This is a
+//! convenient interface, because the full tensor derivative of $g$ may be sparse, so computing
+//! all entries might lead to redundant computation, whereas allowing an implementation of an
+//! operator $g$ to directly compute the contraction allows it to use a more efficient
+//! internal expression for the contraction. By further providing the operator with several vectors
+//! to be evaluated at once, shared computations can be amortized.
+//!
+//! TODO: Document symmetry assumptions (actually we should encode this in our type system)
 //!
 //!
 
