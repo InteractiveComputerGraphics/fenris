@@ -917,6 +917,8 @@ pub fn assemble_element_source_vector<T, Element, Source>(
         Dynamic::new(n),
     );
 
+    output.fill(T::zero());
+
     let quadrature_iter = izip!(quadrature_weights, quadrature_points, quadrature_data);
     for (weight, point, data) in quadrature_iter {
         element.populate_basis(&mut *basis_values_buffer, point);
