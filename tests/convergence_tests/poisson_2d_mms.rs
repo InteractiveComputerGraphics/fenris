@@ -34,14 +34,14 @@ fn u_exact(x: &Point2<f64>) -> f64 {
 
 // fn u_exact_grad(x: &Point2<f64>) -> Vector2<f64> {
 //     let &XY { x, y } = x.coords.deref();
-//     let u_x = - PI * cos(PI * x) * sin(PI * y);
-//     let u_y = - PI * sin(PI * x) * cos(PI * y);
+//     let u_x = PI * cos(PI * x) * sin(PI * y);
+//     let u_y = PI * sin(PI * x) * cos(PI * y);
 //     Vector2::new(u_x, u_y)
 // }
 
 fn f(x: &Point2<f64>) -> f64 {
     // Derived from f = - Del u = - u_xx - u_yy
-    - 2.0 * PI * PI * u_exact(x)
+    2.0 * PI * PI * u_exact(x)
 }
 
 #[derive(Debug)]
