@@ -160,6 +160,8 @@
 //!
 //! TODO: Document symmetry assumptions (actually we should encode this in our type system)
 //!
+//! TODO: Extend elliptic operators to have a dependency on the domain, e.g. $g = g(x, \nabla u)$.
+//!
 //!
 
 pub mod global;

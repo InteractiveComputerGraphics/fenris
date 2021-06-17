@@ -1,45 +1,13 @@
-use crate::allocators::{BiDimAllocator, SmallDimAllocator};
-use crate::nalgebra::{DefaultAllocator, DMatrixSliceMut, Dynamic, MatrixMN, MatrixSliceMN, RealField, Scalar, U1, Vector1, VectorN, DimName};
-use crate::nalgebra::allocator::Allocator;
-use crate::SmallDim;
 use std::ops::AddAssign;
 
-/// The Laplace operator $\Delta = \nabla^2$.
-///
-/// TODO: We need to make this precise, i.e. what *exactly* this operator does
-/// (and sign convention)
-///
-/// TODO: Docs
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LaplaceOperator;
+use crate::allocators::{BiDimAllocator};
+use crate::nalgebra::{DefaultAllocator, DimName, DMatrixSliceMut, Dynamic, MatrixMN, MatrixSliceMN, RealField, Scalar, U1, VectorN};
+use crate::nalgebra::allocator::Allocator;
+use crate::SmallDim;
 
-/// Declare properties of the Laplace operator
-impl Operator for LaplaceOperator {
-    /// The Laplace operator operates on scalar values, so the dimension of our solution variable
-    /// is 1.
-    type SolutionDim = U1;
-    /// There are no parameters (density, stiffness, temperature etc.) associated with the Laplace
-    /// operator.
-    type Parameters = ();
-}
+mod laplace;
 
-impl<T, D> EllipticContraction<T, D> for LaplaceOperator
-where
-    T: RealField,
-    D: SmallDim,
-    DefaultAllocator: SmallDimAllocator<T, D>
-{
-    // TODO: Document
-    fn contract(
-        &self,
-        _gradient: &MatrixMN<T, D, Self::SolutionDim>,
-        _data: &Self::Parameters,
-        a: &VectorN<T, D>,
-        b: &VectorN<T, D>,
-    ) -> MatrixMN<T, Self::SolutionDim, Self::SolutionDim> {
-        Vector1::new(a.dot(&b))
-    }
-}
+pub use laplace::*;
 
 pub trait Operator {
     type SolutionDim: SmallDim;
@@ -123,4 +91,45 @@ where
             }
         }
     }
+}
+
+/// An energy function associated with an elliptic operator.
+///
+/// The elliptic energy is a function $\psi: \mathbb{R}^{d \times s} \rightarrow \mathbb{R}$
+/// that represents some energy-like quantity *per unit volume*. Typically the elliptic energy
+/// arises in applications as the total potential energy over the domain
+///
+/// $$ E[u] := \int_{\Omega} \psi (\nabla u) \dx. $$
+///
+/// The elliptic energy is then related to the elliptic operator
+/// $g: \mathbb{R}^{d \times s} \rightarrow \mathbb{R}^{d \times s}$ by the relation
+///
+/// $$ g = \pd{\psi}{G} $$
+///
+/// where $G = \nabla u$.
+/// This relationship lets us connect the total energy to the weak form associated with $g$
+/// by noticing that the functional derivative gives us the functional differential
+/// with respect to a test function $v$
+///
+/// $$ \partial E = \int_{\Omega} \pd{\psi}{G} : \nabla v \dx
+///     = \int_{\Omega} g : \nabla v \dx. $$
+///
+/// The simplest example of an elliptic energy is the
+/// [Dirichlet energy](https://en.wikipedia.org/wiki/Dirichlet_energy)
+/// $$ E[u] = \int_{\Omega} \frac{1}{2} \| \nabla u \|^2 \dx $$
+/// where in our framework, $ \psi (\nabla u) = \frac{1}{2} \| \nabla u \|^2$ and
+/// $g = \nabla u$, which gives the weak form associated with Laplace's equation.
+///
+///
+///
+/// TODO: Extend elliptic energy to have an additional domain dependence,
+/// e.g. $\psi = \psi(x, \nabla u)$.
+pub trait EllipticEnergy<T, GeometryDim> : Operator
+where
+    T: RealField,
+    GeometryDim: SmallDim,
+    DefaultAllocator: BiDimAllocator<T, GeometryDim, Self::SolutionDim>,
+{
+    fn compute_energy(gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
+                      parameters: &Self::Parameters) -> T;
 }
