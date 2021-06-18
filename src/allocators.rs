@@ -152,6 +152,7 @@ where
 
 // TODO: The SmallDimAllocator, BiDimAllocator and TriDimAllocator classes should make
 // many/most of the other allocators redundant, I think?
+// TODO: Rename to `UniDimAllocator` or similar? Or just `DimAllocator`?
 pub trait SmallDimAllocator<T: Scalar, D: DimName>:
 Allocator<T, D> + Allocator<T, D, D> + Allocator<T, U1, D>
 // Used for various functionality like decompositions

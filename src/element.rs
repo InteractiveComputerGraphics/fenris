@@ -1971,6 +1971,32 @@ where
     }
 }
 
+impl<'a, T> From<&'a Tet4Element<T>> for Tet10Element<T>
+where
+    T: RealField
+{
+    #[replace_float_literals(T::from_f64(literal).unwrap())]
+    fn from(tet4_element: &'a Tet4Element<T>) -> Self {
+        let midpoint = |x: &Point3<_>, y: &Point3<_>| Point::from((x.coords + y.coords) * 0.5);
+
+        let [a, b, c, d] = tet4_element.vertices;
+
+        // TODO: Provide method for converting from Tet4 to Tet10 (From impl?)
+        Tet10Element::from_vertices([
+            a,
+            b,
+            c,
+            d,
+            midpoint(&a, &b),
+            midpoint(&b, &c),
+            midpoint(&a, &c),
+            midpoint(&a, &d),
+            midpoint(&c, &d),
+            midpoint(&b, &d)
+        ])
+    }
+}
+
 impl<T> Tet10Element<T>
 where
     T: RealField,

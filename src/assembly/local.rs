@@ -1114,12 +1114,11 @@ where
     Operator: EllipticEnergy<T, Element::GeometryDim>,
     DefaultAllocator: BiDimAllocator<T, Element::GeometryDim, Operator::SolutionDim>,
 {
-    assert_eq!(quadrature_weights.len(), quadrature_points.len());
-    assert_eq!(quadrature_points.len(), quadrature_data.len());
-    assert_eq!(basis_gradients_buffer.ncols(), element.num_nodes());
-
     let s = Operator::SolutionDim::dim();
     let n = element.num_nodes();
+    assert_eq!(quadrature_weights.len(), quadrature_points.len());
+    assert_eq!(quadrature_points.len(), quadrature_data.len());
+    assert_eq!(basis_gradients_buffer.ncols(), n);
     assert_eq!(
         u_element.len(),
         s * n,
