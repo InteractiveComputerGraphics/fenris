@@ -1,9 +1,4 @@
-use fenris::element::{
-    map_physical_coordinates, project_physical_coordinates, FiniteElement,
-    FixedNodesReferenceFiniteElement, Hex20Element, Hex27Element, Hex8Element, MatrixSlice,
-    Quad4d2Element, Quad9d2Element, Segment2d2Element, Tet10Element, Tet4Element, Tri3d2Element,
-    Tri6d2Element,
-};
+use fenris::element::{map_physical_coordinates, project_physical_coordinates, FiniteElement, FixedNodesReferenceFiniteElement, Hex20Element, Hex27Element, Hex8Element, MatrixSlice, Quad4d2Element, Quad9d2Element, Segment2d2Element, Tet10Element, Tet4Element, Tri3d2Element, Tri6d2Element, Tet20Element};
 use fenris::error::{estimate_element_L2_error, ErrorWorkspace};
 use fenris::geometry::proptest_strategies::{
     clockwise_triangle2d_strategy_f64, nondegenerate_convex_quad2d_strategy_f64,
@@ -183,6 +178,23 @@ fn tet10_lagrange_property() {
         let phi = element.evaluate_basis(&xi);
 
         let mut expected = MatrixMN::<f64, U1, U10>::zeros();
+        expected[i] = 1.0;
+
+        assert_approx_matrix_eq!(phi, expected, abstol = 1e-12);
+    }
+}
+
+#[test]
+fn tet20_lagrange_property() {
+    // We expect that N_i(x_j) = delta_ij
+    // where N_i is the ith basis function, j is the vertex associated with the ith node,
+    // and delta_ij is the Kronecker delta.
+    let element = Tet20Element::reference();
+
+    for (i, xi) in element.vertices().into_iter().enumerate() {
+        let phi = element.evaluate_basis(&xi);
+
+        let mut expected = MatrixMN::<f64, U1, U20>::zeros();
         expected[i] = 1.0;
 
         assert_approx_matrix_eq!(phi, expected, abstol = 1e-12);
@@ -651,6 +663,15 @@ proptest! {
     }
 
     #[test]
+    fn tet20_partition_of_unity(xi in point_in_tet_ref_domain()) {
+        let element = Tet20Element::reference();
+        let phi = element.evaluate_basis(&xi);
+        let phi_sum: f64 = phi.sum();
+
+        prop_assert!( (phi_sum - 1.0f64).abs() <= 1e-12);
+    }
+
+    #[test]
     fn hex8_partition_of_unity(xi in point_in_hex_ref_domain()) {
         let element = Hex8Element::reference();
         let phi = element.evaluate_basis(&xi);
@@ -674,6 +695,17 @@ proptest! {
         // Since the sum of basis functions is 1, the sum of the gradients must be 0
         let xi = Point3::new(x, y, z);
         let element = Tet10Element::reference();
+        let grad = element.gradients(&xi);
+        let grad_sum = grad.column_sum();
+
+        assert_approx_matrix_eq!(grad_sum, Vector3::<f64>::zeros(), abstol=1e-12);
+    }
+
+    #[test]
+    fn tet20_partition_of_unity_gradient((x, y, z) in (-1.0 ..= 1.0, -1.0 ..= 1.0, -1.0 ..= 1.0)) {
+        // Since the sum of basis functions is 1, the sum of the gradients must be 0
+        let xi = Point3::new(x, y, z);
+        let element = Tet20Element::reference();
         let grad = element.gradients(&xi);
         let grad_sum = grad.column_sum();
 
@@ -779,6 +811,26 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(10).with_function(move |x, xi| {
+            let xi = Point::from(xi.fixed_slice::<U3, U1>(0, 0).clone_owned());
+            x.copy_from(&tet.evaluate_basis(&xi).transpose());
+        });
+
+        let grad = tet.gradients(&xi);
+        let grad_approx = approximate_jacobian(f, &DVectorSlice::<_, Dynamic>::from(&xi.coords).clone_owned(), &h).transpose();
+
+        assert_approx_matrix_eq!(grad, &grad_approx, abstol=1e-5);
+    }
+
+    #[test]
+    fn tet20_reference_element_gradient_is_derivative_of_transform(
+        xi in point_in_tet_ref_domain()
+    ) {
+        let tet = Tet20Element::reference();
+        // Finite difference parameter
+        let h = 1e-6;
+        // Note: Function values are given as row vectors, so we transpose to get the result,
+        // and we must also transpose the end result
+        let f = VectorFunctionBuilder::with_dimension(20).with_function(move |x, xi| {
             let xi = Point::from(xi.fixed_slice::<U3, U1>(0, 0).clone_owned());
             x.copy_from(&tet.evaluate_basis(&xi).transpose());
         });

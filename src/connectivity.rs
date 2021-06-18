@@ -938,6 +938,56 @@ where
     }
 }
 
+/// Connectivity for a 20-node tetrahedron element.
+///
+/// See GMSH documentation for node ordering.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Tet20Connectivity(pub [usize; 20]);
+
+impl<'a> From<&'a Tet20Connectivity> for Tet4Connectivity {
+    fn from(tet20: &'a Tet20Connectivity) -> Self {
+        let Tet20Connectivity(indices) = tet20;
+        Tet4Connectivity([indices[0], indices[1], indices[2], indices[3]])
+    }
+}
+
+impl Connectivity for Tet20Connectivity {
+    // TODO: Connectivity?
+    type FaceConnectivity = ();
+
+    fn num_faces(&self) -> usize {
+        0
+    }
+
+    fn get_face_connectivity(&self, _index: usize) -> Option<Self::FaceConnectivity> {
+        None
+    }
+
+    fn vertex_indices(&self) -> &[usize] {
+        &self.0
+    }
+}
+
+impl ConnectivityMut for Tet20Connectivity {
+    fn vertex_indices_mut(&mut self) -> &mut [usize] {
+        &mut self.0
+    }
+}
+
+impl<T> CellConnectivity<T, U3> for Tet20Connectivity
+    where
+        T: RealField,
+{
+    type Cell = Tetrahedron<T>;
+
+    fn cell(&self, vertices: &[Point3<T>]) -> Option<Self::Cell> {
+        let mut tet4_v = [0, 0, 0, 0];
+        tet4_v.clone_from_slice(&self.0[0..4]);
+        let tet4 = Tet4Connectivity(tet4_v);
+        tet4.cell(vertices)
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Segment2d3Connectivity(pub [usize; 2]);
 

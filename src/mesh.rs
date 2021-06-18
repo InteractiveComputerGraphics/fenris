@@ -4,11 +4,7 @@ use nested_vec::NestedVec;
 use std::collections::{BTreeMap, HashMap};
 use std::iter::once;
 
-use crate::connectivity::{
-    CellConnectivity, Connectivity, ConnectivityMut, Hex20Connectivity, Hex27Connectivity,
-    Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity, Tet10Connectivity,
-    Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity,
-};
+use crate::connectivity::{CellConnectivity, Connectivity, ConnectivityMut, Hex20Connectivity, Hex27Connectivity, Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity, Tet10Connectivity, Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity, Tet20Connectivity};
 use nalgebra::allocator::Allocator;
 use serde::{Deserialize, Serialize};
 
@@ -48,6 +44,7 @@ pub type Hex20Mesh<T> = Mesh3d<T, Hex20Connectivity>;
 pub type Hex27Mesh<T> = Mesh3d<T, Hex27Connectivity>;
 pub type Tet4Mesh<T> = Mesh3d<T, Tet4Connectivity>;
 pub type Tet10Mesh<T> = Mesh3d<T, Tet10Connectivity>;
+pub type Tet20Mesh<T> = Mesh3d<T, Tet20Connectivity>;
 
 impl<T, D, Connectivity> Mesh<T, D, Connectivity>
 where

@@ -2101,6 +2101,236 @@ where
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Tet20Element<T>
+    where
+        T: Scalar,
+{
+    tet4: Tet4Element<T>,
+    vertices: [Point3<T>; 20],
+}
+
+impl<T> Tet20Element<T>
+    where
+        T: Scalar,
+{
+    pub fn from_vertices(vertices: [Point3<T>; 20]) -> Self {
+        let tet4_v = [
+            vertices[0].clone(),
+            vertices[1].clone(),
+            vertices[2].clone(),
+            vertices[3].clone()
+        ];
+        Self {
+            tet4: Tet4Element::from_vertices(tet4_v),
+            vertices,
+        }
+    }
+
+    pub fn vertices(&self) -> &[Point3<T>; 20] {
+        &self.vertices
+    }
+}
+
+impl<T> Tet20Element<T>
+    where
+        T: RealField,
+{
+    #[replace_float_literals(T::from_f64(literal).unwrap())]
+    pub fn reference() -> Self {
+        Self {
+            tet4: Tet4Element::reference(),
+            vertices: [
+                // Vertex nodes
+                Point3::new(-1.0, -1.0, -1.0),
+                Point3::new(1.0, -1.0, -1.0),
+                Point3::new(-1.0, 1.0, -1.0),
+                Point3::new(-1.0, -1.0, 1.0),
+                // Edge nodes
+                // Between node 0 and 1
+                Point3::new(-1.0/3.0, -1.0, -1.0),
+                Point3::new(1.0/3.0, -1.0, -1.0),
+                // Between node 0 and 2
+                Point3::new(-1.0, -1.0/3.0, -1.0),
+                Point3::new(-1.0, 1.0/3.0, -1.0),
+                // Between node 0 and 3
+                Point3::new(-1.0, -1.0, -1.0/3.0),
+                Point3::new(-1.0, -1.0, 1.0/3.0),
+                // Between node 1 and 2
+                Point3::new(1.0/3.0, -1.0/3.0, -1.0),
+                Point3::new(-1.0/3.0, 1.0/3.0, -1.0),
+                // Between node 1 and 3
+                Point3::new(1.0/3.0, -1.0, -1.0/3.0),
+                Point3::new(-1.0/3.0, -1.0, 1.0/3.0),
+                // Between node 2 and 3
+                Point3::new(-1.0, 1.0/3.0, -1.0/3.0),
+                Point3::new(-1.0, -1.0/3.0, 1.0/3.0),
+                // On face {0, 1, 2}
+                Point3::new(-1.0/3.0, -1.0/3.0, -1.0),
+                // On face {0, 1, 3}
+                Point3::new(-1.0/3.0, -1.0, -1.0/3.0),
+                // On face {0, 2, 3}
+                Point3::new(-1.0, -1.0/3.0, -1.0/3.0),
+                // On face {1, 2, 3}
+                Point3::new(-1.0/3.0, -1.0/3.0, -1.0/3.0),
+            ],
+        }
+    }
+}
+
+#[replace_float_literals(T::from_f64(literal).unwrap())]
+impl<T> FixedNodesReferenceFiniteElement<T> for Tet20Element<T>
+    where
+        T: RealField,
+{
+    type ReferenceDim = U3;
+    type NodalDim = U20;
+
+    #[rustfmt::skip]
+    fn evaluate_basis(&self, xi: &Point3<T>) -> MatrixMN<T, U1, U20> {
+        // We express the basis functions of Tet10 as products of
+        // the Tet4 basis functions. See Zienkiewicz et al., Finite Element Method
+        // for the basis functions
+        let psi = self.tet4.evaluate_basis(xi);
+
+        // We define the edge functions by associating a particular edge node
+        // with its closest vertex.
+        let phi_edge = |closest: usize, other: usize|
+            (9.0 / 2.0) * psi[closest] * psi[other] * (3.0 * psi[closest] - 1.0);
+        // The face functions are associated with the three vertex nodes
+        // that make up each facec
+        let phi_face = |a: usize, b: usize, c: usize|
+            27.0 * psi[a] * psi[b] * psi[c];
+
+        MatrixMN::<_, U1, U20>::from_row_slice(&[
+            // Corner nodes
+            0.5 * psi[0] * (3.0 * psi[0] - 1.0) * (3.0 * psi[0] - 2.0),
+            0.5 * psi[1] * (3.0 * psi[1] - 1.0) * (3.0 * psi[1] - 2.0),
+            0.5 * psi[2] * (3.0 * psi[2] - 1.0) * (3.0 * psi[2] - 2.0),
+            0.5 * psi[3] * (3.0 * psi[3] - 1.0) * (3.0 * psi[3] - 2.0),
+
+            // Edge nodes
+            // Between node 0 and 1
+            phi_edge(0, 1),
+            phi_edge(1, 0),
+            // Between node 0 and 2
+            phi_edge(0, 2),
+            phi_edge(2, 0),
+            // Between node 0 and 3
+            phi_edge(0, 3),
+            phi_edge(3, 0),
+            // Between node 1 and 2
+            phi_edge(1, 2),
+            phi_edge(2, 1),
+            // Between node 1 and 3
+            phi_edge(1, 3),
+            phi_edge(3, 1),
+            // Between node 2 and 3
+            phi_edge(2, 3),
+            phi_edge(3, 2),
+
+            // Faces nodes
+            // On face {0, 1, 2}
+            phi_face(0, 1, 2),
+            // On face {0, 1, 3}
+            phi_face(0, 1, 3),
+            // On face {0, 2, 3}
+            phi_face(0, 2, 3),
+            // On face {1, 2, 3}
+            phi_face(1, 2, 3),
+        ])
+    }
+
+    #[rustfmt::skip]
+    fn gradients(&self, xi: &Point3<T>) -> MatrixMN<T, U3, U20> {
+        // Similarly to `evaluate_basis`, we may implement the gradients of
+        // Tet10 with the help of the function values and gradients of Tet4
+        let psi = self.tet4.evaluate_basis(xi);
+        let tet4_gradients = self.tet4.gradients(xi);
+        let g = |i| tet4_gradients.index((.., i));
+
+        // Gradient of vertex node i
+        let vertex_gradient = |i| -> Vector3<T> {
+            let p = psi[i];
+            g(i) * 0.5 * (27.0 * p * p - 18.0 * p + 2.0)
+        };
+
+        // Gradient of edge node on the edge between vertex a and b
+        let edge_gradient = |a, b| -> Vector3<T> {
+            let pa = psi[a];
+            let pb = psi[b];
+            ( g(a) * (pb * (6.0 * pa - 1.0)) + g(b) * (pa * (3.0 * pa - 1.0))) * (9.0 / 2.0)
+        };
+
+        let face_gradient = |a, b, c| -> Vector3<T> {
+            (g(a) * psi[b] * psi[c] + g(b) * psi[a] * psi[c] + g(c) * psi[a] * psi[b]) * 27.0
+        };
+
+        MatrixMN::from_columns(&[
+            // Vertex nodes
+            vertex_gradient(0),
+            vertex_gradient(1),
+            vertex_gradient(2),
+            vertex_gradient(3),
+
+            // Edge nodes
+            // Between node 0 and 1
+            edge_gradient(0, 1),
+            edge_gradient(1, 0),
+            // Between node 0 and 2
+            edge_gradient(0, 2),
+            edge_gradient(2, 0),
+            // Between node 0 and 3
+            edge_gradient(0, 3),
+            edge_gradient(3, 0),
+            // Between node 1 and 2
+            edge_gradient(1, 2),
+            edge_gradient(2, 1),
+            // Between node 1 and 3
+            edge_gradient(1, 3),
+            edge_gradient(3, 1),
+            // Between node 2 and 3
+            edge_gradient(2, 3),
+            edge_gradient(3, 2),
+
+            // Faces nodes
+            // On face {0, 1, 2}
+            face_gradient(0, 1, 2),
+            // On face {0, 1, 3}
+            face_gradient(0, 1, 3),
+            // On face {0, 2, 3}
+            face_gradient(0, 2, 3),
+            // On face {1, 2, 3}
+            face_gradient(1, 2, 3),
+        ])
+    }
+}
+
+impl_reference_finite_element_for_fixed!(Tet20Element<T>);
+
+impl<T> FiniteElement<T> for Tet20Element<T>
+    where
+        T: RealField,
+{
+    type GeometryDim = U3;
+
+    #[allow(non_snake_case)]
+    fn reference_jacobian(&self, xi: &Point3<T>) -> Matrix3<T> {
+        self.tet4.reference_jacobian(xi)
+    }
+
+    #[allow(non_snake_case)]
+    fn map_reference_coords(&self, xi: &Point3<T>) -> Point3<T> {
+        self.tet4.map_reference_coords(xi)
+    }
+
+    // TODO: Write tests for diameter
+    fn diameter(&self) -> T {
+        self.tet4.diameter()
+    }
+}
+
+
 /// Maps physical coordinates `x` to reference coordinates `xi` by solving the equation
 ///  x - T(xi) = 0 using Newton's method.
 ///
