@@ -1,6 +1,6 @@
 use fenris_optimize::calculus::*;
 use matrixcompare::assert_matrix_eq;
-use nalgebra::{DMatrix, DVector, DVectorSlice, DVectorSliceMut};
+use nalgebra::{DMatrix, DVector, DVectorSlice, DVectorSliceMut, RowDVector};
 
 #[test]
 fn approximate_jacobian_simple_function() {
@@ -52,7 +52,10 @@ fn test_approximate_gradient_fd() {
     };
 
     let x = DVector::from_column_slice(&[3.0, 4.0, 5.0]);
-    let f_grad_fd = approximate_gradient_fd(f, &x, 1e-6);
+    let mut x_input = x.clone();
+    let f_grad_fd = approximate_gradient_fd(f, &mut x_input, 1e-6);
+    // Check that x vector was left exactly unchanged
+    assert_matrix_eq!(x, x_input);
 
     assert_matrix_eq!(
         f_grad_fd,
@@ -60,4 +63,38 @@ fn test_approximate_gradient_fd() {
         comp = abs,
         tol = 1e-6
     );
+}
+
+#[test]
+fn test_approximate_jacobian_fd() {
+    // Define some vector function f: R^3 -> R^2 and its 2x3 Jacobian
+    let f = |x: DVectorSlice<f64>, mut f: DVectorSliceMut<f64>| {
+        let (x, y, z) = (x[0], x[1], x[2]);
+        let f1 = 9.0 * x * x + 3.0 * y * x - 3.0 * z * z * z * y;
+        let f2 = 2.0 * x * y * y - 10.0 * z;
+        f[0] = f1;
+        f[1] = f2;
+    };
+    let j = |x: DVectorSlice<f64>| {
+        let (x, y, z) = (x[0], x[1], x[2]);
+        // Compute gradients for each component of f and stack them row-by-row
+        let df1_dx = RowDVector::from_row_slice(&[
+            18.0 * x + 3.0 * y,
+            3.0 * x - 3.0 * z * z * z,
+            -9.0 * z * z * y]);
+        let df2_dx = RowDVector::from_row_slice(&[
+            2.0 * y * y,
+            4.0 * x * y,
+            -10.0
+        ]);
+        DMatrix::from_rows(&[df1_dx, df2_dx])
+    };
+
+    let x = DVector::from_column_slice(&[3.0, 4.0, 5.0]);
+    let mut x_input = x.clone();
+    let j_fd = approximate_jacobian_fd(2, f, &mut x_input, 1e-6);
+    // Check that x vector was left exactly unchanged
+    assert_matrix_eq!(x, x_input);
+
+    assert_matrix_eq!(j_fd, j(DVectorSlice::from(&x)), comp = abs, tol = 1e-6);
 }
