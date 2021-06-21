@@ -1,19 +1,28 @@
 use fenris::allocators::{BiDimAllocator, SmallDimAllocator};
-use fenris::assembly::local::{assemble_element_elliptic_vector, assemble_generalized_element_mass, compute_element_elliptic_energy, assemble_element_elliptic_matrix, assemble_element_source_vector, SourceFunction};
-use fenris::assembly::operators::{EllipticEnergy, EllipticOperator, Operator, EllipticContraction};
+use fenris::assembly::local::{
+    assemble_element_elliptic_matrix, assemble_element_elliptic_vector,
+    assemble_element_source_vector, assemble_generalized_element_mass,
+    compute_element_elliptic_energy, SourceFunction,
+};
+use fenris::assembly::operators::{
+    EllipticContraction, EllipticEnergy, EllipticOperator, Operator,
+};
 use fenris::element::{
     MatrixSlice, MatrixSliceMut, Quad4d2Element, ReferenceFiniteElement, Tet10Element, Tet4Element,
     VolumetricFiniteElement,
 };
 use fenris::geometry::Quad2d;
 use fenris::nalgebra::coordinates::{XY, XYZ};
-use fenris::nalgebra::{DMatrix, DVector, DefaultAllocator, DimName, Dynamic, Matrix3x2, Matrix4, MatrixMN, MatrixN, Point, Point2, RealField, VectorN, U1, U2, U3, U8, DVectorSliceMut};
-use fenris::{quadrature};
+use fenris::nalgebra::{
+    DMatrix, DVector, DVectorSliceMut, DefaultAllocator, DimName, Dynamic, Matrix3x2, Matrix4,
+    MatrixMN, MatrixN, Point, Point2, RealField, VectorN, U1, U2, U3, U8,
+};
+use fenris::quadrature;
 use fenris::quadrature::{Quadrature, QuadraturePair};
 use fenris_optimize::calculus::{approximate_gradient_fd, approximate_jacobian_fd};
 use itertools::izip;
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
-use nalgebra::{DVectorSlice, Point3, Vector1, Vector2, Vector3, Matrix2};
+use nalgebra::{DVectorSlice, Matrix2, Point3, Vector1, Vector2, Vector3};
 use num::Zero;
 use std::ops::Deref;
 
@@ -306,11 +315,13 @@ impl EllipticOperator<f64, U3> for MockVectorEllipticEnergy {
 
 impl EllipticContraction<f64, U3> for MockVectorEllipticEnergy {
     #[allow(non_snake_case)]
-    fn contract(&self,
-                gradient: &MatrixMN<f64, U3, Self::SolutionDim>,
-                _data: &Self::Parameters,
-                a: &VectorN<f64, U3>,
-                b: &VectorN<f64, U3>) -> MatrixMN<f64, Self::SolutionDim, Self::SolutionDim> {
+    fn contract(
+        &self,
+        gradient: &MatrixMN<f64, U3, Self::SolutionDim>,
+        _data: &Self::Parameters,
+        a: &VectorN<f64, U3>,
+        b: &VectorN<f64, U3>,
+    ) -> MatrixMN<f64, Self::SolutionDim, Self::SolutionDim> {
         let G = gradient;
         let G_dot_G = G.dot(&G);
 
@@ -466,7 +477,8 @@ fn elliptic_element_matrix_is_jacobian_of_vector_tet10() {
                 &points,
                 &quadrature_data,
                 MatrixSliceMut::from(&mut gradient_buffer),
-            ).unwrap();
+            )
+            .unwrap();
         };
 
         // TODO: What should h be?
@@ -488,7 +500,7 @@ fn elliptic_element_matrix_is_jacobian_of_vector_tet10() {
         &quadrature_data,
         MatrixSliceMut::from(&mut gradient_buffer),
     )
-        .unwrap();
+    .unwrap();
 
     assert_matrix_eq!(output, finite_diff_result, comp = abs, tol = 1e-6);
 }
@@ -560,7 +572,15 @@ fn element_source_vector_reproduces_inner_product() {
     let quadrature_data = vec![(); weights.len()];
     let mut basis_buffer = vec![0.0; element.num_nodes()];
     let mut f_element = DVector::repeat(u_element.len(), 2.0);
-    assemble_element_source_vector(DVectorSliceMut::from(&mut f_element), &element, &MockSourceFunction, &weights, &points, &quadrature_data, &mut basis_buffer);
+    assemble_element_source_vector(
+        DVectorSliceMut::from(&mut f_element),
+        &element,
+        &MockSourceFunction,
+        &weights,
+        &points,
+        &quadrature_data,
+        &mut basis_buffer,
+    );
 
     // Compute the inner product (u, f) on the element with high order quadrature
     let expected_inner_product = {
@@ -572,5 +592,10 @@ fn element_source_vector_reproduces_inner_product() {
 
     let computed_inner_product = u_element.dot(&f_element);
 
-    assert_scalar_eq!(computed_inner_product, expected_inner_product, comp = abs, tol = 1e-12);
+    assert_scalar_eq!(
+        computed_inner_product,
+        expected_inner_product,
+        comp = abs,
+        tol = 1e-12
+    );
 }

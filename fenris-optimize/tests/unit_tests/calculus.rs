@@ -81,12 +81,9 @@ fn test_approximate_jacobian_fd() {
         let df1_dx = RowDVector::from_row_slice(&[
             18.0 * x + 3.0 * y,
             3.0 * x - 3.0 * z * z * z,
-            -9.0 * z * z * y]);
-        let df2_dx = RowDVector::from_row_slice(&[
-            2.0 * y * y,
-            4.0 * x * y,
-            -10.0
+            -9.0 * z * z * y,
         ]);
+        let df2_dx = RowDVector::from_row_slice(&[2.0 * y * y, 4.0 * x * y, -10.0]);
         DMatrix::from_rows(&[df1_dx, df2_dx])
     };
 

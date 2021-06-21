@@ -1,4 +1,7 @@
-use nalgebra::{DMatrix, DVector, DVectorSlice, DVectorSliceMut, Dim, Dynamic, RealField, Scalar, Vector, U1, DMatrixSliceMut};
+use nalgebra::{
+    DMatrix, DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, Dim, Dynamic, RealField,
+    Scalar, Vector, U1,
+};
 
 use nalgebra::base::storage::{Storage, StorageMut};
 use numeric_literals::replace_float_literals;
@@ -280,10 +283,10 @@ pub fn approximate_jacobian_fd<'a, T>(
     m: usize,
     f: impl Fn(DVectorSlice<T>, DVectorSliceMut<T>),
     x: impl Into<DVectorSliceMut<'a, T>>,
-    h: T)
--> DMatrix<T>
-    where
-        T: RealField
+    h: T,
+) -> DMatrix<T>
+where
+    T: RealField,
 {
     let x = x.into();
     let n = x.len();
@@ -300,9 +303,9 @@ pub fn approximate_jacobian_fd_into<'a, T>(
     jacobian: impl Into<DMatrixSliceMut<'a, T>>,
     f: impl Fn(DVectorSlice<T>, DVectorSliceMut<T>),
     x: impl Into<DVectorSliceMut<'a, T>>,
-    h: T)
-where
-    T: RealField
+    h: T,
+) where
+    T: RealField,
 {
     approximate_jacobian_fd_into_(jacobian.into(), f, x.into(), h);
 }
@@ -326,7 +329,7 @@ fn approximate_jacobian_fd_into_<T>(
 
     // Jacobian has m x n rows
     // Build column by column
-    for i in 0 .. n {
+    for i in 0..n {
         // df_dxi ~ (f(x + h e_i) - f(x - h e_i)) / (2 h)
         let xi = x[i];
         x[i] = xi + h;
