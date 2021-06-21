@@ -210,3 +210,34 @@ where
 
     result
 }
+
+/// Approximates the derivative of the function `f: R^n -> R` with finite differences.
+///
+/// The parameter `h` determines the step size of the finite difference approximation.
+pub fn approximate_gradient_fd<'a, T>(f: impl Fn(DVectorSlice<T>) -> T, x: impl Into<DVectorSlice<'a, T>>, h: T) -> DVector<T>
+where
+    T: RealField
+{
+    approximate_gradient_fd_(f, x.into(), h)
+}
+
+#[replace_float_literals(T::from_f64(literal).unwrap())]
+fn approximate_gradient_fd_<T>(f: impl Fn(DVectorSlice<T>) -> T, x: DVectorSlice<T>, h: T) -> DVector<T>
+where
+    T: RealField
+{
+    let n = x.len();
+    let mut y = x.clone_owned();
+    let mut df = DVector::zeros(n);
+
+    for i in 0 .. n {
+        y[i] = x[i] + h;
+        let f_plus = f(DVectorSlice::from(&y));
+        y[i] = x[i] - h;
+        let f_minus = f(DVectorSlice::from(&y));
+        let df_i = (f_plus - f_minus) / (2.0 * h);
+        df[i] = df_i;
+        y[i] = x[i];
+    }
+    df
+}
