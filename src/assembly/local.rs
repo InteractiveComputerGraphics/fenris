@@ -939,7 +939,25 @@ pub fn assemble_element_source_vector<T, Element, Source>(
     }
 }
 
-/// TODO: Test and document this
+/// Assembles the element (derivative) matrix associated with the given elliptic operator.
+///
+/// Given a finite element, an elliptic operator and a quadrature rule and associated operator
+/// parameters, stores the resulting element matrix in the provided output vector.
+/// This is effectively the **element stiffness matrix** for the given element and elliptic
+/// operator.
+///
+/// See the documentation for [`EllipticContraction`] for more information about
+/// contraction of elliptic operators.
+///
+/// The computation requires a buffer for evaluating gradients. The buffer must be able to
+/// store gradients for each node in the element.
+///
+/// # Panics
+///
+/// Panics if the quadrature data arrays do not have the same lengths.
+///
+/// Panics if the number of columns in the gradient buffer is not equal to the number of nodes
+/// in the element.
 pub fn assemble_element_elliptic_matrix<T, Element, Contraction>(
     mut output: DMatrixSliceMut<T>,
     element: &Element,

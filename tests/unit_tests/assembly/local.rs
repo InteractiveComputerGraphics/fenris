@@ -8,7 +8,6 @@ use fenris::element::{
 use fenris::geometry::Quad2d;
 use fenris::nalgebra::coordinates::{XY, XYZ};
 use fenris::nalgebra::{DMatrix, DVector, DefaultAllocator, DimName, Dynamic, Matrix3x2, Matrix4, MatrixMN, MatrixN, Point, Point2, RealField, VectorN, U1, U2, U3, U8, DVectorSliceMut};
-use fenris::nalgebra_sparse::na::Matrix3;
 use fenris::quadrature;
 use fenris::quadrature::{Quadrature, QuadraturePair};
 use fenris_optimize::calculus::{approximate_gradient_fd, approximate_jacobian_fd};
@@ -287,19 +286,11 @@ impl Operator for MockVectorEllipticEnergy {
     type Parameters = ();
 }
 
-#[rustfmt::skip]
-fn energy_coeff_matrix() -> Matrix3<f64> {
-    // TODO: Use matrix! macro when we've been able to upgrade nalgebra...
-    Matrix3::new(-1.0,  2.0, 4.0,
-                  5.0, -2.0, 0.5,
-                  3.0,  2.0, 0.0)
-}
-
 impl EllipticEnergy<f64, U3> for MockVectorEllipticEnergy {
     fn compute_energy(&self, gradient: &Matrix3x2<f64>, _parameters: &Self::Parameters) -> f64 {
-        let a = energy_coeff_matrix();
-        // An arbitrary function G : (AG)
-        gradient.dot(&(a * gradient))
+        // Use the log here to make sure our function is not so simple that the
+        // contraction is independent of the gradient
+        gradient.dot(&(gradient)).ln()
     }
 }
 
@@ -309,24 +300,23 @@ impl EllipticOperator<f64, U3> for MockVectorEllipticEnergy {
         gradient: &MatrixMN<f64, U3, Self::SolutionDim>,
         _data: &Self::Parameters,
     ) -> MatrixMN<f64, U3, Self::SolutionDim> {
-        let a = energy_coeff_matrix();
-        // (A + A^T) * G
-        (a + a.transpose()) * gradient
+        2.0 * gradient / (gradient.dot(&gradient))
     }
 }
 
 impl EllipticContraction<f64, U3> for MockVectorEllipticEnergy {
+    #[allow(non_snake_case)]
     fn contract(&self,
-                _gradient: &MatrixMN<f64, U3, Self::SolutionDim>,
+                gradient: &MatrixMN<f64, U3, Self::SolutionDim>,
                 _data: &Self::Parameters,
                 a: &VectorN<f64, U3>,
                 b: &VectorN<f64, U3>) -> MatrixMN<f64, Self::SolutionDim, Self::SolutionDim> {
-        // TODO: It is probably unfortunate that we are using a simple quadratic energy, since
-        // we now end up with a very simple contraction that is independent of the gradient
-        // Let's replace it with a more complicated one
-        let a_matrix = energy_coeff_matrix();
-        let c = a_matrix + a_matrix.transpose();
-        a.dot(&(&c * b)) * Matrix2::identity()
+        let G = gradient;
+        let G_dot_G = G.dot(&G);
+
+        let t = a.dot(&b) * G_dot_G * Matrix2::identity();
+        let u = 2.0 * G.transpose() * a * b.transpose() * G;
+        (2.0 / G_dot_G.powi(2)) * (t - u)
     }
 }
 
