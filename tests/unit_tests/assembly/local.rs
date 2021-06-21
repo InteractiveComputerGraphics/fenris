@@ -8,8 +8,8 @@ use fenris::assembly::operators::{
     EllipticContraction, EllipticEnergy, EllipticOperator, Operator,
 };
 use fenris::element::{
-    MatrixSlice, MatrixSliceMut, Quad4d2Element, ReferenceFiniteElement, Tet10Element, Tet4Element,
-    VolumetricFiniteElement,
+    FiniteElement, MatrixSlice, MatrixSliceMut, Quad4d2Element, ReferenceFiniteElement,
+    Tet10Element, Tet4Element, VolumetricFiniteElement,
 };
 use fenris::geometry::Quad2d;
 use fenris::nalgebra::coordinates::{XY, XYZ};
@@ -545,16 +545,23 @@ fn element_source_vector_reproduces_inner_product() {
         Vector2::new(f1, f2)
     }
 
+    fn rho(x: &Point3<f64>) -> f64 {
+        x.coords.norm_squared()
+    }
+
     struct MockSourceFunction;
 
     impl Operator for MockSourceFunction {
         type SolutionDim = U2;
-        type Parameters = ();
+        // We give each point in space a "density" in order to test correct parameter evaluation
+        type Parameters = f64;
     }
 
     impl SourceFunction<f64, U3> for MockSourceFunction {
-        fn evaluate(&self, coords: &Point<f64, U3>, _data: &Self::Parameters) -> Vector2<f64> {
-            f(coords)
+        fn evaluate(&self, coords: &Point<f64, U3>, density: &Self::Parameters) -> Vector2<f64> {
+            // The actual function is rho(x) * f(x), where rho(x) is a scalar implicitly
+            // determined by the parameters
+            *density * f(coords)
         }
     }
 
@@ -569,7 +576,11 @@ fn element_source_vector_reproduces_inner_product() {
     let u_element = u_element_from_vertices_and_u_exact(element.vertices(), u);
 
     let (weights, points) = quadrature::total_order::tetrahedron(8).unwrap();
-    let quadrature_data = vec![(); weights.len()];
+    let quadrature_data: Vec<_> = points
+        .iter()
+        .map(|xi| element.map_reference_coords(xi))
+        .map(|x| rho(&x))
+        .collect();
     let mut basis_buffer = vec![0.0; element.num_nodes()];
     let mut f_element = DVector::repeat(u_element.len(), 2.0);
     assemble_element_source_vector(
@@ -584,10 +595,11 @@ fn element_source_vector_reproduces_inner_product() {
 
     // Compute the inner product (u, f) on the element with high order quadrature
     let expected_inner_product = {
-        // u and f are both quadratic functions, so the product is of order 4
-        let reference_rule = quadrature::total_order::tetrahedron(4).unwrap();
+        // u is a quadratic function and f is together with the density function of order 4,
+        // so the product is of order 6
+        let reference_rule = quadrature::total_order::tetrahedron(6).unwrap();
         let quadrature_rule = construct_quadrature_rule_for_element(&element, &reference_rule);
-        quadrature_rule.integrate(|x| f(x).dot(&u(x)))
+        quadrature_rule.integrate(|x| rho(x) * f(x).dot(&u(x)))
     };
 
     let computed_inner_product = u_element.dot(&f_element);
