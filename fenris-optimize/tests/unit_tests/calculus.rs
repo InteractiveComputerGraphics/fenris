@@ -1,6 +1,6 @@
 use fenris_optimize::calculus::*;
-use nalgebra::{DMatrix, DVector, DVectorSlice, DVectorSliceMut};
 use matrixcompare::assert_matrix_eq;
+use nalgebra::{DMatrix, DVector, DVectorSlice, DVectorSliceMut};
 
 #[test]
 fn approximate_jacobian_simple_function() {
@@ -48,15 +48,16 @@ fn test_approximate_gradient_fd() {
     };
     let f_grad = |x: DVectorSlice<f64>| {
         let (x, y, z) = (x[0], x[1], x[2]);
-        DVector::from_column_slice(&[
-            9.0 * x * x + 3.0 * y,
-            3.0 * x,
-            -10.0 * z
-        ])
+        DVector::from_column_slice(&[9.0 * x * x + 3.0 * y, 3.0 * x, -10.0 * z])
     };
 
     let x = DVector::from_column_slice(&[3.0, 4.0, 5.0]);
     let f_grad_fd = approximate_gradient_fd(f, &x, 1e-6);
 
-    assert_matrix_eq!(f_grad_fd, f_grad(DVectorSlice::from(&x)), comp = abs, tol = 1e-6);
+    assert_matrix_eq!(
+        f_grad_fd,
+        f_grad(DVectorSlice::from(&x)),
+        comp = abs,
+        tol = 1e-6
+    );
 }

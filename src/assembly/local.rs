@@ -1103,7 +1103,11 @@ where
         // and phi_i^ref represents the gradient with respect to reference coordinates.
         // Hence we may compute (g^T J^{-T}) P_0
 
-        let mut output = MatrixSliceMutMN::from_slice_generic(output.as_mut_slice(), Operator::SolutionDim::name(), Dynamic::new(n));
+        let mut output = MatrixSliceMutMN::from_slice_generic(
+            output.as_mut_slice(),
+            Operator::SolutionDim::name(),
+            Dynamic::new(n),
+        );
         let g = operator.compute_elliptic_term(&u_grad, data);
         let g_t_j_inv_t = g.transpose() * j_inv_t;
         output.gemm(weight * j_det.abs(), &g_t_j_inv_t, &phi_grad_ref, T::one());

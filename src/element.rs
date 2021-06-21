@@ -1973,7 +1973,7 @@ where
 
 impl<'a, T> From<&'a Tet4Element<T>> for Tet10Element<T>
 where
-    T: RealField
+    T: RealField,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     fn from(tet4_element: &'a Tet4Element<T>) -> Self {
@@ -1992,7 +1992,7 @@ where
             midpoint(&a, &c),
             midpoint(&a, &d),
             midpoint(&c, &d),
-            midpoint(&b, &d)
+            midpoint(&b, &d),
         ])
     }
 }
@@ -2103,23 +2103,23 @@ where
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Tet20Element<T>
-    where
-        T: Scalar,
+where
+    T: Scalar,
 {
     tet4: Tet4Element<T>,
     vertices: [Point3<T>; 20],
 }
 
 impl<T> Tet20Element<T>
-    where
-        T: Scalar,
+where
+    T: Scalar,
 {
     pub fn from_vertices(vertices: [Point3<T>; 20]) -> Self {
         let tet4_v = [
             vertices[0].clone(),
             vertices[1].clone(),
             vertices[2].clone(),
-            vertices[3].clone()
+            vertices[3].clone(),
         ];
         Self {
             tet4: Tet4Element::from_vertices(tet4_v),
@@ -2133,8 +2133,8 @@ impl<T> Tet20Element<T>
 }
 
 impl<T> Tet20Element<T>
-    where
-        T: RealField,
+where
+    T: RealField,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     pub fn reference() -> Self {
@@ -2148,31 +2148,31 @@ impl<T> Tet20Element<T>
                 Point3::new(-1.0, -1.0, 1.0),
                 // Edge nodes
                 // Between node 0 and 1
-                Point3::new(-1.0/3.0, -1.0, -1.0),
-                Point3::new(1.0/3.0, -1.0, -1.0),
+                Point3::new(-1.0 / 3.0, -1.0, -1.0),
+                Point3::new(1.0 / 3.0, -1.0, -1.0),
                 // Between node 0 and 2
-                Point3::new(-1.0, -1.0/3.0, -1.0),
-                Point3::new(-1.0, 1.0/3.0, -1.0),
+                Point3::new(-1.0, -1.0 / 3.0, -1.0),
+                Point3::new(-1.0, 1.0 / 3.0, -1.0),
                 // Between node 0 and 3
-                Point3::new(-1.0, -1.0, -1.0/3.0),
-                Point3::new(-1.0, -1.0, 1.0/3.0),
+                Point3::new(-1.0, -1.0, -1.0 / 3.0),
+                Point3::new(-1.0, -1.0, 1.0 / 3.0),
                 // Between node 1 and 2
-                Point3::new(1.0/3.0, -1.0/3.0, -1.0),
-                Point3::new(-1.0/3.0, 1.0/3.0, -1.0),
+                Point3::new(1.0 / 3.0, -1.0 / 3.0, -1.0),
+                Point3::new(-1.0 / 3.0, 1.0 / 3.0, -1.0),
                 // Between node 1 and 3
-                Point3::new(1.0/3.0, -1.0, -1.0/3.0),
-                Point3::new(-1.0/3.0, -1.0, 1.0/3.0),
+                Point3::new(1.0 / 3.0, -1.0, -1.0 / 3.0),
+                Point3::new(-1.0 / 3.0, -1.0, 1.0 / 3.0),
                 // Between node 2 and 3
-                Point3::new(-1.0, 1.0/3.0, -1.0/3.0),
-                Point3::new(-1.0, -1.0/3.0, 1.0/3.0),
+                Point3::new(-1.0, 1.0 / 3.0, -1.0 / 3.0),
+                Point3::new(-1.0, -1.0 / 3.0, 1.0 / 3.0),
                 // On face {0, 1, 2}
-                Point3::new(-1.0/3.0, -1.0/3.0, -1.0),
+                Point3::new(-1.0 / 3.0, -1.0 / 3.0, -1.0),
                 // On face {0, 1, 3}
-                Point3::new(-1.0/3.0, -1.0, -1.0/3.0),
+                Point3::new(-1.0 / 3.0, -1.0, -1.0 / 3.0),
                 // On face {0, 2, 3}
-                Point3::new(-1.0, -1.0/3.0, -1.0/3.0),
+                Point3::new(-1.0, -1.0 / 3.0, -1.0 / 3.0),
                 // On face {1, 2, 3}
-                Point3::new(-1.0/3.0, -1.0/3.0, -1.0/3.0),
+                Point3::new(-1.0 / 3.0, -1.0 / 3.0, -1.0 / 3.0),
             ],
         }
     }
@@ -2180,8 +2180,8 @@ impl<T> Tet20Element<T>
 
 #[replace_float_literals(T::from_f64(literal).unwrap())]
 impl<T> FixedNodesReferenceFiniteElement<T> for Tet20Element<T>
-    where
-        T: RealField,
+where
+    T: RealField,
 {
     type ReferenceDim = U3;
     type NodalDim = U20;
@@ -2309,8 +2309,8 @@ impl<T> FixedNodesReferenceFiniteElement<T> for Tet20Element<T>
 impl_reference_finite_element_for_fixed!(Tet20Element<T>);
 
 impl<T> FiniteElement<T> for Tet20Element<T>
-    where
-        T: RealField,
+where
+    T: RealField,
 {
     type GeometryDim = U3;
 
@@ -2329,7 +2329,6 @@ impl<T> FiniteElement<T> for Tet20Element<T>
         self.tet4.diameter()
     }
 }
-
 
 /// Maps physical coordinates `x` to reference coordinates `xi` by solving the equation
 ///  x - T(xi) = 0 using Newton's method.

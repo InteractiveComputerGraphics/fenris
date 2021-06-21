@@ -4,7 +4,12 @@ use nested_vec::NestedVec;
 use std::collections::{BTreeMap, HashMap};
 use std::iter::once;
 
-use crate::connectivity::{CellConnectivity, Connectivity, ConnectivityMut, Hex20Connectivity, Hex27Connectivity, Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity, Tet10Connectivity, Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity, Tet20Connectivity};
+use crate::connectivity::{
+    CellConnectivity, Connectivity, ConnectivityMut, Hex20Connectivity, Hex27Connectivity,
+    Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity, Tet10Connectivity,
+    Tet20Connectivity, Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity,
+    Tri6d2Connectivity,
+};
 use nalgebra::allocator::Allocator;
 use serde::{Deserialize, Serialize};
 

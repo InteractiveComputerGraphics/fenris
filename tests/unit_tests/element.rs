@@ -1,4 +1,9 @@
-use fenris::element::{map_physical_coordinates, project_physical_coordinates, FiniteElement, FixedNodesReferenceFiniteElement, Hex20Element, Hex27Element, Hex8Element, MatrixSlice, Quad4d2Element, Quad9d2Element, Segment2d2Element, Tet10Element, Tet4Element, Tri3d2Element, Tri6d2Element, Tet20Element};
+use fenris::element::{
+    map_physical_coordinates, project_physical_coordinates, FiniteElement,
+    FixedNodesReferenceFiniteElement, Hex20Element, Hex27Element, Hex8Element, MatrixSlice,
+    Quad4d2Element, Quad9d2Element, Segment2d2Element, Tet10Element, Tet20Element, Tet4Element,
+    Tri3d2Element, Tri6d2Element,
+};
 use fenris::error::{estimate_element_L2_error, ErrorWorkspace};
 use fenris::geometry::proptest_strategies::{
     clockwise_triangle2d_strategy_f64, nondegenerate_convex_quad2d_strategy_f64,

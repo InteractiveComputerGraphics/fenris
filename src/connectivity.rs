@@ -975,8 +975,8 @@ impl ConnectivityMut for Tet20Connectivity {
 }
 
 impl<T> CellConnectivity<T, U3> for Tet20Connectivity
-    where
-        T: RealField,
+where
+    T: RealField,
 {
     type Cell = Tetrahedron<T>;
 
