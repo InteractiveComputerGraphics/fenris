@@ -1,26 +1,20 @@
 use fenris::allocators::{BiDimAllocator, SmallDimAllocator};
-use fenris::assembly::local::{
-    assemble_element_elliptic_vector, assemble_generalized_element_mass,
-    compute_element_elliptic_energy,
-};
-use fenris::assembly::operators::{EllipticEnergy, EllipticOperator, Operator};
+use fenris::assembly::local::{assemble_element_elliptic_vector, assemble_generalized_element_mass, compute_element_elliptic_energy, assemble_element_elliptic_matrix};
+use fenris::assembly::operators::{EllipticEnergy, EllipticOperator, Operator, EllipticContraction};
 use fenris::element::{
     MatrixSlice, MatrixSliceMut, Quad4d2Element, ReferenceFiniteElement, Tet10Element, Tet4Element,
     VolumetricFiniteElement,
 };
 use fenris::geometry::Quad2d;
 use fenris::nalgebra::coordinates::{XY, XYZ};
-use fenris::nalgebra::{
-    DMatrix, DVector, DefaultAllocator, DimName, Dynamic, Matrix3x2, Matrix4, MatrixMN, MatrixN,
-    Point, Point2, RealField, VectorN, U1, U2, U3, U8,
-};
+use fenris::nalgebra::{DMatrix, DVector, DefaultAllocator, DimName, Dynamic, Matrix3x2, Matrix4, MatrixMN, MatrixN, Point, Point2, RealField, VectorN, U1, U2, U3, U8, DVectorSliceMut};
 use fenris::nalgebra_sparse::na::Matrix3;
 use fenris::quadrature;
 use fenris::quadrature::{Quadrature, QuadraturePair};
-use fenris_optimize::calculus::approximate_gradient_fd;
+use fenris_optimize::calculus::{approximate_gradient_fd, approximate_jacobian_fd};
 use itertools::izip;
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
-use nalgebra::{DVectorSlice, Point3, Vector1, Vector2, Vector3};
+use nalgebra::{DVectorSlice, Point3, Vector1, Vector2, Vector3, Matrix2};
 use num::Zero;
 use std::ops::Deref;
 
@@ -321,6 +315,21 @@ impl EllipticOperator<f64, U3> for MockVectorEllipticEnergy {
     }
 }
 
+impl EllipticContraction<f64, U3> for MockVectorEllipticEnergy {
+    fn contract(&self,
+                _gradient: &MatrixMN<f64, U3, Self::SolutionDim>,
+                _data: &Self::Parameters,
+                a: &VectorN<f64, U3>,
+                b: &VectorN<f64, U3>) -> MatrixMN<f64, Self::SolutionDim, Self::SolutionDim> {
+        // TODO: It is probably unfortunate that we are using a simple quadratic energy, since
+        // we now end up with a very simple contraction that is independent of the gradient
+        // Let's replace it with a more complicated one
+        let a_matrix = energy_coeff_matrix();
+        let c = a_matrix + a_matrix.transpose();
+        a.dot(&(&c * b)) * Matrix2::identity()
+    }
+}
+
 fn u_vector_quadratic(x: &Point3<f64>) -> Vector2<f64> {
     let &XYZ { x, y, z } = x.deref();
     Vector2::new(
@@ -379,7 +388,7 @@ fn compute_element_energy_vector_tet10() {
 }
 
 #[test]
-fn elliptic_element_vector_is_derivative_of_energy_tet10() {
+fn elliptic_element_vector_is_gradient_of_energy_tet10() {
     // The element vector associated with an elliptic operator should work out
     // to be exactly the gradient of the associated elliptic energy. We check this here
     // using finite differences
@@ -405,7 +414,8 @@ fn elliptic_element_vector_is_derivative_of_energy_tet10() {
             compute_energy_integral(&element, &MockVectorEllipticEnergy, u, &quadrature)
         };
         // TODO: What to use as h?
-        approximate_gradient_fd(f, &u_element, 1e-6)
+        let mut u_element = u_element.clone();
+        approximate_gradient_fd(f, &mut u_element, 1e-6)
     };
 
     let (weights, points) = quadrature::total_order::tetrahedron(8).unwrap();
@@ -424,6 +434,71 @@ fn elliptic_element_vector_is_derivative_of_energy_tet10() {
         MatrixSliceMut::from(&mut gradient_buffer),
     )
     .unwrap();
+
+    assert_matrix_eq!(output, finite_diff_result, comp = abs, tol = 1e-6);
+}
+
+#[test]
+fn elliptic_element_matrix_is_jacobian_of_vector_tet10() {
+    // The element matrix associated with an elliptic operator should work out
+    // to be exactly the Jacobian of the associated element vector.
+    // We check this with finite differences
+
+    // TODO: Test that it works with parameters?
+
+    let a = Point3::new(2.0, 0.0, 1.0);
+    let b = Point3::new(3.0, 4.0, 1.0);
+    let c = Point3::new(1.0, 1.0, 2.0);
+    let d = Point3::new(3.0, 1.0, 4.0);
+    let tet4_element = Tet4Element::from_vertices([a, b, c, d]);
+
+    // A Tet10 element can reproduce any quadratic solution field exactly
+    let element = Tet10Element::from(&tet4_element);
+    let u_element = u_element_from_vertices_and_u_exact(element.vertices(), u_vector_quadratic);
+
+    // Let f(u_element) = energy(grad u). Then we can compute an approximate derivative with finite
+    // differences and use this to compare with our output from the assembly, which should
+    // be exactly the same.
+    let finite_diff_result = {
+        let (weights, points) = quadrature::total_order::tetrahedron(8).unwrap();
+        let quadrature_data = vec![(); weights.len()];
+
+        // Set up a function f = f(u) that corresponds to the element vector given state u
+        let f = |u: DVectorSlice<f64>, output: DVectorSliceMut<f64>| {
+            let mut gradient_buffer = DMatrix::repeat(3, element.num_nodes(), 3.0)
+                .reshape_generic(U3, Dynamic::new(element.num_nodes()));
+            assemble_element_elliptic_vector(
+                output,
+                &element,
+                &MockVectorEllipticEnergy,
+                u,
+                &weights,
+                &points,
+                &quadrature_data,
+                MatrixSliceMut::from(&mut gradient_buffer),
+            ).unwrap();
+        };
+
+        // TODO: What should h be?
+        approximate_jacobian_fd(2 * element.num_nodes(), f, &mut u_element.clone(), 1e-6)
+    };
+
+    let (weights, points) = quadrature::total_order::tetrahedron(8).unwrap();
+    let quadrature_data = vec![(); weights.len()];
+    let mut output = DMatrix::repeat(2 * element.num_nodes(), 2 * element.num_nodes(), 3.0);
+    let mut gradient_buffer = DMatrix::repeat(3, element.num_nodes(), 3.0)
+        .reshape_generic(U3, Dynamic::new(element.num_nodes()));
+    assemble_element_elliptic_matrix(
+        MatrixSliceMut::from(&mut output),
+        &element,
+        &MockVectorEllipticEnergy,
+        MatrixSlice::from(&u_element),
+        &weights,
+        &points,
+        &quadrature_data,
+        MatrixSliceMut::from(&mut gradient_buffer),
+    )
+        .unwrap();
 
     assert_matrix_eq!(output, finite_diff_result, comp = abs, tol = 1e-6);
 }

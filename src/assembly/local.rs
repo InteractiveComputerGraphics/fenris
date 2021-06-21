@@ -940,7 +940,7 @@ pub fn assemble_element_source_vector<T, Element, Source>(
 }
 
 /// TODO: Test and document this
-pub fn assemble_element_stiffness_matrix<T, Element, Contraction>(
+pub fn assemble_element_elliptic_matrix<T, Element, Contraction>(
     mut output: DMatrixSliceMut<T>,
     element: &Element,
     operator: &Contraction,
@@ -970,6 +970,8 @@ where
     );
     assert_eq!(output.nrows(), s * n, "Output matrix dimension mismatch");
     assert_eq!(output.ncols(), s * n, "Output matrix dimension mismatch");
+
+    output.fill(T::zero());
 
     let mut phi_grad = basis_gradients_buffer;
 
