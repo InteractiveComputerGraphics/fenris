@@ -37,6 +37,7 @@ fenris-optimize = { path = "fenris-optimize" }
 fenris-quadrature = { path = "fenris-quadrature" }
 
 [dev-dependencies]
+nalgebra = { version = "0.25", features = [ "serde-serialize", "compare" ] }
 proptest = "1.0"
 prettytable-rs = "^0.8"
 matrixcompare = "0.3"

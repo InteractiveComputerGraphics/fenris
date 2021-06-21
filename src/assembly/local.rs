@@ -1017,8 +1017,23 @@ where
     Ok(())
 }
 
-/// TODO: Test and document this
-pub fn assemble_element_stiffness_vector<T, Element, Operator>(
+/// Assemble the element vector associated with the elliptic operator.
+///
+/// Given a finite element, an elliptic operator and a quadrature rule and associated operator
+/// parameters, stores the resulting element vector in the provided output vector.
+///
+/// See the documentation for [`EllipticOperator`] for more information about elliptic operators.
+///
+/// The computation requires a buffer for evaluating gradients. The buffer must be able to
+/// store gradients for each node in the element.
+///
+/// # Panics
+///
+/// Panics if the quadrature data arrays do not have the same lengths.
+///
+/// Panics if the number of columns in the gradient buffer is not equal to the number of nodes
+/// in the element.
+pub fn assemble_element_elliptic_vector<T, Element, Operator>(
     mut output: DVectorSliceMut<T>,
     element: &Element,
     operator: &Operator,
@@ -1046,8 +1061,9 @@ where
         s * n,
         "Local element dofs (u_element) dimension mismatch"
     );
-    assert_eq!(output.nrows(), s * n, "Output matrix dimension mismatch");
-    assert_eq!(output.ncols(), s * n, "Output matrix dimension mismatch");
+    assert_eq!(output.nrows(), s * n, "Output vector dimension mismatch");
+
+    output.fill(T::zero());
 
     let mut phi_grad_ref = basis_gradients_buffer;
 
@@ -1071,7 +1087,23 @@ where
         );
         let u_grad = compute_volume_u_grad(&j_inv_t, &phi_grad_ref, u_element);
 
-        // TODO: Document what's going on here
+        // We want to compute the vector
+        //
+        // [ g^T phi_1 ]
+        // [ g^T phi_2 ]
+        // [   ...     ]
+        // [ g^T phi_n ]
+        //
+        // We can reorganize this expression into the alternative expression
+        //
+        // [ g^T phi_1     g^T phi_2     ...    g^T phi_n ] = g^T P
+        // where
+        // P = [ phi_1 phi_2 ... phi_n ] = J^{-T} * [ phi_1^ref phi_2^ref ... phi_n^ref ]
+        //   = J^{-T} P_0
+        // and phi_i^ref represents the gradient with respect to reference coordinates.
+        // Hence we may compute (g^T J^{-T}) P_0
+
+        let mut output = MatrixSliceMutMN::from_slice_generic(output.as_mut_slice(), Operator::SolutionDim::name(), Dynamic::new(n));
         let g = operator.compute_elliptic_term(&u_grad, data);
         let g_t_j_inv_t = g.transpose() * j_inv_t;
         output.gemm(weight * j_det.abs(), &g_t_j_inv_t, &phi_grad_ref, T::one());
