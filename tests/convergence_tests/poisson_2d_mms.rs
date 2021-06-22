@@ -22,11 +22,11 @@ use fenris::connectivity::Connectivity;
 use fenris::element::ElementConnectivity;
 use fenris::error::{estimate_element_L2_error_squared, ErrorWorkspace};
 use fenris::io::vtk::FiniteElementMeshDataSetBuilder;
+use fenris::mesh::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::mesh::QuadMesh2d;
 use fenris::nalgebra::coordinates::XY;
 use fenris::nalgebra::{DMatrix, DVector, Point, Point2, Vector1, Vector2, VectorN, U1, U2};
 use fenris::nalgebra_sparse::CsrMatrix;
-use fenris::mesh::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::quadrature;
 
 fn sin(x: f64) -> f64 {

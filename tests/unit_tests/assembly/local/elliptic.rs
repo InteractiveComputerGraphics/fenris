@@ -19,9 +19,9 @@ use fenris::nalgebra::{
     DMatrix, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic, Matrix2,
     Matrix3x2, MatrixMN, Point, Point2, Point3, Vector1, Vector2, Vector3, VectorN, U1, U2, U3,
 };
-use fenris_optimize::calculus::{approximate_gradient_fd, approximate_jacobian_fd};
 use fenris::quadrature;
 use fenris::quadrature::{Quadrature, QuadraturePair};
+use fenris_optimize::calculus::{approximate_gradient_fd, approximate_jacobian_fd};
 
 use crate::unit_tests::assembly::local;
 
