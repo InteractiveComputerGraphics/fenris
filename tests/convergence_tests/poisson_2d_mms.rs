@@ -13,9 +13,9 @@ use fenris::assembly::global::{
     apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, gather_global_to_local,
     CsrAssembler, SerialVectorAssembler,
 };
+use fenris::assembly::local::ElementEllipticAssemblerBuilder;
 use fenris::assembly::local::{
-    ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, SourceFunction,
-    UniformQuadratureTable,
+    ElementSourceAssemblerBuilder, SourceFunction, UniformQuadratureTable,
 };
 use fenris::assembly::operators::{LaplaceOperator, Operator};
 use fenris::connectivity::Connectivity;
