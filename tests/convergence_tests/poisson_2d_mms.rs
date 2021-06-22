@@ -26,7 +26,7 @@ use fenris::mesh::QuadMesh2d;
 use fenris::nalgebra::coordinates::XY;
 use fenris::nalgebra::{DMatrix, DVector, Point, Point2, Vector1, Vector2, VectorN, U1, U2};
 use fenris::nalgebra_sparse::CsrMatrix;
-use fenris::procedural::create_unit_square_uniform_quad_mesh_2d;
+use fenris::mesh::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::quadrature;
 
 fn sin(x: f64) -> f64 {

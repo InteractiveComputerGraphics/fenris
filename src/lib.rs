@@ -13,9 +13,7 @@ pub mod error;
 pub mod io;
 pub mod mesh;
 pub mod model;
-pub mod procedural;
 pub mod quadrature;
-pub mod reorder;
 pub mod space;
 pub mod util;
 

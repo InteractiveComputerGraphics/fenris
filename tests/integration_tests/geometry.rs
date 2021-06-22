@@ -1,5 +1,5 @@
 use fenris::geometry::polymesh::PolyMesh3d;
-use fenris::procedural::create_rectangular_uniform_hex_mesh;
+use fenris::mesh::procedural::create_rectangular_uniform_hex_mesh;
 
 use itertools::iproduct;
 use matrixcompare::assert_scalar_eq;

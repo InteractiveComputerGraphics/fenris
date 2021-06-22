@@ -4,7 +4,7 @@ use fenris::connectivity::{
 use fenris::geometry::polymesh::PolyMesh;
 use fenris::geometry::{Orientation, Triangle};
 use fenris::mesh::{Mesh, Mesh2d};
-use fenris::procedural::{
+use fenris::mesh::procedural::{
     create_rectangular_uniform_hex_mesh, create_rectangular_uniform_quad_mesh_2d,
     create_unit_square_uniform_quad_mesh_2d,
 };

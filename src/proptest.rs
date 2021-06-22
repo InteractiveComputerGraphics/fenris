@@ -2,7 +2,7 @@ use crate::element::Tet4Element;
 use crate::geometry::proptest_strategies::Triangle3dParams;
 use crate::geometry::Orientation::Counterclockwise;
 use crate::mesh::QuadMesh2d;
-use crate::procedural::create_rectangular_uniform_quad_mesh_2d;
+use crate::mesh::procedural::create_rectangular_uniform_quad_mesh_2d;
 use ::proptest::prelude::*;
 use fenris_geometry::Triangle3d;
 use nalgebra::{Point2, Point3, Vector2};

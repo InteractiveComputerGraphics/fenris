@@ -1,3 +1,4 @@
+//! Basic procedural mesh generation routines.
 use crate::connectivity::{Hex8Connectivity, Quad4d2Connectivity};
 use crate::geometry::polymesh::PolyMesh3d;
 use crate::geometry::sdf::BoundedSdf;

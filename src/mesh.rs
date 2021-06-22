@@ -1,17 +1,19 @@
-use crate::geometry::{AxisAlignedBoundingBox, BoundedGeometry, GeometryCollection};
-use nalgebra::{DefaultAllocator, DimName, Point, RealField, Scalar, VectorN, U2, U3};
-use nested_vec::NestedVec;
 use std::collections::{BTreeMap, HashMap};
 use std::iter::once;
-
+use nalgebra::{DefaultAllocator, DimName, Point, RealField, Scalar, U2, U3, VectorN};
+use nalgebra::allocator::Allocator;
+use serde::{Deserialize, Serialize};
+use nested_vec::NestedVec;
 use crate::connectivity::{
     CellConnectivity, Connectivity, ConnectivityMut, Hex20Connectivity, Hex27Connectivity,
     Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity, Tet10Connectivity,
     Tet20Connectivity, Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity,
     Tri6d2Connectivity,
 };
-use nalgebra::allocator::Allocator;
-use serde::{Deserialize, Serialize};
+use crate::geometry::{AxisAlignedBoundingBox, BoundedGeometry, GeometryCollection};
+
+pub mod reorder;
+pub mod procedural;
 
 /// Index-based data structure for conforming meshes (i.e. no hanging nodes).
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]

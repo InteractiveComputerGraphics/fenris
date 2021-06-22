@@ -1,5 +1,5 @@
 use fenris::nalgebra_sparse::CsrMatrix;
-use fenris::reorder::{cuthill_mckee, reverse_cuthill_mckee};
+use fenris::mesh::reorder::{cuthill_mckee, reverse_cuthill_mckee};
 use nalgebra::DMatrix;
 
 #[test]

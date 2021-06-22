@@ -1,3 +1,4 @@
+//! Routines for reordering mesh vertices and elements.
 use crate::assembly::global::CsrParAssembler;
 use crate::connectivity::{Connectivity, ConnectivityMut};
 use crate::mesh::Mesh;
