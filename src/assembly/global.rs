@@ -775,8 +775,6 @@ impl<T: RealField> BasisFunctionBuffer<T> {
         Space: FiniteElementSpace<T>,
         DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
     {
-        let node_count = space.element_node_count(element_index);
-        self.resize(node_count, Space::ReferenceDim::dim());
         space.populate_element_nodes(&mut self.element_nodes, element_index);
     }
 
