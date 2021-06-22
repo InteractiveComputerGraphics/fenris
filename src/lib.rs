@@ -23,10 +23,6 @@ pub mod geometry {
     pub use fenris_geometry::*;
 }
 
-pub mod optimize {
-    pub use fenris_optimize::*;
-}
-
 #[cfg(feature = "proptest")]
 pub mod proptest;
 

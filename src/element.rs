@@ -23,7 +23,7 @@ use numeric_literals::replace_float_literals;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::Debug;
 
-use crate::optimize::newton::NewtonSettings;
+use fenris_optimize::newton::NewtonSettings;
 use num::Zero;
 use std::error::Error;
 
@@ -2343,8 +2343,8 @@ where
     GeometryDim: DimName + DimMin<GeometryDim, Output = GeometryDim>,
     DefaultAllocator: VolumeFiniteElementAllocator<T, GeometryDim>,
 {
-    use crate::optimize::calculus::VectorFunctionBuilder;
-    use crate::optimize::newton::newton;
+    use fenris_optimize::calculus::VectorFunctionBuilder;
+    use fenris_optimize::newton::newton;
 
     let f = VectorFunctionBuilder::with_dimension(GeometryDim::dim())
         .with_function(|f, xi| {
