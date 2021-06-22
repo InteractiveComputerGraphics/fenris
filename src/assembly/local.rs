@@ -7,8 +7,10 @@ use crate::nalgebra::{
     DMatrix, DMatrixSliceMut, DefaultAllocator, DimMin, DimName, RealField, Scalar, U1,
 };
 use crate::nalgebra::{DVectorSliceMut, Point};
+use crate::nested_vec::NestedVec;
 use crate::quadrature::Quadrature;
 use crate::SmallDim;
+use itertools::izip;
 
 mod elliptic;
 mod source;
@@ -160,7 +162,127 @@ where
     }
 }
 
-#[derive(Debug)]
+/// A quadrature table that keeps a separate quadrature rule per element.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GeneralQuadratureTable<T, GeometryDim, Data = ()>
+where
+    T: Scalar,
+    GeometryDim: DimName,
+    DefaultAllocator: Allocator<T, GeometryDim>,
+{
+    points: NestedVec<Point<T, GeometryDim>>,
+    weights: NestedVec<T>,
+    data: NestedVec<Data>,
+}
+
+impl<T, GeometryDim> GeneralQuadratureTable<T, GeometryDim>
+where
+    T: Scalar,
+    GeometryDim: DimName,
+    DefaultAllocator: Allocator<T, GeometryDim>,
+{
+    pub fn from_points_and_weights(
+        points: NestedVec<Point<T, GeometryDim>>,
+        weights: NestedVec<T>,
+    ) -> Self {
+        let mut data = NestedVec::new();
+        for i in 0..points.len() {
+            data.push(&vec![(); points.get(i).unwrap().len()]);
+        }
+        Self::from_points_weights_and_data(points, weights, data)
+    }
+}
+
+impl<T, GeometryDim, Data> GeneralQuadratureTable<T, GeometryDim, Data>
+where
+    T: Scalar,
+    GeometryDim: DimName,
+    DefaultAllocator: Allocator<T, GeometryDim>,
+{
+    pub fn from_points_weights_and_data(
+        points: NestedVec<Point<T, GeometryDim>>,
+        weights: NestedVec<T>,
+        data: NestedVec<Data>,
+    ) -> Self {
+        assert_eq!(points.len(), weights.len());
+        assert_eq!(points.len(), data.len());
+
+        // Ensure that each element has a consistent quadrature rule
+        let iter = izip!(points.iter(), weights.iter(), data.iter());
+        for (element_index, (element_points, element_weights, element_data)) in iter.enumerate() {
+            assert_eq!(
+                element_points.len(),
+                element_weights.len(),
+                "Element {} has mismatched number of points and weights.",
+                element_index
+            );
+            assert_eq!(
+                element_points.len(),
+                element_data.len(),
+                "Element {} has mismatched number of points and data.",
+                element_index
+            );
+        }
+
+        Self {
+            points,
+            weights,
+            data,
+        }
+    }
+}
+
+impl<T, GeometryDim, Data> QuadratureTable<T, GeometryDim>
+    for GeneralQuadratureTable<T, GeometryDim, Data>
+where
+    T: Scalar,
+    GeometryDim: SmallDim,
+    Data: Clone + Default,
+    DefaultAllocator: Allocator<T, GeometryDim>,
+{
+    type Data = Data;
+
+    fn element_quadrature_size(&self, element_index: usize) -> usize {
+        // TODO: Should we rather return results from all these methods? It seems that currently
+        // we are just panicking if the quadrature table size doesn't match the number of elements
+        // in the finite element space. This seems bad.
+        self.weights
+            .get(element_index)
+            .expect("Element index out of bounds")
+            .len()
+    }
+
+    fn populate_element_data(&self, element_index: usize, data: &mut [Self::Data]) {
+        let data_for_element = self
+            .data
+            .get(element_index)
+            .expect("Element index out of bounds");
+        assert_eq!(data_for_element.len(), data.len());
+        data.clone_from_slice(&data_for_element);
+    }
+
+    fn populate_element_quadrature(
+        &self,
+        element_index: usize,
+        points: &mut [Point<T, GeometryDim>],
+        weights: &mut [T],
+    ) {
+        let points_for_element = self
+            .points
+            .get(element_index)
+            .expect("Element index out of bounds");
+        let weights_for_element = self
+            .weights
+            .get(element_index)
+            .expect("Element index out of bounds");
+        assert_eq!(points_for_element.len(), points.len());
+        assert_eq!(weights_for_element.len(), weights.len());
+        points.clone_from_slice(&points_for_element);
+        weights.clone_from_slice(&weights_for_element);
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UniformQuadratureTable<T, GeometryDim, Data = ()>
 where
     T: Scalar,

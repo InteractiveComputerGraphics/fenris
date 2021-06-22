@@ -233,9 +233,21 @@ pub fn assemble_element_source_vector<T, Element, Source>(
     Source: SourceFunction<T, Element::GeometryDim>,
     DefaultAllocator: BiDimAllocator<T, Element::GeometryDim, Source::SolutionDim>,
 {
-    assert_eq!(quadrature_weights.len(), quadrature_points.len());
-    assert_eq!(quadrature_points.len(), quadrature_data.len());
-    assert_eq!(basis_values_buffer.len(), element.num_nodes());
+    assert_eq!(
+        quadrature_weights.len(),
+        quadrature_points.len(),
+        "Number of quadrature weights must be equal to number of points."
+    );
+    assert_eq!(
+        quadrature_points.len(),
+        quadrature_data.len(),
+        "Number of quadrature points must be equal to length of data"
+    );
+    assert_eq!(
+        basis_values_buffer.len(),
+        element.num_nodes(),
+        "Number of basis functions in buffer must be equal to nodes in element."
+    );
 
     // Reshape output into an `s x n` matrix, so that each column corresponds to the
     // output associated with a node

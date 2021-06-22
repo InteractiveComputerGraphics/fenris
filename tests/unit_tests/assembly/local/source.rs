@@ -1,12 +1,22 @@
 use crate::unit_tests::assembly::local;
-use fenris::assembly::local::{assemble_element_source_vector, SourceFunction};
+use crate::unit_tests::assembly::local::density;
+use fenris::assembly::local::ElementVectorAssembler;
+use fenris::assembly::local::{
+    assemble_element_source_vector, ElementSourceAssemblerBuilder, GeneralQuadratureTable,
+    SourceFunction,
+};
 use fenris::assembly::operators::Operator;
-use fenris::element::{ReferenceFiniteElement, Tet10Element, Tet4Element};
+use fenris::element::{
+    ElementConnectivity, FiniteElement, ReferenceFiniteElement, Tet10Element, Tet4Element,
+};
+use fenris::mesh::procedural::create_unit_square_uniform_quad_mesh_2d;
+use fenris::mesh::QuadMesh2d;
 use fenris::nalgebra::base::coordinates::XYZ;
-use fenris::nalgebra::{DVector, DVectorSliceMut, Point, Point3, Vector2, U2, U3};
+use fenris::nalgebra::{DVector, DVectorSliceMut, Point, Point2, Point3, Vector2, U2, U3};
 use fenris::quadrature;
 use fenris::quadrature::Quadrature;
-use matrixcompare::assert_scalar_eq;
+use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
+use nested_vec::NestedVec;
 use std::ops::Deref;
 
 #[test]
@@ -108,4 +118,93 @@ fn element_source_vector_reproduces_inner_product() {
         comp = abs,
         tol = 1e-12
     );
+}
+
+#[test]
+fn source_vector_assembler_matches_individual_elements() {
+    // Create a mesh with a small number of elements
+    let mesh: QuadMesh2d<f64> = create_unit_square_uniform_quad_mesh_2d(3);
+    let mesh = mesh.keep_cells(&[0, 1, 2, 3]);
+
+    // Then give each element its own quadrature rule
+    let (weights, points): (Vec<_>, Vec<_>) = vec![
+        quadrature::tensor::quadrilateral_gauss::<f64>(2),
+        quadrature::tensor::quadrilateral_gauss::<f64>(3),
+        quadrature::tensor::quadrilateral_gauss::<f64>(4),
+        quadrature::tensor::quadrilateral_gauss::<f64>(5),
+    ]
+    .into_iter()
+    .unzip();
+
+    let params: Vec<Vec<_>> = points
+        .iter()
+        .zip(mesh.connectivity())
+        .map(|(points_for_element, conn)| {
+            let element = conn.element(mesh.vertices()).unwrap();
+            let density_per_point = points_for_element
+                .iter()
+                .map(|xi| element.map_reference_coords(xi))
+                .map(|x| density(&x))
+                .collect();
+            density_per_point
+        })
+        .collect();
+
+    let qtable = GeneralQuadratureTable::from_points_weights_and_data(
+        NestedVec::from(&points),
+        NestedVec::from(&weights),
+        NestedVec::from(&params),
+    );
+
+    // And set up a simple mock source function
+    struct MockSource;
+
+    impl Operator for MockSource {
+        type SolutionDim = U2;
+        type Parameters = f64;
+    }
+
+    impl SourceFunction<f64, U2> for MockSource {
+        fn evaluate(&self, coords: &Point2<f64>, &density: &Self::Parameters) -> Vector2<f64> {
+            // Take some transcendental function to make sure that we can't accidentally
+            // integrate it exactly with a high-order quadrature rule
+            density * Vector2::new(coords.x.ln(), coords.y.ln())
+        }
+    }
+
+    let vector_assembler = ElementSourceAssemblerBuilder::new()
+        .with_finite_element_space(&mesh)
+        .with_quadrature_table(&qtable)
+        .with_source(&MockSource)
+        .build();
+
+    // Now check that the result returned by the vector assembler matches that returned
+    // by using a low-level routine
+    let mut element_vector = DVector::repeat(8, 3.0);
+    let mut element_vector_expected = DVector::repeat(8, 4.0);
+    let mut basis_values_buffer = vec![2.0; 4];
+    for (i, conn) in mesh.connectivity().iter().enumerate() {
+        vector_assembler
+            .assemble_element_vector_into(i, DVectorSliceMut::from(&mut element_vector))
+            .unwrap();
+
+        // Compute expected element matrix for this element
+        {
+            let element = conn.element(mesh.vertices()).unwrap();
+            let weights = &weights[i];
+            let points = &points[i];
+            let data = &params[i];
+            assemble_element_source_vector(
+                DVectorSliceMut::from(&mut element_vector_expected),
+                &element,
+                &MockSource,
+                weights,
+                points,
+                &data,
+                &mut basis_values_buffer,
+            );
+        }
+
+        assert_matrix_eq!(element_vector, element_vector_expected);
+    }
 }
