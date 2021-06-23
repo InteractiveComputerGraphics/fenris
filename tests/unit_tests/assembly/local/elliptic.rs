@@ -5,14 +5,15 @@ use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
 use fenris::allocators::BiDimAllocator;
 use fenris::assembly::local::{
     assemble_element_elliptic_matrix, assemble_element_elliptic_vector,
-    compute_element_elliptic_energy,
+    compute_element_elliptic_energy, ElementEllipticAssemblerBuilder, ElementMatrixAssembler,
+    ElementVectorAssembler, GeneralQuadratureTable,
 };
 use fenris::assembly::operators::{
     EllipticContraction, EllipticEnergy, EllipticOperator, Operator,
 };
 use fenris::element::{
-    MatrixSlice, MatrixSliceMut, Quad4d2Element, ReferenceFiniteElement, Tet10Element, Tet4Element,
-    VolumetricFiniteElement,
+    ElementConnectivity, FiniteElement, MatrixSlice, MatrixSliceMut, Quad4d2Element,
+    ReferenceFiniteElement, Tet10Element, Tet4Element, VolumetricFiniteElement,
 };
 use fenris::nalgebra::base::coordinates::{XY, XYZ};
 use fenris::nalgebra::{
@@ -24,6 +25,13 @@ use fenris::quadrature::{Quadrature, QuadraturePair};
 use fenris_optimize::calculus::{approximate_gradient_fd, approximate_jacobian_fd};
 
 use crate::unit_tests::assembly::local;
+use crate::unit_tests::assembly::local::density;
+use fenris::assembly::global::gather_global_to_local;
+use fenris::connectivity::Connectivity;
+use fenris::mesh::procedural::create_unit_square_uniform_quad_mesh_2d;
+use fenris::mesh::QuadMesh2d;
+use nalgebra::DMatrixSliceMut;
+use nested_vec::NestedVec;
 
 struct MockScalarEllipticEnergy;
 
@@ -387,6 +395,138 @@ fn elliptic_element_matrix_is_jacobian_of_vector_tet10() {
     .unwrap();
 
     assert_matrix_eq!(output, finite_diff_result, comp = abs, tol = 1e-6);
+}
+
+#[test]
+fn elliptic_vector_assembler_matches_individual_element_assembly() {
+    // Create a mesh with a small number of elements
+    let mesh: QuadMesh2d<f64> = create_unit_square_uniform_quad_mesh_2d(3);
+    let mesh = mesh.keep_cells(&[0, 1, 2, 3]);
+
+    // Then give each element its own quadrature rule
+    let (weights, points): (Vec<_>, Vec<_>) = vec![
+        quadrature::tensor::quadrilateral_gauss::<f64>(2),
+        quadrature::tensor::quadrilateral_gauss::<f64>(3),
+        quadrature::tensor::quadrilateral_gauss::<f64>(4),
+        quadrature::tensor::quadrilateral_gauss::<f64>(5),
+    ]
+    .into_iter()
+    .unzip();
+
+    let params: Vec<Vec<_>> = points
+        .iter()
+        .zip(mesh.connectivity())
+        .map(|(points_for_element, conn)| {
+            let element = conn.element(mesh.vertices()).unwrap();
+            let density_per_point = points_for_element
+                .iter()
+                .map(|xi| element.map_reference_coords(xi))
+                .map(|x| density(&x))
+                .collect();
+            density_per_point
+        })
+        .collect();
+
+    let qtable = GeneralQuadratureTable::from_points_weights_and_data(
+        NestedVec::from(&points),
+        NestedVec::from(&weights),
+        NestedVec::from(&params),
+    );
+
+    // And set up a simple mock operator
+    struct MockEllipticOperator;
+
+    impl Operator for MockEllipticOperator {
+        type SolutionDim = U2;
+        type Parameters = f64;
+    }
+
+    impl EllipticOperator<f64, U2> for MockEllipticOperator {
+        fn compute_elliptic_term(
+            &self,
+            gradient: &Matrix2<f64>,
+            &density: &Self::Parameters,
+        ) -> Matrix2<f64> {
+            density * gradient
+        }
+    }
+
+    impl EllipticContraction<f64, U2> for MockEllipticOperator {
+        fn contract(
+            &self,
+            gradient: &Matrix2<f64>,
+            &density: &Self::Parameters,
+            a: &Vector2<f64>,
+            b: &Vector2<f64>,
+        ) -> Matrix2<f64> {
+            // This is *not* the correct contraction with respect to the elliptic operator,
+            // but it doesn't matter for our subsequent testing
+            density * (a.dot(&b)) * gradient.transpose() * gradient
+        }
+    }
+
+    let u_global: Vec<_> = (0..2 * mesh.vertices().len()).map(|i| i as f64).collect();
+    let u_global = DVector::from_vec(u_global);
+
+    let assembler = ElementEllipticAssemblerBuilder::new()
+        .with_finite_element_space(&mesh)
+        .with_quadrature_table(&qtable)
+        .with_operator(&MockEllipticOperator)
+        .with_u(&u_global)
+        .build();
+
+    // Now check that the result returned by the assembler matches that returned
+    // by using a low-level routine
+    let mut element_vector = DVector::repeat(8, 3.0);
+    let mut element_matrix = DMatrix::repeat(8, 8, 3.0);
+    let mut element_vector_expected = DVector::repeat(8, 4.0);
+    let mut element_matrix_expected = DMatrix::repeat(8, 8, 4.0);
+    let mut u_element = DVector::repeat(8, 5.0);
+    let mut basis_gradients_buffer =
+        DMatrix::repeat(2, 4, 6.0).reshape_generic(U2, Dynamic::new(4));
+    for (i, conn) in mesh.connectivity().iter().enumerate() {
+        assembler
+            .assemble_element_vector_into(i, DVectorSliceMut::from(&mut element_vector))
+            .unwrap();
+
+        assembler
+            .assemble_element_matrix_into(i, DMatrixSliceMut::from(&mut element_matrix))
+            .unwrap();
+
+        // Compute expected element vector and matrix for this element
+        {
+            let element = conn.element(mesh.vertices()).unwrap();
+            let weights = &weights[i];
+            let points = &points[i];
+            let data = &params[i];
+            gather_global_to_local(&u_global, &mut u_element, conn.vertex_indices(), 2);
+            assemble_element_elliptic_vector(
+                DVectorSliceMut::from(&mut element_vector_expected),
+                &element,
+                &MockEllipticOperator,
+                DVectorSlice::from(&u_element),
+                weights,
+                points,
+                &data,
+                MatrixSliceMut::from(&mut basis_gradients_buffer),
+            )
+            .unwrap();
+            assemble_element_elliptic_matrix(
+                DMatrixSliceMut::from(&mut element_matrix_expected),
+                &element,
+                &MockEllipticOperator,
+                DVectorSlice::from(&u_element),
+                weights,
+                points,
+                &data,
+                MatrixSliceMut::from(&mut basis_gradients_buffer),
+            )
+            .unwrap();
+        }
+
+        assert_matrix_eq!(element_vector, element_vector_expected);
+        assert_matrix_eq!(element_matrix, element_matrix_expected);
+    }
 }
 
 fn compute_energy_integral<Element, Energy>(
