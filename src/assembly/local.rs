@@ -64,8 +64,6 @@ pub trait ElementMatrixAssembler<T: Scalar>: ElementConnectivityAssembler {
         element_index: usize,
         output: DMatrixSliceMut<T>,
     ) -> eyre::Result<()>;
-
-    fn as_connectivity_assembler(&self) -> &dyn ElementConnectivityAssembler;
 }
 
 /// Assemble the generalized element matrix for the given element.

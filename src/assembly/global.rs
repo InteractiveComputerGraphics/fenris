@@ -69,7 +69,7 @@ impl<T: Scalar> CsrAssembler<T> {
     // TODO: Test this method!
     pub fn assemble_pattern(
         &self,
-        element_assembler: &dyn ElementConnectivityAssembler,
+        element_assembler: &impl ElementConnectivityAssembler,
     ) -> SparsityPattern {
         // Here we optimize for memory usage rather than performance: by collecting into a
         // BTreeSet we store each matrix entry exactly once. This is important, because depending
@@ -124,9 +124,9 @@ impl<T: Scalar> CsrAssembler<T> {
 impl<T: RealField> CsrAssembler<T> {
     pub fn assemble(
         &self,
-        element_assembler: &dyn ElementMatrixAssembler<T>,
+        element_assembler: &impl ElementMatrixAssembler<T>,
     ) -> eyre::Result<CsrMatrix<T>> {
-        let pattern = self.assemble_pattern(element_assembler.as_connectivity_assembler());
+        let pattern = self.assemble_pattern(element_assembler);
         let initial_matrix_values = vec![T::zero(); pattern.nnz()];
         let mut matrix = CsrMatrix::try_from_pattern_and_values(pattern, initial_matrix_values)
             .expect("CSR data must be valid by definition");
@@ -137,7 +137,7 @@ impl<T: RealField> CsrAssembler<T> {
     pub fn assemble_into_csr(
         &self,
         csr: &mut CsrMatrix<T>,
-        element_assembler: &dyn ElementMatrixAssembler<T>,
+        element_assembler: &impl ElementMatrixAssembler<T>,
     ) -> eyre::Result<()> {
         // Reuse previously allocated buffers
         let ws = &mut *self.workspace.borrow_mut();
@@ -206,7 +206,7 @@ impl<T: Scalar + Send> Default for CsrParAssembler<T> {
 impl<T: Scalar + Send> CsrParAssembler<T> {
     pub fn assemble_pattern(
         &self,
-        element_assembler: &(dyn Sync + ElementConnectivityAssembler),
+        element_assembler: &(impl Sync + ElementConnectivityAssembler),
     ) -> SparsityPattern {
         let sdim = element_assembler.solution_dim();
 
@@ -564,7 +564,7 @@ impl<T: RealField> SerialVectorAssembler<T> {
     pub fn assemble_vector_into<'a>(
         &self,
         output: impl Into<DVectorSliceMut<'a, T>>,
-        element_assembler: &dyn ElementVectorAssembler<T>,
+        element_assembler: &impl ElementVectorAssembler<T>,
     ) -> eyre::Result<()> {
         // TODO: Move impl into _ method to remove the impl Into<> compilation overhead
         let mut output = output.into();
@@ -591,7 +591,7 @@ impl<T: RealField> SerialVectorAssembler<T> {
 
     pub fn assemble_vector(
         &self,
-        element_assembler: &dyn ElementVectorAssembler<T>,
+        element_assembler: &impl ElementVectorAssembler<T>,
     ) -> eyre::Result<DVector<T>> {
         let n = element_assembler.num_nodes();
         let mut result = DVector::zeros(element_assembler.solution_dim() * n);
@@ -705,7 +705,7 @@ where
     pub fn populate_element_quadrature_from_table(
         &mut self,
         element_index: usize,
-        table: &dyn QuadratureTable<T, GeometryDim, Data = Data>,
+        table: &impl QuadratureTable<T, GeometryDim, Data = Data>,
     ) {
         let quadrature_size = table.element_quadrature_size(element_index);
         self.resize(quadrature_size);

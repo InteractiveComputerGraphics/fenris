@@ -342,10 +342,6 @@ where
             )
         })
     }
-
-    fn as_connectivity_assembler(&self) -> &dyn ElementConnectivityAssembler {
-        self
-    }
 }
 
 /// Assembles the element (derivative) matrix associated with the given elliptic operator.
