@@ -3,12 +3,7 @@
 //! The problem is:
 //!   - Delta u = f,
 //! where Delta = nabla^2 is the Laplace operator.
-use std::f64::consts::PI;
-use std::ops::Deref;
-
 use eyre::eyre;
-use nalgebra::UniformNorm;
-
 use fenris::assembly::global::{
     apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, CsrAssembler,
     SerialVectorAssembler,
@@ -18,14 +13,19 @@ use fenris::assembly::local::{
     ElementSourceAssemblerBuilder, SourceFunction, UniformQuadratureTable,
 };
 use fenris::assembly::operators::{LaplaceOperator, Operator};
+use fenris::element::ElementConnectivity;
 use fenris::error::estimate_L2_error;
-use fenris::io::vtk::FiniteElementMeshDataSetBuilder;
+use fenris::io::vtk::{FiniteElementMeshDataSetBuilder, VtkCellConnectivity};
 use fenris::mesh::procedural::create_unit_square_uniform_quad_mesh_2d;
-use fenris::mesh::QuadMesh2d;
+use fenris::mesh::Mesh2d;
 use fenris::nalgebra::coordinates::XY;
 use fenris::nalgebra::{DMatrix, DVector, Point, Point2, Vector1, Vector2, VectorN, U1, U2};
 use fenris::nalgebra_sparse::CsrMatrix;
 use fenris::quadrature;
+use fenris::quadrature::QuadraturePair2d;
+use nalgebra::UniformNorm;
+use std::f64::consts::PI;
+use std::ops::Deref;
 
 fn sin(x: f64) -> f64 {
     x.sin()
@@ -69,8 +69,14 @@ impl SourceFunction<f64, U2> for PoissonProblemSourceFunction {
 }
 
 /// This is a generalized version of the poisson2d example
-fn assemble_linear_system(mesh: &QuadMesh2d<f64>) -> eyre::Result<(CsrMatrix<f64>, DVector<f64>)> {
-    let (weights, points) = quadrature::tensor::quadrilateral_gauss(2);
+fn assemble_linear_system<C>(
+    mesh: &Mesh2d<f64, C>,
+    quadrature: QuadraturePair2d<f64>,
+) -> eyre::Result<(CsrMatrix<f64>, DVector<f64>)>
+where
+    C: ElementConnectivity<f64, GeometryDim = U2, ReferenceDim = U2>,
+{
+    let (weights, points) = quadrature;
     let quadrature = UniformQuadratureTable::from_points_and_weights(points, weights);
 
     // TODO: This isn't actually needed. Get rid of it by introducing a separate trait
@@ -128,47 +134,84 @@ fn solve_linear_system(matrix: &CsrMatrix<f64>, rhs: &DVector<f64>) -> eyre::Res
     Ok(cholesky.solve(rhs))
 }
 
+#[allow(non_snake_case)]
+struct PoissonSolveResult {
+    u_h: DVector<f64>,
+    L2_error: f64,
+}
+
+#[allow(non_snake_case)]
+fn solve_poisson<C>(
+    mesh: &Mesh2d<f64, C>,
+    quadrature: QuadraturePair2d<f64>,
+    error_quadrature: QuadraturePair2d<f64>,
+) -> PoissonSolveResult
+where
+    C: ElementConnectivity<f64, GeometryDim = U2, ReferenceDim = U2>,
+{
+    let (a, b) = assemble_linear_system(&mesh, quadrature).unwrap();
+    let u_h = solve_linear_system(&a, &b).unwrap();
+
+    let L2_error = {
+        // Use a relatively high order quadrature for error computations
+        let (weights, points) = error_quadrature;
+        let error_quadrature = UniformQuadratureTable::from_points_and_weights(points, weights);
+        estimate_L2_error(mesh, |x| Vector1::new(u_exact(x)), &u_h, &error_quadrature).unwrap()
+    };
+
+    PoissonSolveResult { u_h, L2_error }
+}
+
+fn solve_and_produce_output<C>(
+    element_name: &str,
+    resolution: usize,
+    mesh: &Mesh2d<f64, C>,
+    quadrature: QuadraturePair2d<f64>,
+    error_quadrature: QuadraturePair2d<f64>,
+) where
+    C: VtkCellConnectivity + ElementConnectivity<f64, GeometryDim = U2, ReferenceDim = U2>,
+{
+    let element_name_file_component = element_name.to_ascii_lowercase();
+    let result = solve_poisson(mesh, quadrature, error_quadrature);
+
+    println!("L2 error: {}", result.L2_error);
+
+    FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
+        .with_title(format!(
+            "Poisson 2D FEM {} Res {}",
+            element_name, resolution
+        ))
+        .with_point_scalar_attributes("u_h", result.u_h.as_slice())
+        .try_export(format!(
+            "data/convergence_tests/poisson_2d_mms/poisson2d_mms_approx_{}_res_{}.vtu",
+            element_name_file_component, resolution
+        ))
+        .unwrap();
+
+    // Evaluate u_exact at mesh vertices
+    let u_exact_vector: Vec<_> = mesh.vertices().iter().map(|x| u_exact(x)).collect();
+
+    FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
+        .with_title(format!(
+            "Poisson 2D FEM {} Exact solution Res {}",
+            element_name, resolution
+        ))
+        .with_point_scalar_attributes("u_exact", &u_exact_vector)
+        .try_export(format!(
+            "data/convergence_tests/poisson_2d_mms/poisson2d_mms_exact_{}_res_{}.vtu",
+            element_name_file_component, resolution
+        ))
+        .unwrap();
+}
+
 #[test]
 fn poisson_2d_quad4() {
     let resolutions = [2, 4, 8, 16, 32];
 
     for &cells_per_dim in &resolutions {
         let mesh = create_unit_square_uniform_quad_mesh_2d(cells_per_dim);
-
-        let (a, b) = assemble_linear_system(&mesh).unwrap();
-        let u_h = solve_linear_system(&a, &b).unwrap();
-
-        let l2_error = {
-            // Use a relatively high order quadrature for error computations
-            let (weights, points) = quadrature::tensor::quadrilateral_gauss(6);
-            let quadrature = UniformQuadratureTable::from_points_and_weights(points, weights);
-            estimate_L2_error(&mesh, |x| Vector1::new(u_exact(x)), &u_h, &quadrature).unwrap()
-        };
-
-        println!("L2 error: {}", l2_error);
-
-        FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
-            .with_title(format!("Poisson 2D FEM Res {}", cells_per_dim))
-            .with_point_scalar_attributes("u_h", u_h.as_slice())
-            .try_export(format!(
-                "data/convergence_tests/poisson_2d_mms/poisson2d_mms_approx_res_{}.vtu",
-                cells_per_dim
-            ))
-            .unwrap();
-
-        // Evaluate u_exact at mesh vertices
-        let u_exact_vector: Vec<_> = mesh.vertices().iter().map(|x| u_exact(x)).collect();
-
-        FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
-            .with_title(format!(
-                "Poisson 2D FEM Exact solution Res {}",
-                cells_per_dim
-            ))
-            .with_point_scalar_attributes("u_exact", &u_exact_vector)
-            .try_export(format!(
-                "data/convergence_tests/poisson_2d_mms/poisson2d_mms_exact_res_{}.vtu",
-                cells_per_dim
-            ))
-            .unwrap();
+        let quadrature = quadrature::tensor::quadrilateral_gauss(2);
+        let error_quadrature = quadrature::tensor::quadrilateral_gauss(6);
+        solve_and_produce_output("Quad4", cells_per_dim, &mesh, quadrature, error_quadrature);
     }
 }
