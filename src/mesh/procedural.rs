@@ -23,6 +23,20 @@ where
     )
 }
 
+pub fn create_unit_square_uniform_tri_mesh_2d<T>(cells_per_dim: usize) -> TriangleMesh2d<T>
+where
+    T: RealField,
+{
+    create_rectangular_uniform_quad_mesh_2d(
+        T::one(),
+        1,
+        1,
+        cells_per_dim,
+        &Vector2::new(T::zero(), T::one()),
+    )
+    .split_into_triangles()
+}
+
 /// Generates an axis-aligned rectangular uniform mesh given a unit length,
 /// dimensions as multipliers of the unit length and the number of cells per unit length.
 pub fn create_rectangular_uniform_quad_mesh_2d<T>(

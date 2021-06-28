@@ -16,8 +16,10 @@ use fenris::assembly::operators::{LaplaceOperator, Operator};
 use fenris::element::ElementConnectivity;
 use fenris::error::estimate_L2_error;
 use fenris::io::vtk::{FiniteElementMeshDataSetBuilder, VtkCellConnectivity};
-use fenris::mesh::procedural::create_unit_square_uniform_quad_mesh_2d;
-use fenris::mesh::Mesh2d;
+use fenris::mesh::procedural::{
+    create_unit_square_uniform_quad_mesh_2d, create_unit_square_uniform_tri_mesh_2d,
+};
+use fenris::mesh::{Mesh2d, Quad9Mesh2d, Tri6Mesh2d};
 use fenris::nalgebra::coordinates::XY;
 use fenris::nalgebra::{DMatrix, DVector, Point, Point2, Vector1, Vector2, VectorN, U1, U2};
 use fenris::nalgebra_sparse::CsrMatrix;
@@ -174,7 +176,7 @@ fn solve_and_produce_output<C>(
     let element_name_file_component = element_name.to_ascii_lowercase();
     let result = solve_poisson(mesh, quadrature, error_quadrature);
 
-    println!("L2 error: {}", result.L2_error);
+    println!("L2 error ({}): {}", element_name, result.L2_error);
 
     FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
         .with_title(format!(
@@ -213,5 +215,41 @@ fn poisson_2d_quad4() {
         let quadrature = quadrature::tensor::quadrilateral_gauss(2);
         let error_quadrature = quadrature::tensor::quadrilateral_gauss(6);
         solve_and_produce_output("Quad4", cells_per_dim, &mesh, quadrature, error_quadrature);
+    }
+}
+
+#[test]
+fn poisson_2d_quad8() {
+    let resolutions = [2, 4, 8, 16, 32];
+
+    for &cells_per_dim in &resolutions {
+        let mesh: Quad9Mesh2d<f64> = create_unit_square_uniform_quad_mesh_2d(cells_per_dim).into();
+        let quadrature = quadrature::tensor::quadrilateral_gauss(2);
+        let error_quadrature = quadrature::tensor::quadrilateral_gauss(6);
+        solve_and_produce_output("Quad9", cells_per_dim, &mesh, quadrature, error_quadrature);
+    }
+}
+
+#[test]
+fn poisson_2d_tri3() {
+    let resolutions = [2, 4, 8, 16, 32];
+
+    for &cells_per_dim in &resolutions {
+        let mesh = create_unit_square_uniform_tri_mesh_2d(cells_per_dim);
+        let quadrature = quadrature::total_order::triangle(0).unwrap();
+        let error_quadrature = quadrature::total_order::triangle(6).unwrap();
+        solve_and_produce_output("Tri3", cells_per_dim, &mesh, quadrature, error_quadrature);
+    }
+}
+
+#[test]
+fn poisson_2d_tri6() {
+    let resolutions = [2, 4, 8, 16, 32];
+
+    for &cells_per_dim in &resolutions {
+        let mesh: Tri6Mesh2d<f64> = create_unit_square_uniform_tri_mesh_2d(cells_per_dim).into();
+        let quadrature = quadrature::total_order::triangle(2).unwrap();
+        let error_quadrature = quadrature::total_order::triangle(6).unwrap();
+        solve_and_produce_output("Tri6", cells_per_dim, &mesh, quadrature, error_quadrature);
     }
 }
