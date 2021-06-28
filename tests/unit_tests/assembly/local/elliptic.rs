@@ -398,7 +398,7 @@ fn elliptic_element_matrix_is_jacobian_of_vector_tet10() {
 }
 
 #[test]
-fn elliptic_vector_assembler_matches_individual_element_assembly() {
+fn elliptic_element_assembler_matches_individual_element_assembly() {
     // Create a mesh with a small number of elements
     let mesh: QuadMesh2d<f64> = create_unit_square_uniform_quad_mesh_2d(3);
     let mesh = mesh.keep_cells(&[0, 1, 2, 3]);
