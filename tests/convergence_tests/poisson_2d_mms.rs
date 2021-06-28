@@ -7,20 +7,18 @@ use std::f64::consts::PI;
 use std::ops::Deref;
 
 use eyre::eyre;
-use nalgebra::{Dynamic, MatrixSliceMN, UniformNorm};
+use nalgebra::UniformNorm;
 
 use fenris::assembly::global::{
-    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, gather_global_to_local,
-    CsrAssembler, SerialVectorAssembler,
+    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, CsrAssembler,
+    SerialVectorAssembler,
 };
 use fenris::assembly::local::ElementEllipticAssemblerBuilder;
 use fenris::assembly::local::{
     ElementSourceAssemblerBuilder, SourceFunction, UniformQuadratureTable,
 };
 use fenris::assembly::operators::{LaplaceOperator, Operator};
-use fenris::connectivity::Connectivity;
-use fenris::element::ElementConnectivity;
-use fenris::error::{estimate_element_L2_error_squared, ErrorWorkspace};
+use fenris::error::estimate_L2_error;
 use fenris::io::vtk::FiniteElementMeshDataSetBuilder;
 use fenris::mesh::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::mesh::QuadMesh2d;
@@ -140,32 +138,12 @@ fn poisson_2d_quad4() {
         let (a, b) = assemble_linear_system(&mesh).unwrap();
         let u_h = solve_linear_system(&a, &b).unwrap();
 
-        // TODO: Clean all this up
-        let mut error_workspace = ErrorWorkspace::default();
-        let error_quadrature = quadrature::tensor::quadrilateral_gauss(4);
-        let l2_error = mesh
-            .connectivity()
-            .iter()
-            .map(|conn| {
-                let num_nodes = conn.vertex_indices().len();
-                let mut u_local = DVector::zeros(num_nodes);
-                gather_global_to_local(&u_h, &mut u_local, conn.vertex_indices(), 1);
-                let element = conn.element(mesh.vertices()).unwrap();
-                let u_h_element = MatrixSliceMN::from_slice_generic(
-                    &u_local.as_slice(),
-                    U1,
-                    Dynamic::new(num_nodes),
-                );
-                estimate_element_L2_error_squared(
-                    &mut error_workspace,
-                    &element,
-                    |x, _| Vector1::new(u_exact(x)),
-                    u_h_element,
-                    &error_quadrature,
-                )
-            })
-            .sum::<f64>()
-            .sqrt();
+        let l2_error = {
+            // Use a relatively high order quadrature for error computations
+            let (weights, points) = quadrature::tensor::quadrilateral_gauss(6);
+            let quadrature = UniformQuadratureTable::from_points_and_weights(points, weights);
+            estimate_L2_error(&mesh, |x| Vector1::new(u_exact(x)), &u_h, &quadrature).unwrap()
+        };
 
         println!("L2 error: {}", l2_error);
 

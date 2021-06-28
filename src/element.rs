@@ -2112,8 +2112,27 @@ where
 
 impl<T> Tet20Element<T>
 where
-    T: Scalar,
+    T: RealField,
 {
+    pub fn from_tet4_vertices(vertices: [Point3<T>; 4]) -> Self {
+        // TODO: Test this method
+        let tet4_element = Tet4Element::from_vertices(vertices);
+        let tet20_ref = Tet20Element::reference();
+        let mut vertices = [Point::origin(); 20];
+        // The reference element has the correct placement of nodes in the reference element.
+        // We can obtain the vertex positions in physical space by mapping coordinates
+        // with the Tet4 element that we have constructed. This is currently just a quick
+        // way to avoid having to write down the vertices manually, which is error prone
+        // TODO: Find a more canonical way of doing these things so that we only have
+        // the canonical description in a single location
+        for (v_ref, v_physical) in tet20_ref.vertices().iter().zip(&mut vertices) {
+            *v_physical = tet4_element.map_reference_coords(v_ref);
+        }
+        Self::from_vertices(vertices)
+    }
+
+    // TODO: Remove this method so that it's not possible to create curved Tet20Elements
+    // (we do *not* use isoparametric transformations at the moment). Same with Tet10Element
     pub fn from_vertices(vertices: [Point3<T>; 20]) -> Self {
         let tet4_v = [
             vertices[0].clone(),
@@ -2327,6 +2346,16 @@ where
     // TODO: Write tests for diameter
     fn diameter(&self) -> T {
         self.tet4.diameter()
+    }
+}
+
+impl<'a, T> From<&'a Tet4Element<T>> for Tet20Element<T>
+where
+    T: RealField,
+{
+    fn from(tet4: &'a Tet4Element<T>) -> Self {
+        // TODO: Test this!
+        Self::from_tet4_vertices(tet4.vertices().clone())
     }
 }
 

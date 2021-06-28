@@ -4,7 +4,7 @@ use fenris::element::{
     Quad4d2Element, Quad9d2Element, Segment2d2Element, Tet10Element, Tet20Element, Tet4Element,
     Tri3d2Element, Tri6d2Element,
 };
-use fenris::error::{estimate_element_L2_error, ErrorWorkspace};
+use fenris::error::estimate_element_L2_error;
 use fenris::geometry::proptest_strategies::{
     clockwise_triangle2d_strategy_f64, nondegenerate_convex_quad2d_strategy_f64,
 };
@@ -13,8 +13,8 @@ use fenris::quadrature;
 use fenris_optimize::calculus::{approximate_jacobian, VectorFunctionBuilder};
 
 use nalgebra::{
-    DVectorSlice, Dynamic, MatrixMN, Point, Point1, Point2, Point3, RowVector3, RowVector4,
-    RowVector6, RowVectorN, Vector1, Vector2, Vector3, U1, U10, U2, U20, U27, U3, U4, U6, U8, U9,
+    DVectorSlice, Dynamic, MatrixMN, Point, Point1, Point2, Point3, Vector1, Vector2, Vector3, U1,
+    U10, U2, U20, U27, U3, U4, U6, U8, U9,
 };
 
 use fenris::util::proptest::point2_f64_strategy;
@@ -23,6 +23,7 @@ use matrixcompare::assert_scalar_eq;
 
 use proptest::prelude::*;
 
+use fenris::nalgebra::DVector;
 use util::assert_approx_matrix_eq;
 
 #[test]
@@ -272,19 +273,20 @@ fn quad4_bilinear_function_exact_error() {
     let u_exact = |p: &Point2<f64>| {
         let x = p[0];
         let y = p[1];
-        Vector1::new(5.0 * x * y + 3.0 * x - 2.0 * y - 5.0)
+        5.0 * x * y + 3.0 * x - 2.0 * y - 5.0
     };
-    let u_weights =
-        RowVector4::from_columns(&quad.0.iter().map(|x| u_exact(x)).collect::<Vec<_>>());
+    let u_weights = DVector::from_vec(quad.0.iter().map(u_exact).collect::<Vec<_>>());
 
     // TODO: Use lower strength quadrature
-    let quadrature = quadrature::total_order::quadrilateral(11).unwrap();
+    let (weights, points) = quadrature::total_order::quadrilateral(11).unwrap();
+    let mut basis_buffer = vec![0.0; 4];
     let error = estimate_element_L2_error(
-        &mut ErrorWorkspace::default(),
         &element,
-        |p, _| u_exact(p),
+        |x| Vector1::new(u_exact(x)),
         MatrixSlice::from(&u_weights),
-        &quadrature,
+        &weights,
+        &points,
+        &mut basis_buffer,
     );
 
     // Note: The solution here is obtained by symbolic integration. See
@@ -312,19 +314,20 @@ fn hex27_triquadratic_function_exact_error() {
         let g = -2.0 * y * y + 3.0 * y + 1.5;
         let h = 1.5 * z * z + 1.2 * z - 3.0;
 
-        Vector1::new(f * g * h)
+        f * g * h
     };
-    let cols: Vec<_> = element.vertices().iter().map(|x| u_exact(x)).collect();
-    let u_weights = RowVectorN::<_, U27>::from_columns(&cols);
+    let u_weights = DVector::from_vec(element.vertices().iter().map(u_exact).collect());
 
     // TODO: Use lower strength quadrature
-    let quadrature = quadrature::total_order::hexahedron(11).unwrap();
+    let (weights, points) = quadrature::total_order::hexahedron(11).unwrap();
+    let mut basis_buffer = vec![0.0; 27];
     let error = estimate_element_L2_error(
-        &mut ErrorWorkspace::default(),
         &element,
-        |p, _| u_exact(p),
+        |x| Vector1::new(u_exact(x)),
         MatrixSlice::from(&u_weights),
-        &quadrature,
+        &weights,
+        &points,
+        &mut basis_buffer,
     );
 
     // Note: The solution here is obtained by symbolic integration. See
@@ -346,26 +349,23 @@ fn hex20_quadratic_function_exact_error() {
         let y = p[1];
         let z = p[2];
 
-        Vector1::new(
-            2.0 * x * x + 4.0 * y * y - 3.0 * z * z + 3.0 * x * y - 5.0 * x * z
-                + 1.5 * y * z
-                + 3.0 * x
-                - 2.0 * y
-                + 3.0 * z
-                + 9.0,
-        )
+        2.0 * x * x + 4.0 * y * y - 3.0 * z * z + 3.0 * x * y - 5.0 * x * z + 1.5 * y * z + 3.0 * x
+            - 2.0 * y
+            + 3.0 * z
+            + 9.0
     };
-    let cols: Vec<_> = element.vertices().iter().map(|x| u_exact(x)).collect();
-    let u_weights = RowVectorN::<_, U20>::from_columns(&cols);
+    let u_weights = DVector::from_vec(element.vertices().iter().map(|x| u_exact(x)).collect());
 
     // TODO: Use lower strength quadrature
-    let quadrature = quadrature::total_order::hexahedron(11).unwrap();
+    let (weights, points) = quadrature::total_order::hexahedron(11).unwrap();
+    let mut basis_buffer = vec![0.0; 20];
     let error = estimate_element_L2_error(
-        &mut ErrorWorkspace::default(),
         &element,
-        |p, _| u_exact(p),
-        MatrixSlice::from(&u_weights),
-        &quadrature,
+        |x| Vector1::new(u_exact(x)),
+        DVectorSlice::from(&u_weights),
+        &weights,
+        &points,
+        &mut basis_buffer,
     );
 
     // Note: The solution here is obtained by symbolic integration. See
@@ -516,17 +516,19 @@ proptest! {
         // If u_exact is an affine function, then we can exactly represent it
         // with a Tri3 element. Then the basis weights of u_h are given by
         // u_exact(x_i), where x_i are the coordinates of each node of the element.
-        let u_exact = |x: &Point2<f64>| Vector1::new(2.0 * x[0] - 3.0 * x[1] + 1.5);
-        let u_weights = RowVector3::from_columns(&tri.0.iter().map(|x| u_exact(x)).collect::<Vec<_>>());
+        let u_exact = |x: &Point2<f64>| 2.0 * x[0] - 3.0 * x[1] + 1.5;
+        let u_weights = DVector::from_vec(tri.0.iter().map(|x| u_exact(x)).collect::<Vec<_>>());
 
         // TODO: Use lower strength quadrature
-        let quadrature = quadrature::total_order::triangle(5).unwrap();
+        let (weights, points) = quadrature::total_order::triangle(5).unwrap();
+        let mut basis_buffer = vec![0.0; 3];
         let error = estimate_element_L2_error(
-            &mut ErrorWorkspace::default(),
             &element,
-            |p, _| u_exact(p),
-            MatrixSlice::from(&u_weights),
-            quadrature);
+            |x| Vector1::new(u_exact(x)),
+            DVectorSlice::from(&u_weights),
+            &weights,
+            &points,
+            &mut basis_buffer);
 
         assert_scalar_eq!(error, 0.0, comp=abs, tol=element.diameter() * 1e-12);
     }
@@ -537,17 +539,19 @@ proptest! {
         // If u_exact is an affine function, then we can exactly represent it
         // with a Tri3 element. Then the basis weights of u_h are given by
         // u_exact(x_i), where x_i are the coordinates of each node of the element.
-        let u_exact = |x: &Point2<f64>| Vector1::new(2.0 * x[0] - 3.0 * x[1] + 1.5);
-        let u_weights = RowVector6::from_columns(&element.vertices().iter().map(|x| u_exact(x)).collect::<Vec<_>>());
+        let u_exact = |x: &Point2<f64>| 2.0 * x[0] - 3.0 * x[1] + 1.5;
+        let u_weights = DVector::from_vec(element.vertices().iter().map(|x| u_exact(x)).collect::<Vec<_>>());
 
         // TODO: Use lower strength quadrature
-        let quadrature = quadrature::total_order::triangle(5).unwrap();
+        let (weights, points) = quadrature::total_order::triangle(5).unwrap();
+        let mut basis_buffer = vec![0.0; 6];
         let error = estimate_element_L2_error(
-            &mut ErrorWorkspace::default(),
             &element,
-            |p, _| u_exact(p),
-            MatrixSlice::from(&u_weights),
-            quadrature);
+            |x| Vector1::new(u_exact(x)),
+            DVectorSlice::from(&u_weights),
+            &weights,
+            &points,
+            &mut basis_buffer);
 
         assert_scalar_eq!(error, 0.0, comp=abs, tol=element.diameter() * 1e-12);
     }
@@ -558,17 +562,19 @@ proptest! {
         // If u_exact is an affine function, then we can exactly represent it
         // with a Tri3 element. Then the basis weights of u_h are given by
         // u_exact(x_i), where x_i are the coordinates of each node of the element.
-        let u_exact = |x: &Point2<f64>| Vector1::new(2.0 * x[0] * x[0] - 3.0 * x[1] * x[0] + 0.5 * x[1] + 1.5);
-        let u_weights = RowVector6::from_columns(&element.vertices().iter().map(|x| u_exact(x)).collect::<Vec<_>>());
+        let u_exact = |x: &Point2<f64>| 2.0 * x[0] * x[0] - 3.0 * x[1] * x[0] + 0.5 * x[1] + 1.5;
+        let u_weights = DVector::from_vec(element.vertices().iter().map(|x| u_exact(x)).collect::<Vec<_>>());
 
         // TODO: Use lower strength quadrature
-        let quadrature = quadrature::total_order::triangle(5).unwrap();
+        let (weights, points) = quadrature::total_order::triangle(5).unwrap();
+        let mut basis_buffer = vec![0.0; 6];
         let error = estimate_element_L2_error(
-            &mut ErrorWorkspace::default(),
             &element,
-            |p, _| u_exact(p),
-            MatrixSlice::from(&u_weights),
-            quadrature);
+            |x| Vector1::new(u_exact(x)),
+            DVectorSlice::from(&u_weights),
+            &weights,
+            &points,
+            &mut basis_buffer);
 
         // TODO: Check tolerance
         assert_scalar_eq!(error, 0.0, comp=abs, tol=element.diameter() * element.diameter() * 1e-12);
@@ -586,20 +592,22 @@ proptest! {
         let u_exact = |x: &Point2<f64>| {
             let y = x[1];
             let x = x[0];
-            Vector1::new(3.0 * x + 2.0 * y - 3.0)
+            3.0 * x + 2.0 * y - 3.0
         };
-        let u_weights = RowVector4::from_columns(&quad.0
+        let u_weights = DVector::from_vec(quad.0
                                                     .iter()
                                                     .map(|x| u_exact(x))
                                                     .collect::<Vec<_>>());
 
-        let quadrature = quadrature::total_order::quadrilateral(11).unwrap();
+        let (weights, points) = quadrature::total_order::quadrilateral(11).unwrap();
+        let mut basis_buffer = vec![0.0; 4];
         let error = estimate_element_L2_error(
-            &mut ErrorWorkspace::default(),
             &element,
-            |p, _| u_exact(p),
+            |x| Vector1::new(u_exact(x)),
             MatrixSlice::from(&u_weights),
-            &quadrature);
+            &weights,
+            &points,
+            &mut basis_buffer);
 
         assert_scalar_eq!(error, 0.0, comp=abs, tol=element.diameter() * 1e-12);
     }
@@ -726,19 +734,21 @@ proptest! {
             let x = p.x;
             let y = p.y;
             let z = p.z;
-            Vector1::new(3.0 * x + 2.0 * y - 3.0 * z + 3.0)
+            3.0 * x + 2.0 * y - 3.0 * z + 3.0
         };
-        let u_weights = RowVector4::from_columns(&element.vertices()
+        let u_weights = DVector::from_vec(element.vertices()
                                                     .iter()
                                                     .map(|x| u_exact(x))
                                                     .collect::<Vec<_>>());
 
-        let quadrature = quadrature::total_order::tetrahedron(10).unwrap();
+        let (weights, points) = quadrature::total_order::tetrahedron(10).unwrap();
+        let mut basis_buffer = vec![0.0; 4];
         let error = estimate_element_L2_error(
-            &mut ErrorWorkspace::default(),
-            &element, |p, _| u_exact(p),
+            &element, |x| Vector1::new(u_exact(x)),
             MatrixSlice::from(&u_weights),
-            &quadrature);
+            &weights,
+            &points,
+            &mut basis_buffer);
 
         assert_scalar_eq!(error, 0.0, comp=abs, tol=element.diameter() * 1e-12);
     }
