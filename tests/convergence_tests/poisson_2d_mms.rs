@@ -21,12 +21,16 @@ use fenris::mesh::procedural::{
 };
 use fenris::mesh::{Mesh2d, Quad9Mesh2d, Tri6Mesh2d};
 use fenris::nalgebra::coordinates::XY;
-use fenris::nalgebra::{DMatrix, DVector, Point, Point2, Vector1, Vector2, VectorN, U1, U2};
+use fenris::nalgebra::{
+    DMatrix, DVector, Point, Point2, UniformNorm, Vector1, Vector2, VectorN, U1, U2,
+};
 use fenris::nalgebra_sparse::CsrMatrix;
 use fenris::quadrature;
 use fenris::quadrature::QuadraturePair2d;
-use nalgebra::UniformNorm;
+use itertools::izip;
+use serde::{Deserialize, Serialize};
 use std::f64::consts::PI;
+use std::fs::File;
 use std::ops::Deref;
 
 fn sin(x: f64) -> f64 {
@@ -67,6 +71,36 @@ impl SourceFunction<f64, U2> for PoissonProblemSourceFunction {
         _data: &Self::Parameters,
     ) -> VectorN<f64, Self::SolutionDim> {
         Vector1::new(f(coords))
+    }
+}
+
+/// For serializing to JSON for subsequent analysis/plots
+#[derive(Serialize, Deserialize)]
+#[allow(non_snake_case)]
+struct ErrorSummary {
+    element_name: String,
+    L2_errors: Vec<f64>,
+    /// Resolutions here measured in floating-point cell size, e.g. for quads, each cell is `h x h`,
+    /// where `h` is the resolution.
+    resolutions: Vec<f64>,
+}
+
+fn assert_summary_is_close_to_reference(summary: &ErrorSummary, reference: &ErrorSummary) {
+    assert_eq!(
+        summary.element_name, reference.element_name,
+        "Element names are not identical"
+    );
+    assert_eq!(
+        summary.resolutions, reference.resolutions,
+        "Resolutions are not identical"
+    );
+    assert_eq!(summary.L2_errors.len(), reference.L2_errors.len());
+
+    for (e1, e2) in izip!(&summary.L2_errors, &reference.L2_errors) {
+        let rel_error = (e1 - e2).abs() / e2.abs();
+        if rel_error > 0.01 {
+            panic!("Error deviates by more than 1% compared to expected error.");
+        }
     }
 }
 
@@ -166,90 +200,145 @@ where
 
 fn solve_and_produce_output<C>(
     element_name: &str,
-    resolution: usize,
-    mesh: &Mesh2d<f64, C>,
+    resolutions: &[usize],
+    // Produce a mesh for the given resolution
+    mesh_producer: impl Fn(usize) -> Mesh2d<f64, C>,
     quadrature: QuadraturePair2d<f64>,
     error_quadrature: QuadraturePair2d<f64>,
 ) where
     C: VtkCellConnectivity + ElementConnectivity<f64, GeometryDim = U2, ReferenceDim = U2>,
 {
     let element_name_file_component = element_name.to_ascii_lowercase();
-    let result = solve_poisson(mesh, quadrature, error_quadrature);
 
-    println!("L2 error ({}): {}", element_name, result.L2_error);
+    let mut summary = ErrorSummary {
+        element_name: element_name.to_string(),
+        L2_errors: vec![],
+        resolutions: vec![],
+    };
 
-    FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
-        .with_title(format!(
-            "Poisson 2D FEM {} Res {}",
-            element_name, resolution
-        ))
-        .with_point_scalar_attributes("u_h", result.u_h.as_slice())
-        .try_export(format!(
-            "data/convergence_tests/poisson_2d_mms/poisson2d_mms_approx_{}_res_{}.vtu",
-            element_name_file_component, resolution
-        ))
-        .unwrap();
+    for &resolution in resolutions {
+        let mesh = mesh_producer(resolution);
+        let result = solve_poisson(&mesh, quadrature.clone(), error_quadrature.clone());
 
-    // Evaluate u_exact at mesh vertices
-    let u_exact_vector: Vec<_> = mesh.vertices().iter().map(|x| u_exact(x)).collect();
+        // Resolution measures number of cells per unit-length, and the unit square is one unit
+        // long.
+        let h = 1.0 / resolution as f64;
+        summary.resolutions.push(h);
+        summary.L2_errors.push(result.L2_error);
 
-    FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
-        .with_title(format!(
-            "Poisson 2D FEM {} Exact solution Res {}",
-            element_name, resolution
+        FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
+            .with_title(format!(
+                "Poisson 2D FEM {} Res {}",
+                element_name, resolution
+            ))
+            .with_point_scalar_attributes("u_h", result.u_h.as_slice())
+            .try_export(format!(
+                "data/convergence_tests/poisson_2d_mms/poisson2d_mms_approx_{}_res_{}.vtu",
+                element_name_file_component, resolution
+            ))
+            .unwrap();
+
+        // Evaluate u_exact at mesh vertices
+        let u_exact_vector: Vec<_> = mesh.vertices().iter().map(|x| u_exact(x)).collect();
+
+        FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
+            .with_title(format!(
+                "Poisson 2D FEM {} Exact solution Res {}",
+                element_name, resolution
+            ))
+            .with_point_scalar_attributes("u_exact", &u_exact_vector)
+            .try_export(format!(
+                "data/convergence_tests/poisson_2d_mms/poisson2d_mms_exact_{}_res_{}.vtu",
+                element_name_file_component, resolution
+            ))
+            .unwrap();
+    }
+
+    let summary_path = format!(
+        "data/convergence_tests/poisson_2d_mms/poisson2d_mms_{}_summary.json",
+        element_name_file_component
+    );
+    {
+        let mut summary_file = File::create(&summary_path).unwrap();
+        serde_json::to_writer_pretty(&mut summary_file, &summary)
+            .expect("Failed to write JSON output to directory");
+    }
+
+    // Load summary containing reference values
+    let reference_summary: ErrorSummary = {
+        let reference_summary_path = format!(
+            "tests/convergence_tests/reference_values/poisson2d_mms_{}_summary.json",
+            element_name_file_component
+        );
+        let summary_file = File::open(&reference_summary_path).expect(&format!(
+            "Failed to open reference error summary for element {}",
+            element_name
+        ));
+        serde_json::from_reader(&summary_file).expect(&format!(
+            "Failed to deserialize reference summary for element {}",
+            element_name
         ))
-        .with_point_scalar_attributes("u_exact", &u_exact_vector)
-        .try_export(format!(
-            "data/convergence_tests/poisson_2d_mms/poisson2d_mms_exact_{}_res_{}.vtu",
-            element_name_file_component, resolution
-        ))
-        .unwrap();
+    };
+
+    assert_summary_is_close_to_reference(&summary, &reference_summary);
 }
 
 #[test]
 fn poisson_2d_quad4() {
-    let resolutions = [2, 4, 8, 16, 32];
-
-    for &cells_per_dim in &resolutions {
-        let mesh = create_unit_square_uniform_quad_mesh_2d(cells_per_dim);
-        let quadrature = quadrature::tensor::quadrilateral_gauss(2);
-        let error_quadrature = quadrature::tensor::quadrilateral_gauss(6);
-        solve_and_produce_output("Quad4", cells_per_dim, &mesh, quadrature, error_quadrature);
-    }
+    let resolutions = [1, 2, 4, 8, 16, 32];
+    let mesh_producer = |res| create_unit_square_uniform_quad_mesh_2d(res);
+    let quadrature = quadrature::tensor::quadrilateral_gauss(2);
+    let error_quadrature = quadrature::tensor::quadrilateral_gauss(6);
+    solve_and_produce_output(
+        "Quad4",
+        &resolutions,
+        mesh_producer,
+        quadrature,
+        error_quadrature,
+    );
 }
 
 #[test]
 fn poisson_2d_quad8() {
-    let resolutions = [2, 4, 8, 16, 32];
-
-    for &cells_per_dim in &resolutions {
-        let mesh: Quad9Mesh2d<f64> = create_unit_square_uniform_quad_mesh_2d(cells_per_dim).into();
-        let quadrature = quadrature::tensor::quadrilateral_gauss(2);
-        let error_quadrature = quadrature::tensor::quadrilateral_gauss(6);
-        solve_and_produce_output("Quad9", cells_per_dim, &mesh, quadrature, error_quadrature);
-    }
+    let resolutions = [1, 2, 4, 8, 16, 32];
+    let mesh_producer = |res| Quad9Mesh2d::from(create_unit_square_uniform_quad_mesh_2d(res));
+    let quadrature = quadrature::tensor::quadrilateral_gauss(2);
+    let error_quadrature = quadrature::tensor::quadrilateral_gauss(6);
+    solve_and_produce_output(
+        "Quad9",
+        &resolutions,
+        mesh_producer,
+        quadrature,
+        error_quadrature,
+    );
 }
 
 #[test]
 fn poisson_2d_tri3() {
-    let resolutions = [2, 4, 8, 16, 32];
-
-    for &cells_per_dim in &resolutions {
-        let mesh = create_unit_square_uniform_tri_mesh_2d(cells_per_dim);
-        let quadrature = quadrature::total_order::triangle(0).unwrap();
-        let error_quadrature = quadrature::total_order::triangle(6).unwrap();
-        solve_and_produce_output("Tri3", cells_per_dim, &mesh, quadrature, error_quadrature);
-    }
+    let resolutions = [1, 2, 4, 8, 16, 32];
+    let mesh_producer = |res| create_unit_square_uniform_tri_mesh_2d(res);
+    let quadrature = quadrature::total_order::triangle(0).unwrap();
+    let error_quadrature = quadrature::total_order::triangle(6).unwrap();
+    solve_and_produce_output(
+        "Tri3",
+        &resolutions,
+        mesh_producer,
+        quadrature,
+        error_quadrature,
+    );
 }
 
 #[test]
 fn poisson_2d_tri6() {
-    let resolutions = [2, 4, 8, 16, 32];
-
-    for &cells_per_dim in &resolutions {
-        let mesh: Tri6Mesh2d<f64> = create_unit_square_uniform_tri_mesh_2d(cells_per_dim).into();
-        let quadrature = quadrature::total_order::triangle(2).unwrap();
-        let error_quadrature = quadrature::total_order::triangle(6).unwrap();
-        solve_and_produce_output("Tri6", cells_per_dim, &mesh, quadrature, error_quadrature);
-    }
+    let resolutions = [1, 2, 4, 8, 16, 32];
+    let mesh_producer = |res| Tri6Mesh2d::from(create_unit_square_uniform_tri_mesh_2d(res));
+    let quadrature = quadrature::total_order::triangle(2).unwrap();
+    let error_quadrature = quadrature::total_order::triangle(6).unwrap();
+    solve_and_produce_output(
+        "Tri6",
+        &resolutions,
+        mesh_producer,
+        quadrature,
+        error_quadrature,
+    );
 }
