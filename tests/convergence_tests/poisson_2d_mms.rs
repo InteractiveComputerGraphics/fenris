@@ -3,34 +3,19 @@
 //! The problem is:
 //!   - Delta u = f,
 //! where Delta = nabla^2 is the Laplace operator.
-use eyre::eyre;
-use fenris::assembly::global::{
-    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, CsrAssembler,
-    SerialVectorAssembler,
-};
-use fenris::assembly::local::ElementEllipticAssemblerBuilder;
-use fenris::assembly::local::{
-    ElementSourceAssemblerBuilder, SourceFunction, UniformQuadratureTable,
-};
-use fenris::assembly::operators::{LaplaceOperator, Operator};
+use fenris::assembly::local::SourceFunction;
+use fenris::assembly::operators::Operator;
 use fenris::element::ElementConnectivity;
-use fenris::error::estimate_L2_error;
-use fenris::io::vtk::{FiniteElementMeshDataSetBuilder, VtkCellConnectivity};
+use fenris::io::vtk::VtkCellConnectivity;
 use fenris::mesh::procedural::{
     create_unit_square_uniform_quad_mesh_2d, create_unit_square_uniform_tri_mesh_2d,
 };
 use fenris::mesh::{Mesh2d, Quad9Mesh2d, Tri6Mesh2d};
 use fenris::nalgebra::coordinates::XY;
-use fenris::nalgebra::{
-    DMatrix, DVector, Point, Point2, UniformNorm, Vector1, Vector2, VectorN, U1, U2,
-};
-use fenris::nalgebra_sparse::CsrMatrix;
+use fenris::nalgebra::{Point, Point2, Vector1, VectorN, U1, U2};
 use fenris::quadrature;
 use fenris::quadrature::QuadraturePair2d;
-use itertools::izip;
-use serde::{Deserialize, Serialize};
 use std::f64::consts::PI;
-use std::fs::File;
 use std::ops::Deref;
 
 fn sin(x: f64) -> f64 {
@@ -74,131 +59,7 @@ impl SourceFunction<f64, U2> for PoissonProblemSourceFunction {
     }
 }
 
-/// For serializing to JSON for subsequent analysis/plots
-#[derive(Serialize, Deserialize)]
-#[allow(non_snake_case)]
-struct ErrorSummary {
-    element_name: String,
-    L2_errors: Vec<f64>,
-    /// Resolutions here measured in floating-point cell size, e.g. for quads, each cell is `h x h`,
-    /// where `h` is the resolution.
-    resolutions: Vec<f64>,
-}
-
-fn assert_summary_is_close_to_reference(summary: &ErrorSummary, reference: &ErrorSummary) {
-    assert_eq!(
-        summary.element_name, reference.element_name,
-        "Element names are not identical"
-    );
-    assert_eq!(
-        summary.resolutions, reference.resolutions,
-        "Resolutions are not identical"
-    );
-    assert_eq!(summary.L2_errors.len(), reference.L2_errors.len());
-
-    for (e1, e2) in izip!(&summary.L2_errors, &reference.L2_errors) {
-        let rel_error = (e1 - e2).abs() / e2.abs();
-        if rel_error > 0.01 {
-            panic!("Error deviates by more than 1% compared to expected error.");
-        }
-    }
-}
-
-/// This is a generalized version of the poisson2d example
-fn assemble_linear_system<C>(
-    mesh: &Mesh2d<f64, C>,
-    quadrature: QuadraturePair2d<f64>,
-) -> eyre::Result<(CsrMatrix<f64>, DVector<f64>)>
-where
-    C: ElementConnectivity<f64, GeometryDim = U2, ReferenceDim = U2>,
-{
-    let (weights, points) = quadrature;
-    let quadrature = UniformQuadratureTable::from_points_and_weights(points, weights);
-
-    // TODO: This isn't actually needed. Get rid of it by introducing a separate trait
-    // for linear contractions
-    let u = DVector::<f64>::zeros(mesh.vertices().len());
-
-    let vector_assembler = SerialVectorAssembler::<f64>::default();
-    let matrix_assembler = CsrAssembler::default();
-
-    let laplace_assembler = ElementEllipticAssemblerBuilder::new()
-        .with_finite_element_space(mesh)
-        .with_operator(&LaplaceOperator)
-        .with_quadrature_table(&quadrature)
-        .with_u(&u)
-        .build();
-
-    let mut a_global = matrix_assembler.assemble(&laplace_assembler)?;
-
-    let source_assembler = ElementSourceAssemblerBuilder::new()
-        .with_finite_element_space(mesh)
-        // TODO: Use better quadrature
-        .with_quadrature_table(&quadrature)
-        .with_source(&PoissonProblemSourceFunction)
-        .build();
-
-    let mut b_global = vector_assembler.assemble_vector(&source_assembler)?;
-
-    // We want to have a Dirichlet boundary for |x| == 1. To account for slight numerical errors,
-    // we determine the indices of the Dirichlet nodes by extracting those node indices
-    // which satisfy x < eps, for some small epsilon.
-    let dirichlet_nodes: Vec<_> = mesh
-        .vertices()
-        .iter()
-        .enumerate()
-        // TODO: Clean this up a bit
-        .filter_map(|(idx, x)| {
-            ((x.coords - Vector2::new(0.5, 0.5)).apply_norm(&UniformNorm) > 0.4999).then(|| idx)
-        })
-        .collect();
-
-    apply_homogeneous_dirichlet_bc_csr(&mut a_global, &dirichlet_nodes, 1);
-    apply_homogeneous_dirichlet_bc_rhs(&mut b_global, &dirichlet_nodes, 1);
-
-    Ok((a_global, b_global))
-}
-
-fn solve_linear_system(matrix: &CsrMatrix<f64>, rhs: &DVector<f64>) -> eyre::Result<DVector<f64>> {
-    // TODO: Use sparse solver
-    let matrix = DMatrix::from(matrix);
-    // The discrete Laplace operator is positive definite (given appropriate boundary conditions),
-    // so we can use a Cholesky factorization
-    let cholesky = matrix
-        .cholesky()
-        .ok_or_else(|| eyre!("Failed to solve linear system"))?;
-    Ok(cholesky.solve(rhs))
-}
-
-#[allow(non_snake_case)]
-struct PoissonSolveResult {
-    u_h: DVector<f64>,
-    L2_error: f64,
-}
-
-#[allow(non_snake_case)]
-fn solve_poisson<C>(
-    mesh: &Mesh2d<f64, C>,
-    quadrature: QuadraturePair2d<f64>,
-    error_quadrature: QuadraturePair2d<f64>,
-) -> PoissonSolveResult
-where
-    C: ElementConnectivity<f64, GeometryDim = U2, ReferenceDim = U2>,
-{
-    let (a, b) = assemble_linear_system(&mesh, quadrature).unwrap();
-    let u_h = solve_linear_system(&a, &b).unwrap();
-
-    let L2_error = {
-        // Use a relatively high order quadrature for error computations
-        let (weights, points) = error_quadrature;
-        let error_quadrature = UniformQuadratureTable::from_points_and_weights(points, weights);
-        estimate_L2_error(mesh, |x| Vector1::new(u_exact(x)), &u_h, &error_quadrature).unwrap()
-    };
-
-    PoissonSolveResult { u_h, L2_error }
-}
-
-fn solve_and_produce_output<C>(
+pub fn solve_and_produce_output<C>(
     element_name: &str,
     resolutions: &[usize],
     // Produce a mesh for the given resolution
@@ -208,79 +69,15 @@ fn solve_and_produce_output<C>(
 ) where
     C: VtkCellConnectivity + ElementConnectivity<f64, GeometryDim = U2, ReferenceDim = U2>,
 {
-    let element_name_file_component = element_name.to_ascii_lowercase();
-
-    let mut summary = ErrorSummary {
-        element_name: element_name.to_string(),
-        L2_errors: vec![],
-        resolutions: vec![],
-    };
-
-    for &resolution in resolutions {
-        let mesh = mesh_producer(resolution);
-        let result = solve_poisson(&mesh, quadrature.clone(), error_quadrature.clone());
-
-        // Resolution measures number of cells per unit-length, and the unit square is one unit
-        // long.
-        let h = 1.0 / resolution as f64;
-        summary.resolutions.push(h);
-        summary.L2_errors.push(result.L2_error);
-
-        FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
-            .with_title(format!(
-                "Poisson 2D FEM {} Res {}",
-                element_name, resolution
-            ))
-            .with_point_scalar_attributes("u_h", result.u_h.as_slice())
-            .try_export(format!(
-                "data/convergence_tests/poisson_2d_mms/poisson2d_mms_approx_{}_res_{}.vtu",
-                element_name_file_component, resolution
-            ))
-            .unwrap();
-
-        // Evaluate u_exact at mesh vertices
-        let u_exact_vector: Vec<_> = mesh.vertices().iter().map(|x| u_exact(x)).collect();
-
-        FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
-            .with_title(format!(
-                "Poisson 2D FEM {} Exact solution Res {}",
-                element_name, resolution
-            ))
-            .with_point_scalar_attributes("u_exact", &u_exact_vector)
-            .try_export(format!(
-                "data/convergence_tests/poisson_2d_mms/poisson2d_mms_exact_{}_res_{}.vtu",
-                element_name_file_component, resolution
-            ))
-            .unwrap();
-    }
-
-    let summary_path = format!(
-        "data/convergence_tests/poisson_2d_mms/poisson2d_mms_{}_summary.json",
-        element_name_file_component
+    crate::convergence_tests::poisson_mms_common::solve_and_produce_output(
+        element_name,
+        resolutions,
+        mesh_producer,
+        quadrature,
+        error_quadrature,
+        &PoissonProblemSourceFunction,
+        u_exact,
     );
-    {
-        let mut summary_file = File::create(&summary_path).unwrap();
-        serde_json::to_writer_pretty(&mut summary_file, &summary)
-            .expect("Failed to write JSON output to directory");
-    }
-
-    // Load summary containing reference values
-    let reference_summary: ErrorSummary = {
-        let reference_summary_path = format!(
-            "tests/convergence_tests/reference_values/poisson2d_mms_{}_summary.json",
-            element_name_file_component
-        );
-        let summary_file = File::open(&reference_summary_path).expect(&format!(
-            "Failed to open reference error summary for element {}",
-            element_name
-        ));
-        serde_json::from_reader(&summary_file).expect(&format!(
-            "Failed to deserialize reference summary for element {}",
-            element_name
-        ))
-    };
-
-    assert_summary_is_close_to_reference(&summary, &reference_summary);
 }
 
 #[test]
