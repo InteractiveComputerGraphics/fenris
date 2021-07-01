@@ -37,6 +37,13 @@ where
     .split_into_triangles()
 }
 
+pub fn create_unit_box_uniform_hex_mesh_3d<T>(cells_per_dim: usize) -> HexMesh<T>
+where
+    T: RealField,
+{
+    create_rectangular_uniform_hex_mesh(T::one(), 1, 1, 1, cells_per_dim)
+}
+
 /// Generates an axis-aligned rectangular uniform mesh given a unit length,
 /// dimensions as multipliers of the unit length and the number of cells per unit length.
 pub fn create_rectangular_uniform_quad_mesh_2d<T>(

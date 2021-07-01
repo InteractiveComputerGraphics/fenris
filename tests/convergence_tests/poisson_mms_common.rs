@@ -13,14 +13,16 @@ use fenris::element::ElementConnectivity;
 use fenris::error::estimate_L2_error;
 use fenris::io::vtk::{FiniteElementMeshDataSetBuilder, VtkCellConnectivity};
 use fenris::mesh::Mesh;
-use fenris::nalgebra::{DMatrix, DVector, DefaultAllocator, Point, UniformNorm, Vector1, U1};
+use fenris::nalgebra::{DVector, DefaultAllocator, Dynamic, Point, UniformNorm, Vector1, U1};
 use fenris::nalgebra_sparse::CsrMatrix;
 use fenris::quadrature::QuadraturePair;
 use fenris::SmallDim;
 use itertools::izip;
 use nalgebra::VectorN;
+use nalgebra_sparse::factorization::CscCholesky;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
+use std::path::PathBuf;
 
 /// For serializing to JSON for subsequent analysis/plots
 #[derive(Serialize, Deserialize)]
@@ -116,14 +118,15 @@ pub fn solve_linear_system(
     matrix: &CsrMatrix<f64>,
     rhs: &DVector<f64>,
 ) -> eyre::Result<DVector<f64>> {
-    // TODO: Use sparse solver
-    let matrix = DMatrix::from(matrix);
     // The discrete Laplace operator is positive definite (given appropriate boundary conditions),
     // so we can use a Cholesky factorization
-    let cholesky = matrix
-        .cholesky()
-        .ok_or_else(|| eyre!("Failed to solve linear system"))?;
-    Ok(cholesky.solve(rhs))
+    let cholesky = CscCholesky::factor(&matrix.into())
+        .map_err(|err| eyre!("Failed to solve linear system. Error: {}", err))?;
+    // TODO: So apparently `CscCholesky::solve` only works with dynamic matrices. Should support
+    // any kind of matrix, especially vectors (DVector in particular)!
+    // Need to make a PR for this
+    let u = cholesky.solve(rhs);
+    Ok(u.reshape_generic(Dynamic::new(rhs.len()), U1))
 }
 
 #[allow(non_snake_case)]
@@ -192,6 +195,9 @@ pub fn solve_and_produce_output<C, D, Source>(
         resolutions: vec![],
     };
 
+    let d = D::dim();
+    let base_path = PathBuf::from(format!("data/convergence_tests/poisson_{}d_mms", d));
+
     for &resolution in resolutions {
         let mesh = mesh_producer(resolution);
         let result = solve_poisson(
@@ -210,14 +216,16 @@ pub fn solve_and_produce_output<C, D, Source>(
 
         FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
             .with_title(format!(
-                "Poisson 2D FEM {} Res {}",
-                element_name, resolution
+                "Poisson {}D FEM {} Res {}",
+                D::dim(),
+                element_name,
+                resolution
             ))
             .with_point_scalar_attributes("u_h", result.u_h.as_slice())
-            .try_export(format!(
-                "data/convergence_tests/poisson_2d_mms/poisson2d_mms_approx_{}_res_{}.vtu",
-                element_name_file_component, resolution
-            ))
+            .try_export(base_path.join(format!(
+                "poisson{}d_mms_approx_{}_res_{}.vtu",
+                d, element_name_file_component, resolution
+            )))
             .unwrap();
 
         // Evaluate u_exact at mesh vertices
@@ -225,21 +233,21 @@ pub fn solve_and_produce_output<C, D, Source>(
 
         FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
             .with_title(format!(
-                "Poisson 2D FEM {} Exact solution Res {}",
-                element_name, resolution
+                "Poisson {}D FEM {} Exact solution Res {}",
+                d, element_name, resolution
             ))
             .with_point_scalar_attributes("u_exact", &u_exact_vector)
-            .try_export(format!(
-                "data/convergence_tests/poisson_2d_mms/poisson2d_mms_exact_{}_res_{}.vtu",
-                element_name_file_component, resolution
-            ))
+            .try_export(base_path.join(format!(
+                "poisson{}d_mms_exact_{}_res_{}.vtu",
+                d, element_name_file_component, resolution
+            )))
             .unwrap();
     }
 
-    let summary_path = format!(
-        "data/convergence_tests/poisson_2d_mms/poisson2d_mms_{}_summary.json",
-        element_name_file_component
-    );
+    let summary_path = base_path.join(format!(
+        "poisson{}d_mms_{}_summary.json",
+        d, element_name_file_component
+    ));
     {
         let mut summary_file = File::create(&summary_path).unwrap();
         serde_json::to_writer_pretty(&mut summary_file, &summary)
@@ -249,8 +257,8 @@ pub fn solve_and_produce_output<C, D, Source>(
     // Load summary containing reference values
     let reference_summary: ErrorSummary = {
         let reference_summary_path = format!(
-            "tests/convergence_tests/reference_values/poisson2d_mms_{}_summary.json",
-            element_name_file_component
+            "tests/convergence_tests/reference_values/poisson{}d_mms_{}_summary.json",
+            d, element_name_file_component
         );
         let summary_file = File::open(&reference_summary_path).expect(&format!(
             "Failed to open reference error summary for element {}",
