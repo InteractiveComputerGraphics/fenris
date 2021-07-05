@@ -4,7 +4,7 @@ use crate::connectivity::{
     Tri3d2Connectivity, Tri6d2Connectivity,
 };
 use crate::element::{ElementConnectivity, FiniteElement};
-use crate::mesh::{Mesh, Mesh2d, Mesh3d, Tet4Mesh};
+use crate::mesh::{Mesh, Mesh2d, Mesh3d, Tet4Mesh, HexMesh};
 use nalgebra::allocator::Allocator;
 use nalgebra::{DefaultAllocator, DimName, Point, Point2, Point3, RealField, Scalar, U3};
 
@@ -492,6 +492,21 @@ where
         <Self as FromTemp<_>>::from(initial_mesh)
     }
 }
+
+impl<'a, T> From<&'a HexMesh<T>> for Tet4Mesh<T>
+where
+    T: RealField
+{
+    fn from(hex_mesh: &'a HexMesh<T>) -> Self {
+        // TODO: Provide a "direct" method that does not rely on triangulation
+        // (then we could also reduce the `RealField` bound to `Scalar`)
+        let poly_mesh = PolyMesh3d::from(hex_mesh).triangulate()
+            .expect("Must be able to triangulate hex mesh");
+        Tet4Mesh::try_from(&poly_mesh)
+            .expect("Must be able to convert triangulated mesh into TetMesh")
+    }
+}
+
 
 impl<'a, T, D, C> From<&'a Mesh<T, D, C>> for PolyMesh<T, D>
 where

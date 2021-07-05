@@ -1,9 +1,9 @@
 //! Basic procedural mesh generation routines.
 use crate::connectivity::{Hex8Connectivity, Quad4d2Connectivity};
-use crate::geometry::polymesh::PolyMesh3d;
+use crate::geometry::polymesh::{PolyMesh3d};
 use crate::geometry::sdf::BoundedSdf;
 use crate::geometry::{AxisAlignedBoundingBox2d, HalfSpace};
-use crate::mesh::{HexMesh, Mesh, QuadMesh2d, TriangleMesh2d};
+use crate::mesh::{HexMesh, Mesh, QuadMesh2d, TriangleMesh2d, Tet4Mesh};
 use nalgebra::{convert, try_convert, Point2, Point3, RealField, Unit, Vector2, Vector3};
 use numeric_literals::replace_float_literals;
 use ordered_float::NotNan;
@@ -42,6 +42,14 @@ where
     T: RealField,
 {
     create_rectangular_uniform_hex_mesh(T::one(), 1, 1, 1, cells_per_dim)
+}
+
+pub fn create_unit_box_uniform_tet_mesh_3d<T>(cells_per_dim: usize) -> Tet4Mesh<T>
+where
+    T: RealField
+{
+    let hex_mesh = create_unit_box_uniform_hex_mesh_3d(cells_per_dim);
+    Tet4Mesh::from(&hex_mesh)
 }
 
 /// Generates an axis-aligned rectangular uniform mesh given a unit length,
