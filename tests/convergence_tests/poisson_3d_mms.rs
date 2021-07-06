@@ -7,7 +7,9 @@ use fenris::assembly::local::SourceFunction;
 use fenris::assembly::operators::Operator;
 use fenris::element::ElementConnectivity;
 use fenris::io::vtk::VtkCellConnectivity;
-use fenris::mesh::procedural::{create_unit_box_uniform_hex_mesh_3d, create_unit_box_uniform_tet_mesh_3d};
+use fenris::mesh::procedural::{
+    create_unit_box_uniform_hex_mesh_3d, create_unit_box_uniform_tet_mesh_3d,
+};
 use fenris::mesh::{Hex20Mesh, Hex27Mesh, Mesh3d, Tet10Mesh};
 use fenris::nalgebra::coordinates::XYZ;
 use fenris::nalgebra::{Point, Point3, Vector1, VectorN, U1, U3};
