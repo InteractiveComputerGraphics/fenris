@@ -266,3 +266,69 @@ where
 {
     Ok(estimate_L2_error_squared(space, u, u_h, qtable)?.sqrt())
 }
+
+/// Estimate the squared $H^1$ seminorm error $\| u_h - u \|^2_{H^1}$ on the given finite element space
+/// with the given solution weights and quadrature table.
+#[allow(non_snake_case)]
+pub fn estimate_H1_seminorm_error_squared<'a, T, Space, SolutionDim, QTable>(
+    space: &Space,
+    u_grad: impl Fn(&Point<T, Space::GeometryDim>) -> MatrixMN<T, Space::GeometryDim, SolutionDim>,
+    u_h: impl Into<DVectorSlice<'a, T>>,
+    qtable: &QTable,
+) -> eyre::Result<T>
+where
+    T: RealField,
+    SolutionDim: SmallDim,
+    Space: VolumetricFiniteElementSpace<T>,
+    QTable: QuadratureTable<T, Space::ReferenceDim>,
+    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>,
+{
+    let u_h = u_h.into();
+    let s = SolutionDim::dim();
+    let mut quadrature_buffer = QuadratureBuffer::default();
+    let mut basis_buffer = BasisFunctionBuffer::default();
+    let mut u_element = DVector::zeros(0);
+
+    let mut result = T::zero();
+    for i in 0..space.num_elements() {
+        quadrature_buffer.populate_element_quadrature_from_table(i, qtable);
+
+        let element = ElementInSpace::from_space_and_element_index(space, i);
+        let n = element.num_nodes();
+        basis_buffer.resize(n, Space::ReferenceDim::dim());
+        basis_buffer.populate_element_nodes_from_space(i, space);
+        u_element.resize_vertically_mut(s * n, T::zero());
+        gather_global_to_local(&u_h, &mut u_element, basis_buffer.element_nodes(), s);
+
+        let element_H1_seminorm_squared = estimate_element_H1_semi_error_squared(
+            &element,
+            &u_grad,
+            DVectorSlice::from(&u_element),
+            quadrature_buffer.weights(),
+            quadrature_buffer.points(),
+            basis_buffer.element_gradients_mut(),
+        );
+        result += element_H1_seminorm_squared;
+    }
+
+    Ok(result)
+}
+
+/// Estimate the squared $H^1$ seminorm error $\| u_h - u \|^2_{H^1}$ on the given finite element space
+/// with the given solution weights and quadrature table.
+#[allow(non_snake_case)]
+pub fn estimate_H1_seminorm_error<'a, T, Space, SolutionDim, QTable>(
+    space: &Space,
+    u_grad: impl Fn(&Point<T, Space::GeometryDim>) -> MatrixMN<T, Space::GeometryDim, SolutionDim>,
+    u_h: impl Into<DVectorSlice<'a, T>>,
+    qtable: &QTable,
+) -> eyre::Result<T>
+where
+    T: RealField,
+    SolutionDim: SmallDim,
+    Space: VolumetricFiniteElementSpace<T>,
+    QTable: QuadratureTable<T, Space::ReferenceDim>,
+    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>,
+{
+    estimate_H1_seminorm_error_squared(space, u_grad, u_h, qtable).map(|err2| err2.sqrt())
+}
