@@ -1,9 +1,17 @@
-use fenris::element::{Tet20Element, Tet4Element, VolumetricFiniteElement};
-use fenris::error::{estimate_element_H1_semi_error, estimate_element_L2_error};
+use fenris::assembly::global::gather_global_to_local;
+use fenris::assembly::local::GeneralQuadratureTable;
+use fenris::connectivity::Connectivity;
+use fenris::element::{ElementConnectivity, Tet20Element, Tet4Element, VolumetricFiniteElement};
+use fenris::error::{
+    estimate_L2_error, estimate_element_H1_semi_error, estimate_element_L2_error,
+    estimate_element_L2_error_squared,
+};
+use fenris::mesh::procedural::create_unit_box_uniform_hex_mesh_3d;
 use fenris::nalgebra::coordinates::XYZ;
 use fenris::nalgebra::{
-    DMatrix, DVector, DVectorSlice, Dynamic, MatrixSliceMut, Point3, Vector1, Vector2, U3,
+    DMatrix, DVector, DVectorSlice, Dynamic, MatrixSliceMut, Point3, Vector1, Vector2, VectorN, U3,
 };
+use fenris::nested_vec::NestedVec;
 use fenris::quadrature;
 use fenris::quadrature::{Quadrature, QuadraturePair3d};
 use matrixcompare::assert_scalar_eq;
@@ -189,6 +197,69 @@ fn test_element_H1_seminorm_error_vector() {
     assert_scalar_eq!(
         H1_seminorm_computed,
         H1_seminorm_expected,
+        comp = abs,
+        tol = 1e-12
+    );
+}
+
+#[test]
+#[allow(non_snake_case)]
+fn test_estimate_L2_error_on_mesh() {
+    // Test that the "global" error estimate is consistent with what we get from local estimates
+    let mesh = create_unit_box_uniform_hex_mesh_3d(2);
+
+    // Use a different quadrature rule per element
+    // This ensures us that the error estimator actually takes into account
+    // the correct quadrature rule for a given element
+    let mut error_quadrature_points = NestedVec::new();
+    let mut error_quadrature_weights = NestedVec::new();
+    for i in 0..mesh.connectivity().len() {
+        let (weights, points) = quadrature::tensor::hexahedron_gauss(i + 1);
+        error_quadrature_weights.push(&weights);
+        error_quadrature_points.push(&points);
+    }
+    let quadrature_table = GeneralQuadratureTable::from_points_and_weights(
+        error_quadrature_points.clone(),
+        error_quadrature_weights.clone(),
+    );
+
+    // Use an arbitrary function projected onto the nodes to make sure we get some non-zero error
+    // for higher-order quadratures
+    let g = |x: &Point3<f64>| {
+        let &XYZ { x, y, z } = x.deref();
+        Vector2::new(3.0 * x + 2.0 * y * z.powi(3), 4.0 * x.powi(2) + 2.0 * y + z)
+    };
+    let u_h = flatten_vertically(&mesh.vertices().iter().map(g).collect::<Vec<_>>()).unwrap();
+    let computed_L2_error = estimate_L2_error(&mesh, u_vector, &u_h, &quadrature_table).unwrap();
+
+    // Compute the error "manually" element-by-element for comparison
+    let expected_L2_error = {
+        mesh.connectivity()
+            .iter()
+            .enumerate()
+            .map(|(i, conn)| {
+                let element = conn.element(mesh.vertices()).unwrap();
+                let mut u_h_element = VectorN::from([0.0; 2 * 8]);
+                gather_global_to_local(&u_h, &mut u_h_element, conn.vertex_indices(), 2);
+                let weights = error_quadrature_weights.get(i).unwrap();
+                let points = error_quadrature_points.get(i).unwrap();
+                let mut basis_buffer = [0.0; 8];
+                estimate_element_L2_error_squared(
+                    &element,
+                    u_vector,
+                    DVectorSlice::from(&u_h_element),
+                    weights,
+                    points,
+                    &mut basis_buffer,
+                )
+            })
+            .sum::<f64>()
+            .sqrt()
+    };
+
+    assert_scalar_eq!(
+        computed_L2_error,
+        expected_L2_error,
         comp = abs,
         tol = 1e-12
     );
