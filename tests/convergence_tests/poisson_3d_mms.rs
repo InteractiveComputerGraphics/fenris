@@ -12,7 +12,7 @@ use fenris::mesh::procedural::{
 };
 use fenris::mesh::{Hex20Mesh, Hex27Mesh, Mesh3d, Tet10Mesh};
 use fenris::nalgebra::coordinates::XYZ;
-use fenris::nalgebra::{Point, Point3, Vector1, VectorN, U1, U3};
+use fenris::nalgebra::{Point, Point3, Vector1, VectorN, U1, U3, Vector3};
 use fenris::quadrature;
 use fenris::quadrature::QuadraturePair3d;
 use std::f64::consts::PI;
@@ -21,7 +21,7 @@ use std::ops::Deref;
 fn sin(x: f64) -> f64 {
     x.sin()
 }
-// fn cos(x: f64) -> f64 { x.cos() }
+fn cos(x: f64) -> f64 { x.cos() }
 
 // Exact solution
 fn u_exact(x: &Point3<f64>) -> f64 {
@@ -29,12 +29,13 @@ fn u_exact(x: &Point3<f64>) -> f64 {
     sin(PI * x) * sin(PI * y) * sin(PI * z)
 }
 
-// fn u_exact_grad(x: &Point2<f64>) -> Vector2<f64> {
-//     let &XY { x, y } = x.coords.deref();
-//     let u_x = PI * cos(PI * x) * sin(PI * y);
-//     let u_y = PI * sin(PI * x) * cos(PI * y);
-//     Vector2::new(u_x, u_y)
-// }
+fn u_exact_grad(x: &Point3<f64>) -> Vector3<f64> {
+    let &XYZ { x, y, z } = x.coords.deref();
+    let u_x = PI * cos(PI * x) * sin(PI * y) * sin(PI * z);
+    let u_y = PI * sin(PI * x) * cos(PI * y) * sin(PI * z);
+    let u_z = PI * sin(PI * x) * sin(PI * y) * cos(PI * z);
+    Vector3::new(u_x, u_y, u_z)
+}
 
 fn f(x: &Point3<f64>) -> f64 {
     // Derived from f = - Del u = - u_xx - u_yy
@@ -77,6 +78,7 @@ pub fn solve_and_produce_output<C>(
         error_quadrature,
         &PoissonProblemSourceFunction,
         u_exact,
+        u_exact_grad
     );
 }
 

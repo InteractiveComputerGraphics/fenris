@@ -10,7 +10,7 @@ use fenris::assembly::local::{
 };
 use fenris::assembly::operators::LaplaceOperator;
 use fenris::element::ElementConnectivity;
-use fenris::error::estimate_L2_error;
+use fenris::error::{estimate_L2_error, estimate_H1_seminorm_error};
 use fenris::io::vtk::{FiniteElementMeshDataSetBuilder, VtkCellConnectivity};
 use fenris::mesh::Mesh;
 use fenris::nalgebra::{DVector, DefaultAllocator, Dynamic, Point, UniformNorm, Vector1, U1};
@@ -30,6 +30,7 @@ use std::path::PathBuf;
 pub struct ErrorSummary {
     pub element_name: String,
     pub L2_errors: Vec<f64>,
+    pub H1_seminorm_errors: Vec<f64>,
     /// Resolutions here measured in floating-point cell size, e.g. for quads, each cell is `h x h`,
     /// where `h` is the resolution.
     pub resolutions: Vec<f64>,
@@ -45,11 +46,19 @@ pub fn assert_summary_is_close_to_reference(summary: &ErrorSummary, reference: &
         "Resolutions are not identical"
     );
     assert_eq!(summary.L2_errors.len(), reference.L2_errors.len());
+    assert_eq!(summary.H1_seminorm_errors.len(), reference.H1_seminorm_errors.len());
 
     for (e1, e2) in izip!(&summary.L2_errors, &reference.L2_errors) {
         let rel_error = (e1 - e2).abs() / e2.abs();
         if rel_error > 0.01 {
-            panic!("Error deviates by more than 1% compared to expected error.");
+            panic!("L2 error deviates by more than 1% compared to expected error.");
+        }
+    }
+
+    for (e1, e2) in izip!(&summary.H1_seminorm_errors, &reference.H1_seminorm_errors) {
+        let rel_error = (e1 - e2).abs() / e2.abs();
+        if rel_error > 0.01 {
+            panic!("H1 seminorm error deviates by more than 1% compared to expected error.");
         }
     }
 }
@@ -133,6 +142,7 @@ pub fn solve_linear_system(
 pub struct PoissonSolveResult {
     pub u_h: DVector<f64>,
     pub L2_error: f64,
+    pub H1_seminorm_error: f64
 }
 
 #[allow(non_snake_case)]
@@ -142,6 +152,7 @@ pub fn solve_poisson<C, D, Source>(
     error_quadrature: QuadraturePair<f64, D>,
     poisson_source_function: &Source,
     u_exact: impl Fn(&Point<f64, D>) -> f64,
+    u_exact_grad: impl Fn(&Point<f64, D>) -> VectorN<f64, D>
 ) -> PoissonSolveResult
 where
     C: ElementConnectivity<f64, GeometryDim = D, ReferenceDim = D>,
@@ -154,20 +165,19 @@ where
     let (a, b) = assemble_linear_system(&mesh, quadrature, poisson_source_function).unwrap();
     let u_h = solve_linear_system(&a, &b).unwrap();
 
-    let L2_error = {
         // Use a relatively high order quadrature for error computations
         let (weights, points) = error_quadrature;
         let error_quadrature = UniformQuadratureTable::from_points_and_weights(points, weights);
-        estimate_L2_error(
+        let L2_error = estimate_L2_error(
             mesh,
             |x: &Point<f64, D>| Vector1::repeat(u_exact(x)),
             &u_h,
             &error_quadrature,
         )
-        .unwrap()
-    };
+        .unwrap();
+        let H1_seminorm_error = estimate_H1_seminorm_error(mesh, u_exact_grad, &u_h, &error_quadrature).unwrap();
 
-    PoissonSolveResult { u_h, L2_error }
+    PoissonSolveResult { u_h, L2_error, H1_seminorm_error }
 }
 
 pub fn solve_and_produce_output<C, D, Source>(
@@ -179,6 +189,7 @@ pub fn solve_and_produce_output<C, D, Source>(
     error_quadrature: QuadraturePair<f64, D>,
     poisson_source_function: &Source,
     u_exact: impl Fn(&Point<f64, D>) -> f64,
+    u_exact_grad: impl Fn(&Point<f64, D>) -> VectorN<f64, D>
 ) where
     C: VtkCellConnectivity + ElementConnectivity<f64, GeometryDim = D, ReferenceDim = D>,
     D: SmallDim,
@@ -192,6 +203,7 @@ pub fn solve_and_produce_output<C, D, Source>(
     let mut summary = ErrorSummary {
         element_name: element_name.to_string(),
         L2_errors: vec![],
+        H1_seminorm_errors: vec![],
         resolutions: vec![],
     };
 
@@ -206,6 +218,7 @@ pub fn solve_and_produce_output<C, D, Source>(
             error_quadrature.clone(),
             poisson_source_function,
             &u_exact,
+            &u_exact_grad
         );
 
         // Resolution measures number of cells per unit-length, and the unit square is one unit
@@ -213,6 +226,7 @@ pub fn solve_and_produce_output<C, D, Source>(
         let h = 1.0 / resolution as f64;
         summary.resolutions.push(h);
         summary.L2_errors.push(result.L2_error);
+        summary.H1_seminorm_errors.push(result.H1_seminorm_error);
 
         FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
             .with_title(format!(
