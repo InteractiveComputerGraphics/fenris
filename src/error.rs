@@ -10,7 +10,7 @@ use crate::SmallDim;
 use itertools::izip;
 use nalgebra::MatrixMN;
 
-/// Estimate the squared $L^2$ error $\| u_h - u \|^2_{L^2}$ on the given element with the given basis
+/// Estimate the squared $L^2$ error $\norm{u_h - u}^2_{L^2}$ on the given element with the given basis
 /// weights and quadrature points.
 ///
 /// # Panics
@@ -52,7 +52,7 @@ where
     result
 }
 
-/// Estimate the squared $H^1$ *seminorm* error $| u_h - u |^2_{H^1}$ on the given element with the given basis
+/// Estimate the squared $H^1$ *seminorm* error $\seminorm{u_h - u}^2_{H^1}$ on the given element with the given basis
 /// weights and quadrature points.
 ///
 /// # Panics
@@ -60,7 +60,7 @@ where
 /// Panics if the basis buffer does not have the length $n$, where $n$ is the number of nodes
 /// in the element.
 #[allow(non_snake_case)]
-pub fn estimate_element_H1_semi_error_squared<T, Element, SolutionDim>(
+pub fn estimate_element_H1_seminorm_error_squared<T, Element, SolutionDim>(
     element: &Element,
     u_grad: impl Fn(&Point<T, Element::GeometryDim>) -> MatrixMN<T, Element::GeometryDim, SolutionDim>,
     u_h_element: DVectorSlice<T>,
@@ -106,7 +106,7 @@ where
     result
 }
 
-/// Estimate the $H^1$ *seminorm* error $| u_h - u |_{H^1}$ on the given element with the given basis
+/// Estimate the $H^1$ *seminorm* error $\seminorm{u_h - u}_{H^1}$ on the given element with the given basis
 /// weights and quadrature points.
 ///
 /// # Panics
@@ -114,7 +114,7 @@ where
 /// Panics if the basis buffer does not have the length $n$, where $n$ is the number of nodes
 /// in the element.
 #[allow(non_snake_case)]
-pub fn estimate_element_H1_semi_error<T, Element, SolutionDim>(
+pub fn estimate_element_H1_seminorm_error<T, Element, SolutionDim>(
     element: &Element,
     u_grad: impl Fn(&Point<T, Element::GeometryDim>) -> MatrixMN<T, Element::GeometryDim, SolutionDim>,
     u_h_element: DVectorSlice<T>,
@@ -128,7 +128,7 @@ where
     SolutionDim: SmallDim,
     DefaultAllocator: TriDimAllocator<T, Element::GeometryDim, Element::ReferenceDim, SolutionDim>,
 {
-    estimate_element_H1_semi_error_squared(
+    estimate_element_H1_seminorm_error_squared(
         element,
         u_grad,
         u_h_element,
@@ -139,7 +139,7 @@ where
     .sqrt()
 }
 
-/// Estimate the $L^2$ error $\| u_h - u \|_{L^2}$ on the given element with the given basis
+/// Estimate the $L^2$ error $\norm{u_h - u}_{L^2}$ on the given element with the given basis
 /// weights and quadrature points.
 ///
 /// # Panics
@@ -201,7 +201,7 @@ where
     u_h_element * phi
 }
 
-/// Estimate the squared $L^2$ error $\| u_h - u \|^2_{L^2}$ on the given finite element space
+/// Estimate the squared $L^2$ error $\norm{u_h - u}^2_{L^2}$ on the given finite element space
 /// with the given solution weights and quadrature table.
 #[allow(non_snake_case)]
 pub fn estimate_L2_error_squared<'a, T, Space, SolutionDim, QTable>(
@@ -248,7 +248,7 @@ where
     Ok(result)
 }
 
-/// Estimate the $L^2$ error $\| u_h - u \|_{L^2}$ on the given finite element space
+/// Estimate the $L^2$ error $\norm{u_h - u}_{L^2}$ on the given finite element space
 /// with the given solution weights and quadrature table.
 #[allow(non_snake_case)]
 pub fn estimate_L2_error<'a, T, Space, SolutionDim, QTable>(
@@ -267,7 +267,7 @@ where
     Ok(estimate_L2_error_squared(space, u, u_h, qtable)?.sqrt())
 }
 
-/// Estimate the squared $H^1$ seminorm error $\| u_h - u \|^2_{H^1}$ on the given finite element space
+/// Estimate the squared $H^1$ *seminorm* error $\| u_h - u \|^2_{H^1}$ on the given finite element space
 /// with the given solution weights and quadrature table.
 #[allow(non_snake_case)]
 pub fn estimate_H1_seminorm_error_squared<'a, T, Space, SolutionDim, QTable>(
@@ -300,7 +300,7 @@ where
         u_element.resize_vertically_mut(s * n, T::zero());
         gather_global_to_local(&u_h, &mut u_element, basis_buffer.element_nodes(), s);
 
-        let element_H1_seminorm_squared = estimate_element_H1_semi_error_squared(
+        let element_H1_seminorm_squared = estimate_element_H1_seminorm_error_squared(
             &element,
             &u_grad,
             DVectorSlice::from(&u_element),
@@ -314,7 +314,7 @@ where
     Ok(result)
 }
 
-/// Estimate the squared $H^1$ seminorm error $\| u_h - u \|^2_{H^1}$ on the given finite element space
+/// Estimate the squared $H^1$ *seminorm* error $\|u_h - u \|^2_{H^1}$ on the given finite element space
 /// with the given solution weights and quadrature table.
 #[allow(non_snake_case)]
 pub fn estimate_H1_seminorm_error<'a, T, Space, SolutionDim, QTable>(

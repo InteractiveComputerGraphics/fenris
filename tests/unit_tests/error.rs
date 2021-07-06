@@ -3,8 +3,8 @@ use fenris::assembly::local::GeneralQuadratureTable;
 use fenris::connectivity::Connectivity;
 use fenris::element::{ElementConnectivity, Tet20Element, Tet4Element, VolumetricFiniteElement};
 use fenris::error::{
-    estimate_H1_seminorm_error, estimate_L2_error, estimate_element_H1_semi_error,
-    estimate_element_H1_semi_error_squared, estimate_element_L2_error,
+    estimate_H1_seminorm_error, estimate_L2_error, estimate_element_H1_seminorm_error,
+    estimate_element_H1_seminorm_error_squared, estimate_element_L2_error,
     estimate_element_L2_error_squared,
 };
 use fenris::mesh::procedural::create_unit_box_uniform_hex_mesh_3d;
@@ -143,7 +143,7 @@ fn test_element_H1_seminorm_error_scalar() {
     // polynomial order)
     let (weights, points) = quadrature::total_order::tetrahedron(8).unwrap();
     let mut gradient_buffer = DMatrix::repeat(3, 20, 3.0).reshape_generic(U3, Dynamic::new(20));
-    let H1_seminorm_computed = estimate_element_H1_semi_error(
+    let H1_seminorm_computed = estimate_element_H1_seminorm_error(
         &element,
         u1_scalar_grad,
         DVectorSlice::from(&u_h_element),
@@ -180,7 +180,7 @@ fn test_element_H1_seminorm_error_vector() {
     // (since we compute a squared norm, we need double the polynomial degree)
     let (weights, points) = quadrature::total_order::tetrahedron(10).unwrap();
     let mut gradient_buffer = DMatrix::repeat(3, 20, 3.0).reshape_generic(U3, Dynamic::new(20));
-    let H1_seminorm_computed = estimate_element_H1_semi_error(
+    let H1_seminorm_computed = estimate_element_H1_seminorm_error(
         &element,
         u1_vector_grad,
         DVectorSlice::from(&u_h_element),
@@ -310,7 +310,7 @@ fn test_estimate_H1_seminorm_error_on_mesh() {
                 let weights = error_quadrature_weights.get(i).unwrap();
                 let points = error_quadrature_points.get(i).unwrap();
                 let mut gradient_buffer = MatrixMN::<_, U3, U8>::zeros();
-                estimate_element_H1_semi_error_squared(
+                estimate_element_H1_seminorm_error_squared(
                     &element,
                     u_vector_grad,
                     DVectorSlice::from(&u_h_element),
