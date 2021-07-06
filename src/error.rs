@@ -1,13 +1,14 @@
 //! Functionality for error estimation.
 use crate::allocators::{SmallDimAllocator, TriDimAllocator};
 use crate::assembly::global::{gather_global_to_local, BasisFunctionBuffer, QuadratureBuffer};
-use crate::assembly::local::QuadratureTable;
+use crate::assembly::local::{QuadratureTable, compute_volume_u_grad};
 use crate::element::{MatrixSlice, ReferenceFiniteElement, VolumetricFiniteElement};
-use crate::nalgebra::{DVector, DVectorSlice};
+use crate::nalgebra::{DVector, DVectorSlice, MatrixSliceMutMN, MatrixSliceMut};
 use crate::nalgebra::{DefaultAllocator, DimName, Dynamic, Point, RealField, VectorN};
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
 use crate::SmallDim;
 use itertools::izip;
+use nalgebra::{MatrixMN};
 
 /// Estimate the squared $L^2$ error $\| u_h - u \|^2_{L^2}$ on the given element with the given basis
 /// weights and quadrature points.
@@ -31,6 +32,9 @@ where
     SolutionDim: SmallDim,
     DefaultAllocator: TriDimAllocator<T, Element::GeometryDim, Element::ReferenceDim, SolutionDim>,
 {
+    let n = element.num_nodes();
+    assert_eq!(u_h_element.len(), n * SolutionDim::dim());
+    assert_eq!(basis_buffer.len(), n);
     let phi = basis_buffer;
 
     let mut result = T::zero();
@@ -46,6 +50,80 @@ where
         result += *w * error.norm_squared() * j.determinant().abs();
     }
     result
+}
+
+/// Estimate the squared $H^1$ *seminorm* error $| u_h - u |^2_{H^1}$ on the given element with the given basis
+/// weights and quadrature points.
+///
+/// # Panics
+///
+/// Panics if the basis buffer does not have the length $n$, where $n$ is the number of nodes
+/// in the element.
+#[allow(non_snake_case)]
+pub fn estimate_element_H1_semi_error_squared<T, Element, SolutionDim>(
+    element: &Element,
+    u_grad: impl Fn(&Point<T, Element::GeometryDim>) -> MatrixMN<T, Element::GeometryDim, SolutionDim>,
+    u_h_element: DVectorSlice<T>,
+    quadrature_weights: &[T],
+    quadrature_points: &[Point<T, Element::ReferenceDim>],
+    basis_gradients_buffer: MatrixSliceMutMN<T, Element::ReferenceDim, Dynamic>,
+) -> T
+where
+    T: RealField,
+    Element: VolumetricFiniteElement<T>,
+    SolutionDim: SmallDim,
+    DefaultAllocator: TriDimAllocator<T, Element::GeometryDim, Element::ReferenceDim, SolutionDim>,
+{
+    let n = element.num_nodes();
+    assert_eq!(u_h_element.len(), n * SolutionDim::dim());
+    assert_eq!(basis_gradients_buffer.ncols(), n);
+    let mut phi_grad_ref = basis_gradients_buffer;
+
+    // TODO: Rewrite compute_volume_u_grad so that it just takes a DVectorSlice
+    let u_h_element = MatrixSlice::from_slice_generic(u_h_element.as_slice(), SolutionDim::name(), Dynamic::new(n));
+
+    let mut result = T::zero();
+    for (w, xi) in izip!(quadrature_weights, quadrature_points) {
+        let x = element.map_reference_coords(xi);
+        let j = element.reference_jacobian(xi);
+        let j_det_abs = j.determinant().abs();
+        let j_inv_t = j.try_inverse()
+            .expect("Jacobian must be invertible. TODO: How to handle this?")
+            .transpose();
+        element.populate_basis_gradients(MatrixSliceMut::from(&mut phi_grad_ref), xi);
+
+        let u_h_grad: MatrixMN<T, Element::ReferenceDim, SolutionDim> =
+            compute_volume_u_grad(&j_inv_t, &phi_grad_ref, &u_h_element);
+        let u_grad_at_x = u_grad(&x);
+        let error = u_h_grad - u_grad_at_x;
+        result += *w * error.norm_squared() * j_det_abs;
+    }
+    result
+}
+
+/// Estimate the $H^1$ *seminorm* error $| u_h - u |_{H^1}$ on the given element with the given basis
+/// weights and quadrature points.
+///
+/// # Panics
+///
+/// Panics if the basis buffer does not have the length $n$, where $n$ is the number of nodes
+/// in the element.
+#[allow(non_snake_case)]
+pub fn estimate_element_H1_semi_error<T, Element, SolutionDim>(
+    element: &Element,
+    u_grad: impl Fn(&Point<T, Element::GeometryDim>) -> MatrixMN<T, Element::GeometryDim, SolutionDim>,
+    u_h_element: DVectorSlice<T>,
+    quadrature_weights: &[T],
+    quadrature_points: &[Point<T, Element::ReferenceDim>],
+    basis_gradients_buffer: MatrixSliceMutMN<T, Element::ReferenceDim, Dynamic>,
+) -> T
+    where
+        T: RealField,
+        Element: VolumetricFiniteElement<T>,
+        SolutionDim: SmallDim,
+        DefaultAllocator: TriDimAllocator<T, Element::GeometryDim, Element::ReferenceDim, SolutionDim>,
+{
+    estimate_element_H1_semi_error_squared(element, u_grad, u_h_element, quadrature_weights, quadrature_points, basis_gradients_buffer).sqrt()
 }
 
 /// Estimate the $L^2$ error $\| u_h - u \|_{L^2}$ on the given element with the given basis

@@ -27,10 +27,7 @@ where
     T: RealField,
     SolutionDim: DimName,
     GeometryDim: DimName,
-    DefaultAllocator: Allocator<T, GeometryDim>
-        + Allocator<T, GeometryDim, SolutionDim>
-        + Allocator<T, SolutionDim, GeometryDim>
-        + Allocator<T, GeometryDim, GeometryDim>,
+    DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>
 {
     let phi_grad_ref = phi_grad_ref.into();
     let u = u.into();

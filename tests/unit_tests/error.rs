@@ -1,12 +1,13 @@
 use fenris::element::{Tet20Element, Tet4Element, VolumetricFiniteElement};
-use fenris::error::estimate_element_L2_error;
+use fenris::error::{estimate_element_L2_error, estimate_element_H1_semi_error};
 use fenris::nalgebra::coordinates::XYZ;
-use fenris::nalgebra::{DVector, DVectorSlice, Point3, Vector1, Vector2, U3};
+use fenris::nalgebra::{DVector, DVectorSlice, Point3, Vector1, Vector2, U3, Dynamic, DMatrix, MatrixSliceMut};
 use fenris::quadrature;
 use fenris::quadrature::{Quadrature, QuadraturePair3d};
 use matrixcompare::assert_scalar_eq;
 use std::ops::Deref;
 use util::flatten_vertically;
+use nalgebra::{Vector3, Matrix3x2};
 
 // TODO: Port this to the library proper?
 fn transform_quadrature_to_physical_domain<Element>(
@@ -76,7 +77,6 @@ fn test_element_L2_error_scalar() {
     };
     let u = |x: &Point3<f64>| u1(x) - u2(x);
 
-    // TODO: Use some arbitrary element rather than reference element
     let element = arbitrary_tet20_element();
     let u_h_element = DVector::from_vec(element.vertices().iter().map(u2).collect());
 
@@ -158,7 +158,6 @@ fn test_element_L2_error_vector() {
     };
     let u = |x: &Point3<f64>| u1(x) - u2(x);
 
-    // TODO: Use some arbitrary element rather than reference element
     let element = arbitrary_tet20_element();
     let u_h_element =
         flatten_vertically(&element.vertices().iter().map(u2).collect::<Vec<_>>()).unwrap();
@@ -186,6 +185,172 @@ fn test_element_L2_error_vector() {
     assert_scalar_eq!(
         L2_error_computed,
         L2_error_expected,
+        comp = abs,
+        tol = 1e-12
+    );
+}
+
+#[test]
+#[allow(non_snake_case)]
+fn test_element_H1_seminorm_error_scalar() {
+    // We take the same approach as in the L2 tests, except in this case of course we're
+    // dealing with gradients of `u` rather than `u` itself.
+    // See those tests for comments on what is going on here.
+
+    let u1_grad = |x: &Point3<f64>| {
+        let &XYZ { x, y, z } = x.deref();
+        let u1_x = 30.0 * x.powi(5) + 3.0 * y.powi(3) * z + 2.0 * x + 3.0;
+        let u1_y = 10.0 * y.powi(4) + 9.0 * x * y.powi(2) * z - 6.0 * y + 2.0 * x.powi(2) * y + 2.0;
+        let u1_z = -10.0 * z.powi(4) + 3.0 * x * y.powi(3) - 3.0;
+        Vector3::new(u1_x, u1_y, u1_z)
+    };
+    let u2_grad = |x: &Point3<f64>| {
+        let &XYZ { x, y, z } = x.deref();
+        let u2_x = 18.0 * x.powi(2) + 4.0 * y * x + 2.0 * x + 5.0 * y * z + 2.0;
+        let u2_y = -6.0 * y.powi(2) + 2.0 * x.powi(2) + 8.0 * z * y - 3.0 * y.powi(2) + 5.0 * x * z + 3.0;
+        let u2_z = 12.0 * z.powi(2)  + 4.0 * y.powi(2) + 5.0 * x * y - 5.0;
+        Vector3::new(u2_x, u2_y, u2_z)
+    };
+    let u2 = |x: &Point3<f64>| {
+        let &XYZ { x, y, z } = x.deref();
+        // A polynomial of total order 3
+        6.0 * x.powi(3) - 2.0 * y.powi(3)
+            + 4.0 * z.powi(3)
+            + 2.0 * x.powi(2) * y
+            + 4.0 * y.powi(2) * z
+            + x.powi(2)
+            - y.powi(3)
+            + 5.0 * x * y * z
+            + 2.0 * x
+            + 3.0 * y
+            - 5.0 * z
+            + 2.0
+    };
+
+
+    let u_grad = |x: &Point3<f64>| u1_grad(x) - u2_grad(x);
+
+    let element = arbitrary_tet20_element();
+    let u_h_element = DVector::from_vec(element.vertices().iter().map(u2).collect());
+
+    // Use a quadrature rule with sufficient strength such that it can exactly capture the error
+    // (since we compute a squared norm, we need double the polynomial degree of the gradient
+    // polynomial order)
+    let (weights, points) = quadrature::total_order::tetrahedron(8).unwrap();
+    let mut gradient_buffer = DMatrix::repeat(3, 20, 3.0).reshape_generic(U3, Dynamic::new(20));
+    let H1_seminorm_computed = estimate_element_H1_semi_error(
+        &element,
+        u1_grad,
+        DVectorSlice::from(&u_h_element),
+        &weights,
+        &points,
+        MatrixSliceMut::from(&mut gradient_buffer),
+    );
+
+    let H1_seminorm_expected = {
+        let (weights, points) =
+            transform_quadrature_to_physical_domain(&element, &weights, &points);
+        let u_squared_norm = |x: &Point3<f64>| u_grad(x).norm_squared();
+        (weights, points).integrate(u_squared_norm).sqrt()
+    };
+
+    assert_scalar_eq!(
+        H1_seminorm_computed,
+        H1_seminorm_expected,
+        comp = abs,
+        tol = 1e-12
+    );
+}
+
+#[test]
+#[allow(non_snake_case)]
+fn test_element_H1_seminorm_error_vector() {
+    // This test is completely analogous to the scalar test, it just tests vector-valued
+    // functions instead
+
+    let u1_grad = |x: &Point3<f64>| {
+        let &XYZ { x, y, z } = x.deref();
+        let u1_1x = 30.0 * x.powi(4) + 3.0 * y.powi(3) * z + 2.0 * x * y.powi(2) + 3.0;
+        let u1_1y = 10.0 * y.powi(4) + 9.0 * x * z * y.powi(2) - 6.0 * y.powi(2) + 2.0 * x.powi(2) * y + 2.0;
+        let u1_1z = -10.0 * z.powi(4) + 3.0 * x * y.powi(3) - 3.0;
+
+        let u1_2x = 15.0 * x.powi(4) + 9.0 * y * z * x.powi(2) + 4.0;
+        let u1_2y = -15.0 * y.powi(4) + 3.0 * x.powi(3) * z + 2.0;
+        let u1_2z = 10.0 * z.powi(4) + 3.0 * x.powi(3) * y;
+
+        let u1_1_grad = Vector3::new(u1_1x, u1_1y, u1_1z);
+        let u1_2_grad = Vector3::new(u1_2x, u1_2y, u1_2z);
+
+        Matrix3x2::from_columns(&[u1_1_grad, u1_2_grad])
+    };
+    let u2 = |x: &Point3<f64>| {
+        let &XYZ { x, y, z } = x.deref();
+        // A polynomial of total order 3
+        let u2_1 = 6.0 * x.powi(3) - 2.0 * y.powi(3)
+            + 4.0 * z.powi(3)
+            + 2.0 * x.powi(2) * y
+            + 4.0 * y.powi(2) * z
+            + x.powi(2)
+            - y.powi(3)
+            + 5.0 * x * y * z
+            + 2.0 * x
+            + 3.0 * y
+            - 5.0 * z
+            + 2.0;
+        let u2_2 = 3.0 * x.powi(3) - 4.0 * y.powi(3)
+            + 2.0 * z.powi(3)
+            + 2.0 * x.powi(2) * z
+            + 3.0 * y.powi(2)
+            - 2.0 * x
+            + 3.0 * y
+            - 5.0 * z
+            + 9.0;
+        Vector2::new(u2_1, u2_2)
+    };
+    let u2_grad = |x: &Point3<f64>| {
+        let &XYZ { x, y, z } = x.deref();
+        let u2_1x = 18.0 * x.powi(2) + 4.0 * y * x + 2.0 * x + 5.0 * y * z + 2.0;
+        let u2_1y = -6.0 * y.powi(2) + 2.0 * x.powi(2) + 8.0 * z * y - 3.0 * y.powi(2) + 5.0 * x * z + 3.0;
+        let u2_1z = 12.0 * z.powi(2) + 4.0 * y.powi(2) + 5.0 * x * y - 5.0;
+
+        let u2_2x = 9.0 * x.powi(2) + 4.0 * x * z - 2.0;
+        let u2_2y = -12.0 * y.powi(2) + 6.0 * y + 3.0;
+        let u2_2z = 6.0 * z.powi(2) + 2.0 * x.powi(2) - 5.0;
+
+        let u2_1_grad = Vector3::new(u2_1x, u2_1y, u2_1z);
+        let u2_2_grad = Vector3::new(u2_2x, u2_2y, u2_2z);
+
+        Matrix3x2::from_columns(&[u2_1_grad, u2_2_grad])
+    };
+    let u_grad = |x: &Point3<f64>| u1_grad(x) - u2_grad(x);
+
+    let element = arbitrary_tet20_element();
+    let u_h_element =
+        flatten_vertically(&element.vertices().iter().map(u2).collect::<Vec<_>>()).unwrap();
+
+    // Use a quadrature rule with sufficient strength such that it can exactly capture the error
+    // (since we compute a squared norm, we need double the polynomial degree)
+    let (weights, points) = quadrature::total_order::tetrahedron(10).unwrap();
+    let mut gradient_buffer = DMatrix::repeat(3, 20, 3.0).reshape_generic(U3, Dynamic::new(20));
+    let H1_seminorm_computed = estimate_element_H1_semi_error(
+        &element,
+        u1_grad,
+        DVectorSlice::from(&u_h_element),
+        &weights,
+        &points,
+        MatrixSliceMut::from(&mut gradient_buffer),
+    );
+
+    let H1_seminorm_expected = {
+        let (weights, points) =
+            transform_quadrature_to_physical_domain(&element, &weights, &points);
+        let u_squared_norm = |x: &Point3<f64>| u_grad(x).norm_squared();
+        (weights, points).integrate(u_squared_norm).sqrt()
+    };
+
+    assert_scalar_eq!(
+        H1_seminorm_computed,
+        H1_seminorm_expected,
         comp = abs,
         tol = 1e-12
     );
