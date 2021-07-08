@@ -12,7 +12,7 @@ use fenris::mesh::procedural::{
 };
 use fenris::mesh::{Hex20Mesh, Hex27Mesh, Mesh3d, Tet10Mesh};
 use fenris::nalgebra::coordinates::XYZ;
-use fenris::nalgebra::{Point, Point3, Vector1, VectorN, U1, U3, Vector3};
+use fenris::nalgebra::{Point, Point3, Vector1, Vector3, VectorN, U1, U3};
 use fenris::quadrature;
 use fenris::quadrature::QuadraturePair3d;
 use std::f64::consts::PI;
@@ -21,7 +21,9 @@ use std::ops::Deref;
 fn sin(x: f64) -> f64 {
     x.sin()
 }
-fn cos(x: f64) -> f64 { x.cos() }
+fn cos(x: f64) -> f64 {
+    x.cos()
+}
 
 // Exact solution
 fn u_exact(x: &Point3<f64>) -> f64 {
@@ -78,7 +80,7 @@ pub fn solve_and_produce_output<C>(
         error_quadrature,
         &PoissonProblemSourceFunction,
         u_exact,
-        u_exact_grad
+        u_exact_grad,
     );
 }
 

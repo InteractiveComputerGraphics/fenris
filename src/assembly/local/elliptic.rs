@@ -7,10 +7,11 @@ use crate::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOp
 use crate::element::{MatrixSlice, MatrixSliceMut, VolumetricFiniteElement};
 use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{
-    DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic,
-    MatrixMN, MatrixSliceMN, MatrixSliceMutMN, Point, RealField, Scalar,
+    DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, Dim, DimName,
+    Dynamic, MatrixMN, MatrixSliceMN, MatrixSliceMutMN, Point, RealField, Scalar, U1,
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
+use crate::util::reshape_to_slice;
 use crate::workspace::Workspace;
 use eyre::eyre;
 use itertools::izip;
@@ -381,15 +382,24 @@ where
     assert_eq!(quadrature_points.len(), quadrature_data.len());
     assert_eq!(basis_gradients_buffer.ncols(), element.num_nodes());
 
-    let s = Contraction::SolutionDim::dim();
+    let d = Element::GeometryDim::dim();
+    let s = Contraction::SolutionDim::name();
     let n = element.num_nodes();
     assert_eq!(
         u_element.len(),
-        s * n,
+        s.value() * n,
         "Local element dofs (u_element) dimension mismatch"
     );
-    assert_eq!(output.nrows(), s * n, "Output matrix dimension mismatch");
-    assert_eq!(output.ncols(), s * n, "Output matrix dimension mismatch");
+    assert_eq!(
+        output.nrows(),
+        s.value() * n,
+        "Output matrix dimension mismatch"
+    );
+    assert_eq!(
+        output.ncols(),
+        s.value() * n,
+        "Output matrix dimension mismatch"
+    );
 
     output.fill(T::zero());
 
@@ -408,13 +418,8 @@ where
         // First populate gradients with respect to reference coords
         element.populate_basis_gradients(MatrixSliceMut::from(&mut phi_grad), &point);
 
-        // TODO: Refactor this
         // We currently have to compute u_grad by providing reference gradients
-        let u_element = MatrixSliceMN::from_slice_generic(
-            u_element.as_slice(),
-            Contraction::SolutionDim::name(),
-            Dynamic::new(n),
-        );
+        let u_element = reshape_to_slice(&u_element, (s, Dynamic::new(n)));
         let u_grad = compute_volume_u_grad(&j_inv_t, &phi_grad, u_element);
 
         // Transform reference gradients to gradients with respect to physical coords
@@ -423,17 +428,18 @@ where
             phi_grad.copy_from(&new_phi_grad);
         }
 
-        // TODO: Scale during the loop up above?
-        // TODO: Or maybe we should extend the contraction trait to allow a scaling factor
+        // Note: We need to multiply the contraction result by a scale factor to account for the
+        // quadrature weight and jacobian determinant
         let scale = weight * j_det.abs();
-        // We need to multiply the contraction result by the scale factor.
-        // We do this implicitly by multiplying the basis gradients by its square root.
-        // This way we don't have to allocate an additional matrix or complicate
-        // the trait.
-        let g = &mut phi_grad;
-        *g *= scale.sqrt();
-
-        operator.contract_multiple_into(&mut output, data, &u_grad, &MatrixSlice::from(&*g));
+        let phi_grad = reshape_to_slice(&phi_grad, (Dynamic::new(d * n), U1::name()));
+        operator.accumulate_contractions_into(
+            DMatrixSliceMut::from(&mut output),
+            scale,
+            &u_grad,
+            phi_grad.clone(),
+            phi_grad,
+            data,
+        );
     }
 
     Ok(())

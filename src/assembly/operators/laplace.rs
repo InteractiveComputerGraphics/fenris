@@ -64,9 +64,9 @@ where
     fn contract(
         &self,
         _gradient: &MatrixMN<T, D, Self::SolutionDim>,
-        _data: &Self::Parameters,
         a: &VectorN<T, D>,
         b: &VectorN<T, D>,
+        _data: &Self::Parameters,
     ) -> MatrixMN<T, Self::SolutionDim, Self::SolutionDim> {
         Vector1::new(a.dot(&b))
     }

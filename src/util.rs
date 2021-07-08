@@ -4,11 +4,12 @@ use crate::mesh::Mesh;
 use itertools::Itertools;
 use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{DimEq, ShapeConstraint};
-use nalgebra::storage::{Storage, StorageMut};
+use nalgebra::storage::{ContiguousStorage, Storage, StorageMut};
 use nalgebra::{
-    DMatrixSlice, DVector, DVectorSlice, DefaultAllocator, Dim, DimDiff, DimMin, DimName, DimSub,
-    Matrix, Matrix3, MatrixMN, MatrixN, MatrixSlice, MatrixSliceMut, Quaternion, RealField, Scalar,
-    SliceStorage, SliceStorageMut, SquareMatrix, UnitQuaternion, Vector, Vector3, VectorN, U1,
+    DMatrixSlice, DVector, DVectorSlice, DefaultAllocator, Dim, DimDiff, DimMin, DimMul, DimName,
+    DimProd, DimSub, Matrix, Matrix3, MatrixMN, MatrixN, MatrixSlice, MatrixSliceMut, Quaternion,
+    RealField, Scalar, SliceStorage, SliceStorageMut, SquareMatrix, UnitQuaternion, Vector,
+    Vector3, VectorN, U1,
 };
 use nalgebra_sparse::{CooMatrix, CsrMatrix};
 use num::Zero;
@@ -19,6 +20,32 @@ use std::fmt::LowerExp;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
+
+/// Given a matrix, returns a matrix slice reshaped to the requested shape.
+// TODO: With nalgebra 0.27 we can remove the strides on matrix slice
+// TODO: Implement ReshapeableStorage for slices in `nalgebra`
+pub(crate) fn reshape_to_slice<T, R, C, S, R2, C2>(
+    matrix: &Matrix<T, R, C, S>,
+    shape: (R2, C2),
+) -> MatrixSlice<T, R2, C2, U1, R2>
+where
+    T: Scalar,
+    R: DimMul<C>,
+    C: Dim,
+    R2: DimMul<C2>,
+    C2: Dim,
+    S: ContiguousStorage<T, R, C>,
+    ShapeConstraint: DimEq<DimProd<R, C>, DimProd<R2, C2>>,
+{
+    let (r2, c2) = shape;
+    assert_eq!(
+        matrix.nrows() * matrix.ncols(),
+        r2.value() * c2.value(),
+        "Cannot reshape with different number of elements"
+    );
+    let data_slice = matrix.as_slice();
+    MatrixSlice::from_slice_generic(data_slice, r2, c2)
+}
 
 /// Creates a column-major slice from the given matrix.
 ///

@@ -193,9 +193,9 @@ impl EllipticContraction<f64, U3> for MockVectorEllipticEnergy {
     fn contract(
         &self,
         gradient: &MatrixMN<f64, U3, Self::SolutionDim>,
-        density: &Self::Parameters,
         a: &VectorN<f64, U3>,
         b: &VectorN<f64, U3>,
+        density: &Self::Parameters,
     ) -> MatrixMN<f64, Self::SolutionDim, Self::SolutionDim> {
         let G = gradient;
         let G_dot_G = G.dot(&G);
@@ -455,9 +455,9 @@ fn elliptic_element_assembler_matches_individual_element_assembly() {
         fn contract(
             &self,
             gradient: &Matrix2<f64>,
-            &density: &Self::Parameters,
             a: &Vector2<f64>,
             b: &Vector2<f64>,
+            &density: &Self::Parameters,
         ) -> Matrix2<f64> {
             // This is *not* the correct contraction with respect to the elliptic operator,
             // but it doesn't matter for our subsequent testing

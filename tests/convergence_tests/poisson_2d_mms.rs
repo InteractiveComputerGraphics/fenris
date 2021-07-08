@@ -12,7 +12,7 @@ use fenris::mesh::procedural::{
 };
 use fenris::mesh::{Mesh2d, Quad9Mesh2d, Tri6Mesh2d};
 use fenris::nalgebra::coordinates::XY;
-use fenris::nalgebra::{Point, Point2, Vector1, VectorN, U1, U2, Vector2};
+use fenris::nalgebra::{Point, Point2, Vector1, Vector2, VectorN, U1, U2};
 use fenris::quadrature;
 use fenris::quadrature::QuadraturePair2d;
 use std::f64::consts::PI;
@@ -21,7 +21,9 @@ use std::ops::Deref;
 fn sin(x: f64) -> f64 {
     x.sin()
 }
-fn cos(x: f64) -> f64 { x.cos() }
+fn cos(x: f64) -> f64 {
+    x.cos()
+}
 
 // Exact solution
 fn u_exact(x: &Point2<f64>) -> f64 {
