@@ -1,7 +1,7 @@
 use crate::allocators::{BiDimAllocator, SmallDimAllocator};
 use crate::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
 use crate::nalgebra::{DefaultAllocator, MatrixMN, RealField, Vector1, VectorN, U1};
-use crate::SmallDim;
+use crate::{SmallDim, Symmetry};
 use numeric_literals::replace_float_literals;
 
 /// The Laplace operator $\Delta = \nabla^2$.
@@ -69,5 +69,9 @@ where
         _data: &Self::Parameters,
     ) -> MatrixMN<T, Self::SolutionDim, Self::SolutionDim> {
         Vector1::new(a.dot(&b))
+    }
+
+    fn symmetry(&self) -> Symmetry {
+        Symmetry::Symmetric
     }
 }
