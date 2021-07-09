@@ -11,8 +11,9 @@ use crate::nalgebra::{
     Dynamic, MatrixMN, MatrixSliceMN, MatrixSliceMutMN, Point, RealField, Scalar, U1,
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
-use crate::util::reshape_to_slice;
+use crate::util::{clone_upper_to_lower, reshape_to_slice};
 use crate::workspace::Workspace;
+use crate::Symmetry;
 use eyre::eyre;
 use itertools::izip;
 use std::cell::RefCell;
@@ -440,6 +441,10 @@ where
             phi_grad,
             data,
         );
+    }
+
+    if matches!(operator.symmetry(), Symmetry::Symmetric) {
+        clone_upper_to_lower(&mut output);
     }
 
     Ok(())

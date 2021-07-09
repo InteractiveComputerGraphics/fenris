@@ -40,3 +40,9 @@ pub extern crate vtkio;
 pub trait SmallDim: DimName + DimMin<Self, Output = Self> {}
 
 impl<D> SmallDim for D where D: DimName + DimMin<Self, Output = Self> {}
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum Symmetry {
+    NonSymmetric,
+    Symmetric,
+}

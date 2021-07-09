@@ -3,11 +3,11 @@ use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{
     DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, MatrixMN, RealField, Scalar, VectorN,
 };
-use crate::SmallDim;
+use crate::{SmallDim, Symmetry};
 
 mod laplace;
-
 pub use laplace::*;
+use nalgebra::min;
 
 pub trait Operator {
     type SolutionDim: SmallDim;
@@ -62,6 +62,21 @@ where
         parameters: &Self::Parameters,
     ) -> MatrixMN<T, Self::SolutionDim, Self::SolutionDim>;
 
+    /// Whether the contraction operator is symmetric.
+    ///
+    /// The contraction operator is *symmetric* if, for all $\nabla u, a, b$, regardless
+    /// of [operator parameters](Operator::Parameters),
+    /// $$
+    ///     C_g(\nabla u, a, b) = C_g(\nabla u, b, a)^T.
+    /// $$
+    ///
+    /// Symmetry can be exploited to only fill half of the matrix entries in batch operations
+    /// (see [accumulate_contractions_into](Self::accumulate_contractions_into)). The default
+    /// implementation indicates non-symmetry.
+    fn symmetry(&self) -> Symmetry {
+        Symmetry::NonSymmetric
+    }
+
     /// Compute the contraction for a number of vectors at the same time, with the given
     /// parameters.
     ///
@@ -106,6 +121,10 @@ where
     /// at once much more efficiently than one at a time. For performance reasons, it is therefore
     /// often advisable to override this method.
     ///
+    /// The method can exploit symmetry: If [self.symmetry()](Self::symmetry) indicates symmetry,
+    /// then only the **upper triangle** needs to be filled. Consumers of this method
+    /// **must** take this into account by checking for symmetry of the operator.
+    ///
     /// # Panics
     ///
     /// Panics if `a.len() != b.len()` or `a.len()` is not divisible by $d$ (`GeometryDim`).
@@ -146,11 +165,16 @@ where
             "Number of columns in output matrix is not consistent with b"
         );
         let s_times_s = (Self::SolutionDim::name(), Self::SolutionDim::name());
+        let symmetry = self.symmetry();
 
-        // Note: We fill the matrix column-by-column since the matrix is stored in column-major
-        // format
+        // Note: We fill the matrix (block) column-by-column since the matrix is stored in
+        // column-major format
         for J in 0..N {
-            for I in 0..M {
+            let row_range = match symmetry {
+                Symmetry::Symmetric => min(J + 1, M),
+                Symmetry::NonSymmetric => M,
+            };
+            for I in 0..row_range {
                 let a_I = a.rows_generic(d * I, GeometryDim::name()).clone_owned();
                 let b_J = b.rows_generic(d * J, GeometryDim::name()).clone_owned();
                 let mut c_IJ = output.generic_slice_mut((s * I, s * J), s_times_s);

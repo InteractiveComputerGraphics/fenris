@@ -21,6 +21,24 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
 
+/// Clones the upper triangle entries into the lower triangle entries.
+///
+/// The primary use case for this is to construct a full symmetric matrix from a symmetric
+/// matrix represented only by its upper triangular entries.
+pub(crate) fn clone_upper_to_lower<T, R, C, S>(matrix: &mut Matrix<T, R, C, S>)
+where
+    T: Scalar,
+    R: Dim,
+    C: Dim,
+    S: StorageMut<T, R, C>,
+{
+    for j in 0..matrix.ncols() {
+        for i in (j + 1)..matrix.nrows() {
+            matrix[(i, j)] = matrix[(j, i)].clone();
+        }
+    }
+}
+
 /// Given a matrix, returns a matrix slice reshaped to the requested shape.
 // TODO: With nalgebra 0.27 we can remove the strides on matrix slice
 // TODO: Implement ReshapeableStorage for slices in `nalgebra`

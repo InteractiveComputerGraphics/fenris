@@ -20,8 +20,8 @@ use fenris::nalgebra::{
     DMatrix, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic, Matrix2,
     Matrix3x2, MatrixMN, Point, Point2, Point3, Vector1, Vector2, Vector3, VectorN, U1, U2, U3,
 };
-use fenris::quadrature;
 use fenris::quadrature::{Quadrature, QuadraturePair};
+use fenris::{quadrature, Symmetry};
 use fenris_optimize::calculus::{approximate_gradient_fd, approximate_jacobian_fd};
 
 use crate::unit_tests::assembly::local;
@@ -206,6 +206,41 @@ impl EllipticContraction<f64, U3> for MockVectorEllipticEnergy {
     }
 }
 
+/// Same as the non-symmetric version, except we explicitly override `symmetry()` to indicate
+/// that the operator is in fact symmetric
+struct MockVectorSymmetricEllipticEnergy;
+
+impl Operator for MockVectorSymmetricEllipticEnergy {
+    type SolutionDim = U2;
+    type Parameters = f64;
+}
+
+impl EllipticOperator<f64, U3> for MockVectorSymmetricEllipticEnergy {
+    fn compute_elliptic_term(
+        &self,
+        gradient: &MatrixMN<f64, U3, Self::SolutionDim>,
+        data: &Self::Parameters,
+    ) -> MatrixMN<f64, U3, Self::SolutionDim> {
+        MockVectorEllipticEnergy.compute_elliptic_term(gradient, data)
+    }
+}
+
+impl EllipticContraction<f64, U3> for MockVectorSymmetricEllipticEnergy {
+    fn contract(
+        &self,
+        gradient: &MatrixMN<f64, U3, Self::SolutionDim>,
+        a: &VectorN<f64, U3>,
+        b: &VectorN<f64, U3>,
+        parameters: &Self::Parameters,
+    ) -> MatrixMN<f64, Self::SolutionDim, Self::SolutionDim> {
+        MockVectorEllipticEnergy.contract(gradient, a, b, parameters)
+    }
+
+    fn symmetry(&self) -> Symmetry {
+        Symmetry::Symmetric
+    }
+}
+
 fn u_vector_quadratic(x: &Point3<f64>) -> Vector2<f64> {
     let &XYZ { x, y, z } = x.deref();
     Vector2::new(
@@ -386,6 +421,74 @@ fn elliptic_element_matrix_is_jacobian_of_vector_tet10() {
         MatrixSliceMut::from(&mut output),
         &element,
         &MockVectorEllipticEnergy,
+        MatrixSlice::from(&u_element),
+        &weights,
+        &points,
+        &quadrature_data,
+        MatrixSliceMut::from(&mut gradient_buffer),
+    )
+    .unwrap();
+
+    assert_matrix_eq!(output, finite_diff_result, comp = abs, tol = 1e-6);
+}
+
+#[test]
+fn symmetric_elliptic_element_matrix_is_jacobian_of_vector_tet10() {
+    // This test is the same as the non-symmetric test, except we use an operator
+    // that is explicitly symmetric
+
+    // TODO: Test that it works with parameters?
+
+    let a = Point3::new(2.0, 0.0, 1.0);
+    let b = Point3::new(3.0, 4.0, 1.0);
+    let c = Point3::new(1.0, 1.0, 2.0);
+    let d = Point3::new(3.0, 1.0, 4.0);
+    let tet4_element = Tet4Element::from_vertices([a, b, c, d]);
+
+    // A Tet10 element can reproduce any quadratic solution field exactly
+    let element = Tet10Element::from(&tet4_element);
+    let u_element =
+        local::u_element_from_vertices_and_u_exact(element.vertices(), u_vector_quadratic);
+
+    // Let f(u_element) = energy(grad u). Then we can compute an approximate derivative with finite
+    // differences and use this to compare with our output from the assembly, which should
+    // be exactly the same.
+    let finite_diff_result = {
+        let (weights, points) = quadrature::total_order::tetrahedron(8).unwrap();
+        let quadrature_data =
+            local::evaluate_density_at_quadrature_points(&element, &points, local::density);
+
+        // Set up a function f = f(u) that corresponds to the element vector given state u
+        let f = |u: DVectorSlice<f64>, output: DVectorSliceMut<f64>| {
+            let mut gradient_buffer = DMatrix::repeat(3, element.num_nodes(), 3.0)
+                .reshape_generic(U3, Dynamic::new(element.num_nodes()));
+            assemble_element_elliptic_vector(
+                output,
+                &element,
+                &MockVectorSymmetricEllipticEnergy,
+                u,
+                &weights,
+                &points,
+                &quadrature_data,
+                MatrixSliceMut::from(&mut gradient_buffer),
+            )
+            .unwrap();
+        };
+
+        // TODO: What should h be?
+        approximate_jacobian_fd(2 * element.num_nodes(), f, &mut u_element.clone(), 1e-6)
+    };
+
+    let (weights, points) = quadrature::total_order::tetrahedron(8).unwrap();
+    let quadrature_data =
+        local::evaluate_density_at_quadrature_points(&element, &points, local::density);
+    let mut output = DMatrix::repeat(2 * element.num_nodes(), 2 * element.num_nodes(), 3.0);
+    let mut gradient_buffer = DMatrix::repeat(3, element.num_nodes(), 3.0)
+        .reshape_generic(U3, Dynamic::new(element.num_nodes()));
+    assemble_element_elliptic_matrix(
+        MatrixSliceMut::from(&mut output),
+        &element,
+        &MockVectorSymmetricEllipticEnergy,
         MatrixSlice::from(&u_element),
         &weights,
         &points,
