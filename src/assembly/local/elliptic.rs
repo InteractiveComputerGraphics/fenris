@@ -541,7 +541,7 @@ where
             Operator::SolutionDim::name(),
             Dynamic::new(n),
         );
-        let g = operator.compute_elliptic_term(&u_grad, data);
+        let g = operator.compute_elliptic_operator(&u_grad, data);
         let g_t_j_inv_t = g.transpose() * j_inv_t;
         output.gemm(weight * j_det.abs(), &g_t_j_inv_t, &phi_grad_ref, T::one());
     }

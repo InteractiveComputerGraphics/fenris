@@ -45,7 +45,7 @@ where
     D: SmallDim,
     DefaultAllocator: BiDimAllocator<T, D, Self::SolutionDim>,
 {
-    fn compute_elliptic_term(
+    fn compute_elliptic_operator(
         &self,
         gradient: &MatrixMN<T, D, Self::SolutionDim>,
         _data: &Self::Parameters,

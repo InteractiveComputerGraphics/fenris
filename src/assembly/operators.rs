@@ -26,11 +26,12 @@ where
     GeometryDim: SmallDim,
     DefaultAllocator: Allocator<T, GeometryDim, Self::SolutionDim>,
 {
-    /// TODO: Find better name
-    fn compute_elliptic_term(
+    /// Compute the elliptic operator $g = g(\nabla u)$ with the provided
+    /// [operator parameters](Operator::Parameters).
+    fn compute_elliptic_operator(
         &self,
         gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
-        data: &Self::Parameters,
+        parameters: &Self::Parameters,
     ) -> MatrixMN<T, GeometryDim, Self::SolutionDim>;
 }
 

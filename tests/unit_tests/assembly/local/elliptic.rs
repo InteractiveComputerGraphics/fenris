@@ -179,7 +179,7 @@ impl EllipticEnergy<f64, U3> for MockVectorEllipticEnergy {
 }
 
 impl EllipticOperator<f64, U3> for MockVectorEllipticEnergy {
-    fn compute_elliptic_term(
+    fn compute_elliptic_operator(
         &self,
         gradient: &MatrixMN<f64, U3, Self::SolutionDim>,
         density: &Self::Parameters,
@@ -216,12 +216,12 @@ impl Operator for MockVectorSymmetricEllipticEnergy {
 }
 
 impl EllipticOperator<f64, U3> for MockVectorSymmetricEllipticEnergy {
-    fn compute_elliptic_term(
+    fn compute_elliptic_operator(
         &self,
         gradient: &MatrixMN<f64, U3, Self::SolutionDim>,
         data: &Self::Parameters,
     ) -> MatrixMN<f64, U3, Self::SolutionDim> {
-        MockVectorEllipticEnergy.compute_elliptic_term(gradient, data)
+        MockVectorEllipticEnergy.compute_elliptic_operator(gradient, data)
     }
 }
 
@@ -545,7 +545,7 @@ fn elliptic_element_assembler_matches_individual_element_assembly() {
     }
 
     impl EllipticOperator<f64, U2> for MockEllipticOperator {
-        fn compute_elliptic_term(
+        fn compute_elliptic_operator(
             &self,
             gradient: &Matrix2<f64>,
             &density: &Self::Parameters,
