@@ -43,12 +43,14 @@ impl ElementSourceAssemblerBuilder<(), (), (), ()> {
             space: (),
             source: (),
             qtable: (),
-            marker: PhantomData
+            marker: PhantomData,
         }
     }
 }
 
-impl<SpaceRef, SourceRef, QTableRef> ElementSourceAssemblerBuilder<(), SpaceRef, SourceRef, QTableRef> {
+impl<SpaceRef, SourceRef, QTableRef>
+    ElementSourceAssemblerBuilder<(), SpaceRef, SourceRef, QTableRef>
+{
     pub fn with_finite_element_space<Space>(
         self,
         space: &Space,
@@ -57,7 +59,7 @@ impl<SpaceRef, SourceRef, QTableRef> ElementSourceAssemblerBuilder<(), SpaceRef,
             space,
             source: self.source,
             qtable: self.qtable,
-            marker: PhantomData
+            marker: PhantomData,
         }
     }
 
@@ -69,7 +71,7 @@ impl<SpaceRef, SourceRef, QTableRef> ElementSourceAssemblerBuilder<(), SpaceRef,
             space: self.space,
             source,
             qtable: self.qtable,
-            marker: PhantomData
+            marker: PhantomData,
         }
     }
 
@@ -81,12 +83,14 @@ impl<SpaceRef, SourceRef, QTableRef> ElementSourceAssemblerBuilder<(), SpaceRef,
             space: self.space,
             source: self.source,
             qtable,
-            marker: PhantomData
+            marker: PhantomData,
         }
     }
 }
 
-impl<'a, Space, Source, QTable> ElementSourceAssemblerBuilder<(), &'a Space, &'a Source, &'a QTable> {
+impl<'a, Space, Source, QTable>
+    ElementSourceAssemblerBuilder<(), &'a Space, &'a Source, &'a QTable>
+{
     // TODO: It's totally weird to have T as a parameter on the function here. Can we design
     // this differently? Maybe FiniteElementSpace should actually have Scalar as an
     // associated type?
@@ -95,7 +99,7 @@ impl<'a, Space, Source, QTable> ElementSourceAssemblerBuilder<(), &'a Space, &'a
             space: self.space,
             qtable: self.qtable,
             source: self.source,
-            marker: PhantomData
+            marker: PhantomData,
         }
     }
 }
@@ -107,7 +111,7 @@ pub struct ElementSourceAssembler<'a, T, Space, Source, QTable> {
     space: &'a Space,
     qtable: &'a QTable,
     source: &'a Source,
-    marker: PhantomData<T>
+    marker: PhantomData<T>,
 }
 
 impl<'a, T, Space, Source, QTable> ElementConnectivityAssembler
@@ -116,7 +120,7 @@ where
     T: Scalar,
     Space: VolumetricFiniteElementSpace<T>,
     Source: Operator<T, Space::GeometryDim>,
-    DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>
+    DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
 {
     fn solution_dim(&self) -> usize {
         Source::SolutionDim::dim()
