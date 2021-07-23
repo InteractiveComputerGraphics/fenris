@@ -47,7 +47,7 @@ fn f(x: &Point3<f64>) -> f64 {
 #[derive(Debug)]
 pub struct PoissonProblemSourceFunction;
 
-impl Operator for PoissonProblemSourceFunction {
+impl Operator<f64, U3> for PoissonProblemSourceFunction {
     type SolutionDim = U1;
     type Parameters = ();
 }

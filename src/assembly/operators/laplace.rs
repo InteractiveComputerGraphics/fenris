@@ -14,7 +14,7 @@ use numeric_literals::replace_float_literals;
 pub struct LaplaceOperator;
 
 /// Declare properties of the Laplace operator
-impl Operator for LaplaceOperator {
+impl<T, GeometryDim> Operator<T, GeometryDim> for LaplaceOperator {
     /// The Laplace operator operates on scalar values, so the dimension of our solution variable
     /// is 1.
     type SolutionDim = U1;

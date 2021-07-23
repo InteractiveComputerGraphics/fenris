@@ -9,14 +9,15 @@ use crate::nalgebra::{
     DVectorSliceMut, DefaultAllocator, DimName, Dynamic, MatrixSliceMutMN, Point, RealField,
     Scalar, VectorN, U1,
 };
-use crate::space::{ElementInSpace, FiniteElementConnectivity, VolumetricFiniteElementSpace};
+use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
 use crate::workspace::Workspace;
 use crate::SmallDim;
 use itertools::izip;
 use std::cell::RefCell;
 use std::cell::RefMut;
+use std::marker::PhantomData;
 
-pub trait SourceFunction<T, GeometryDim>: Operator
+pub trait SourceFunction<T, GeometryDim>: Operator<T, GeometryDim>
 where
     T: Scalar,
     GeometryDim: SmallDim,
@@ -29,63 +30,72 @@ where
     ) -> VectorN<T, Self::SolutionDim>;
 }
 
-pub struct ElementSourceAssemblerBuilder<SpaceRef, SourceRef, QTableRef> {
+pub struct ElementSourceAssemblerBuilder<T, SpaceRef, SourceRef, QTableRef> {
     space: SpaceRef,
     source: SourceRef,
     qtable: QTableRef,
+    marker: PhantomData<T>,
 }
 
-impl ElementSourceAssemblerBuilder<(), (), ()> {
+impl ElementSourceAssemblerBuilder<(), (), (), ()> {
     pub fn new() -> Self {
         Self {
             space: (),
             source: (),
             qtable: (),
+            marker: PhantomData
         }
     }
 }
 
-impl<SpaceRef, SourceRef, QTableRef> ElementSourceAssemblerBuilder<SpaceRef, SourceRef, QTableRef> {
+impl<SpaceRef, SourceRef, QTableRef> ElementSourceAssemblerBuilder<(), SpaceRef, SourceRef, QTableRef> {
     pub fn with_finite_element_space<Space>(
         self,
         space: &Space,
-    ) -> ElementSourceAssemblerBuilder<&Space, SourceRef, QTableRef> {
+    ) -> ElementSourceAssemblerBuilder<(), &Space, SourceRef, QTableRef> {
         ElementSourceAssemblerBuilder {
             space,
             source: self.source,
             qtable: self.qtable,
+            marker: PhantomData
         }
     }
 
     pub fn with_source<Source>(
         self,
         source: &Source,
-    ) -> ElementSourceAssemblerBuilder<SpaceRef, &Source, QTableRef> {
+    ) -> ElementSourceAssemblerBuilder<(), SpaceRef, &Source, QTableRef> {
         ElementSourceAssemblerBuilder {
             space: self.space,
             source,
             qtable: self.qtable,
+            marker: PhantomData
         }
     }
 
     pub fn with_quadrature_table<QTable>(
         self,
         qtable: &QTable,
-    ) -> ElementSourceAssemblerBuilder<SpaceRef, SourceRef, &QTable> {
+    ) -> ElementSourceAssemblerBuilder<(), SpaceRef, SourceRef, &QTable> {
         ElementSourceAssemblerBuilder {
             space: self.space,
             source: self.source,
             qtable,
+            marker: PhantomData
         }
     }
 }
 
-impl<'a, Space, Source, QTable> ElementSourceAssemblerBuilder<&'a Space, &'a Source, &'a QTable> {
-    pub fn build(self) -> ElementSourceAssembler<'a, Space, Source, QTable> {
+impl<'a, Space, Source, QTable> ElementSourceAssemblerBuilder<(), &'a Space, &'a Source, &'a QTable> {
+    // TODO: It's totally weird to have T as a parameter on the function here. Can we design
+    // this differently? Maybe FiniteElementSpace should actually have Scalar as an
+    // associated type?
+    pub fn build<T>(self) -> ElementSourceAssembler<'a, T, Space, Source, QTable> {
         ElementSourceAssembler {
             space: self.space,
             qtable: self.qtable,
             source: self.source,
+            marker: PhantomData
         }
     }
 }
@@ -93,17 +103,20 @@ impl<'a, Space, Source, QTable> ElementSourceAssemblerBuilder<&'a Space, &'a Sou
 /// An element assembler for source functions.
 ///
 /// TODO: Docs
-pub struct ElementSourceAssembler<'a, Space, Source, QTable> {
+pub struct ElementSourceAssembler<'a, T, Space, Source, QTable> {
     space: &'a Space,
     qtable: &'a QTable,
     source: &'a Source,
+    marker: PhantomData<T>
 }
 
-impl<'a, Space, Source, QTable> ElementConnectivityAssembler
-    for ElementSourceAssembler<'a, Space, Source, QTable>
+impl<'a, T, Space, Source, QTable> ElementConnectivityAssembler
+    for ElementSourceAssembler<'a, T, Space, Source, QTable>
 where
-    Space: FiniteElementConnectivity,
-    Source: Operator,
+    T: Scalar,
+    Space: VolumetricFiniteElementSpace<T>,
+    Source: Operator<T, Space::GeometryDim>,
+    DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>
 {
     fn solution_dim(&self) -> usize {
         Source::SolutionDim::dim()
@@ -153,11 +166,11 @@ where
 }
 
 impl<'a, T, Space, Source, QTable> ElementVectorAssembler<T>
-    for ElementSourceAssembler<'a, Space, Source, QTable>
+    for ElementSourceAssembler<'a, T, Space, Source, QTable>
 where
     T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
-    Source: SourceFunction<T, Space::GeometryDim>,
+    Source: SourceFunction<T, Space::ReferenceDim>,
     QTable: QuadratureTable<T, Space::ReferenceDim, Data = Source::Parameters>,
     DefaultAllocator:
         TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Source::SolutionDim>,

@@ -163,7 +163,7 @@ impl<'a, T, Space, Op, QTable> ElementConnectivityAssembler
 where
     T: Scalar,
     Space: VolumetricFiniteElementSpace<T>,
-    Op: Operator,
+    Op: Operator<T, Space::GeometryDim>,
     DefaultAllocator: SmallDimAllocator<T, Space::GeometryDim>,
 {
     fn solution_dim(&self) -> usize {
@@ -222,7 +222,7 @@ impl<'a, T: Scalar, Space, Op, QTable> ElementEllipticAssembler<'a, T, Space, Op
 where
     T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
-    Op: Operator,
+    Op: Operator<T, Space::ReferenceDim>,
     QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters>,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Op::SolutionDim>,
 {
@@ -249,7 +249,7 @@ impl<'a, T, Space, Op, QTable> ElementVectorAssembler<T>
 where
     T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
-    Op: EllipticOperator<T, Space::GeometryDim>,
+    Op: EllipticOperator<T, Space::ReferenceDim>,
     QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters>,
     DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Op::SolutionDim>,
 {
@@ -298,7 +298,7 @@ impl<'a, T, Space, Op, QTable> ElementMatrixAssembler<T>
 where
     T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
-    Op: EllipticContraction<T, Space::GeometryDim>,
+    Op: EllipticContraction<T, Space::ReferenceDim>,
     QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters>,
     DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Op::SolutionDim>,
 {

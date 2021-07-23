@@ -35,7 +35,7 @@ use nested_vec::NestedVec;
 
 struct MockScalarEllipticEnergy;
 
-impl Operator for MockScalarEllipticEnergy {
+impl Operator<f64, U2> for MockScalarEllipticEnergy {
     type SolutionDim = U1;
     /// Basically density to check that parameters are taken into account during assembly
     type Parameters = f64;
@@ -163,7 +163,7 @@ fn compute_element_energy_scalar_quad4() {
 
 struct MockVectorEllipticEnergy;
 
-impl Operator for MockVectorEllipticEnergy {
+impl Operator<f64, U3> for MockVectorEllipticEnergy {
     type SolutionDim = U2;
     // A sort of "density" whose purpose is to test that the quadrature parameters are taken into
     // account during assembly
@@ -210,7 +210,7 @@ impl EllipticContraction<f64, U3> for MockVectorEllipticEnergy {
 /// that the operator is in fact symmetric
 struct MockVectorSymmetricEllipticEnergy;
 
-impl Operator for MockVectorSymmetricEllipticEnergy {
+impl Operator<f64, U3> for MockVectorSymmetricEllipticEnergy {
     type SolutionDim = U2;
     type Parameters = f64;
 }
@@ -539,7 +539,7 @@ fn elliptic_element_assembler_matches_individual_element_assembly() {
     // And set up a simple mock operator
     struct MockEllipticOperator;
 
-    impl Operator for MockEllipticOperator {
+    impl Operator<f64, U2> for MockEllipticOperator {
         type SolutionDim = U2;
         type Parameters = f64;
     }

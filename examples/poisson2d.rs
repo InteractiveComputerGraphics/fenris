@@ -102,7 +102,7 @@ fn solve_linear_system(matrix: &CsrMatrix<f64>, rhs: &DVector<f64>) -> eyre::Res
 /// Represents the source function `f` in the poisson equation - Delta u = f.
 struct PoissonProblemSourceFunction;
 
-impl Operator for PoissonProblemSourceFunction {
+impl Operator<f64, U2> for PoissonProblemSourceFunction {
     /// f maps R^2 to R^1 (U1)
     type SolutionDim = U1;
     type Parameters = ();

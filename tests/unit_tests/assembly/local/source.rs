@@ -61,7 +61,7 @@ fn element_source_vector_reproduces_inner_product() {
 
     struct MockSourceFunction;
 
-    impl Operator for MockSourceFunction {
+    impl Operator<f64, U3> for MockSourceFunction {
         type SolutionDim = U2;
         // We give each point in space a "density" in order to test correct parameter evaluation
         type Parameters = f64;
@@ -159,7 +159,7 @@ fn source_vector_assembler_matches_individual_element_assembly() {
     // And set up a simple mock source function
     struct MockSource;
 
-    impl Operator for MockSource {
+    impl Operator<f64, U2> for MockSource {
         type SolutionDim = U2;
         type Parameters = f64;
     }

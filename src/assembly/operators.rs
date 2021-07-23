@@ -9,7 +9,7 @@ mod laplace;
 pub use laplace::*;
 use nalgebra::min;
 
-pub trait Operator {
+pub trait Operator<T, GeometryDim> {
     type SolutionDim: SmallDim;
 
     /// The parameters associated with the operator.
@@ -20,7 +20,7 @@ pub trait Operator {
     type Parameters: Default + Clone + 'static;
 }
 
-pub trait EllipticOperator<T, GeometryDim>: Operator
+pub trait EllipticOperator<T, GeometryDim>: Operator<T, GeometryDim>
 where
     T: Scalar,
     GeometryDim: SmallDim,
@@ -47,8 +47,7 @@ where
 /// for the above expression.
 ///
 /// TODO: Maybe return results in impls...?
-/// TODO: Decide how to model symmetry
-pub trait EllipticContraction<T, GeometryDim>: Operator
+pub trait EllipticContraction<T, GeometryDim>: Operator<T, GeometryDim>
 where
     T: RealField,
     GeometryDim: SmallDim,
@@ -217,7 +216,7 @@ where
 ///
 /// TODO: Extend elliptic energy to have an additional domain dependence,
 /// e.g. $\psi = \psi(x, \nabla u)$.
-pub trait EllipticEnergy<T, GeometryDim>: Operator
+pub trait EllipticEnergy<T, GeometryDim>: Operator<T, GeometryDim>
 where
     T: RealField,
     GeometryDim: SmallDim,
