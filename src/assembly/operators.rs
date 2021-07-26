@@ -131,7 +131,7 @@ where
     ///
     /// Panics if `a.len() != b.len()` or `a.len()` is not divisible by $d$ (`GeometryDim`).
     ///
-    /// Panics if `output.nrows() != s * M` or `output.ncols() != output.ncols() * N`.
+    /// Panics if `output.nrows() != s * M` or `output.ncols() != s * N`.
     #[allow(non_snake_case)]
     fn accumulate_contractions_into(
         &self,
