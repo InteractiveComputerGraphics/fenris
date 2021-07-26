@@ -114,10 +114,8 @@ where
     let rule_files = find_polyquad_rule_files_in_dir(rule_dir).expect("Could not find rule files");
     let mut rules = Vec::new();
     for rule_file in rule_files {
-        let data = read_to_string(&rule_file.path).expect(&format!(
-            "Failed to load rule file {}",
-            rule_file.path.display()
-        ));
+        let data =
+            read_to_string(&rule_file.path).expect(&format!("Failed to load rule file {}", rule_file.path.display()));
         let (weights, points) = Parser::parse(&data).expect(&format!(
             "Failed to parse polyquad rule file {}",
             rule_file.path.display()
@@ -143,10 +141,7 @@ where
     rules
 }
 
-fn generate_source_tokens_for_rules<const D: usize>(
-    domain_name: &str,
-    rules: Vec<PolyquadRule<D>>,
-) -> TokenStream {
+fn generate_source_tokens_for_rules<const D: usize>(domain_name: &str, rules: Vec<PolyquadRule<D>>) -> TokenStream {
     let quadrature_tokens = rules.iter().map(|rule| {
         let strength = rule.strength;
         let fn_name = format_ident!("{}_{}", domain_name, strength);
@@ -209,8 +204,7 @@ fn generate_source_tokens_for_rules<const D: usize>(
 fn write_tokens_to_file(tokens: &TokenStream, path: impl AsRef<Path>) {
     let code = format!("{:#}", tokens);
     let path = path.as_ref();
-    std::fs::create_dir_all(path.parent().unwrap())
-        .expect("Failed to create directory for generated output code");
+    std::fs::create_dir_all(path.parent().unwrap()).expect("Failed to create directory for generated output code");
     std::fs::write(&path, &code).expect("Failed to write source code for quadrature rule");
 }
 

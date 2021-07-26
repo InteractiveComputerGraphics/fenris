@@ -1,12 +1,10 @@
 use eyre::eyre;
 use fenris::allocators::{SmallDimAllocator, TriDimAllocator};
 use fenris::assembly::global::{
-    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, CsrAssembler,
-    SerialVectorAssembler,
+    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, CsrAssembler, SerialVectorAssembler,
 };
 use fenris::assembly::local::{
-    ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, SourceFunction,
-    UniformQuadratureTable,
+    ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, SourceFunction, UniformQuadratureTable,
 };
 use fenris::assembly::operators::LaplaceOperator;
 use fenris::element::ElementConnectivity;
@@ -46,10 +44,7 @@ pub fn assert_summary_is_close_to_reference(summary: &ErrorSummary, reference: &
         "Resolutions are not identical"
     );
     assert_eq!(summary.L2_errors.len(), reference.L2_errors.len());
-    assert_eq!(
-        summary.H1_seminorm_errors.len(),
-        reference.H1_seminorm_errors.len()
-    );
+    assert_eq!(summary.H1_seminorm_errors.len(), reference.H1_seminorm_errors.len());
 
     for (e1, e2) in izip!(&summary.L2_errors, &reference.L2_errors) {
         let rel_error = (e1 - e2).abs() / e2.abs();
@@ -115,8 +110,7 @@ where
         .enumerate()
         // TODO: Clean this up a bit
         .filter_map(|(idx, x)| {
-            ((&x.coords - VectorN::<f64, D>::repeat(0.5)).apply_norm(&UniformNorm) > 0.4999)
-                .then(|| idx)
+            ((&x.coords - VectorN::<f64, D>::repeat(0.5)).apply_norm(&UniformNorm) > 0.4999).then(|| idx)
         })
         .collect();
 
@@ -126,14 +120,11 @@ where
     Ok((a_global, b_global))
 }
 
-pub fn solve_linear_system(
-    matrix: &CsrMatrix<f64>,
-    rhs: &DVector<f64>,
-) -> eyre::Result<DVector<f64>> {
+pub fn solve_linear_system(matrix: &CsrMatrix<f64>, rhs: &DVector<f64>) -> eyre::Result<DVector<f64>> {
     // The discrete Laplace operator is positive definite (given appropriate boundary conditions),
     // so we can use a Cholesky factorization
-    let cholesky = CscCholesky::factor(&matrix.into())
-        .map_err(|err| eyre!("Failed to solve linear system. Error: {}", err))?;
+    let cholesky =
+        CscCholesky::factor(&matrix.into()).map_err(|err| eyre!("Failed to solve linear system. Error: {}", err))?;
     // TODO: So apparently `CscCholesky::solve` only works with dynamic matrices. Should support
     // any kind of matrix, especially vectors (DVector in particular)!
     // Need to make a PR for this
@@ -178,8 +169,7 @@ where
         &error_quadrature,
     )
     .unwrap();
-    let H1_seminorm_error =
-        estimate_H1_seminorm_error(mesh, u_exact_grad, &u_h, &error_quadrature).unwrap();
+    let H1_seminorm_error = estimate_H1_seminorm_error(mesh, u_exact_grad, &u_h, &error_quadrature).unwrap();
 
     PoissonSolveResult {
         u_h,
@@ -237,12 +227,7 @@ pub fn solve_and_produce_output<C, D, Source>(
         summary.H1_seminorm_errors.push(result.H1_seminorm_error);
 
         FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
-            .with_title(format!(
-                "Poisson {}D FEM {} Res {}",
-                D::dim(),
-                element_name,
-                resolution
-            ))
+            .with_title(format!("Poisson {}D FEM {} Res {}", D::dim(), element_name, resolution))
             .with_point_scalar_attributes("u_h", result.u_h.as_slice())
             .try_export(base_path.join(format!(
                 "poisson{}d_mms_approx_{}_res_{}.vtu",
@@ -272,8 +257,7 @@ pub fn solve_and_produce_output<C, D, Source>(
     ));
     {
         let mut summary_file = File::create(&summary_path).unwrap();
-        serde_json::to_writer_pretty(&mut summary_file, &summary)
-            .expect("Failed to write JSON output to directory");
+        serde_json::to_writer_pretty(&mut summary_file, &summary).expect("Failed to write JSON output to directory");
     }
 
     // Load summary containing reference values

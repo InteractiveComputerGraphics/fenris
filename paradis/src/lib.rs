@@ -44,10 +44,7 @@ impl<'data, Access> SubsetAccess<'data, Access> {
         unsafe { self.access.get_unchecked(global_index) }
     }
 
-    pub fn get_mut<'b>(
-        &'b mut self,
-        local_index: usize,
-    ) -> <Access as ParallelIndexedAccess<'b>>::RecordMut
+    pub fn get_mut<'b>(&'b mut self, local_index: usize) -> <Access as ParallelIndexedAccess<'b>>::RecordMut
     where
         'data: 'b,
         Access: ParallelIndexedAccess<'b>,
@@ -192,11 +189,7 @@ impl DisjointSubsets {
         labels: Vec<usize>,
     ) -> Result<Self, SubsetsNotDisjointError> {
         let subsets = subsets.into();
-        assert_eq!(
-            subsets.len(),
-            labels.len(),
-            "Must have exactly one label per subset."
-        );
+        assert_eq!(subsets.len(), labels.len(), "Must have exactly one label per subset.");
 
         let mut max_index = None;
         let mut global_index_set = HashSet::new();
@@ -239,11 +232,7 @@ impl DisjointSubsets {
         max_index: Option<usize>,
     ) -> Self {
         let subsets = subsets.into();
-        assert_eq!(
-            subsets.len(),
-            labels.len(),
-            "Must have exactly one label per subset."
-        );
+        assert_eq!(subsets.len(), labels.len(), "Must have exactly one label per subset.");
         Self {
             max_index,
             subsets: subsets.into(),

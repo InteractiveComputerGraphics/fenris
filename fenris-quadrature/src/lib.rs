@@ -86,10 +86,7 @@ impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::NoRuleAvailable => {
-                write!(
-                    f,
-                    "There is no quadrature rule satisfying the requirements available"
-                )
+                write!(f, "There is no quadrature rule satisfying the requirements available")
             }
         }
     }

@@ -6,10 +6,9 @@ use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{DimEq, ShapeConstraint};
 use nalgebra::storage::{ContiguousStorage, Storage, StorageMut};
 use nalgebra::{
-    DMatrixSlice, DVector, DVectorSlice, DefaultAllocator, Dim, DimDiff, DimMin, DimMul, DimName,
-    DimProd, DimSub, Matrix, Matrix3, MatrixMN, MatrixN, MatrixSlice, MatrixSliceMut, Quaternion,
-    RealField, Scalar, SliceStorage, SliceStorageMut, SquareMatrix, UnitQuaternion, Vector,
-    Vector3, VectorN, U1,
+    DMatrixSlice, DVector, DVectorSlice, DefaultAllocator, Dim, DimDiff, DimMin, DimMul, DimName, DimProd, DimSub,
+    Matrix, Matrix3, MatrixMN, MatrixN, MatrixSlice, MatrixSliceMut, Quaternion, RealField, Scalar, SliceStorage,
+    SliceStorageMut, SquareMatrix, UnitQuaternion, Vector, Vector3, VectorN, U1,
 };
 use nalgebra_sparse::{CooMatrix, CsrMatrix};
 use num::Zero;
@@ -91,12 +90,8 @@ where
     );
 
     unsafe {
-        let data = SliceStorage::new_with_strides_unchecked(
-            &matrix.data,
-            (0, 0),
-            (slice_rows, slice_cols),
-            (U1, slice_rows),
-        );
+        let data =
+            SliceStorage::new_with_strides_unchecked(&matrix.data, (0, 0), (slice_rows, slice_cols), (U1, slice_rows));
         Matrix::from_data_statically_unchecked(data)
     }
 }
@@ -116,10 +111,8 @@ pub fn rotation_svd<T, D>(matrix: &MatrixN<T, D>) -> (MatrixN<T, D>, VectorN<T, 
 where
     T: RealField,
     D: DimName + DimMin<D, Output = D> + DimSub<U1>,
-    DefaultAllocator: Allocator<T, D>
-        + Allocator<T, D, D>
-        + Allocator<T, <D as DimSub<U1>>::Output>
-        + Allocator<(usize, usize), D>,
+    DefaultAllocator:
+        Allocator<T, D> + Allocator<T, D, D> + Allocator<T, <D as DimSub<U1>>::Output> + Allocator<(usize, usize), D>,
 {
     let minus_one = T::from_f64(-1.0).unwrap();
     let mut svd = matrix.clone().svd(true, true);
@@ -189,8 +182,7 @@ pub fn apd<T: RealField>(
         let h12 = (B2[1] + B1[2]) * 0.5;
 
         let detH =
-            -(h02 * h02 * h11) + (h01 * h02 * h12) * 2.0 - (h00 * h12 * h12) - (h01 * h01 * h22)
-                + (h00 * h11 * h22);
+            -(h02 * h02 * h11) + (h01 * h02 * h12) * 2.0 - (h00 * h12 * h12) - (h01 * h01 * h22) + (h00 * h11 * h22);
         let factor = detH.recip() * (-0.25);
 
         let mut omega = Vector3::zeros();
@@ -233,10 +225,7 @@ pub fn apd<T: RealField>(
     q
 }
 
-pub fn diag_left_mul<T, D1, D2, S>(
-    diag: &Vector<T, D1, S>,
-    matrix: &MatrixMN<T, D1, D2>,
-) -> MatrixMN<T, D1, D2>
+pub fn diag_left_mul<T, D1, D2, S>(diag: &Vector<T, D1, S>, matrix: &MatrixMN<T, D1, D2>) -> MatrixMN<T, D1, D2>
 where
     T: RealField,
     D1: DimName,
@@ -309,17 +298,7 @@ pub fn try_transmute_ref_mut<T: 'static, U: 'static>(e: &mut T) -> Option<&mut U
 }
 
 pub fn cross_product_matrix<T: RealField>(x: &Vector3<T>) -> Matrix3<T> {
-    Matrix3::new(
-        T::zero(),
-        -x[2],
-        x[1],
-        x[2],
-        T::zero(),
-        -x[0],
-        -x[1],
-        x[0],
-        T::zero(),
-    )
+    Matrix3::new(T::zero(), -x[2], x[1], x[2], T::zero(), -x[0], -x[1], x[0], T::zero())
 }
 
 pub fn dump_matrix_to_file<'a, T: Scalar + Display>(
@@ -361,8 +340,7 @@ where
     let node_matrix = CsrMatrix::try_from_pattern_and_values(pattern, vec![1.0f64; nnz])
         .expect("CSR data must be valid by definition");
 
-    dump_csr_matrix_to_mm_file(node_path.as_ref(), &node_matrix)
-        .map_err(|err| err as Box<dyn Error>)?;
+    dump_csr_matrix_to_mm_file(node_path.as_ref(), &node_matrix).map_err(|err| err as Box<dyn Error>)?;
 
     // Create a rectangular matrix with element index on the rows and
     // node indices as columns
@@ -373,11 +351,8 @@ where
         }
     }
 
-    dump_csr_matrix_to_mm_file(
-        element_path.as_ref(),
-        &CsrMatrix::from(&element_node_matrix),
-    )
-    .map_err(|err| err as Box<dyn Error>)?;
+    dump_csr_matrix_to_mm_file(element_path.as_ref(), &CsrMatrix::from(&element_node_matrix))
+        .map_err(|err| err as Box<dyn Error>)?;
     Ok(())
 }
 
@@ -397,13 +372,7 @@ pub fn dump_csr_matrix_to_mm_file<T: Scalar + LowerExp>(
     writeln!(writer, "%%MatrixMarket matrix coordinate real general")?;
 
     // Write dimensions
-    writeln!(
-        writer,
-        "{} {} {}",
-        matrix.nrows(),
-        matrix.ncols(),
-        matrix.nnz()
-    )?;
+    writeln!(writer, "{} {} {}", matrix.nrows(), matrix.ncols(), matrix.nnz())?;
 
     for (i, j, v) in matrix.triplet_iter() {
         // Indices have to be stored as 1-based
@@ -419,10 +388,8 @@ where
     T: RealField,
     D: Dim + DimSub<U1>,
     S: Storage<T, D, D>,
-    DefaultAllocator: Allocator<T, D, D>
-        + Allocator<T, DimDiff<D, U1>>
-        + Allocator<T, D>
-        + Allocator<T, DimDiff<D, U1>>,
+    DefaultAllocator:
+        Allocator<T, D, D> + Allocator<T, DimDiff<D, U1>> + Allocator<T, D> + Allocator<T, DimDiff<D, U1>>,
 {
     use std::cmp::Ordering;
     matrix
@@ -455,10 +422,8 @@ where
     T: RealField,
     D: Dim + DimSub<U1>,
     S: Storage<T, D, D>,
-    DefaultAllocator: Allocator<T, D, D>
-        + Allocator<T, DimDiff<D, U1>>
-        + Allocator<T, D>
-        + Allocator<T, DimDiff<D, U1>>,
+    DefaultAllocator:
+        Allocator<T, D, D> + Allocator<T, DimDiff<D, U1>> + Allocator<T, D> + Allocator<T, DimDiff<D, U1>>,
 {
     use std::cmp::Ordering;
     matrix
@@ -475,10 +440,8 @@ where
     T: RealField,
     D: Dim + DimSub<U1>,
     S: Storage<T, D, D>,
-    DefaultAllocator: Allocator<T, D, D>
-        + Allocator<T, DimDiff<D, U1>>
-        + Allocator<T, D>
-        + Allocator<T, DimDiff<D, U1>>,
+    DefaultAllocator:
+        Allocator<T, D, D> + Allocator<T, DimDiff<D, U1>> + Allocator<T, D> + Allocator<T, DimDiff<D, U1>>,
 {
     use std::cmp::Ordering;
     let (min, max) = matrix

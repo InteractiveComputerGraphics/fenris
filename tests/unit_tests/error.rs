@@ -4,14 +4,12 @@ use fenris::connectivity::Connectivity;
 use fenris::element::{ElementConnectivity, Tet20Element, Tet4Element, VolumetricFiniteElement};
 use fenris::error::{
     estimate_H1_seminorm_error, estimate_L2_error, estimate_element_H1_seminorm_error,
-    estimate_element_H1_seminorm_error_squared, estimate_element_L2_error,
-    estimate_element_L2_error_squared,
+    estimate_element_H1_seminorm_error_squared, estimate_element_L2_error, estimate_element_L2_error_squared,
 };
 use fenris::mesh::procedural::create_unit_box_uniform_hex_mesh_3d;
 use fenris::nalgebra::coordinates::XYZ;
 use fenris::nalgebra::{
-    DMatrix, DVector, DVectorSlice, Dynamic, MatrixMN, MatrixSliceMut, Point3, Vector1, Vector2,
-    VectorN, U3, U8,
+    DMatrix, DVector, DVectorSlice, Dynamic, MatrixMN, MatrixSliceMut, Point3, Vector1, Vector2, VectorN, U3, U8,
 };
 use fenris::nested_vec::NestedVec;
 use fenris::quadrature;
@@ -77,18 +75,12 @@ fn test_element_L2_error_scalar() {
     );
 
     let L2_error_expected = {
-        let (weights, points) =
-            transform_quadrature_to_physical_domain(&element, &weights, &points);
+        let (weights, points) = transform_quadrature_to_physical_domain(&element, &weights, &points);
         let u_squared_norm = |x: &Point3<f64>| u_scalar(x).powi(2);
         (weights, points).integrate(u_squared_norm).sqrt()
     };
 
-    assert_scalar_eq!(
-        L2_error_computed,
-        L2_error_expected,
-        comp = abs,
-        tol = 1e-12
-    );
+    assert_scalar_eq!(L2_error_computed, L2_error_expected, comp = abs, tol = 1e-12);
 }
 
 #[test]
@@ -98,8 +90,7 @@ fn test_element_L2_error_vector() {
     // functions intead
 
     let element = arbitrary_tet20_element();
-    let u_h_element =
-        flatten_vertically(&element.vertices().iter().map(u2_vector).collect::<Vec<_>>()).unwrap();
+    let u_h_element = flatten_vertically(&element.vertices().iter().map(u2_vector).collect::<Vec<_>>()).unwrap();
 
     // Use a quadrature rule with sufficient strength such that it can exactly capture the error
     // (since we compute a squared norm, we need double the polynomial degree)
@@ -115,18 +106,12 @@ fn test_element_L2_error_vector() {
     );
 
     let L2_error_expected = {
-        let (weights, points) =
-            transform_quadrature_to_physical_domain(&element, &weights, &points);
+        let (weights, points) = transform_quadrature_to_physical_domain(&element, &weights, &points);
         let u_squared_norm = |x: &Point3<f64>| u_vector(x).norm_squared();
         (weights, points).integrate(u_squared_norm).sqrt()
     };
 
-    assert_scalar_eq!(
-        L2_error_computed,
-        L2_error_expected,
-        comp = abs,
-        tol = 1e-12
-    );
+    assert_scalar_eq!(L2_error_computed, L2_error_expected, comp = abs, tol = 1e-12);
 }
 
 #[test]
@@ -153,18 +138,12 @@ fn test_element_H1_seminorm_error_scalar() {
     );
 
     let H1_seminorm_expected = {
-        let (weights, points) =
-            transform_quadrature_to_physical_domain(&element, &weights, &points);
+        let (weights, points) = transform_quadrature_to_physical_domain(&element, &weights, &points);
         let u_squared_norm = |x: &Point3<f64>| u_scalar_grad(x).norm_squared();
         (weights, points).integrate(u_squared_norm).sqrt()
     };
 
-    assert_scalar_eq!(
-        H1_seminorm_computed,
-        H1_seminorm_expected,
-        comp = abs,
-        tol = 1e-12
-    );
+    assert_scalar_eq!(H1_seminorm_computed, H1_seminorm_expected, comp = abs, tol = 1e-12);
 }
 
 #[test]
@@ -173,8 +152,7 @@ fn test_element_H1_seminorm_error_vector() {
     // This test is completely analogous to the scalar test, it just tests vector-valued
     // functions instead
     let element = arbitrary_tet20_element();
-    let u_h_element =
-        flatten_vertically(&element.vertices().iter().map(u2_vector).collect::<Vec<_>>()).unwrap();
+    let u_h_element = flatten_vertically(&element.vertices().iter().map(u2_vector).collect::<Vec<_>>()).unwrap();
 
     // Use a quadrature rule with sufficient strength such that it can exactly capture the error
     // (since we compute a squared norm, we need double the polynomial degree)
@@ -190,18 +168,12 @@ fn test_element_H1_seminorm_error_vector() {
     );
 
     let H1_seminorm_expected = {
-        let (weights, points) =
-            transform_quadrature_to_physical_domain(&element, &weights, &points);
+        let (weights, points) = transform_quadrature_to_physical_domain(&element, &weights, &points);
         let u_squared_norm = |x: &Point3<f64>| u_vector_grad(x).norm_squared();
         (weights, points).integrate(u_squared_norm).sqrt()
     };
 
-    assert_scalar_eq!(
-        H1_seminorm_computed,
-        H1_seminorm_expected,
-        comp = abs,
-        tol = 1e-12
-    );
+    assert_scalar_eq!(H1_seminorm_computed, H1_seminorm_expected, comp = abs, tol = 1e-12);
 }
 
 #[test]
@@ -259,12 +231,7 @@ fn test_estimate_L2_error_on_mesh() {
             .sqrt()
     };
 
-    assert_scalar_eq!(
-        computed_L2_error,
-        expected_L2_error,
-        comp = abs,
-        tol = 1e-12
-    );
+    assert_scalar_eq!(computed_L2_error, expected_L2_error, comp = abs, tol = 1e-12);
 }
 
 #[test]
@@ -295,8 +262,7 @@ fn test_estimate_H1_seminorm_error_on_mesh() {
         Vector2::new(3.0 * x + 2.0 * y * z.powi(3), 4.0 * x.powi(2) + 2.0 * y + z)
     };
     let u_h = flatten_vertically(&mesh.vertices().iter().map(g).collect::<Vec<_>>()).unwrap();
-    let computed_H1_seminorm_error =
-        estimate_H1_seminorm_error(&mesh, u_vector_grad, &u_h, &quadrature_table).unwrap();
+    let computed_H1_seminorm_error = estimate_H1_seminorm_error(&mesh, u_vector_grad, &u_h, &quadrature_table).unwrap();
 
     // Compute the error "manually" element-by-element for comparison
     let expected_H1_seminorm_error = {
@@ -347,11 +313,7 @@ fn u1_scalar(x: &Point3<f64>) -> f64 {
 fn u2_scalar(x: &Point3<f64>) -> f64 {
     let &XYZ { x, y, z } = x.deref();
     // A polynomial of total order 3
-    6.0 * x.powi(3) - 2.0 * y.powi(3)
-        + 4.0 * z.powi(3)
-        + 2.0 * x.powi(2) * y
-        + 4.0 * y.powi(2) * z
-        + x.powi(2)
+    6.0 * x.powi(3) - 2.0 * y.powi(3) + 4.0 * z.powi(3) + 2.0 * x.powi(2) * y + 4.0 * y.powi(2) * z + x.powi(2)
         - y.powi(3)
         + 5.0 * x * y * z
         + 2.0 * x
@@ -369,19 +331,13 @@ fn u_scalar(x: &Point3<f64>) -> f64 {
 fn u1_vector(x: &Point3<f64>) -> Vector2<f64> {
     let &XYZ { x, y, z } = x.deref();
     // A polynomial of total order 5
-    let u1_1 = 6.0 * x.powi(5) + 2.0 * y.powi(5) - 2.0 * z.powi(5) + 3.0 * x * y.powi(3) * z
-        - 2.0 * y.powi(3)
+    let u1_1 = 6.0 * x.powi(5) + 2.0 * y.powi(5) - 2.0 * z.powi(5) + 3.0 * x * y.powi(3) * z - 2.0 * y.powi(3)
         + x.powi(2) * y.powi(2)
         + 3.0 * x
         + 2.0 * y
         - 3.0 * z
         - 6.0;
-    let u1_2 = 3.0 * x.powi(5) - 3.0 * y.powi(5)
-        + 2.0 * z.powi(5)
-        + 3.0 * x.powi(3) * y * z
-        + 4.0 * x
-        + 2.0 * y
-        + 15.0;
+    let u1_2 = 3.0 * x.powi(5) - 3.0 * y.powi(5) + 2.0 * z.powi(5) + 3.0 * x.powi(3) * y * z + 4.0 * x + 2.0 * y + 15.0;
     Vector2::new(u1_1, u1_2)
 }
 
@@ -389,23 +345,18 @@ fn u1_vector(x: &Point3<f64>) -> Vector2<f64> {
 fn u2_vector(x: &Point3<f64>) -> Vector2<f64> {
     let &XYZ { x, y, z } = x.deref();
     // A polynomial of total order 3
-    let u2_1 = 6.0 * x.powi(3) - 2.0 * y.powi(3)
-        + 4.0 * z.powi(3)
-        + 2.0 * x.powi(2) * y
-        + 4.0 * y.powi(2) * z
-        + x.powi(2)
-        - y.powi(3)
-        + 5.0 * x * y * z
-        + 2.0 * x
-        + 3.0 * y
-        - 5.0 * z
-        + 2.0;
-    let u2_2 =
-        3.0 * x.powi(3) - 4.0 * y.powi(3) + 2.0 * z.powi(3) + 2.0 * x.powi(2) * z + 3.0 * y.powi(2)
-            - 2.0 * x
+    let u2_1 =
+        6.0 * x.powi(3) - 2.0 * y.powi(3) + 4.0 * z.powi(3) + 2.0 * x.powi(2) * y + 4.0 * y.powi(2) * z + x.powi(2)
+            - y.powi(3)
+            + 5.0 * x * y * z
+            + 2.0 * x
             + 3.0 * y
             - 5.0 * z
-            + 9.0;
+            + 2.0;
+    let u2_2 = 3.0 * x.powi(3) - 4.0 * y.powi(3) + 2.0 * z.powi(3) + 2.0 * x.powi(2) * z + 3.0 * y.powi(2) - 2.0 * x
+        + 3.0 * y
+        - 5.0 * z
+        + 9.0;
     Vector2::new(u2_1, u2_2)
 }
 
@@ -425,8 +376,7 @@ fn u1_scalar_grad(x: &Point3<f64>) -> Vector3<f64> {
 fn u2_scalar_grad(x: &Point3<f64>) -> Vector3<f64> {
     let &XYZ { x, y, z } = x.deref();
     let u2_x = 18.0 * x.powi(2) + 4.0 * y * x + 2.0 * x + 5.0 * y * z + 2.0;
-    let u2_y =
-        -6.0 * y.powi(2) + 2.0 * x.powi(2) + 8.0 * z * y - 3.0 * y.powi(2) + 5.0 * x * z + 3.0;
+    let u2_y = -6.0 * y.powi(2) + 2.0 * x.powi(2) + 8.0 * z * y - 3.0 * y.powi(2) + 5.0 * x * z + 3.0;
     let u2_z = 12.0 * z.powi(2) + 4.0 * y.powi(2) + 5.0 * x * y - 5.0;
     Vector3::new(u2_x, u2_y, u2_z)
 }
@@ -438,8 +388,7 @@ fn u_scalar_grad(x: &Point3<f64>) -> Vector3<f64> {
 fn u1_vector_grad(x: &Point3<f64>) -> Matrix3x2<f64> {
     let &XYZ { x, y, z } = x.deref();
     let u1_1x = 30.0 * x.powi(4) + 3.0 * y.powi(3) * z + 2.0 * x * y.powi(2) + 3.0;
-    let u1_1y =
-        10.0 * y.powi(4) + 9.0 * x * z * y.powi(2) - 6.0 * y.powi(2) + 2.0 * x.powi(2) * y + 2.0;
+    let u1_1y = 10.0 * y.powi(4) + 9.0 * x * z * y.powi(2) - 6.0 * y.powi(2) + 2.0 * x.powi(2) * y + 2.0;
     let u1_1z = -10.0 * z.powi(4) + 3.0 * x * y.powi(3) - 3.0;
 
     let u1_2x = 15.0 * x.powi(4) + 9.0 * y * z * x.powi(2) + 4.0;
@@ -455,8 +404,7 @@ fn u1_vector_grad(x: &Point3<f64>) -> Matrix3x2<f64> {
 fn u2_vector_grad(x: &Point3<f64>) -> Matrix3x2<f64> {
     let &XYZ { x, y, z } = x.deref();
     let u2_1x = 18.0 * x.powi(2) + 4.0 * y * x + 2.0 * x + 5.0 * y * z + 2.0;
-    let u2_1y =
-        -6.0 * y.powi(2) + 2.0 * x.powi(2) + 8.0 * z * y - 3.0 * y.powi(2) + 5.0 * x * z + 3.0;
+    let u2_1y = -6.0 * y.powi(2) + 2.0 * x.powi(2) + 8.0 * z * y - 3.0 * y.powi(2) + 5.0 * x * z + 3.0;
     let u2_1z = 12.0 * z.powi(2) + 4.0 * y.powi(2) + 5.0 * x * y - 5.0;
 
     let u2_2x = 9.0 * x.powi(2) + 4.0 * x * z - 2.0;

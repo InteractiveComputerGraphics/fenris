@@ -7,9 +7,7 @@ use fenris::assembly::local::SourceFunction;
 use fenris::assembly::operators::Operator;
 use fenris::element::ElementConnectivity;
 use fenris::io::vtk::VtkCellConnectivity;
-use fenris::mesh::procedural::{
-    create_unit_box_uniform_hex_mesh_3d, create_unit_box_uniform_tet_mesh_3d,
-};
+use fenris::mesh::procedural::{create_unit_box_uniform_hex_mesh_3d, create_unit_box_uniform_tet_mesh_3d};
 use fenris::mesh::{Hex20Mesh, Hex27Mesh, Mesh3d, Tet10Mesh};
 use fenris::nalgebra::coordinates::XYZ;
 use fenris::nalgebra::{Point, Point3, Vector1, Vector3, VectorN, U1, U3};
@@ -53,11 +51,7 @@ impl Operator<f64, U3> for PoissonProblemSourceFunction {
 }
 
 impl SourceFunction<f64, U3> for PoissonProblemSourceFunction {
-    fn evaluate(
-        &self,
-        coords: &Point<f64, U3>,
-        _data: &Self::Parameters,
-    ) -> VectorN<f64, Self::SolutionDim> {
+    fn evaluate(&self, coords: &Point<f64, U3>, _data: &Self::Parameters) -> VectorN<f64, Self::SolutionDim> {
         Vector1::new(f(coords))
     }
 }
@@ -90,13 +84,7 @@ fn poisson_3d_hex8() {
     let mesh_producer = |res| create_unit_box_uniform_hex_mesh_3d(res);
     let quadrature = quadrature::tensor::hexahedron_gauss(2);
     let error_quadrature = quadrature::tensor::hexahedron_gauss(6);
-    solve_and_produce_output(
-        "Hex8",
-        &resolutions,
-        mesh_producer,
-        quadrature,
-        error_quadrature,
-    );
+    solve_and_produce_output("Hex8", &resolutions, mesh_producer, quadrature, error_quadrature);
 }
 
 #[test]
@@ -106,13 +94,7 @@ fn poisson_3d_hex20() {
     // TODO: Use "correct" quadrature
     let quadrature = quadrature::tensor::hexahedron_gauss(4);
     let error_quadrature = quadrature::tensor::hexahedron_gauss(6);
-    solve_and_produce_output(
-        "Hex20",
-        &resolutions,
-        mesh_producer,
-        quadrature,
-        error_quadrature,
-    );
+    solve_and_produce_output("Hex20", &resolutions, mesh_producer, quadrature, error_quadrature);
 }
 
 #[test]
@@ -122,13 +104,7 @@ fn poisson_3d_hex27() {
     // TODO: Use "correct" quadrature
     let quadrature = quadrature::tensor::hexahedron_gauss(4);
     let error_quadrature = quadrature::tensor::hexahedron_gauss(6);
-    solve_and_produce_output(
-        "Hex27",
-        &resolutions,
-        mesh_producer,
-        quadrature,
-        error_quadrature,
-    );
+    solve_and_produce_output("Hex27", &resolutions, mesh_producer, quadrature, error_quadrature);
 }
 
 #[test]
@@ -138,13 +114,7 @@ fn poisson_3d_tet4() {
     // TODO: Use "correct" quadrature
     let quadrature = quadrature::total_order::tetrahedron(0).unwrap();
     let error_quadrature = quadrature::total_order::tetrahedron(6).unwrap();
-    solve_and_produce_output(
-        "Tet4",
-        &resolutions,
-        mesh_producer,
-        quadrature,
-        error_quadrature,
-    );
+    solve_and_produce_output("Tet4", &resolutions, mesh_producer, quadrature, error_quadrature);
 }
 
 #[test]
@@ -154,13 +124,7 @@ fn poisson_3d_tet10() {
     // TODO: Use "correct" quadrature
     let quadrature = quadrature::total_order::tetrahedron(2).unwrap();
     let error_quadrature = quadrature::total_order::tetrahedron(6).unwrap();
-    solve_and_produce_output(
-        "Tet10",
-        &resolutions,
-        mesh_producer,
-        quadrature,
-        error_quadrature,
-    );
+    solve_and_produce_output("Tet10", &resolutions, mesh_producer, quadrature, error_quadrature);
 }
 
 #[test]

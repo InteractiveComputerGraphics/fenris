@@ -376,13 +376,9 @@ where
             if v1 != v2 {
                 let edge_dir = v2 - v1;
                 let negative_edge_normal = Vector2::new(-edge_dir.y, edge_dir.x);
-                let normalized_negative_edge_normal =
-                    Unit::try_new(negative_edge_normal, T::zero())
-                        .expect("v1 != v2, so vector can be safely normalized");
-                Some(HalfPlane::from_point_and_normal(
-                    *v1,
-                    normalized_negative_edge_normal,
-                ))
+                let normalized_negative_edge_normal = Unit::try_new(negative_edge_normal, T::zero())
+                    .expect("v1 != v2, so vector can be safely normalized");
+                Some(HalfPlane::from_point_and_normal(*v1, normalized_negative_edge_normal))
             } else {
                 None
             }

@@ -57,12 +57,7 @@ fn test_approximate_gradient_fd() {
     // Check that x vector was left exactly unchanged
     assert_matrix_eq!(x, x_input);
 
-    assert_matrix_eq!(
-        f_grad_fd,
-        f_grad(DVectorSlice::from(&x)),
-        comp = abs,
-        tol = 1e-6
-    );
+    assert_matrix_eq!(f_grad_fd, f_grad(DVectorSlice::from(&x)), comp = abs, tol = 1e-6);
 }
 
 #[test]
@@ -78,11 +73,7 @@ fn test_approximate_jacobian_fd() {
     let j = |x: DVectorSlice<f64>| {
         let (x, y, z) = (x[0], x[1], x[2]);
         // Compute gradients for each component of f and stack them row-by-row
-        let df1_dx = RowDVector::from_row_slice(&[
-            18.0 * x + 3.0 * y,
-            3.0 * x - 3.0 * z * z * z,
-            -9.0 * z * z * y,
-        ]);
+        let df1_dx = RowDVector::from_row_slice(&[18.0 * x + 3.0 * y, 3.0 * x - 3.0 * z * z * z, -9.0 * z * z * y]);
         let df2_dx = RowDVector::from_row_slice(&[2.0 * y * y, 4.0 * x * y, -10.0]);
         DMatrix::from_rows(&[df1_dx, df2_dx])
     };

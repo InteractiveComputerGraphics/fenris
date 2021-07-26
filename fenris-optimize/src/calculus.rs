@@ -1,6 +1,5 @@
 use nalgebra::{
-    DMatrix, DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, Dim, Dynamic, RealField,
-    Scalar, Vector, U1,
+    DMatrix, DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, Dim, Dynamic, RealField, Scalar, Vector, U1,
 };
 
 use nalgebra::base::storage::{Storage, StorageMut};
@@ -90,11 +89,7 @@ impl<F> ConcreteVectorFunction<F, ()> {
     pub fn with_jacobian_solver<J, T>(self, jacobian_solver: J) -> ConcreteVectorFunction<F, J>
     where
         T: Scalar,
-        J: FnMut(
-            &mut DVectorSliceMut<T>,
-            &DVectorSlice<T>,
-            &DVectorSlice<T>,
-        ) -> Result<(), Box<dyn Error>>,
+        J: FnMut(&mut DVectorSliceMut<T>, &DVectorSlice<T>, &DVectorSlice<T>) -> Result<(), Box<dyn Error>>,
     {
         ConcreteVectorFunction {
             dimension: self.dimension,
@@ -123,11 +118,7 @@ impl<F, J, T> DifferentiableVectorFunction<T> for ConcreteVectorFunction<F, J>
 where
     T: Scalar,
     F: FnMut(&mut DVectorSliceMut<T>, &DVectorSlice<T>),
-    J: FnMut(
-        &mut DVectorSliceMut<T>,
-        &DVectorSlice<T>,
-        &DVectorSlice<T>,
-    ) -> Result<(), Box<dyn Error>>,
+    J: FnMut(&mut DVectorSliceMut<T>, &DVectorSlice<T>, &DVectorSlice<T>) -> Result<(), Box<dyn Error>>,
 {
     fn solve_jacobian_system(
         &mut self,
@@ -193,14 +184,8 @@ where
         x_minus.copy_from(x);
         x_minus[j] -= *h;
 
-        f.eval_into(
-            &mut as_vector_slice_mut(&mut f_plus),
-            &as_vector_slice(&x_plus),
-        );
-        f.eval_into(
-            &mut as_vector_slice_mut(&mut f_minus),
-            &as_vector_slice(&x_minus),
-        );
+        f.eval_into(&mut as_vector_slice_mut(&mut f_plus), &as_vector_slice(&x_plus));
+        f.eval_into(&mut as_vector_slice_mut(&mut f_minus), &as_vector_slice(&x_minus));
 
         // result[.., j] := (f+ - f-) / 2h
         let mut column_j = result.column_mut(j);

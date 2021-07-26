@@ -49,11 +49,8 @@ where
     }
 
     // TODO: Take "arbitrary" u, not just DVector
-    pub fn interpolate_into<SolutionDim>(
-        &self,
-        result: &mut [VectorN<T, SolutionDim>],
-        u: &DVector<T>,
-    ) where
+    pub fn interpolate_into<SolutionDim>(&self, result: &mut [VectorN<T, SolutionDim>], u: &DVector<T>)
+    where
         SolutionDim: DimName,
         DefaultAllocator: Allocator<T, SolutionDim, U1>,
     {
@@ -63,8 +60,7 @@ where
             "Number of interpolation points must match."
         );
         assert!(
-            self.max_node_index.is_none()
-                || SolutionDim::dim() * self.max_node_index.unwrap() < u.len(),
+            self.max_node_index.is_none() || SolutionDim::dim() * self.max_node_index.unwrap() < u.len(),
             "Cannot reference degrees of freedom not present in solution variables"
         );
 
@@ -83,10 +79,7 @@ where
 }
 
 impl<T> FiniteElementInterpolator<T> {
-    pub fn from_compressed_values(
-        node_values: Vec<(T, usize)>,
-        supported_node_offsets: Vec<usize>,
-    ) -> Self {
+    pub fn from_compressed_values(node_values: Vec<(T, usize)>, supported_node_offsets: Vec<usize>) -> Self {
         assert!(
             supported_node_offsets
                 .iter()

@@ -53,11 +53,7 @@ pub fn flatten_vertically_into<T, R1, C1, S1, R2, C2, S2>(
         let mut rows = 0;
 
         for matrix in matrices {
-            assert_eq!(
-                matrix.ncols(),
-                cols,
-                "All matrices must have same number of columns."
-            );
+            assert_eq!(matrix.ncols(), cols, "All matrices must have same number of columns.");
             output.rows_mut(rows, matrix.nrows()).copy_from(matrix);
             rows += matrix.nrows();
         }
@@ -75,9 +71,7 @@ pub fn flatten_vertically_into<T, R1, C1, S1, R2, C2, S2>(
     }
 }
 
-pub fn flatten_vertically<T, R, C, S>(
-    matrices: &[Matrix<T, R, C, S>],
-) -> Option<MatrixMN<T, Dynamic, C>>
+pub fn flatten_vertically<T, R, C, S>(matrices: &[Matrix<T, R, C, S>]) -> Option<MatrixMN<T, Dynamic, C>>
 where
     T: Scalar + Zero,
     R: Dim,
@@ -95,10 +89,7 @@ where
     }
 }
 
-pub fn prefix_sum(
-    counts: impl IntoIterator<Item = usize>,
-    x0: usize,
-) -> impl Iterator<Item = usize> {
+pub fn prefix_sum(counts: impl IntoIterator<Item = usize>, x0: usize) -> impl Iterator<Item = usize> {
     counts.into_iter().scan(x0, |sum, x| {
         let current = *sum;
         *sum += x;

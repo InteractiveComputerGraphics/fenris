@@ -3,9 +3,7 @@ use crate::connectivity::Connectivity;
 use crate::element::VolumetricFiniteElement;
 use crate::mesh::Mesh;
 use crate::nalgebra::allocator::Allocator;
-use crate::nalgebra::{
-    DMatrix, DMatrixSliceMut, DefaultAllocator, DimMin, DimName, RealField, Scalar, U1,
-};
+use crate::nalgebra::{DMatrix, DMatrixSliceMut, DefaultAllocator, DimMin, DimName, RealField, Scalar, U1};
 use crate::nalgebra::{DVectorSliceMut, Point};
 use crate::nested_vec::NestedVec;
 use crate::quadrature::Quadrature;
@@ -59,11 +57,7 @@ where
 }
 
 pub trait ElementMatrixAssembler<T: Scalar>: ElementConnectivityAssembler {
-    fn assemble_element_matrix_into(
-        &self,
-        element_index: usize,
-        output: DMatrixSliceMut<T>,
-    ) -> eyre::Result<()>;
+    fn assemble_element_matrix_into(&self, element_index: usize, output: DMatrixSliceMut<T>) -> eyre::Result<()>;
 }
 
 /// Assemble the generalized element matrix for the given element.
@@ -119,11 +113,7 @@ pub fn assemble_generalized_element_mass<T, SolutionDim, Element, Q>(
 }
 
 pub trait ElementVectorAssembler<T: Scalar>: ElementConnectivityAssembler {
-    fn assemble_element_vector_into(
-        &self,
-        element_index: usize,
-        output: DVectorSliceMut<T>,
-    ) -> eyre::Result<()>;
+    fn assemble_element_vector_into(&self, element_index: usize, output: DVectorSliceMut<T>) -> eyre::Result<()>;
 }
 
 /// Lookup table mapping elements to quadrature rules.
@@ -179,10 +169,7 @@ where
     GeometryDim: DimName,
     DefaultAllocator: Allocator<T, GeometryDim>,
 {
-    pub fn from_points_and_weights(
-        points: NestedVec<Point<T, GeometryDim>>,
-        weights: NestedVec<T>,
-    ) -> Self {
+    pub fn from_points_and_weights(points: NestedVec<Point<T, GeometryDim>>, weights: NestedVec<T>) -> Self {
         let mut data = NestedVec::new();
         for i in 0..points.len() {
             data.push(&vec![(); points.get(i).unwrap().len()]);
@@ -222,16 +209,11 @@ where
             );
         }
 
-        Self {
-            points,
-            weights,
-            data,
-        }
+        Self { points, weights, data }
     }
 }
 
-impl<T, GeometryDim, Data> QuadratureTable<T, GeometryDim>
-    for GeneralQuadratureTable<T, GeometryDim, Data>
+impl<T, GeometryDim, Data> QuadratureTable<T, GeometryDim> for GeneralQuadratureTable<T, GeometryDim, Data>
 where
     T: Scalar,
     GeometryDim: SmallDim,
@@ -310,24 +292,15 @@ where
     GeometryDim: DimName,
     DefaultAllocator: Allocator<T, GeometryDim>,
 {
-    pub fn from_points_weights_and_data(
-        points: Vec<Point<T, GeometryDim>>,
-        weights: Vec<T>,
-        data: Vec<Data>,
-    ) -> Self {
+    pub fn from_points_weights_and_data(points: Vec<Point<T, GeometryDim>>, weights: Vec<T>, data: Vec<Data>) -> Self {
         let msg = "Points, weights and data must have the same length.";
         assert_eq!(points.len(), weights.len(), "{}", msg);
         assert_eq!(points.len(), data.len(), "{}", msg);
-        Self {
-            points,
-            weights,
-            data,
-        }
+        Self { points, weights, data }
     }
 }
 
-impl<T, GeometryDim, Data> QuadratureTable<T, GeometryDim>
-    for UniformQuadratureTable<T, GeometryDim, Data>
+impl<T, GeometryDim, Data> QuadratureTable<T, GeometryDim> for UniformQuadratureTable<T, GeometryDim, Data>
 where
     T: Scalar,
     GeometryDim: SmallDim,

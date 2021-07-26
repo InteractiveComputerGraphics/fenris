@@ -4,21 +4,18 @@ use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
 
 use fenris::allocators::BiDimAllocator;
 use fenris::assembly::local::{
-    assemble_element_elliptic_matrix, assemble_element_elliptic_vector,
-    compute_element_elliptic_energy, ElementEllipticAssemblerBuilder, ElementMatrixAssembler,
-    ElementVectorAssembler, GeneralQuadratureTable,
+    assemble_element_elliptic_matrix, assemble_element_elliptic_vector, compute_element_elliptic_energy,
+    ElementEllipticAssemblerBuilder, ElementMatrixAssembler, ElementVectorAssembler, GeneralQuadratureTable,
 };
-use fenris::assembly::operators::{
-    EllipticContraction, EllipticEnergy, EllipticOperator, Operator,
-};
+use fenris::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
 use fenris::element::{
-    ElementConnectivity, FiniteElement, MatrixSlice, MatrixSliceMut, Quad4d2Element,
-    ReferenceFiniteElement, Tet10Element, Tet4Element, VolumetricFiniteElement,
+    ElementConnectivity, FiniteElement, MatrixSlice, MatrixSliceMut, Quad4d2Element, ReferenceFiniteElement,
+    Tet10Element, Tet4Element, VolumetricFiniteElement,
 };
 use fenris::nalgebra::base::coordinates::{XY, XYZ};
 use fenris::nalgebra::{
-    DMatrix, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic, Matrix2,
-    Matrix3x2, MatrixMN, Point, Point2, Point3, Vector1, Vector2, Vector3, VectorN, U1, U2, U3,
+    DMatrix, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic, Matrix2, Matrix3x2, MatrixMN,
+    Point, Point2, Point3, Vector1, Vector2, Vector3, VectorN, U1, U2, U3,
 };
 use fenris::quadrature::{Quadrature, QuadraturePair};
 use fenris::{quadrature, Symmetry};
@@ -42,11 +39,7 @@ impl Operator<f64, U2> for MockScalarEllipticEnergy {
 }
 
 impl EllipticEnergy<f64, U2> for MockScalarEllipticEnergy {
-    fn compute_energy(
-        &self,
-        gradient: &MatrixMN<f64, U2, Self::SolutionDim>,
-        _parameters: &Self::Parameters,
-    ) -> f64 {
+    fn compute_energy(&self, gradient: &MatrixMN<f64, U2, Self::SolutionDim>, _parameters: &Self::Parameters) -> f64 {
         3.0 * gradient[0] - 2.0 * gradient[1]
     }
 }
@@ -90,12 +83,10 @@ fn compute_element_energy_scalar_quad4() {
             Point2::new(-6.0, 4.0),
         ]);
 
-        let u_element =
-            local::u_element_from_vertices_and_u_exact(element.vertices(), u_scalar_bilinear);
+        let u_element = local::u_element_from_vertices_and_u_exact(element.vertices(), u_scalar_bilinear);
 
         let quadrature = quadrature::tensor::quadrilateral_gauss(2);
-        let quadrature_params =
-            local::evaluate_density_at_quadrature_points(&element, &quadrature.1, local::density);
+        let quadrature_params = local::evaluate_density_at_quadrature_points(&element, &quadrature.1, local::density);
         let integral_computed = compute_energy_integral(
             &element,
             &MockScalarEllipticEnergy,
@@ -112,12 +103,7 @@ fn compute_element_energy_scalar_quad4() {
             &reference_quadrature,
         );
 
-        assert_scalar_eq!(
-            integral_computed,
-            integral_expected,
-            comp = abs,
-            tol = 1e-12
-        );
+        assert_scalar_eq!(integral_computed, integral_expected, comp = abs, tol = 1e-12);
     }
 
     {
@@ -130,12 +116,10 @@ fn compute_element_energy_scalar_quad4() {
             Point2::new(-8.0, 4.0),
         ]);
 
-        let u_element =
-            local::u_element_from_vertices_and_u_exact(element.vertices(), u_scalar_linear);
+        let u_element = local::u_element_from_vertices_and_u_exact(element.vertices(), u_scalar_linear);
 
         let quadrature = quadrature::tensor::quadrilateral_gauss(2);
-        let quadrature_params =
-            local::evaluate_density_at_quadrature_points(&element, &quadrature.1, local::density);
+        let quadrature_params = local::evaluate_density_at_quadrature_points(&element, &quadrature.1, local::density);
         let integral_computed = compute_energy_integral(
             &element,
             &MockScalarEllipticEnergy,
@@ -152,12 +136,7 @@ fn compute_element_energy_scalar_quad4() {
             &reference_quadrature,
         );
 
-        assert_scalar_eq!(
-            integral_computed,
-            integral_expected,
-            comp = abs,
-            tol = 1e-12
-        );
+        assert_scalar_eq!(integral_computed, integral_expected, comp = abs, tol = 1e-12);
     }
 }
 
@@ -276,12 +255,10 @@ fn compute_element_energy_vector_tet10() {
         // A Tet10 element can reproduce any quadratic solution field exactly
         let element = Tet10Element::from(&tet4_element);
 
-        let u_element =
-            local::u_element_from_vertices_and_u_exact(element.vertices(), u_vector_quadratic);
+        let u_element = local::u_element_from_vertices_and_u_exact(element.vertices(), u_vector_quadratic);
 
         let quadrature = quadrature::total_order::tetrahedron(8).unwrap();
-        let quadrature_params =
-            local::evaluate_density_at_quadrature_points(&element, &quadrature.1, local::density);
+        let quadrature_params = local::evaluate_density_at_quadrature_points(&element, &quadrature.1, local::density);
         let integral_computed = compute_energy_integral(
             &element,
             &MockVectorEllipticEnergy,
@@ -318,24 +295,16 @@ fn elliptic_element_vector_is_gradient_of_energy_tet10() {
 
     // A Tet10 element can reproduce any quadratic solution field exactly
     let element = Tet10Element::from(&tet4_element);
-    let u_element =
-        local::u_element_from_vertices_and_u_exact(element.vertices(), u_vector_quadratic);
+    let u_element = local::u_element_from_vertices_and_u_exact(element.vertices(), u_vector_quadratic);
 
     // Let f(u_element) = energy(grad u). Then we can compute an approximate derivative with finite
     // differences and use this to compare with our output from the assembly, which should
     // be exactly the same.
     let finite_diff_result = {
         let quadrature = quadrature::total_order::tetrahedron(8).unwrap();
-        let quadrature_params =
-            local::evaluate_density_at_quadrature_points(&element, &quadrature.1, local::density);
+        let quadrature_params = local::evaluate_density_at_quadrature_points(&element, &quadrature.1, local::density);
         let f = |u: DVectorSlice<f64>| {
-            compute_energy_integral(
-                &element,
-                &MockVectorEllipticEnergy,
-                u,
-                &quadrature,
-                &quadrature_params,
-            )
+            compute_energy_integral(&element, &MockVectorEllipticEnergy, u, &quadrature, &quadrature_params)
         };
         // TODO: What to use as h?
         let mut u_element = u_element.clone();
@@ -343,11 +312,10 @@ fn elliptic_element_vector_is_gradient_of_energy_tet10() {
     };
 
     let (weights, points) = quadrature::total_order::tetrahedron(8).unwrap();
-    let quadrature_data =
-        local::evaluate_density_at_quadrature_points(&element, &points, local::density);
+    let quadrature_data = local::evaluate_density_at_quadrature_points(&element, &points, local::density);
     let mut output = DVector::repeat(2 * element.num_nodes(), 3.0);
-    let mut gradient_buffer = DMatrix::repeat(3, element.num_nodes(), 3.0)
-        .reshape_generic(U3, Dynamic::new(element.num_nodes()));
+    let mut gradient_buffer =
+        DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3, Dynamic::new(element.num_nodes()));
     assemble_element_elliptic_vector(
         MatrixSliceMut::from(&mut output),
         &element,
@@ -379,21 +347,19 @@ fn elliptic_element_matrix_is_jacobian_of_vector_tet10() {
 
     // A Tet10 element can reproduce any quadratic solution field exactly
     let element = Tet10Element::from(&tet4_element);
-    let u_element =
-        local::u_element_from_vertices_and_u_exact(element.vertices(), u_vector_quadratic);
+    let u_element = local::u_element_from_vertices_and_u_exact(element.vertices(), u_vector_quadratic);
 
     // Let f(u_element) = energy(grad u). Then we can compute an approximate derivative with finite
     // differences and use this to compare with our output from the assembly, which should
     // be exactly the same.
     let finite_diff_result = {
         let (weights, points) = quadrature::total_order::tetrahedron(8).unwrap();
-        let quadrature_data =
-            local::evaluate_density_at_quadrature_points(&element, &points, local::density);
+        let quadrature_data = local::evaluate_density_at_quadrature_points(&element, &points, local::density);
 
         // Set up a function f = f(u) that corresponds to the element vector given state u
         let f = |u: DVectorSlice<f64>, output: DVectorSliceMut<f64>| {
-            let mut gradient_buffer = DMatrix::repeat(3, element.num_nodes(), 3.0)
-                .reshape_generic(U3, Dynamic::new(element.num_nodes()));
+            let mut gradient_buffer =
+                DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3, Dynamic::new(element.num_nodes()));
             assemble_element_elliptic_vector(
                 output,
                 &element,
@@ -412,11 +378,10 @@ fn elliptic_element_matrix_is_jacobian_of_vector_tet10() {
     };
 
     let (weights, points) = quadrature::total_order::tetrahedron(8).unwrap();
-    let quadrature_data =
-        local::evaluate_density_at_quadrature_points(&element, &points, local::density);
+    let quadrature_data = local::evaluate_density_at_quadrature_points(&element, &points, local::density);
     let mut output = DMatrix::repeat(2 * element.num_nodes(), 2 * element.num_nodes(), 3.0);
-    let mut gradient_buffer = DMatrix::repeat(3, element.num_nodes(), 3.0)
-        .reshape_generic(U3, Dynamic::new(element.num_nodes()));
+    let mut gradient_buffer =
+        DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3, Dynamic::new(element.num_nodes()));
     assemble_element_elliptic_matrix(
         MatrixSliceMut::from(&mut output),
         &element,
@@ -447,21 +412,19 @@ fn symmetric_elliptic_element_matrix_is_jacobian_of_vector_tet10() {
 
     // A Tet10 element can reproduce any quadratic solution field exactly
     let element = Tet10Element::from(&tet4_element);
-    let u_element =
-        local::u_element_from_vertices_and_u_exact(element.vertices(), u_vector_quadratic);
+    let u_element = local::u_element_from_vertices_and_u_exact(element.vertices(), u_vector_quadratic);
 
     // Let f(u_element) = energy(grad u). Then we can compute an approximate derivative with finite
     // differences and use this to compare with our output from the assembly, which should
     // be exactly the same.
     let finite_diff_result = {
         let (weights, points) = quadrature::total_order::tetrahedron(8).unwrap();
-        let quadrature_data =
-            local::evaluate_density_at_quadrature_points(&element, &points, local::density);
+        let quadrature_data = local::evaluate_density_at_quadrature_points(&element, &points, local::density);
 
         // Set up a function f = f(u) that corresponds to the element vector given state u
         let f = |u: DVectorSlice<f64>, output: DVectorSliceMut<f64>| {
-            let mut gradient_buffer = DMatrix::repeat(3, element.num_nodes(), 3.0)
-                .reshape_generic(U3, Dynamic::new(element.num_nodes()));
+            let mut gradient_buffer =
+                DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3, Dynamic::new(element.num_nodes()));
             assemble_element_elliptic_vector(
                 output,
                 &element,
@@ -480,11 +443,10 @@ fn symmetric_elliptic_element_matrix_is_jacobian_of_vector_tet10() {
     };
 
     let (weights, points) = quadrature::total_order::tetrahedron(8).unwrap();
-    let quadrature_data =
-        local::evaluate_density_at_quadrature_points(&element, &points, local::density);
+    let quadrature_data = local::evaluate_density_at_quadrature_points(&element, &points, local::density);
     let mut output = DMatrix::repeat(2 * element.num_nodes(), 2 * element.num_nodes(), 3.0);
-    let mut gradient_buffer = DMatrix::repeat(3, element.num_nodes(), 3.0)
-        .reshape_generic(U3, Dynamic::new(element.num_nodes()));
+    let mut gradient_buffer =
+        DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3, Dynamic::new(element.num_nodes()));
     assemble_element_elliptic_matrix(
         MatrixSliceMut::from(&mut output),
         &element,
@@ -545,11 +507,7 @@ fn elliptic_element_assembler_matches_individual_element_assembly() {
     }
 
     impl EllipticOperator<f64, U2> for MockEllipticOperator {
-        fn compute_elliptic_operator(
-            &self,
-            gradient: &Matrix2<f64>,
-            &density: &Self::Parameters,
-        ) -> Matrix2<f64> {
+        fn compute_elliptic_operator(&self, gradient: &Matrix2<f64>, &density: &Self::Parameters) -> Matrix2<f64> {
             density * gradient
         }
     }
@@ -585,8 +543,7 @@ fn elliptic_element_assembler_matches_individual_element_assembly() {
     let mut element_vector_expected = DVector::repeat(8, 4.0);
     let mut element_matrix_expected = DMatrix::repeat(8, 8, 4.0);
     let mut u_element = DVector::repeat(8, 5.0);
-    let mut basis_gradients_buffer =
-        DMatrix::repeat(2, 4, 6.0).reshape_generic(U2, Dynamic::new(4));
+    let mut basis_gradients_buffer = DMatrix::repeat(2, 4, 6.0).reshape_generic(U2, Dynamic::new(4));
     for (i, conn) in mesh.connectivity().iter().enumerate() {
         assembler
             .assemble_element_vector_into(i, DVectorSliceMut::from(&mut element_vector))
@@ -675,18 +632,14 @@ fn compute_expected_energy_integral<Element, Energy, UGrad>(
 where
     Element: VolumetricFiniteElement<f64>,
     Energy: EllipticEnergy<f64, Element::GeometryDim, Parameters = f64>,
-    UGrad: Fn(
-        &Point<f64, Element::GeometryDim>,
-    ) -> MatrixMN<f64, Element::GeometryDim, Energy::SolutionDim>,
+    UGrad: Fn(&Point<f64, Element::GeometryDim>) -> MatrixMN<f64, Element::GeometryDim, Energy::SolutionDim>,
     DefaultAllocator: BiDimAllocator<f64, Element::GeometryDim, Energy::SolutionDim>,
 {
     let quadrature_rule = local::construct_quadrature_rule_for_element(element, reference_rule);
     // Assuming f is a polynomial function (i.e. the energy is a polynomial in terms of the
     // components of u_grad and u_grad is polynomial), then we can hopefully compute this integral
     // exactly provided that the reference rule is sufficiently accurate
-    let f = |x: &Point<f64, Element::GeometryDim>| {
-        energy.compute_energy(&u_grad(x), &local::density(x))
-    };
+    let f = |x: &Point<f64, Element::GeometryDim>| energy.compute_energy(&u_grad(x), &local::density(x));
     let integral_expected = quadrature_rule.integrate(f);
     integral_expected
 }

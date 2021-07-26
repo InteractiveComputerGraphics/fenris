@@ -1,8 +1,7 @@
 use crate::connectivity::{
-    CellConnectivity, Connectivity, ConnectivityMut, Hex20Connectivity, Hex27Connectivity,
-    Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity, Tet10Connectivity,
-    Tet20Connectivity, Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity,
-    Tri6d2Connectivity,
+    CellConnectivity, Connectivity, ConnectivityMut, Hex20Connectivity, Hex27Connectivity, Hex8Connectivity,
+    Quad4d2Connectivity, Quad9d2Connectivity, Tet10Connectivity, Tet20Connectivity, Tet4Connectivity,
+    Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity,
 };
 use crate::geometry::{AxisAlignedBoundingBox, BoundedGeometry, GeometryCollection};
 use nalgebra::allocator::Allocator;
@@ -81,14 +80,8 @@ where
     /// incorrect. However, since this can be done exclusively with safe code, unchecked
     /// or unsafe indexing in which the user is *trusted* to provide valid indices may
     /// produce undefined behavior.Therefore, the connectivity must always be checked.
-    pub fn from_vertices_and_connectivity(
-        vertices: Vec<Point<T, D>>,
-        connectivity: Vec<Connectivity>,
-    ) -> Self {
-        Self {
-            vertices,
-            connectivity,
-        }
+    pub fn from_vertices_and_connectivity(vertices: Vec<Point<T, D>>, connectivity: Vec<Connectivity>) -> Self {
+        Self { vertices, connectivity }
     }
 }
 

@@ -12,10 +12,7 @@ use numeric_literals::replace_float_literals;
 use serde::{Deserialize, Serialize};
 
 // use crate::connectivity::Connectivity;
-use crate::{
-    compute_polyhedron_volume_from_faces, ConvexPolygon3d, ConvexPolyhedron, HalfSpace,
-    LineSegment3d,
-};
+use crate::{compute_polyhedron_volume_from_faces, ConvexPolygon3d, ConvexPolyhedron, HalfSpace, LineSegment3d};
 // use crate::mesh::Mesh;
 use nested_vec::NestedVec;
 
@@ -73,9 +70,7 @@ where
     DefaultAllocator: Allocator<T, D>,
 {
     #[serde(bound(serialize = "<DefaultAllocator as Allocator<T, D>>::Buffer: Serialize"))]
-    #[serde(bound(
-        deserialize = "<DefaultAllocator as Allocator<T, D>>::Buffer: Deserialize<'de>"
-    ))]
+    #[serde(bound(deserialize = "<DefaultAllocator as Allocator<T, D>>::Buffer: Deserialize<'de>"))]
     vertices: Vec<Point<T, D>>,
     faces: NestedVec<usize>,
     cells: NestedVec<usize>,
@@ -94,11 +89,7 @@ where
         Self::from_poly_data(vec![], NestedVec::new(), NestedVec::new())
     }
 
-    pub fn from_poly_data(
-        vertices: Vec<Point<T, D>>,
-        faces: NestedVec<usize>,
-        cells: NestedVec<usize>,
-    ) -> Self {
+    pub fn from_poly_data(vertices: Vec<Point<T, D>>, faces: NestedVec<usize>, cells: NestedVec<usize>) -> Self {
         let num_vertices = vertices.len();
         let num_faces = faces.len();
 
@@ -133,10 +124,7 @@ where
         self.cells.len()
     }
 
-    pub fn face_vertices<'a>(
-        &'a self,
-        face_idx: usize,
-    ) -> impl 'a + Iterator<Item = &'a Point<T, D>> {
+    pub fn face_vertices<'a>(&'a self, face_idx: usize) -> impl 'a + Iterator<Item = &'a Point<T, D>> {
         self.get_face_connectivity(face_idx)
             .into_iter()
             .flatten()
@@ -320,8 +308,7 @@ where
                 let edge = [v1.min(v2), v1.max(v2)];
                 let v12 = *subdivided_edges.entry(edge).or_insert_with(|| {
                     let new_vertex_index = vertex_offset + additional_vertices.len();
-                    let midpoint =
-                        Point::from((&self.vertices[v1].coords + &self.vertices[v2].coords) * 0.5);
+                    let midpoint = Point::from((&self.vertices[v1].coords + &self.vertices[v2].coords) * 0.5);
                     additional_vertices.push(midpoint);
                     new_vertex_index
                 });
@@ -448,11 +435,8 @@ where
             }
         }
 
-        let mut new_poly_mesh = PolyMesh::from_poly_data(
-            self.vertices().to_vec(),
-            triangulated_faces,
-            tetrahedral_cells,
-        );
+        let mut new_poly_mesh =
+            PolyMesh::from_poly_data(self.vertices().to_vec(), triangulated_faces, tetrahedral_cells);
         new_poly_mesh.dedup_faces();
         Ok(new_poly_mesh)
     }
@@ -577,10 +561,7 @@ where
         compute_polyhedron_volume_from_faces(face_iter)
     }
 
-    pub fn intersect_convex_polyhedron<'a>(
-        &self,
-        polyhedron: &impl ConvexPolyhedron<'a, T>,
-    ) -> Self {
+    pub fn intersect_convex_polyhedron<'a>(&self, polyhedron: &impl ConvexPolyhedron<'a, T>) -> Self {
         let mut mesh = self.clone();
         for i in 0..polyhedron.num_faces() {
             let face = polyhedron.get_face(i).unwrap();
@@ -740,8 +721,7 @@ where
 
         // Convert faces from edge representation to new indices,
         // and remove and remap empty faces
-        let (final_faces, face_label_map) =
-            relabel_face_edge_representations(&new_faces, &vertex_label_map);
+        let (final_faces, face_label_map) = relabel_face_edge_representations(&new_faces, &vertex_label_map);
 
         // TODO: If we're a little more clever earlier on, we wouldn't have to
         // allocate a whole new storage here

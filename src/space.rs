@@ -84,8 +84,7 @@ where
 /// This trait essentially functions as a marker trait for finite element spaces which can
 /// also be interpreted as a collection of geometry objects, with a 1:1 correspondence between
 /// elements and geometries.
-pub trait GeometricFiniteElementSpace<'a, T>:
-    FiniteElementSpace<T> + GeometryCollection<'a>
+pub trait GeometricFiniteElementSpace<'a, T>: FiniteElementSpace<T> + GeometryCollection<'a>
 where
     T: Scalar,
     DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
@@ -102,10 +101,7 @@ pub struct ElementInSpace<'a, Space> {
 
 impl<'a, Space> ElementInSpace<'a, Space> {
     pub fn from_space_and_element_index(space: &'a Space, element_index: usize) -> Self {
-        Self {
-            space,
-            element_index,
-        }
+        Self { space, element_index }
     }
 }
 
@@ -121,11 +117,7 @@ where
         self.space.element_node_count(self.element_index)
     }
 
-    fn populate_basis(
-        &self,
-        basis_values: &mut [T],
-        reference_coords: &Point<T, Self::ReferenceDim>,
-    ) {
+    fn populate_basis(&self, basis_values: &mut [T], reference_coords: &Point<T, Self::ReferenceDim>) {
         self.space
             .populate_element_basis(self.element_index, basis_values, reference_coords)
     }
@@ -156,10 +148,7 @@ where
             .element_reference_jacobian(self.element_index, reference_coords)
     }
 
-    fn map_reference_coords(
-        &self,
-        reference_coords: &Point<T, Self::ReferenceDim>,
-    ) -> Point<T, Self::GeometryDim> {
+    fn map_reference_coords(&self, reference_coords: &Point<T, Self::ReferenceDim>) -> Point<T, Self::GeometryDim> {
         self.space
             .map_element_reference_coords(self.element_index, reference_coords)
     }

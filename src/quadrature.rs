@@ -88,9 +88,7 @@ where
     }
 }
 
-fn convert_quadrature_rule_from_2d_f64<T>(
-    quadrature: fenris_quadrature::Rule<2>,
-) -> QuadraturePair2d<T>
+fn convert_quadrature_rule_from_2d_f64<T>(quadrature: fenris_quadrature::Rule<2>) -> QuadraturePair2d<T>
 where
     T: RealField,
 {
@@ -100,9 +98,7 @@ where
     (weights, points)
 }
 
-fn convert_quadrature_rule_from_3d_f64<T>(
-    quadrature: fenris_quadrature::Rule<3>,
-) -> QuadraturePair3d<T>
+fn convert_quadrature_rule_from_3d_f64<T>(quadrature: fenris_quadrature::Rule<3>) -> QuadraturePair3d<T>
 where
     T: RealField,
 {

@@ -3,9 +3,9 @@ use nalgebra::{DefaultAllocator, DimName, RealField, Scalar};
 use vtkio::model::{Attribute, CellType, Cells, DataSet, UnstructuredGridPiece, VertexNumbers};
 
 use crate::connectivity::{
-    Connectivity, Hex20Connectivity, Hex27Connectivity, Hex8Connectivity, Quad4d2Connectivity,
-    Quad9d2Connectivity, Segment2d2Connectivity, Tet10Connectivity, Tet4Connectivity,
-    Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity,
+    Connectivity, Hex20Connectivity, Hex27Connectivity, Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity,
+    Segment2d2Connectivity, Tet10Connectivity, Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity,
+    Tri6d2Connectivity,
 };
 
 use nalgebra::allocator::Allocator;

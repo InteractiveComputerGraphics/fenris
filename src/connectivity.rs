@@ -1,6 +1,4 @@
-use crate::geometry::{
-    Hexahedron, LineSegment2d, Quad2d, Tetrahedron, Triangle, Triangle2d, Triangle3d,
-};
+use crate::geometry::{Hexahedron, LineSegment2d, Quad2d, Tetrahedron, Triangle, Triangle2d, Triangle3d};
 use itertools::izip;
 use nalgebra::allocator::Allocator;
 use nalgebra::{DefaultAllocator, DimName, Point, Point2, Point3, RealField, Scalar, U2, U3};
@@ -8,8 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::ops::{Deref, DerefMut};
 
 /// Represents the type of the faces for a given cell connectivity.
-pub type CellFace<T, Cell> =
-    <<Cell as Connectivity>::FaceConnectivity as CellConnectivity<T, U2>>::Cell;
+pub type CellFace<T, Cell> = <<Cell as Connectivity>::FaceConnectivity as CellConnectivity<T, U2>>::Cell;
 
 pub trait Connectivity: Clone {
     type FaceConnectivity: Connectivity;

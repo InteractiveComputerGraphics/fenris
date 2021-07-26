@@ -1,6 +1,4 @@
-use fenris::connectivity::{
-    CellConnectivity, Connectivity, Quad9d2Connectivity, Tri3d2Connectivity,
-};
+use fenris::connectivity::{CellConnectivity, Connectivity, Quad9d2Connectivity, Tri3d2Connectivity};
 use fenris::geometry::polymesh::PolyMesh;
 use fenris::geometry::{Orientation, Triangle};
 use fenris::mesh::procedural::{
@@ -44,8 +42,7 @@ fn quad4_find_boundary_faces() {
 fn quad9_find_boundary_vertices() {
     {
         // Single element
-        let mesh: Mesh2d<f64, Quad9d2Connectivity> =
-            create_unit_square_uniform_quad_mesh_2d(1).into();
+        let mesh: Mesh2d<f64, Quad9d2Connectivity> = create_unit_square_uniform_quad_mesh_2d(1).into();
         let boundary_vertex_indices = mesh.find_boundary_vertices();
 
         assert_eq!(boundary_vertex_indices, vec![0, 1, 2, 3, 4, 5, 6, 7]);
@@ -77,10 +74,7 @@ fn quad9_find_boundary_vertices() {
         let mesh = Mesh2d::from_vertices_and_connectivity(vertices, connectivity);
         let boundary_vertex_indices = mesh.find_boundary_vertices();
 
-        assert_eq!(
-            boundary_vertex_indices,
-            vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 13, 14]
-        );
+        assert_eq!(boundary_vertex_indices, vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 13, 14]);
     }
 }
 
@@ -146,10 +140,7 @@ where
                 .face_connectivity_iter()
                 .enumerate()
                 .filter(|(_, vertex_indices)| {
-                    equal(
-                        sorted(vertex_indices.to_vec()),
-                        sorted(face.vertex_indices().to_vec()),
-                    )
+                    equal(sorted(vertex_indices.to_vec()), sorted(face.vertex_indices().to_vec()))
                 })
                 .map(|(i, _)| i)
                 .collect();

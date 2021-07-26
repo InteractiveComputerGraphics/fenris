@@ -1,9 +1,7 @@
 //! Solid mechanics functionality for `fenris`.
 use fenris::allocators::SmallDimAllocator;
-use fenris::assembly::operators::{
-    EllipticContraction, EllipticEnergy, EllipticOperator, Operator,
-};
-use fenris::nalgebra::{DefaultAllocator, DimName, MatrixMN, RealField, VectorN, DMatrixSliceMut, DVectorSlice};
+use fenris::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
+use fenris::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, MatrixMN, RealField, VectorN};
 use fenris::{SmallDim, Symmetry};
 use std::cmp::min;
 
@@ -112,25 +110,20 @@ where
     ///
     /// TODO: Test the default impl
     #[allow(non_snake_case)]
-    fn accumulate_stress_contractions_into(&self,
-                                           mut output: DMatrixSliceMut<T>,
-                                           alpha: T,
-                                           deformation_gradient: &MatrixMN<T, GeometryDim, GeometryDim>,
-                                           a: DVectorSlice<T>,
-                                           b: DVectorSlice<T>,
-                                           parameters: &Self::Parameters)
-    {
+    fn accumulate_stress_contractions_into(
+        &self,
+        mut output: DMatrixSliceMut<T>,
+        alpha: T,
+        deformation_gradient: &MatrixMN<T, GeometryDim, GeometryDim>,
+        a: DVectorSlice<T>,
+        b: DVectorSlice<T>,
+        parameters: &Self::Parameters,
+    ) {
         // Note: This implementation is just an adaption of the default impl
         // of EllipticContraction::accumulate_contractions_into
         let d = GeometryDim::dim();
-        assert!(
-            a.len() % d == 0,
-            "Dimension of a must be divisible by d (GeometryDim)"
-        );
-        assert!(
-            b.len() % d == 0,
-            "Dimension of b must be divisible by d (GeometryDim)"
-        );
+        assert!(a.len() % d == 0, "Dimension of a must be divisible by d (GeometryDim)");
+        assert!(b.len() % d == 0, "Dimension of b must be divisible by d (GeometryDim)");
         let M = a.len() / d;
         let N = b.len() / d;
         assert_eq!(
@@ -164,8 +157,7 @@ where
 /// with `fenris` assembly operations.
 pub struct MaterialEllipticOperator<'a, Material>(&'a Material);
 
-impl<'a, T, GeometryDim, Material> Operator<T, GeometryDim>
-    for MaterialEllipticOperator<'a, Material>
+impl<'a, T, GeometryDim, Material> Operator<T, GeometryDim> for MaterialEllipticOperator<'a, Material>
 where
     T: RealField,
     GeometryDim: SmallDim,
@@ -176,26 +168,20 @@ where
     type Parameters = Material::Parameters;
 }
 
-impl<'a, T, GeometryDim, Material> EllipticEnergy<T, GeometryDim>
-    for MaterialEllipticOperator<'a, Material>
+impl<'a, T, GeometryDim, Material> EllipticEnergy<T, GeometryDim> for MaterialEllipticOperator<'a, Material>
 where
     T: RealField,
     GeometryDim: SmallDim,
     Material: HyperelasticMaterial<T, GeometryDim>,
     DefaultAllocator: SmallDimAllocator<T, GeometryDim>,
 {
-    fn compute_energy(
-        &self,
-        gradient: &MatrixMN<T, GeometryDim, GeometryDim>,
-        parameters: &Self::Parameters,
-    ) -> T {
+    fn compute_energy(&self, gradient: &MatrixMN<T, GeometryDim, GeometryDim>, parameters: &Self::Parameters) -> T {
         let f = gradient.transpose();
         self.0.compute_energy_density(&f, parameters)
     }
 }
 
-impl<'a, T, GeometryDim, Material> EllipticOperator<T, GeometryDim>
-    for MaterialEllipticOperator<'a, Material>
+impl<'a, T, GeometryDim, Material> EllipticOperator<T, GeometryDim> for MaterialEllipticOperator<'a, Material>
 where
     T: RealField,
     GeometryDim: SmallDim,
@@ -213,8 +199,7 @@ where
     }
 }
 
-impl<'a, T, GeometryDim, Material> EllipticContraction<T, GeometryDim>
-    for MaterialEllipticOperator<'a, Material>
+impl<'a, T, GeometryDim, Material> EllipticContraction<T, GeometryDim> for MaterialEllipticOperator<'a, Material>
 where
     T: RealField,
     GeometryDim: SmallDim,
@@ -237,16 +222,19 @@ where
     }
 
     #[allow(non_snake_case)]
-    fn accumulate_contractions_into(&self,
-                                    output: DMatrixSliceMut<T>,
-                                    alpha: T,
-                                    gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
-                                    a: DVectorSlice<T>,
-                                    b: DVectorSlice<T>,
-                                    parameters: &Self::Parameters) {
+    fn accumulate_contractions_into(
+        &self,
+        output: DMatrixSliceMut<T>,
+        alpha: T,
+        gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
+        a: DVectorSlice<T>,
+        b: DVectorSlice<T>,
+        parameters: &Self::Parameters,
+    ) {
         // Note: This implementation is basically the same as the default implementation,
         // however we must
         let f = gradient.transpose();
-        self.0.accumulate_stress_contractions_into(output, alpha, &f, a, b, parameters)
+        self.0
+            .accumulate_stress_contractions_into(output, alpha, &f, a, b, parameters)
     }
 }

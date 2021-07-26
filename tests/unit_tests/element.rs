@@ -1,8 +1,7 @@
 use fenris::element::{
-    map_physical_coordinates, project_physical_coordinates, FiniteElement,
-    FixedNodesReferenceFiniteElement, Hex20Element, Hex27Element, Hex8Element, MatrixSlice,
-    Quad4d2Element, Quad9d2Element, Segment2d2Element, Tet10Element, Tet20Element, Tet4Element,
-    Tri3d2Element, Tri6d2Element,
+    map_physical_coordinates, project_physical_coordinates, FiniteElement, FixedNodesReferenceFiniteElement,
+    Hex20Element, Hex27Element, Hex8Element, MatrixSlice, Quad4d2Element, Quad9d2Element, Segment2d2Element,
+    Tet10Element, Tet20Element, Tet4Element, Tri3d2Element, Tri6d2Element,
 };
 use fenris::error::estimate_element_L2_error;
 use fenris::geometry::proptest_strategies::{
@@ -13,8 +12,8 @@ use fenris::quadrature;
 use fenris_optimize::calculus::{approximate_jacobian, VectorFunctionBuilder};
 
 use nalgebra::{
-    DVectorSlice, Dynamic, MatrixMN, Point, Point1, Point2, Point3, Vector1, Vector2, Vector3, U1,
-    U10, U2, U20, U27, U3, U4, U6, U8, U9,
+    DVectorSlice, Dynamic, MatrixMN, Point, Point1, Point2, Point3, Vector1, Vector2, Vector3, U1, U10, U2, U20, U27,
+    U3, U4, U6, U8, U9,
 };
 
 use fenris::util::proptest::point2_f64_strategy;
@@ -349,8 +348,7 @@ fn hex20_quadratic_function_exact_error() {
         let y = p[1];
         let z = p[2];
 
-        2.0 * x * x + 4.0 * y * y - 3.0 * z * z + 3.0 * x * y - 5.0 * x * z + 1.5 * y * z + 3.0 * x
-            - 2.0 * y
+        2.0 * x * x + 4.0 * y * y - 3.0 * z * z + 3.0 * x * y - 5.0 * x * z + 1.5 * y * z + 3.0 * x - 2.0 * y
             + 3.0 * z
             + 9.0
     };

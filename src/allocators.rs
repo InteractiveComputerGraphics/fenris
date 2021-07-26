@@ -46,8 +46,7 @@ ReferenceFiniteElementAllocator<T, ReferenceDim>
 /// Helper trait to make specifying bounds on generic functions working with the
 /// `FiniteElement` trait easier, for elements whose geometry dimension and reference element
 /// dimension coincide.
-pub trait VolumeFiniteElementAllocator<T, GeometryDim>:
-    FiniteElementAllocator<T, GeometryDim, GeometryDim>
+pub trait VolumeFiniteElementAllocator<T, GeometryDim>: FiniteElementAllocator<T, GeometryDim, GeometryDim>
 where
     T: Scalar,
     GeometryDim: DimName,
@@ -80,8 +79,7 @@ where
 {
 }
 
-impl<T, GeometryDim, ReferenceDim> FiniteElementAllocator<T, GeometryDim, ReferenceDim>
-    for DefaultAllocator
+impl<T, GeometryDim, ReferenceDim> FiniteElementAllocator<T, GeometryDim, ReferenceDim> for DefaultAllocator
 where
     T: Scalar,
     GeometryDim: DimName,
@@ -102,8 +100,7 @@ where
 {
 }
 
-impl<T, SolutionDim, GeometryDim> FiniteElementMatrixAllocator<T, SolutionDim, GeometryDim>
-    for DefaultAllocator
+impl<T, SolutionDim, GeometryDim> FiniteElementMatrixAllocator<T, SolutionDim, GeometryDim> for DefaultAllocator
 where
     T: Scalar,
     GeometryDim: DimName,
@@ -125,19 +122,12 @@ where
 }
 
 pub trait ElementConnectivityAllocator<T, Connectivity>:
-    FiniteElementAllocator<
-    T,
-    ConnectivityGeometryDim<T, Connectivity>,
-    ConnectivityReferenceDim<T, Connectivity>,
->
+    FiniteElementAllocator<T, ConnectivityGeometryDim<T, Connectivity>, ConnectivityReferenceDim<T, Connectivity>>
 where
     T: Scalar,
     Connectivity: ElementConnectivity<T>,
-    DefaultAllocator: FiniteElementAllocator<
-        T,
-        ConnectivityGeometryDim<T, Connectivity>,
-        ConnectivityReferenceDim<T, Connectivity>,
-    >,
+    DefaultAllocator:
+        FiniteElementAllocator<T, ConnectivityGeometryDim<T, Connectivity>, ConnectivityReferenceDim<T, Connectivity>>,
 {
 }
 
@@ -145,8 +135,7 @@ impl<T, C> ElementConnectivityAllocator<T, C> for DefaultAllocator
 where
     T: Scalar,
     C: ElementConnectivity<T>,
-    DefaultAllocator:
-        FiniteElementAllocator<T, ConnectivityGeometryDim<T, C>, ConnectivityReferenceDim<T, C>>,
+    DefaultAllocator: FiniteElementAllocator<T, ConnectivityGeometryDim<T, C>, ConnectivityReferenceDim<T, C>>,
 {
 }
 
@@ -164,11 +153,8 @@ impl<T, D> SmallDimAllocator<T, D> for DefaultAllocator
 where
     T: Scalar,
     D: DimName,
-    DefaultAllocator: Allocator<T, D>
-        + Allocator<T, D, D>
-        + Allocator<T, U1, D>
-        + Allocator<usize, D>
-        + Allocator<(usize, usize), D>,
+    DefaultAllocator:
+        Allocator<T, D> + Allocator<T, D, D> + Allocator<T, U1, D> + Allocator<usize, D> + Allocator<(usize, usize), D>,
 {
 }
 
@@ -178,10 +164,7 @@ pub trait BiDimAllocator<T: Scalar, D1: DimName, D2: DimName>:
 }
 
 impl<T: Scalar, D1: DimName, D2: DimName> BiDimAllocator<T, D1, D2> for DefaultAllocator where
-    DefaultAllocator: SmallDimAllocator<T, D1>
-        + SmallDimAllocator<T, D2>
-        + Allocator<T, D1, D2>
-        + Allocator<T, D2, D1>
+    DefaultAllocator: SmallDimAllocator<T, D1> + SmallDimAllocator<T, D2> + Allocator<T, D1, D2> + Allocator<T, D2, D1>
 {
 }
 
@@ -190,10 +173,7 @@ pub trait TriDimAllocator<T: Scalar, D1: DimName, D2: DimName, D3: DimName>:
 {
 }
 
-impl<T: Scalar, D1: DimName, D2: DimName, D3: DimName> TriDimAllocator<T, D1, D2, D3>
-    for DefaultAllocator
-where
-    DefaultAllocator:
-        BiDimAllocator<T, D1, D2> + BiDimAllocator<T, D1, D3> + BiDimAllocator<T, D2, D3>,
+impl<T: Scalar, D1: DimName, D2: DimName, D3: DimName> TriDimAllocator<T, D1, D2, D3> for DefaultAllocator where
+    DefaultAllocator: BiDimAllocator<T, D1, D2> + BiDimAllocator<T, D1, D3> + BiDimAllocator<T, D2, D3>
 {
 }

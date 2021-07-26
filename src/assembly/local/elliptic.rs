@@ -7,8 +7,8 @@ use crate::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOp
 use crate::element::{MatrixSlice, MatrixSliceMut, VolumetricFiniteElement};
 use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{
-    DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, Dim, DimName,
-    Dynamic, MatrixMN, MatrixSliceMN, MatrixSliceMutMN, Point, RealField, Scalar, U1,
+    DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, Dim, DimName, Dynamic, MatrixMN,
+    MatrixSliceMN, MatrixSliceMutMN, Point, RealField, Scalar, U1,
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
 use crate::util::{clone_upper_to_lower, reshape_to_slice};
@@ -91,10 +91,7 @@ impl<Op, QTable, U> ElementEllipticAssemblerBuilder<(), Op, QTable, U> {
 }
 
 impl<Space, QTable, U> ElementEllipticAssemblerBuilder<Space, (), QTable, U> {
-    pub fn with_operator<Op>(
-        self,
-        op: &Op,
-    ) -> ElementEllipticAssemblerBuilder<Space, &Op, QTable, U> {
+    pub fn with_operator<Op>(self, op: &Op) -> ElementEllipticAssemblerBuilder<Space, &Op, QTable, U> {
         ElementEllipticAssemblerBuilder {
             space: self.space,
             op,
@@ -135,8 +132,7 @@ impl<Space, Op, QTable> ElementEllipticAssemblerBuilder<Space, Op, QTable, ()> {
     }
 }
 
-impl<'a, T, Space, Op, QTable>
-    ElementEllipticAssemblerBuilder<&'a Space, &'a Op, &'a QTable, DVectorSlice<'a, T>>
+impl<'a, T, Space, Op, QTable> ElementEllipticAssemblerBuilder<&'a Space, &'a Op, &'a QTable, DVectorSlice<'a, T>>
 where
     T: Scalar,
 {
@@ -158,8 +154,7 @@ pub struct ElementEllipticAssembler<'a, T: Scalar, Space, Op, QTable> {
     u: DVectorSlice<'a, T>,
 }
 
-impl<'a, T, Space, Op, QTable> ElementConnectivityAssembler
-    for ElementEllipticAssembler<'a, T, Space, Op, QTable>
+impl<'a, T, Space, Op, QTable> ElementConnectivityAssembler for ElementEllipticAssembler<'a, T, Space, Op, QTable>
 where
     T: Scalar,
     Space: VolumetricFiniteElementSpace<T>,
@@ -237,15 +232,13 @@ where
             // First get through the RefCell
             let mut ws = workspace.borrow_mut();
             // Then get the concrete type from the type-erased workspace
-            let ws =
-                ws.get_or_default::<EllipticAssemblerWorkspace<T, Space::GeometryDim, Op::Parameters>>();
+            let ws = ws.get_or_default::<EllipticAssemblerWorkspace<T, Space::GeometryDim, Op::Parameters>>();
             f(ws)
         })
     }
 }
 
-impl<'a, T, Space, Op, QTable> ElementVectorAssembler<T>
-    for ElementEllipticAssembler<'a, T, Space, Op, QTable>
+impl<'a, T, Space, Op, QTable> ElementVectorAssembler<T> for ElementEllipticAssembler<'a, T, Space, Op, QTable>
 where
     T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
@@ -254,11 +247,7 @@ where
     DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Op::SolutionDim>,
 {
     #[allow(non_snake_case)]
-    fn assemble_element_vector_into(
-        &self,
-        element_index: usize,
-        output: DVectorSliceMut<T>,
-    ) -> eyre::Result<()> {
+    fn assemble_element_vector_into(&self, element_index: usize, output: DVectorSliceMut<T>) -> eyre::Result<()> {
         let s = self.solution_dim();
         let n = self.element_node_count(element_index);
         assert_eq!(output.len(), s * n, "Output vector dimension mismatch");
@@ -268,12 +257,7 @@ where
             ws.basis_buffer
                 .populate_element_nodes_from_space(element_index, self.space);
             ws.u_element.resize_vertically_mut(s * n, T::zero());
-            gather_global_to_local(
-                &self.u,
-                &mut ws.u_element,
-                ws.basis_buffer.element_nodes(),
-                s,
-            );
+            gather_global_to_local(&self.u, &mut ws.u_element, ws.basis_buffer.element_nodes(), s);
 
             ws.quadrature_buffer
                 .populate_element_quadrature_from_table(element_index, self.qtable);
@@ -293,8 +277,7 @@ where
     }
 }
 
-impl<'a, T, Space, Op, QTable> ElementMatrixAssembler<T>
-    for ElementEllipticAssembler<'a, T, Space, Op, QTable>
+impl<'a, T, Space, Op, QTable> ElementMatrixAssembler<T> for ElementEllipticAssembler<'a, T, Space, Op, QTable>
 where
     T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
@@ -303,11 +286,7 @@ where
     DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Op::SolutionDim>,
 {
     #[allow(non_snake_case)]
-    fn assemble_element_matrix_into(
-        &self,
-        element_index: usize,
-        output: DMatrixSliceMut<T>,
-    ) -> eyre::Result<()> {
+    fn assemble_element_matrix_into(&self, element_index: usize, output: DMatrixSliceMut<T>) -> eyre::Result<()> {
         let s = self.solution_dim();
         let n = self.element_node_count(element_index);
         assert_eq!(output.nrows(), s * n, "Output matrix dimension mismatch");
@@ -318,12 +297,7 @@ where
             ws.basis_buffer
                 .populate_element_nodes_from_space(element_index, self.space);
             ws.u_element.resize_vertically_mut(s * n, T::zero());
-            gather_global_to_local(
-                &self.u,
-                &mut ws.u_element,
-                ws.basis_buffer.element_nodes(),
-                s,
-            );
+            gather_global_to_local(&self.u, &mut ws.u_element, ws.basis_buffer.element_nodes(), s);
 
             ws.quadrature_buffer
                 .populate_element_quadrature_from_table(element_index, self.qtable);
@@ -391,16 +365,8 @@ where
         s.value() * n,
         "Local element dofs (u_element) dimension mismatch"
     );
-    assert_eq!(
-        output.nrows(),
-        s.value() * n,
-        "Output matrix dimension mismatch"
-    );
-    assert_eq!(
-        output.ncols(),
-        s.value() * n,
-        "Output matrix dimension mismatch"
-    );
+    assert_eq!(output.nrows(), s.value() * n, "Output matrix dimension mismatch");
+    assert_eq!(output.ncols(), s.value() * n, "Output matrix dimension mismatch");
 
     output.fill(T::zero());
 
@@ -513,11 +479,8 @@ where
         // First populate gradients with respect to reference coords
         element.populate_basis_gradients(MatrixSliceMut::from(&mut phi_grad_ref), &point);
 
-        let u_element = MatrixSliceMN::from_slice_generic(
-            u_element.as_slice(),
-            Operator::SolutionDim::name(),
-            Dynamic::new(n),
-        );
+        let u_element =
+            MatrixSliceMN::from_slice_generic(u_element.as_slice(), Operator::SolutionDim::name(), Dynamic::new(n));
         let u_grad = compute_volume_u_grad(&j_inv_t, &phi_grad_ref, u_element);
 
         // We want to compute the vector
@@ -536,11 +499,8 @@ where
         // and phi_i^ref represents the gradient with respect to reference coordinates.
         // Hence we may compute (g^T J^{-T}) P_0
 
-        let mut output = MatrixSliceMutMN::from_slice_generic(
-            output.as_mut_slice(),
-            Operator::SolutionDim::name(),
-            Dynamic::new(n),
-        );
+        let mut output =
+            MatrixSliceMutMN::from_slice_generic(output.as_mut_slice(), Operator::SolutionDim::name(), Dynamic::new(n));
         let g = operator.compute_elliptic_operator(&u_grad, data);
         let g_t_j_inv_t = g.transpose() * j_inv_t;
         output.gemm(weight * j_det.abs(), &g_t_j_inv_t, &phi_grad_ref, T::one());
@@ -612,11 +572,8 @@ where
         // First populate gradients with respect to reference coords
         element.populate_basis_gradients(MatrixSliceMut::from(&mut phi_grad_ref), &point);
 
-        let u_element = MatrixSliceMN::from_slice_generic(
-            u_element.as_slice(),
-            Operator::SolutionDim::name(),
-            Dynamic::new(n),
-        );
+        let u_element =
+            MatrixSliceMN::from_slice_generic(u_element.as_slice(), Operator::SolutionDim::name(), Dynamic::new(n));
         let u_grad = compute_volume_u_grad(&j_inv_t, &phi_grad_ref, u_element);
 
         let psi = operator.compute_energy(&u_grad, data);

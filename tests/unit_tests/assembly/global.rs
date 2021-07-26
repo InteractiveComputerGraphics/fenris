@@ -5,8 +5,8 @@ use proptest::num::i32;
 use proptest::prelude::*;
 
 use fenris::assembly::global::{
-    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_matrix,
-    gather_global_to_local, CsrAssembler, CsrParAssembler,
+    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_matrix, gather_global_to_local, CsrAssembler,
+    CsrParAssembler,
 };
 use fenris::assembly::local::ElementConnectivityAssembler;
 use fenris::nalgebra::{DMatrix, DVector, U2};
@@ -78,8 +78,7 @@ fn csr_assemble_mock_pattern() {
         };
         let csr_assembler = CsrAssembler::<i32>::default();
         let pattern = csr_assembler.assemble_pattern(&element_assembler);
-        let expected_pattern =
-            SparsityPattern::try_from_offsets_and_indices(0, 0, vec![0], vec![]).unwrap();
+        let expected_pattern = SparsityPattern::try_from_offsets_and_indices(0, 0, vec![0], vec![]).unwrap();
         assert_eq!(pattern, expected_pattern);
     }
 
@@ -92,8 +91,7 @@ fn csr_assemble_mock_pattern() {
         };
         let csr_assembler = CsrAssembler::<i32>::default();
         let pattern = csr_assembler.assemble_pattern(&element_assembler);
-        let expected_pattern =
-            SparsityPattern::try_from_offsets_and_indices(10, 10, vec![0; 11], vec![]).unwrap();
+        let expected_pattern = SparsityPattern::try_from_offsets_and_indices(10, 10, vec![0; 11], vec![]).unwrap();
         assert_eq!(pattern, expected_pattern);
     }
 
@@ -102,12 +100,7 @@ fn csr_assemble_mock_pattern() {
         let element_assembler = MockElementAssembler {
             solution_dim: 1,
             num_nodes: 6,
-            element_connectivities: vec![
-                vec![0, 1, 2],
-                vec![2, 3],
-                vec![],
-                vec![3, 4, 4, 4, 4, 4, 4],
-            ],
+            element_connectivities: vec![vec![0, 1, 2], vec![2, 3], vec![], vec![3, 4, 4, 4, 4, 4, 4]],
         };
         let csr_assembler = CsrAssembler::<i32>::default();
         let pattern = csr_assembler.assemble_pattern(&element_assembler);
@@ -126,12 +119,7 @@ fn csr_assemble_mock_pattern() {
         let element_assembler = MockElementAssembler {
             solution_dim: 2,
             num_nodes: 6,
-            element_connectivities: vec![
-                vec![0, 1, 2],
-                vec![2, 3],
-                vec![],
-                vec![3, 4, 4, 4, 4, 4, 4],
-            ],
+            element_connectivities: vec![vec![0, 1, 2], vec![2, 3], vec![], vec![3, 4, 4, 4, 4, 4, 4]],
         };
         let csr_assembler = CsrParAssembler::<i32>::default();
         let pattern = csr_assembler.assemble_pattern(&element_assembler);
@@ -140,9 +128,8 @@ fn csr_assemble_mock_pattern() {
             12,
             vec![0, 6, 12, 18, 24, 32, 40, 46, 52, 56, 60, 60, 60],
             vec![
-                0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3,
-                4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 4, 5, 6, 7, 8, 9, 4, 5, 6, 7, 8, 9, 6, 7, 8, 9,
-                6, 7, 8, 9,
+                0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1,
+                2, 3, 4, 5, 6, 7, 4, 5, 6, 7, 8, 9, 4, 5, 6, 7, 8, 9, 6, 7, 8, 9, 6, 7, 8, 9,
             ],
         )
         .unwrap();
@@ -165,8 +152,7 @@ fn csr_par_assemble_mock_pattern() {
         };
         let csr_assembler = CsrParAssembler::<i32>::default();
         let pattern = csr_assembler.assemble_pattern(&element_assembler);
-        let expected_pattern =
-            SparsityPattern::try_from_offsets_and_indices(0, 0, vec![0], vec![]).unwrap();
+        let expected_pattern = SparsityPattern::try_from_offsets_and_indices(0, 0, vec![0], vec![]).unwrap();
         assert_eq!(pattern, expected_pattern);
     }
 
@@ -179,8 +165,7 @@ fn csr_par_assemble_mock_pattern() {
         };
         let csr_assembler = CsrParAssembler::<i32>::default();
         let pattern = csr_assembler.assemble_pattern(&element_assembler);
-        let expected_pattern =
-            SparsityPattern::try_from_offsets_and_indices(10, 10, vec![0; 11], vec![]).unwrap();
+        let expected_pattern = SparsityPattern::try_from_offsets_and_indices(10, 10, vec![0; 11], vec![]).unwrap();
         assert_eq!(pattern, expected_pattern);
     }
 
@@ -189,12 +174,7 @@ fn csr_par_assemble_mock_pattern() {
         let element_assembler = MockElementAssembler {
             solution_dim: 1,
             num_nodes: 6,
-            element_connectivities: vec![
-                vec![0, 1, 2],
-                vec![2, 3],
-                vec![],
-                vec![3, 4, 4, 4, 4, 4, 4],
-            ],
+            element_connectivities: vec![vec![0, 1, 2], vec![2, 3], vec![], vec![3, 4, 4, 4, 4, 4, 4]],
         };
         let csr_assembler = CsrParAssembler::<i32>::default();
         let pattern = csr_assembler.assemble_pattern(&element_assembler);
@@ -213,12 +193,7 @@ fn csr_par_assemble_mock_pattern() {
         let element_assembler = MockElementAssembler {
             solution_dim: 2,
             num_nodes: 6,
-            element_connectivities: vec![
-                vec![0, 1, 2],
-                vec![2, 3],
-                vec![],
-                vec![3, 4, 4, 4, 4, 4, 4],
-            ],
+            element_connectivities: vec![vec![0, 1, 2], vec![2, 3], vec![], vec![3, 4, 4, 4, 4, 4, 4]],
         };
         let csr_assembler = CsrParAssembler::<i32>::default();
         let pattern = csr_assembler.assemble_pattern(&element_assembler);
@@ -227,9 +202,8 @@ fn csr_par_assemble_mock_pattern() {
             12,
             vec![0, 6, 12, 18, 24, 32, 40, 46, 52, 56, 60, 60, 60],
             vec![
-                0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3,
-                4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 4, 5, 6, 7, 8, 9, 4, 5, 6, 7, 8, 9, 6, 7, 8, 9,
-                6, 7, 8, 9,
+                0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1,
+                2, 3, 4, 5, 6, 7, 4, 5, 6, 7, 8, 9, 4, 5, 6, 7, 8, 9, 6, 7, 8, 9, 6, 7, 8, 9,
             ],
         )
         .unwrap();

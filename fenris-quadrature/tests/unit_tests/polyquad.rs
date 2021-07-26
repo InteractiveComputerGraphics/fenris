@@ -1,6 +1,4 @@
-use fenris_quadrature::polyquad::{
-    hexahedron, prism, pyramid, quadrilateral, tetrahedron, triangle,
-};
+use fenris_quadrature::polyquad::{hexahedron, prism, pyramid, quadrilateral, tetrahedron, triangle};
 use fenris_quadrature::{Error, Rule};
 
 use matrixcompare::assert_scalar_eq;
@@ -190,12 +188,7 @@ fn test_2d_rules_satisfy_prescribed_accuracy(
                     // The magnitude of the integrals is either 0 or somewhere in the neighborhood of 1,
                     // at least within a couple of orders of magnitude, which is why the below
                     // absolute tolerance seems reasonable
-                    assert_scalar_eq!(
-                        estimated_integral,
-                        monomial_integral,
-                        comp = abs,
-                        tol = 1e-14
-                    );
+                    assert_scalar_eq!(estimated_integral, monomial_integral, comp = abs, tol = 1e-14);
                 }
             }
         }
@@ -212,9 +205,7 @@ fn test_3d_rules_satisfy_prescribed_accuracy(
             for j in 0..=strength {
                 for k in 0..=strength {
                     if i + j + k <= strength {
-                        let monomial = |x: f64, y: f64, z: f64| {
-                            x.powi(i as i32) * y.powi(j as i32) * z.powi(k as i32)
-                        };
+                        let monomial = |x: f64, y: f64, z: f64| x.powi(i as i32) * y.powi(j as i32) * z.powi(k as i32);
                         let monomial_integral = monomial_integral(i, j, k);
                         let (weights, points) = rule_generator(strength);
                         let estimated_integral: f64 = weights
@@ -226,12 +217,7 @@ fn test_3d_rules_satisfy_prescribed_accuracy(
                         // The magnitude of the integrals is either 0 or somewhere in the neighborhood of 1,
                         // at least within a couple of orders of magnitude, which is why the below
                         // absolute tolerance seems reasonable
-                        assert_scalar_eq!(
-                            estimated_integral,
-                            monomial_integral,
-                            comp = abs,
-                            tol = 1e-14
-                        );
+                        assert_scalar_eq!(estimated_integral, monomial_integral, comp = abs, tol = 1e-14);
                     }
                 }
             }
@@ -265,8 +251,7 @@ fn triangle_rules_satisfy_prescribed_accuracy() {
         let (i, j) = (i as f64, j as f64);
         // TODO: Is there a simpler expression?
         (-1.0f64).powf(j + 1.0) / (j + 1.0)
-            * ((1.0 - (-1.0f64).powf(i + j)) / (i + j + 2.0)
-                - (1.0 - (-1.0f64).powf(i + 1.0)) / (i + 1.0))
+            * ((1.0 - (-1.0f64).powf(i + j)) / (i + j + 2.0) - (1.0 - (-1.0f64).powf(i + 1.0)) / (i + 1.0))
     };
 
     test_2d_rules_satisfy_prescribed_accuracy(max_strength, rule_generator, monomial_integral);
@@ -301,8 +286,7 @@ fn integrate_polygon_3d<const OUTDIM: usize>(
     assert!(vertices.len() >= 3, "Polygon must have at least 3 vertices");
     let mut result = SVector::zeros();
 
-    let (weights, points) =
-        triangle(strength).expect("Must have quadrature rule available for requested strength");
+    let (weights, points) = triangle(strength).expect("Must have quadrature rule available for requested strength");
 
     // Decompose the polygon into a triangle fan and sum the integrals over each triangle
     let num_triangles = vertices.len() - 2;
@@ -433,9 +417,8 @@ fn tetrahedron_rules_satisfy_prescribed_accuracy() {
         ],
     };
 
-    let monomial_integral = |alpha: usize, beta: usize, gamma: usize| {
-        integrate_monomial_polyhedron(&tetrahedron, &[alpha, beta, gamma])
-    };
+    let monomial_integral =
+        |alpha: usize, beta: usize, gamma: usize| integrate_monomial_polyhedron(&tetrahedron, &[alpha, beta, gamma]);
 
     test_3d_rules_satisfy_prescribed_accuracy(max_strength, rule_generator, monomial_integral);
 }
@@ -464,9 +447,8 @@ fn prism_rules_satisfy_prescribed_accuracy() {
         ],
     };
 
-    let monomial_integral = |alpha: usize, beta: usize, gamma: usize| {
-        integrate_monomial_polyhedron(&prism, &[alpha, beta, gamma])
-    };
+    let monomial_integral =
+        |alpha: usize, beta: usize, gamma: usize| integrate_monomial_polyhedron(&prism, &[alpha, beta, gamma]);
 
     test_3d_rules_satisfy_prescribed_accuracy(max_strength, rule_generator, monomial_integral);
 }
@@ -494,9 +476,8 @@ fn pyramid_rules_satisfy_prescribed_accuracy() {
         ],
     };
 
-    let monomial_integral = |alpha: usize, beta: usize, gamma: usize| {
-        integrate_monomial_polyhedron(&pyramid, &[alpha, beta, gamma])
-    };
+    let monomial_integral =
+        |alpha: usize, beta: usize, gamma: usize| integrate_monomial_polyhedron(&pyramid, &[alpha, beta, gamma]);
 
     test_3d_rules_satisfy_prescribed_accuracy(max_strength, rule_generator, monomial_integral);
 }

@@ -6,8 +6,7 @@ use nalgebra::DMatrix;
 fn cuthill_mckee_basic_examples() {
     // Basic example
     {
-        let matrix =
-            DMatrix::from_row_slice(4, 4, &[1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1]);
+        let matrix = DMatrix::from_row_slice(4, 4, &[1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1]);
         let csr = CsrMatrix::from(&matrix);
         let perm = cuthill_mckee(csr.pattern());
 
@@ -21,8 +20,7 @@ fn cuthill_mckee_basic_examples() {
     // Diagonal pattern
     // Note that the "standard" CM algorithm
     {
-        let matrix =
-            DMatrix::from_row_slice(4, 4, &[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+        let matrix = DMatrix::from_row_slice(4, 4, &[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
         let csr = CsrMatrix::from(&matrix);
         let perm = cuthill_mckee(csr.pattern());
         assert_eq!(perm.perm(), &[0, 1, 2, 3]);

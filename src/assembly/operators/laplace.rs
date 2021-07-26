@@ -30,11 +30,7 @@ where
     DefaultAllocator: BiDimAllocator<T, D, Self::SolutionDim>,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
-    fn compute_energy(
-        &self,
-        gradient: &MatrixMN<T, D, Self::SolutionDim>,
-        _parameters: &Self::Parameters,
-    ) -> T {
+    fn compute_energy(&self, gradient: &MatrixMN<T, D, Self::SolutionDim>, _parameters: &Self::Parameters) -> T {
         0.5 * gradient.dot(&gradient)
     }
 }

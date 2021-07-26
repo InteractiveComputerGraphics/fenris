@@ -21,12 +21,7 @@ fn polygon_area_signed_unsigned() {
     let polygon = GeneralPolygon::from_vertices(vertices.clone());
 
     let expected_area = 10.5;
-    assert_scalar_eq!(
-        polygon.signed_area(),
-        expected_area,
-        comp = abs,
-        tol = 1e-12
-    );
+    assert_scalar_eq!(polygon.signed_area(), expected_area, comp = abs, tol = 1e-12);
     assert_scalar_eq!(polygon.area(), expected_area, comp = abs, tol = 1e-12);
 
     let vertices_reversed = {
@@ -37,18 +32,8 @@ fn polygon_area_signed_unsigned() {
 
     let reversed_polygon = GeneralPolygon::from_vertices(vertices_reversed);
 
-    assert_scalar_eq!(
-        reversed_polygon.signed_area(),
-        -expected_area,
-        comp = abs,
-        tol = 1e-12
-    );
-    assert_scalar_eq!(
-        reversed_polygon.area(),
-        expected_area,
-        comp = abs,
-        tol = 1e-12
-    );
+    assert_scalar_eq!(reversed_polygon.signed_area(), -expected_area, comp = abs, tol = 1e-12);
+    assert_scalar_eq!(reversed_polygon.area(), expected_area, comp = abs, tol = 1e-12);
 }
 
 #[test]
@@ -119,23 +104,9 @@ fn polygon_closest_edge() {
         let expected_t = f64::sqrt(0.5) / 2.82842712474619;
 
         assert_eq!(closest_edge.edge_index, 3);
-        assert_scalar_eq!(
-            closest_edge.signed_distance,
-            f64::sqrt(0.5),
-            comp = abs,
-            tol = 1e-12
-        );
-        assert_scalar_eq!(
-            closest_edge.edge_parameter,
-            expected_t,
-            comp = abs,
-            tol = 1e-12
-        );
-        assert_approx_matrix_eq!(
-            closest_edge.edge_point.coords,
-            Vector2::new(-3.5, -0.5),
-            abstol = 1e-12
-        );
+        assert_scalar_eq!(closest_edge.signed_distance, f64::sqrt(0.5), comp = abs, tol = 1e-12);
+        assert_scalar_eq!(closest_edge.edge_parameter, expected_t, comp = abs, tol = 1e-12);
+        assert_approx_matrix_eq!(closest_edge.edge_point.coords, Vector2::new(-3.5, -0.5), abstol = 1e-12);
     }
 
     {
@@ -146,12 +117,7 @@ fn polygon_closest_edge() {
 
         assert_eq!(closest_edge.edge_index, 4);
         assert_scalar_eq!(closest_edge.signed_distance, 0.0, comp = abs, tol = 1e-12);
-        assert_scalar_eq!(
-            closest_edge.edge_parameter,
-            expected_t,
-            comp = abs,
-            tol = 1e-12
-        );
+        assert_scalar_eq!(closest_edge.edge_parameter, expected_t, comp = abs, tol = 1e-12);
         assert_approx_matrix_eq!(closest_edge.edge_point.coords, point.coords, abstol = 1e-12);
     }
 
@@ -162,28 +128,15 @@ fn polygon_closest_edge() {
 
         // Whether edge 2 or 3 is reported is not well-defined. It can be either.
         assert!([2, 3].contains(&closest_edge.edge_index));
-        let expected_t = if closest_edge.edge_index == 2 {
-            1.0
-        } else {
-            0.0
-        };
+        let expected_t = if closest_edge.edge_index == 2 { 1.0 } else { 0.0 };
         assert_scalar_eq!(
             closest_edge.signed_distance,
             -0.412310562561766,
             comp = abs,
             tol = 1e-12
         );
-        assert_scalar_eq!(
-            closest_edge.edge_parameter,
-            expected_t,
-            comp = abs,
-            tol = 1e-12
-        );
-        assert_approx_matrix_eq!(
-            closest_edge.edge_point.coords,
-            vertices[3].coords,
-            abstol = 1e-12
-        );
+        assert_scalar_eq!(closest_edge.edge_parameter, expected_t, comp = abs, tol = 1e-12);
+        assert_approx_matrix_eq!(closest_edge.edge_point.coords, vertices[3].coords, abstol = 1e-12);
     }
 
     {
@@ -199,12 +152,7 @@ fn polygon_closest_edge() {
             comp = abs,
             tol = 1e-12
         );
-        assert_scalar_eq!(
-            closest_edge.edge_parameter,
-            expected_t,
-            comp = abs,
-            tol = 1e-10
-        );
+        assert_scalar_eq!(closest_edge.edge_parameter, expected_t, comp = abs, tol = 1e-10);
         assert_approx_matrix_eq!(
             closest_edge.edge_point.coords,
             Vector2::new(-5.384615384615385, -0.076923076923077),

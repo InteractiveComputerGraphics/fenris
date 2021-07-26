@@ -35,19 +35,15 @@ pub enum NewtonError {
 impl Display for NewtonError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
-            &NewtonError::MaximumIterationsReached(maxit) => write!(
-                f,
-                "Failed to converge within maximum number of iterations ({}).",
-                maxit
-            ),
+            &NewtonError::MaximumIterationsReached(maxit) => {
+                write!(f, "Failed to converge within maximum number of iterations ({}).", maxit)
+            }
             &NewtonError::JacobianError(ref err) => {
                 write!(f, "Failed to solve Jacobian system. Error: {}", err)
             }
-            &NewtonError::LineSearchError(ref err) => write!(
-                f,
-                "Line search failed to produce valid step direction. Error: {}",
-                err
-            ),
+            &NewtonError::LineSearchError(ref err) => {
+                write!(f, "Line search failed to produce valid step direction. Error: {}", err)
+            }
         }
     }
 }
@@ -110,11 +106,7 @@ where
         }
 
         // Solve the system J dx = -f   <=>   J (-dx) = f
-        let j_result = function.solve_jacobian_system(
-            &mut minus_dx,
-            &DVectorSlice::from(&x),
-            &DVectorSlice::from(&f),
-        );
+        let j_result = function.solve_jacobian_system(&mut minus_dx, &DVectorSlice::from(&x), &DVectorSlice::from(&f));
         if let Err(err) = j_result {
             return Err(NewtonError::JacobianError(err));
         }

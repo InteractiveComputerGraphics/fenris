@@ -30,10 +30,7 @@ pub struct Triangle3dParams {
 
 impl Triangle3dParams {
     pub fn with_orientation(self, orientation: Orientation) -> Self {
-        Self {
-            orientation,
-            ..self
-        }
+        Self { orientation, ..self }
     }
 }
 
@@ -52,10 +49,7 @@ pub struct Triangle2dParams {
 
 impl Triangle2dParams {
     pub fn with_orientation(self, orientation: Orientation) -> Self {
-        Self {
-            orientation,
-            ..self
-        }
+        Self { orientation, ..self }
     }
 }
 

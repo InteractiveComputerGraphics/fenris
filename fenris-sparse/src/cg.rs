@@ -3,8 +3,7 @@ use nalgebra::base::constraint::AreMultipliable;
 use nalgebra::constraint::{DimEq, ShapeConstraint};
 use nalgebra::storage::Storage;
 use nalgebra::{
-    ClosedAdd, ClosedMul, DVector, DVectorSlice, DVectorSliceMut, Dim, Dynamic, Matrix, RealField,
-    Scalar, U1,
+    ClosedAdd, ClosedMul, DVector, DVectorSlice, DVectorSliceMut, Dim, Dynamic, Matrix, RealField, Scalar, U1,
 };
 use nalgebra_sparse::ops::serial::spmm_csr_dense;
 use nalgebra_sparse::ops::Op;
@@ -243,10 +242,7 @@ impl<'a, T: Scalar, P, Criterion> ConjugateGradient<'a, T, (), P, Criterion> {
 }
 
 impl<'a, T: Scalar, A, P, Criterion> ConjugateGradient<'a, T, A, P, Criterion> {
-    pub fn with_preconditioner<P2>(
-        self,
-        preconditioner: P2,
-    ) -> ConjugateGradient<'a, T, A, P2, Criterion> {
+    pub fn with_preconditioner<P2>(self, preconditioner: P2) -> ConjugateGradient<'a, T, A, P2, Criterion> {
         ConjugateGradient {
             workspace: self.workspace,
             operator: self.operator,

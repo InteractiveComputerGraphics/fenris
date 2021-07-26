@@ -1,13 +1,10 @@
 use crate::allocators::{BiDimAllocator, SmallDimAllocator, TriDimAllocator};
 use crate::assembly::global::{BasisFunctionBuffer, QuadratureBuffer};
-use crate::assembly::local::{
-    ElementConnectivityAssembler, ElementVectorAssembler, QuadratureTable,
-};
+use crate::assembly::local::{ElementConnectivityAssembler, ElementVectorAssembler, QuadratureTable};
 use crate::assembly::operators::Operator;
 use crate::element::{MatrixSlice, ReferenceFiniteElement, VolumetricFiniteElement};
 use crate::nalgebra::{
-    DVectorSliceMut, DefaultAllocator, DimName, Dynamic, MatrixSliceMutMN, Point, RealField,
-    Scalar, VectorN, U1,
+    DVectorSliceMut, DefaultAllocator, DimName, Dynamic, MatrixSliceMutMN, Point, RealField, Scalar, VectorN, U1,
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
 use crate::workspace::Workspace;
@@ -23,11 +20,7 @@ where
     GeometryDim: SmallDim,
     DefaultAllocator: BiDimAllocator<T, GeometryDim, Self::SolutionDim>,
 {
-    fn evaluate(
-        &self,
-        coords: &Point<T, GeometryDim>,
-        data: &Self::Parameters,
-    ) -> VectorN<T, Self::SolutionDim>;
+    fn evaluate(&self, coords: &Point<T, GeometryDim>, data: &Self::Parameters) -> VectorN<T, Self::SolutionDim>;
 }
 
 pub struct ElementSourceAssemblerBuilder<T, SpaceRef, SourceRef, QTableRef> {
@@ -48,9 +41,7 @@ impl ElementSourceAssemblerBuilder<(), (), (), ()> {
     }
 }
 
-impl<SpaceRef, SourceRef, QTableRef>
-    ElementSourceAssemblerBuilder<(), SpaceRef, SourceRef, QTableRef>
-{
+impl<SpaceRef, SourceRef, QTableRef> ElementSourceAssemblerBuilder<(), SpaceRef, SourceRef, QTableRef> {
     pub fn with_finite_element_space<Space>(
         self,
         space: &Space,
@@ -88,9 +79,7 @@ impl<SpaceRef, SourceRef, QTableRef>
     }
 }
 
-impl<'a, Space, Source, QTable>
-    ElementSourceAssemblerBuilder<(), &'a Space, &'a Source, &'a QTable>
-{
+impl<'a, Space, Source, QTable> ElementSourceAssemblerBuilder<(), &'a Space, &'a Source, &'a QTable> {
     // TODO: It's totally weird to have T as a parameter on the function here. Can we design
     // this differently? Maybe FiniteElementSpace should actually have Scalar as an
     // associated type?
@@ -114,8 +103,7 @@ pub struct ElementSourceAssembler<'a, T, Space, Source, QTable> {
     marker: PhantomData<T>,
 }
 
-impl<'a, T, Space, Source, QTable> ElementConnectivityAssembler
-    for ElementSourceAssembler<'a, T, Space, Source, QTable>
+impl<'a, T, Space, Source, QTable> ElementConnectivityAssembler for ElementSourceAssembler<'a, T, Space, Source, QTable>
 where
     T: Scalar,
     Space: VolumetricFiniteElementSpace<T>,
@@ -169,21 +157,15 @@ where
     }
 }
 
-impl<'a, T, Space, Source, QTable> ElementVectorAssembler<T>
-    for ElementSourceAssembler<'a, T, Space, Source, QTable>
+impl<'a, T, Space, Source, QTable> ElementVectorAssembler<T> for ElementSourceAssembler<'a, T, Space, Source, QTable>
 where
     T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
     Source: SourceFunction<T, Space::ReferenceDim>,
     QTable: QuadratureTable<T, Space::ReferenceDim, Data = Source::Parameters>,
-    DefaultAllocator:
-        TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Source::SolutionDim>,
+    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Source::SolutionDim>,
 {
-    fn assemble_element_vector_into(
-        &self,
-        element_index: usize,
-        output: DVectorSliceMut<T>,
-    ) -> eyre::Result<()> {
+    fn assemble_element_vector_into(&self, element_index: usize, output: DVectorSliceMut<T>) -> eyre::Result<()> {
         SOURCE_WORKSPACE.with(|ws| {
             // TODO: Is it possible to simplify retrieving a mutable reference to the workspace?
             let mut ws: RefMut<SourceTermWorkspace<T, Space::ReferenceDim, Source::Parameters>> =
@@ -274,11 +256,8 @@ pub fn assemble_element_source_vector<T, Element, Source>(
         n * Source::SolutionDim::dim(),
         "Length of output vector must be consistent with number of nodes and solution dim"
     );
-    let mut output = MatrixSliceMutMN::from_slice_generic(
-        output.as_mut_slice(),
-        Source::SolutionDim::name(),
-        Dynamic::new(n),
-    );
+    let mut output =
+        MatrixSliceMutMN::from_slice_generic(output.as_mut_slice(), Source::SolutionDim::name(), Dynamic::new(n));
 
     output.fill(T::zero());
 

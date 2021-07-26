@@ -1,7 +1,6 @@
 use crate::nalgebra::RealField;
 use crate::quadrature::{
-    convert_quadrature_rule_from_2d_f64, convert_quadrature_rule_from_3d_f64, QuadraturePair2d,
-    QuadraturePair3d,
+    convert_quadrature_rule_from_2d_f64, convert_quadrature_rule_from_3d_f64, QuadraturePair2d, QuadraturePair3d,
 };
 
 use fenris_quadrature::tensor;

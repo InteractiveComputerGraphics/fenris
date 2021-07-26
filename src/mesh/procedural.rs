@@ -14,27 +14,15 @@ pub fn create_unit_square_uniform_quad_mesh_2d<T>(cells_per_dim: usize) -> QuadM
 where
     T: RealField,
 {
-    create_rectangular_uniform_quad_mesh_2d(
-        T::one(),
-        1,
-        1,
-        cells_per_dim,
-        &Vector2::new(T::zero(), T::one()),
-    )
+    create_rectangular_uniform_quad_mesh_2d(T::one(), 1, 1, cells_per_dim, &Vector2::new(T::zero(), T::one()))
 }
 
 pub fn create_unit_square_uniform_tri_mesh_2d<T>(cells_per_dim: usize) -> TriangleMesh2d<T>
 where
     T: RealField,
 {
-    create_rectangular_uniform_quad_mesh_2d(
-        T::one(),
-        1,
-        1,
-        cells_per_dim,
-        &Vector2::new(T::zero(), T::one()),
-    )
-    .split_into_triangles()
+    create_rectangular_uniform_quad_mesh_2d(T::one(), 1, 1, cells_per_dim, &Vector2::new(T::zero(), T::one()))
+        .split_into_triangles()
 }
 
 pub fn create_unit_box_uniform_hex_mesh_3d<T>(cells_per_dim: usize) -> HexMesh<T>
@@ -70,8 +58,7 @@ where
         let mut vertices = Vec::new();
         let mut cells = Vec::new();
 
-        let cell_size =
-            T::from_f64(unit_length.to_subset().unwrap() / cells_per_unit as f64).unwrap();
+        let cell_size = T::from_f64(unit_length.to_subset().unwrap() / cells_per_unit as f64).unwrap();
         let num_cells_x = units_x * cells_per_unit;
         let num_cells_y = units_y * cells_per_unit;
         let num_vertices_x = num_cells_x + 1;
@@ -105,26 +92,20 @@ where
 }
 
 #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-pub fn voxelize_bounding_box_2d<T>(
-    bounds: &AxisAlignedBoundingBox2d<T>,
-    max_cell_size: T,
-) -> QuadMesh2d<T>
+pub fn voxelize_bounding_box_2d<T>(bounds: &AxisAlignedBoundingBox2d<T>, max_cell_size: T) -> QuadMesh2d<T>
 where
     T: RealField,
 {
     assert!(max_cell_size > T::zero(), "Max cell size must be positive.");
 
     let extents = bounds.extents();
-    let enlarged_bounds =
-        AxisAlignedBoundingBox2d::new(bounds.min() - extents * 0.01, bounds.max() + extents * 0.01);
+    let enlarged_bounds = AxisAlignedBoundingBox2d::new(bounds.min() - extents * 0.01, bounds.max() + extents * 0.01);
     let enlarged_extents = enlarged_bounds.extents();
 
     // Determine the minimum number of cells needed in each direction to completely cover
     // the enlarged bounding box. We do this in double precision
-    let enlarged_extents_f64: Vector2<f64> =
-        try_convert(enlarged_extents).expect("Must be able to fit extents in f64");
-    let resolution_f64: f64 =
-        try_convert(max_cell_size).expect("Must be able to fit resolution in f64");
+    let enlarged_extents_f64: Vector2<f64> = try_convert(enlarged_extents).expect("Must be able to fit extents in f64");
+    let resolution_f64: f64 = try_convert(max_cell_size).expect("Must be able to fit resolution in f64");
 
     let candidate_num_cells_x = (enlarged_extents_f64.x / resolution_f64).ceil();
     let candidate_num_cells_y = (enlarged_extents_f64.y / resolution_f64).ceil();
@@ -140,14 +121,10 @@ where
     let num_cells_y = (enlarged_extents_f64.y / cell_size_f64).ceil();
     let final_extents_x = num_cells_x * cell_size_f64;
     let final_extents_y = num_cells_y * cell_size_f64;
-    let final_extents: Vector2<T> =
-        Vector2::new(convert(final_extents_x), convert(final_extents_y));
+    let final_extents: Vector2<T> = Vector2::new(convert(final_extents_x), convert(final_extents_y));
 
     let center = bounds.center();
-    let top_left = Vector2::new(
-        center.x - final_extents.x / 2.0,
-        center.y + final_extents.y / 2.0,
-    );
+    let top_left = Vector2::new(center.x - final_extents.x / 2.0, center.y + final_extents.y / 2.0);
 
     create_rectangular_uniform_quad_mesh_2d(
         convert(cell_size_f64),
@@ -163,8 +140,7 @@ pub fn voxelize_sdf_2d<T>(sdf: &impl BoundedSdf<T>, max_cell_size: T) -> QuadMes
 where
     T: RealField,
 {
-    let rectangular_mesh: QuadMesh2d<T> =
-        voxelize_bounding_box_2d(&sdf.bounding_box(), max_cell_size);
+    let rectangular_mesh: QuadMesh2d<T> = voxelize_bounding_box_2d(&sdf.bounding_box(), max_cell_size);
     let desired_cell_indices: Vec<_> = rectangular_mesh
         .cell_iter()
         .enumerate()
@@ -176,10 +152,7 @@ where
 }
 
 #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-pub fn approximate_quad_mesh_for_sdf_2d<T>(
-    sdf: &impl BoundedSdf<T>,
-    max_cell_size: T,
-) -> QuadMesh2d<T>
+pub fn approximate_quad_mesh_for_sdf_2d<T>(sdf: &impl BoundedSdf<T>, max_cell_size: T) -> QuadMesh2d<T>
 where
     T: RealField,
 {
@@ -197,10 +170,7 @@ where
     mesh
 }
 
-pub fn approximate_triangle_mesh_for_sdf_2d<T>(
-    sdf: &impl BoundedSdf<T>,
-    max_cell_size: T,
-) -> TriangleMesh2d<T>
+pub fn approximate_triangle_mesh_for_sdf_2d<T>(sdf: &impl BoundedSdf<T>, max_cell_size: T) -> TriangleMesh2d<T>
 where
     T: RealField,
 {
@@ -258,8 +228,7 @@ where
         let mut vertices = Vec::new();
         let mut cells = Vec::new();
 
-        let cell_size =
-            T::from_f64(unit_length.to_subset().unwrap() / cells_per_unit as f64).unwrap();
+        let cell_size = T::from_f64(unit_length.to_subset().unwrap() / cells_per_unit as f64).unwrap();
 
         let num_cells_x = units_x * cells_per_unit;
         let num_cells_y = units_y * cells_per_unit;
@@ -268,9 +237,8 @@ where
         let num_vertices_y = num_cells_y + 1;
         let num_vertices_z = num_cells_z + 1;
 
-        let to_global_vertex_index = |i: usize, j: usize, k: usize| {
-            (num_vertices_x * num_vertices_y) * k + (num_vertices_x) * j + i
-        };
+        let to_global_vertex_index =
+            |i: usize, j: usize, k: usize| (num_vertices_x * num_vertices_y) * k + (num_vertices_x) * j + i;
 
         for k in 0..num_vertices_z {
             for j in 0..num_vertices_y {
@@ -307,11 +275,7 @@ where
     }
 }
 
-pub fn create_simple_stupid_sphere(
-    center: &Point3<f64>,
-    radius: f64,
-    num_sweeps: usize,
-) -> PolyMesh3d<f64> {
+pub fn create_simple_stupid_sphere(center: &Point3<f64>, radius: f64, num_sweeps: usize) -> PolyMesh3d<f64> {
     assert!(num_sweeps > 0);
 
     // Create cube centered at origin

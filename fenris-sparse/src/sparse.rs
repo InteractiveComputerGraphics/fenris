@@ -206,8 +206,7 @@ impl<'a, T> ParCsrRowMut<'a, T> {
     }
 
     pub fn cols_and_values_mut(&mut self) -> (&[usize], &mut [T]) {
-        let values_mut =
-            unsafe { slice::from_raw_parts_mut(self.values, self.column_indices.len()) };
+        let values_mut = unsafe { slice::from_raw_parts_mut(self.values, self.column_indices.len()) };
         (&self.column_indices, values_mut)
     }
 }
@@ -247,10 +246,7 @@ where
         let column_indices = &self.pattern.minor_indices()[row_begin..row_end];
         let values_ptr = self.values_ptr.add(row_begin);
         let values = slice::from_raw_parts(values_ptr, column_indices.len());
-        ParCsrRow {
-            column_indices,
-            values,
-        }
+        ParCsrRow { column_indices, values }
     }
 
     unsafe fn get_unchecked_mut(&self, global_index: usize) -> Self::RecordMut {
@@ -266,9 +262,7 @@ where
     }
 }
 
-unsafe impl<'a, T: 'a + Sync + Send> ParallelIndexedCollection<'a>
-    for ParallelCsrRowCollection<'a, T>
-{
+unsafe impl<'a, T: 'a + Sync + Send> ParallelIndexedCollection<'a> for ParallelCsrRowCollection<'a, T> {
     type Access = CsrParallelRowAccess<'a, T>;
 
     unsafe fn create_access(&'a mut self) -> Self::Access {
@@ -276,10 +270,7 @@ unsafe impl<'a, T: 'a + Sync + Send> ParallelIndexedCollection<'a>
         // rather store the CSR data directly
         let values_ptr = self.0.values_mut().as_mut_ptr();
         let pattern = self.0.pattern();
-        CsrParallelRowAccess {
-            pattern,
-            values_ptr,
-        }
+        CsrParallelRowAccess { pattern, values_ptr }
     }
 
     fn len(&self) -> usize {

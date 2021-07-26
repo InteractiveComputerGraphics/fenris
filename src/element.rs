@@ -1,22 +1,19 @@
 use nalgebra::allocator::Allocator;
 use nalgebra::{
-    distance, DVectorSlice, DVectorSliceMut, DimName, Dynamic, Matrix1x6, Matrix2x6, Matrix3,
-    Matrix3x4, Point2, Point3, Vector3,
+    distance, DVectorSlice, DVectorSliceMut, DimName, Dynamic, Matrix1x6, Matrix2x6, Matrix3, Matrix3x4, Point2,
+    Point3, Vector3,
 };
 use nalgebra::{
-    DefaultAllocator, DimMin, Matrix1x3, Matrix1x4, Matrix2, Matrix2x3, Matrix2x4, MatrixMN,
-    RealField, Scalar, Vector2, VectorN, U1, U10, U2, U20, U27, U3, U4, U6, U8, U9,
+    DefaultAllocator, DimMin, Matrix1x3, Matrix1x4, Matrix2, Matrix2x3, Matrix2x4, MatrixMN, RealField, Scalar,
+    Vector2, VectorN, U1, U10, U2, U20, U27, U3, U4, U6, U8, U9,
 };
 use nalgebra::{Matrix3x2, Point};
 
 use crate::connectivity::{
-    Connectivity, Hex20Connectivity, Hex27Connectivity, Hex8Connectivity, Quad4d2Connectivity,
-    Quad9d2Connectivity, Tet10Connectivity, Tet4Connectivity, Tri3d2Connectivity,
-    Tri3d3Connectivity, Tri6d2Connectivity,
+    Connectivity, Hex20Connectivity, Hex27Connectivity, Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity,
+    Tet10Connectivity, Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity,
 };
-use crate::geometry::{
-    ConcavePolygonError, ConvexPolygon, LineSegment2d, Quad2d, Triangle, Triangle2d, Triangle3d,
-};
+use crate::geometry::{ConcavePolygonError, ConvexPolygon, LineSegment2d, Quad2d, Triangle, Triangle2d, Triangle3d};
 
 use itertools::Itertools;
 use numeric_literals::replace_float_literals;
@@ -27,9 +24,7 @@ use fenris_optimize::newton::NewtonSettings;
 use num::Zero;
 use std::error::Error;
 
-use crate::allocators::{
-    FiniteElementAllocator, ReferenceFiniteElementAllocator, VolumeFiniteElementAllocator,
-};
+use crate::allocators::{FiniteElementAllocator, ReferenceFiniteElementAllocator, VolumeFiniteElementAllocator};
 use crate::connectivity::Segment2d2Connectivity;
 use crate::nalgebra::Point1;
 use crate::SmallDim;
@@ -53,11 +48,7 @@ where
     ///
     /// TODO: Document that it should panic if the result does not have exactly the correct
     /// number of columns (==nodes)
-    fn populate_basis(
-        &self,
-        basis_values: &mut [T],
-        reference_coords: &Point<T, Self::ReferenceDim>,
-    );
+    fn populate_basis(&self, basis_values: &mut [T], reference_coords: &Point<T, Self::ReferenceDim>);
 
     /// Given nodal weights, construct a matrix whose columns are the
     /// gradients of each shape function in the element.
@@ -89,10 +80,7 @@ where
 
     /// Evaluates each basis function at the given reference coordinates. The result is given
     /// in a row vector where each entry is the value of the corresponding basis function.
-    fn evaluate_basis(
-        &self,
-        reference_coords: &Point<T, Self::ReferenceDim>,
-    ) -> MatrixMN<T, U1, Self::NodalDim>;
+    fn evaluate_basis(&self, reference_coords: &Point<T, Self::ReferenceDim>) -> MatrixMN<T, U1, Self::NodalDim>;
 
     /// Given nodal weights, construct a matrix whose columns are the
     /// gradients of each shape function in the element.
@@ -175,10 +163,7 @@ where
     ) -> MatrixMN<T, Self::GeometryDim, Self::ReferenceDim>;
 
     /// Maps reference coordinates to physical coordinates in the element.
-    fn map_reference_coords(
-        &self,
-        reference_coords: &Point<T, Self::ReferenceDim>,
-    ) -> Point<T, Self::GeometryDim>;
+    fn map_reference_coords(&self, reference_coords: &Point<T, Self::ReferenceDim>) -> Point<T, Self::GeometryDim>;
 
     /// The diameter of the finite element.
     ///
@@ -195,11 +180,7 @@ where
     T: Scalar,
     DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
-    type Element: FiniteElement<
-        T,
-        GeometryDim = Self::GeometryDim,
-        ReferenceDim = Self::ReferenceDim,
-    >;
+    type Element: FiniteElement<T, GeometryDim = Self::GeometryDim, ReferenceDim = Self::ReferenceDim>;
     type GeometryDim: DimName;
     type ReferenceDim: DimName;
 
@@ -229,8 +210,7 @@ where
 }
 
 /// A finite element whose geometry dimension and reference dimension coincide.
-pub trait VolumetricFiniteElement<T>:
-    FiniteElement<T, ReferenceDim = <Self as FiniteElement<T>>::GeometryDim>
+pub trait VolumetricFiniteElement<T>: FiniteElement<T, ReferenceDim = <Self as FiniteElement<T>>::GeometryDim>
 where
     T: Scalar,
     DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
@@ -255,8 +235,7 @@ where
 }
 
 // TODO: Move these?
-pub type ElementForConnectivity<T, Connectivity> =
-    <Connectivity as ElementConnectivity<T>>::Element;
+pub type ElementForConnectivity<T, Connectivity> = <Connectivity as ElementConnectivity<T>>::Element;
 
 pub type ConnectivityGeometryDim<T, Conn> = <Conn as ElementConnectivity<T>>::GeometryDim;
 pub type ConnectivityReferenceDim<T, Conn> = <Conn as ElementConnectivity<T>>::ReferenceDim;
@@ -457,11 +436,7 @@ where
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     pub fn reference() -> Self {
-        Self::from_vertices([
-            Point2::new(-1.0, -1.0),
-            Point2::new(1.0, -1.0),
-            Point2::new(-1.0, 1.0),
-        ])
+        Self::from_vertices([Point2::new(-1.0, -1.0), Point2::new(1.0, -1.0), Point2::new(-1.0, 1.0)])
     }
 }
 
@@ -585,8 +560,7 @@ where
 {
     // TODO: Test this
     fn from(tri3: &'a Tri3d2Element<T>) -> Self {
-        let midpoint =
-            |a: &Point2<_>, b: &Point2<_>| LineSegment2d::new(a.clone(), b.clone()).midpoint();
+        let midpoint = |a: &Point2<_>, b: &Point2<_>| LineSegment2d::new(a.clone(), b.clone()).midpoint();
 
         let tri3_v = &tri3.vertices;
         let mut vertices = [Point2::origin(); 6];
@@ -755,8 +729,7 @@ where
     T: RealField,
 {
     fn from(quad4: &'a Quad4d2Element<T>) -> Self {
-        let midpoint =
-            |a: &Point2<_>, b: &Point2<_>| LineSegment2d::new(a.clone(), b.clone()).midpoint();
+        let midpoint = |a: &Point2<_>, b: &Point2<_>| LineSegment2d::new(a.clone(), b.clone()).midpoint();
 
         let quad4_v = &quad4.vertices;
         let mut vertices = [Point2::origin(); 9];
@@ -2432,13 +2405,7 @@ where
         };
     }
 
-    newton(
-        f,
-        &mut slice!(xi),
-        &mut slice!(f_val),
-        &mut slice!(dx),
-        settings,
-    )?;
+    newton(f, &mut slice!(xi), &mut slice!(f_val), &mut slice!(dx), settings)?;
 
     Ok(Point::from(xi))
 }

@@ -291,8 +291,7 @@ where
     type Dimension = U2;
 
     fn bounding_box(&self) -> AxisAlignedBoundingBox2d<T> {
-        AxisAlignedBoundingBox2d::from_points(self.vertices())
-            .expect("Vertex collection must be non-empty")
+        AxisAlignedBoundingBox2d::from_points(self.vertices()).expect("Vertex collection must be non-empty")
     }
 }
 

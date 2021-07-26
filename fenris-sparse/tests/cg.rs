@@ -37,11 +37,7 @@ fn solve_arbitrary() {
 #[test]
 fn solve_arbitrary_preconditioned() {
     // Take some arbitrary positive definite matrices as system matrix and preconditioner
-    let a = DMatrix::from_row_slice(
-        3,
-        3,
-        &[21.0, -1.0, -5.0, -1.0, 11.0, -4.0, -5.0, -4.0, 26.0],
-    );
+    let a = DMatrix::from_row_slice(3, 3, &[21.0, -1.0, -5.0, -1.0, 11.0, -4.0, -5.0, -4.0, 26.0]);
     let p = DMatrix::from_row_slice(3, 3, &[17.0, 6.0, 3.0, 6.0, 14.0, 9.0, 3.0, 9.0, 10.0]);
     let x0 = DVector::from_column_slice(&[1.0, 3.0, 2.0]);
     let b = &a * &x0;

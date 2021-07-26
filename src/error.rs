@@ -43,8 +43,7 @@ where
         let j = element.reference_jacobian(xi);
         element.populate_basis(phi, xi);
 
-        let u_h: VectorN<T, SolutionDim> =
-            evaluate_u_h(&u_h_element, DVectorSlice::from_slice(phi, phi.len()));
+        let u_h: VectorN<T, SolutionDim> = evaluate_u_h(&u_h_element, DVectorSlice::from_slice(phi, phi.len()));
         let u_at_x = u(&x);
         let error = u_h - u_at_x;
         result += *w * error.norm_squared() * j.determinant().abs();
@@ -80,11 +79,7 @@ where
     let mut phi_grad_ref = basis_gradients_buffer;
 
     // TODO: Rewrite compute_volume_u_grad so that it just takes a DVectorSlice
-    let u_h_element = MatrixSlice::from_slice_generic(
-        u_h_element.as_slice(),
-        SolutionDim::name(),
-        Dynamic::new(n),
-    );
+    let u_h_element = MatrixSlice::from_slice_generic(u_h_element.as_slice(), SolutionDim::name(), Dynamic::new(n));
 
     let mut result = T::zero();
     for (w, xi) in izip!(quadrature_weights, quadrature_points) {
@@ -193,11 +188,7 @@ where
     );
 
     // TODO: Use reshape_generic once ReshapeableStorage is implemented for slices
-    let u_h_element = MatrixSlice::from_slice_generic(
-        u_h_element.as_slice(),
-        SolutionDim::name(),
-        Dynamic::new(n),
-    );
+    let u_h_element = MatrixSlice::from_slice_generic(u_h_element.as_slice(), SolutionDim::name(), Dynamic::new(n));
     u_h_element * phi
 }
 

@@ -7,9 +7,7 @@ use fenris::assembly::local::SourceFunction;
 use fenris::assembly::operators::Operator;
 use fenris::element::ElementConnectivity;
 use fenris::io::vtk::VtkCellConnectivity;
-use fenris::mesh::procedural::{
-    create_unit_square_uniform_quad_mesh_2d, create_unit_square_uniform_tri_mesh_2d,
-};
+use fenris::mesh::procedural::{create_unit_square_uniform_quad_mesh_2d, create_unit_square_uniform_tri_mesh_2d};
 use fenris::mesh::{Mesh2d, Quad9Mesh2d, Tri6Mesh2d};
 use fenris::nalgebra::coordinates::XY;
 use fenris::nalgebra::{Point, Point2, Vector1, Vector2, VectorN, U1, U2};
@@ -52,11 +50,7 @@ impl<T> Operator<T, U2> for PoissonProblemSourceFunction {
 }
 
 impl SourceFunction<f64, U2> for PoissonProblemSourceFunction {
-    fn evaluate(
-        &self,
-        coords: &Point<f64, U2>,
-        _data: &Self::Parameters,
-    ) -> VectorN<f64, Self::SolutionDim> {
+    fn evaluate(&self, coords: &Point<f64, U2>, _data: &Self::Parameters) -> VectorN<f64, Self::SolutionDim> {
         Vector1::new(f(coords))
     }
 }
@@ -89,13 +83,7 @@ fn poisson_2d_quad4() {
     let mesh_producer = |res| create_unit_square_uniform_quad_mesh_2d(res);
     let quadrature = quadrature::tensor::quadrilateral_gauss(2);
     let error_quadrature = quadrature::tensor::quadrilateral_gauss(6);
-    solve_and_produce_output(
-        "Quad4",
-        &resolutions,
-        mesh_producer,
-        quadrature,
-        error_quadrature,
-    );
+    solve_and_produce_output("Quad4", &resolutions, mesh_producer, quadrature, error_quadrature);
 }
 
 #[test]
@@ -104,13 +92,7 @@ fn poisson_2d_quad8() {
     let mesh_producer = |res| Quad9Mesh2d::from(create_unit_square_uniform_quad_mesh_2d(res));
     let quadrature = quadrature::tensor::quadrilateral_gauss(2);
     let error_quadrature = quadrature::tensor::quadrilateral_gauss(6);
-    solve_and_produce_output(
-        "Quad9",
-        &resolutions,
-        mesh_producer,
-        quadrature,
-        error_quadrature,
-    );
+    solve_and_produce_output("Quad9", &resolutions, mesh_producer, quadrature, error_quadrature);
 }
 
 #[test]
@@ -119,13 +101,7 @@ fn poisson_2d_tri3() {
     let mesh_producer = |res| create_unit_square_uniform_tri_mesh_2d(res);
     let quadrature = quadrature::total_order::triangle(0).unwrap();
     let error_quadrature = quadrature::total_order::triangle(6).unwrap();
-    solve_and_produce_output(
-        "Tri3",
-        &resolutions,
-        mesh_producer,
-        quadrature,
-        error_quadrature,
-    );
+    solve_and_produce_output("Tri3", &resolutions, mesh_producer, quadrature, error_quadrature);
 }
 
 #[test]
@@ -134,11 +110,5 @@ fn poisson_2d_tri6() {
     let mesh_producer = |res| Tri6Mesh2d::from(create_unit_square_uniform_tri_mesh_2d(res));
     let quadrature = quadrature::total_order::triangle(2).unwrap();
     let error_quadrature = quadrature::total_order::triangle(6).unwrap();
-    solve_and_produce_output(
-        "Tri6",
-        &resolutions,
-        mesh_producer,
-        quadrature,
-        error_quadrature,
-    );
+    solve_and_produce_output("Tri6", &resolutions, mesh_producer, quadrature, error_quadrature);
 }

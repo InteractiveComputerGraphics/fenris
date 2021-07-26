@@ -1,8 +1,8 @@
 mod polytope;
 use itertools::izip;
 use nalgebra::{
-    distance_squared, DefaultAllocator, DimName, Point, Point2, Point3, RealField, Scalar, Unit,
-    Vector3, VectorN, U2, U3,
+    distance_squared, DefaultAllocator, DimName, Point, Point2, Point3, RealField, Scalar, Unit, Vector3, VectorN, U2,
+    U3,
 };
 pub use polytope::*;
 use serde::{Deserialize, Serialize};
@@ -72,10 +72,7 @@ pub trait DistanceQuery<'a, QueryGeometry>: GeometryCollection<'a> {
 pub trait NeighborhoodQuery<'a, QueryGeometry>: GeometryCollection<'a> {
     type NeighborsIter: Iterator<Item = usize>;
 
-    fn neighbors_within_distance(
-        &'a self,
-        query_geometry: &'a QueryGeometry,
-    ) -> Self::NeighborsIter;
+    fn neighbors_within_distance(&'a self, query_geometry: &'a QueryGeometry) -> Self::NeighborsIter;
 }
 
 pub trait OverlapQuery<'a, QueryGeometry>: GeometryCollection<'a> {
@@ -186,10 +183,9 @@ where
     pub fn from_points<'a>(points: impl IntoIterator<Item = &'a Point<T, D>>) -> Option<Self> {
         let mut points = points.into_iter();
         points.next().map(|first_point| {
-            points.fold(
-                AxisAlignedBoundingBox::from(first_point.clone()),
-                |aabb, point| aabb.enclose(&AxisAlignedBoundingBox::from(point.clone())),
-            )
+            points.fold(AxisAlignedBoundingBox::from(first_point.clone()), |aabb, point| {
+                aabb.enclose(&AxisAlignedBoundingBox::from(point.clone()))
+            })
         })
     }
 
@@ -237,10 +233,7 @@ pub enum Orientation {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(bound(
-    serialize = "Point<T, D>: Serialize",
-    deserialize = "Point<T, D>: Deserialize<'de>"
-))]
+#[serde(bound(serialize = "Point<T, D>: Serialize", deserialize = "Point<T, D>: Deserialize<'de>"))]
 pub struct Triangle<T, D>(pub [Point<T, D>; 3])
 where
     T: Scalar,
@@ -453,11 +446,7 @@ where
             }
         }
 
-        let sign = if inside {
-            T::from_f64(-1.0).unwrap()
-        } else {
-            T::one()
-        };
+        let sign = if inside { T::from_f64(-1.0).unwrap() } else { T::one() };
 
         Some(SignedDistanceResult {
             feature_id: closest_segment,
@@ -813,10 +802,7 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
     {
         let normal = self.compute_face_normal();
         let point = self.get_vertex(0)?;
-        Some(HalfSpace::from_point_and_normal(
-            point,
-            Unit::new_unchecked(normal),
-        ))
+        Some(HalfSpace::from_point_and_normal(point, Unit::new_unchecked(normal)))
     }
 
     /// Computes a vector normal to the polygon (oriented outwards w.r.t. a counter-clockwise
@@ -829,10 +815,7 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
     where
         T: RealField,
     {
-        assert!(
-            self.num_vertices() >= 3,
-            "Polygons must have at least 3 vertices."
-        );
+        assert!(self.num_vertices() >= 3, "Polygons must have at least 3 vertices.");
 
         let mut area_vector = Vector3::zeros();
 
@@ -869,10 +852,7 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
     where
         T: RealField,
     {
-        assert!(
-            self.num_vertices() >= 3,
-            "Polygon must have at least 3 vertices."
-        );
+        assert!(self.num_vertices() >= 3, "Polygon must have at least 3 vertices.");
 
         // First, "extrude" the polygon by extruding each edge perpendicular to the
         // face. Then check if the point is contained in this extruded prism
@@ -953,10 +933,7 @@ pub trait ConvexPolyhedron<'a, T: Scalar>: Debug {
     where
         T: RealField,
     {
-        assert!(
-            self.num_faces() >= 4,
-            "Polyhedron must have at least 4 faces."
-        );
+        assert!(self.num_faces() >= 4, "Polyhedron must have at least 4 faces.");
         let mut inside = true;
         let mut closest_dist = T::max_value();
         let mut closest_point = Point3::origin();
@@ -1025,9 +1002,7 @@ pub trait ConvexPolyhedron<'a, T: Scalar>: Debug {
 }
 
 #[replace_float_literals(T::from_f64(literal).unwrap())]
-pub fn compute_polyhedron_volume_from_faces<'a, T, F>(
-    boundary_faces: impl 'a + IntoIterator<Item = F>,
-) -> T
+pub fn compute_polyhedron_volume_from_faces<'a, T, F>(boundary_faces: impl 'a + IntoIterator<Item = F>) -> T
 where
     T: RealField,
     F: ConvexPolygon3d<'a, T>,

@@ -20,12 +20,7 @@ impl Color {
         }
     }
 
-    fn try_add_subset(
-        &mut self,
-        subset: &[usize],
-        label: usize,
-        local_workspace_set: &mut BTreeSet<usize>,
-    ) -> bool {
+    fn try_add_subset(&mut self, subset: &[usize], label: usize, local_workspace_set: &mut BTreeSet<usize>) -> bool {
         local_workspace_set.clear();
         for idx in subset {
             local_workspace_set.insert(*idx);
@@ -71,13 +66,7 @@ pub fn sequential_greedy_coloring(subsets: &NestedVec<usize>) -> Vec<DisjointSub
         .map(|color| {
             let max_index = color.max_index();
             // Subsets must be disjoint by construction, so skip checks
-            unsafe {
-                DisjointSubsets::from_disjoint_subsets_unchecked(
-                    color.subsets,
-                    color.labels,
-                    max_index,
-                )
-            }
+            unsafe { DisjointSubsets::from_disjoint_subsets_unchecked(color.subsets, color.labels, max_index) }
         })
         .collect()
 }

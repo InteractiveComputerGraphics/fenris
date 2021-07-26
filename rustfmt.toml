@@ -1,0 +1,5 @@
+max_width = 120
+
+# Increasing max width to 120 causes many method chains to become single-line and hard to read,
+# so we set the chain width to the equivalent default value for the standard max width setting
+chain_width = 60

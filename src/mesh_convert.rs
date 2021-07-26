@@ -1,7 +1,6 @@
 use crate::connectivity::{
-    Connectivity, ConnectivityMut, Hex20Connectivity, Hex27Connectivity, Hex8Connectivity,
-    Quad4d2Connectivity, Quad9d2Connectivity, Tet10Connectivity, Tet4Connectivity,
-    Tri3d2Connectivity, Tri6d2Connectivity,
+    Connectivity, ConnectivityMut, Hex20Connectivity, Hex27Connectivity, Hex8Connectivity, Quad4d2Connectivity,
+    Quad9d2Connectivity, Tet10Connectivity, Tet4Connectivity, Tri3d2Connectivity, Tri6d2Connectivity,
 };
 use crate::element::{ElementConnectivity, FiniteElement};
 use crate::mesh::{HexMesh, Mesh, Mesh2d, Mesh3d, Tet4Mesh};
@@ -64,10 +63,9 @@ where
             let v_global_end = global_indices[v_local_end];
             parents.push(&[v_global_begin, v_global_end]);
             child_indices.push(0);
-            let midpoint = mesh_vertices[v_global_begin].coords.lerp(
-                &mesh_vertices[v_global_end].coords,
-                T::from_f64(0.5).unwrap(),
-            );
+            let midpoint = mesh_vertices[v_global_begin]
+                .coords
+                .lerp(&mesh_vertices[v_global_end].coords, T::from_f64(0.5).unwrap());
             vertices.push(midpoint.into());
         };
 
@@ -160,8 +158,7 @@ where
 
         // TODO: This looks a bit silly
         Hex27Connectivity([
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
-            24, 25, 26,
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
         ])
     }
 }
@@ -213,9 +210,7 @@ where
         add_edge_node(6, 7);
 
         // TODO: This looks a bit silly
-        Hex20Connectivity([
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-        ])
+        Hex20Connectivity([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
     }
 }
 
@@ -467,10 +462,7 @@ where
             new_connectivity.push(tet4_conn);
         }
 
-        let tet4_mesh = Mesh::from_vertices_and_connectivity(
-            initial_mesh.vertices().to_vec(),
-            new_connectivity,
-        );
+        let tet4_mesh = Mesh::from_vertices_and_connectivity(initial_mesh.vertices().to_vec(), new_connectivity);
         tet4_mesh.keep_cells(&((0..tet4_mesh.connectivity().len()).collect::<Vec<_>>()))
     }
 }
@@ -503,8 +495,7 @@ where
         let poly_mesh = PolyMesh3d::from(hex_mesh)
             .triangulate()
             .expect("Must be able to triangulate hex mesh");
-        Tet4Mesh::try_from(&poly_mesh)
-            .expect("Must be able to convert triangulated mesh into TetMesh")
+        Tet4Mesh::try_from(&poly_mesh).expect("Must be able to convert triangulated mesh into TetMesh")
     }
 }
 
@@ -651,9 +642,7 @@ where
                 tet4_vertex_indices[3] = *apex;
                 connectivity.push(Tet4Connectivity(tet4_vertex_indices));
             } else {
-                return Err(Box::from(
-                    "Failure to convert: Detected non-tetrahedral cell.",
-                ));
+                return Err(Box::from("Failure to convert: Detected non-tetrahedral cell."));
             }
         }
 

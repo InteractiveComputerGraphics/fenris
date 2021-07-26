@@ -2,12 +2,10 @@ use eyre::eyre;
 use nalgebra::Vector1;
 
 use fenris::assembly::global::{
-    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, CsrAssembler,
-    SerialVectorAssembler,
+    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, CsrAssembler, SerialVectorAssembler,
 };
 use fenris::assembly::local::{
-    ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, SourceFunction,
-    UniformQuadratureTable,
+    ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, SourceFunction, UniformQuadratureTable,
 };
 use fenris::assembly::operators::{LaplaceOperator, Operator};
 use fenris::io::vtk::FiniteElementMeshDataSetBuilder;

@@ -62,23 +62,14 @@ fn rectangular_uniform_mesh_cell_distribution_strategy(
 ) -> impl Strategy<Value = (usize, usize, usize)> {
     let max_cells_per_unit = f64::floor(f64::sqrt(max_cells as f64)) as usize;
     (1..=max(1, max_cells_per_unit))
-        .prop_flat_map(move |cells_per_unit| {
-            (
-                Just(cells_per_unit),
-                0..=max_cells / (cells_per_unit * cells_per_unit),
-            )
-        })
+        .prop_flat_map(move |cells_per_unit| (Just(cells_per_unit), 0..=max_cells / (cells_per_unit * cells_per_unit)))
         .prop_flat_map(move |(cells_per_unit, units_x)| {
-            let units_y_strategy =
-                0..=max_cells / (cells_per_unit * cells_per_unit * max(1, units_x));
+            let units_y_strategy = 0..=max_cells / (cells_per_unit * cells_per_unit * max(1, units_x));
             (Just(cells_per_unit), Just(units_x), units_y_strategy)
         })
 }
 
-pub fn rectangular_uniform_mesh_strategy(
-    unit_length: f64,
-    max_cells: usize,
-) -> impl Strategy<Value = QuadMesh2d<f64>> {
+pub fn rectangular_uniform_mesh_strategy(unit_length: f64, max_cells: usize) -> impl Strategy<Value = QuadMesh2d<f64>> {
     rectangular_uniform_mesh_cell_distribution_strategy(max_cells).prop_map(
         move |(cells_per_unit, units_x, units_y)| {
             create_rectangular_uniform_quad_mesh_2d(
@@ -96,8 +87,7 @@ pub fn rectangular_uniform_mesh_strategy(
 mod tests {
     use super::rectangular_uniform_mesh_cell_distribution_strategy;
     use crate::geometry::proptest_strategies::{
-        convex_quad2d_strategy_f64, nondegenerate_convex_quad2d_strategy_f64,
-        nondegenerate_triangle2d_strategy_f64,
+        convex_quad2d_strategy_f64, nondegenerate_convex_quad2d_strategy_f64, nondegenerate_triangle2d_strategy_f64,
     };
     use crate::geometry::Orientation;
     use proptest::prelude::*;

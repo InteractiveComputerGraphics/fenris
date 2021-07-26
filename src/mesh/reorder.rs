@@ -120,9 +120,7 @@ impl Permutation {
         let mut visited = vec![false; perm.len()];
         for &index in &perm {
             if visited[index] {
-                return Err(InvalidPermutation {
-                    marker: PhantomData,
-                });
+                return Err(InvalidPermutation { marker: PhantomData });
             } else {
                 visited[index] = true;
             }

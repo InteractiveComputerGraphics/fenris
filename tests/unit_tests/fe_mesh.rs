@@ -2,8 +2,7 @@ use fenris::mesh::{Hex27Mesh, Mesh2d, Mesh3d};
 use nalgebra::{Point2, Point3, Vector2, Vector3};
 
 use fenris::connectivity::{
-    Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity, Tri3d2Connectivity,
-    Tri6d2Connectivity,
+    Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity, Tri3d2Connectivity, Tri6d2Connectivity,
 };
 use util::assert_approx_matrix_eq;
 
@@ -26,60 +25,20 @@ fn quad4_to_quad9_single_element_mesh() {
     assert_eq!(quad9_connectivity[8], 8);
 
     const EPS: f64 = 1e-12;
-    assert_approx_matrix_eq!(
-        quad9_mesh.vertices()[0].coords,
-        vertices[0].coords,
-        abstol = EPS
-    );
-    assert_approx_matrix_eq!(
-        quad9_mesh.vertices()[1].coords,
-        vertices[1].coords,
-        abstol = EPS
-    );
-    assert_approx_matrix_eq!(
-        quad9_mesh.vertices()[2].coords,
-        vertices[2].coords,
-        abstol = EPS
-    );
-    assert_approx_matrix_eq!(
-        quad9_mesh.vertices()[3].coords,
-        vertices[3].coords,
-        abstol = EPS
-    );
-    assert_approx_matrix_eq!(
-        quad9_mesh.vertices()[4].coords,
-        Vector2::new(2.5, 3.0),
-        abstol = EPS
-    );
-    assert_approx_matrix_eq!(
-        quad9_mesh.vertices()[5].coords,
-        Vector2::new(3.0, 3.5),
-        abstol = EPS
-    );
-    assert_approx_matrix_eq!(
-        quad9_mesh.vertices()[6].coords,
-        Vector2::new(2.5, 4.0),
-        abstol = EPS
-    );
-    assert_approx_matrix_eq!(
-        quad9_mesh.vertices()[7].coords,
-        Vector2::new(2.0, 3.5),
-        abstol = EPS
-    );
-    assert_approx_matrix_eq!(
-        quad9_mesh.vertices()[8].coords,
-        Vector2::new(2.5, 3.5),
-        abstol = EPS
-    );
+    assert_approx_matrix_eq!(quad9_mesh.vertices()[0].coords, vertices[0].coords, abstol = EPS);
+    assert_approx_matrix_eq!(quad9_mesh.vertices()[1].coords, vertices[1].coords, abstol = EPS);
+    assert_approx_matrix_eq!(quad9_mesh.vertices()[2].coords, vertices[2].coords, abstol = EPS);
+    assert_approx_matrix_eq!(quad9_mesh.vertices()[3].coords, vertices[3].coords, abstol = EPS);
+    assert_approx_matrix_eq!(quad9_mesh.vertices()[4].coords, Vector2::new(2.5, 3.0), abstol = EPS);
+    assert_approx_matrix_eq!(quad9_mesh.vertices()[5].coords, Vector2::new(3.0, 3.5), abstol = EPS);
+    assert_approx_matrix_eq!(quad9_mesh.vertices()[6].coords, Vector2::new(2.5, 4.0), abstol = EPS);
+    assert_approx_matrix_eq!(quad9_mesh.vertices()[7].coords, Vector2::new(2.0, 3.5), abstol = EPS);
+    assert_approx_matrix_eq!(quad9_mesh.vertices()[8].coords, Vector2::new(2.5, 3.5), abstol = EPS);
 }
 
 #[test]
 fn tri3_to_tri6_single_element_mesh() {
-    let vertices = vec![
-        Point2::new(2.0, 3.0),
-        Point2::new(3.0, 3.0),
-        Point2::new(3.0, 4.0),
-    ];
+    let vertices = vec![Point2::new(2.0, 3.0), Point2::new(3.0, 3.0), Point2::new(3.0, 4.0)];
     let tri3 = Tri3d2Connectivity([0, 1, 2]);
     let tri3_mesh = Mesh2d::from_vertices_and_connectivity(vertices.clone(), vec![tri3]);
 
@@ -90,36 +49,12 @@ fn tri3_to_tri6_single_element_mesh() {
     assert_eq!(tri6_connectivity[3..6], [3, 4, 5]);
 
     const EPS: f64 = 1e-12;
-    assert_approx_matrix_eq!(
-        tri6_mesh.vertices()[0].coords,
-        vertices[0].coords,
-        abstol = EPS
-    );
-    assert_approx_matrix_eq!(
-        tri6_mesh.vertices()[1].coords,
-        vertices[1].coords,
-        abstol = EPS
-    );
-    assert_approx_matrix_eq!(
-        tri6_mesh.vertices()[2].coords,
-        vertices[2].coords,
-        abstol = EPS
-    );
-    assert_approx_matrix_eq!(
-        tri6_mesh.vertices()[3].coords,
-        Vector2::new(2.5, 3.0),
-        abstol = EPS
-    );
-    assert_approx_matrix_eq!(
-        tri6_mesh.vertices()[4].coords,
-        Vector2::new(3.0, 3.5),
-        abstol = EPS
-    );
-    assert_approx_matrix_eq!(
-        tri6_mesh.vertices()[5].coords,
-        Vector2::new(2.5, 3.5),
-        abstol = EPS
-    );
+    assert_approx_matrix_eq!(tri6_mesh.vertices()[0].coords, vertices[0].coords, abstol = EPS);
+    assert_approx_matrix_eq!(tri6_mesh.vertices()[1].coords, vertices[1].coords, abstol = EPS);
+    assert_approx_matrix_eq!(tri6_mesh.vertices()[2].coords, vertices[2].coords, abstol = EPS);
+    assert_approx_matrix_eq!(tri6_mesh.vertices()[3].coords, Vector2::new(2.5, 3.0), abstol = EPS);
+    assert_approx_matrix_eq!(tri6_mesh.vertices()[4].coords, Vector2::new(3.0, 3.5), abstol = EPS);
+    assert_approx_matrix_eq!(tri6_mesh.vertices()[5].coords, Vector2::new(2.5, 3.5), abstol = EPS);
 }
 
 #[test]
@@ -190,9 +125,5 @@ fn hex8_to_hex27_single_element_mesh() {
     assert_approx_matrix_eq!(v[25].coords, midpoint(&[4, 5, 6, 7]), abstol = EPS);
 
     // Center node
-    assert_approx_matrix_eq!(
-        v[26].coords,
-        midpoint(&[0, 1, 2, 3, 4, 5, 6, 7]),
-        abstol = EPS
-    );
+    assert_approx_matrix_eq!(v[26].coords, midpoint(&[0, 1, 2, 3, 4, 5, 6, 7]), abstol = EPS);
 }

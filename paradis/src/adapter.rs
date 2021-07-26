@@ -60,10 +60,7 @@ where
             0,
             "Collection length must be divisible by block size."
         );
-        Self {
-            collection,
-            block_size,
-        }
+        Self { collection, block_size }
     }
 }
 

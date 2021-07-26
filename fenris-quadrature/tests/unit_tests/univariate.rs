@@ -19,12 +19,7 @@ fn gauss_rules_satisfy_expected_accuracy() {
             let monomial_integral = (1.0 - (-1.0f64).powi(alpha + 1)) / (alpha as f64 + 1.0);
             let estimated_integral = integrate(&rule, |x| monomial(x[0]));
 
-            assert_scalar_eq!(
-                estimated_integral,
-                monomial_integral,
-                comp = abs,
-                tol = 1e-14
-            );
+            assert_scalar_eq!(estimated_integral, monomial_integral, comp = abs, tol = 1e-14);
         }
     }
 }

@@ -19,12 +19,7 @@ fn compute_volume() {
             let cube = PolyMesh3d::from(&cube);
             let expected_volume: f64 = u * u * u * (nx * ny * nz) as f64;
             dbg!(u, nx, ny, nz, res);
-            assert_scalar_eq!(
-                cube.compute_volume(),
-                expected_volume,
-                comp = abs,
-                tol = 1e-12
-            );
+            assert_scalar_eq!(cube.compute_volume(), expected_volume, comp = abs, tol = 1e-12);
         }
     }
 }

@@ -5,9 +5,7 @@ use std::ops::AddAssign;
 
 use itertools::izip;
 use nalgebra::base::storage::Storage;
-use nalgebra::{
-    DMatrix, DMatrixSliceMut, DVectorSliceMut, DimName, Dynamic, Matrix, RealField, Scalar, U1,
-};
+use nalgebra::{DMatrix, DMatrixSliceMut, DVectorSliceMut, DimName, Dynamic, Matrix, RealField, Scalar, U1};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
 use thread_local::ThreadLocal;
@@ -67,10 +65,7 @@ impl<T: Scalar> Default for CsrAssemblerWorkspace<T> {
 
 impl<T: Scalar> CsrAssembler<T> {
     // TODO: Test this method!
-    pub fn assemble_pattern(
-        &self,
-        element_assembler: &impl ElementConnectivityAssembler,
-    ) -> SparsityPattern {
+    pub fn assemble_pattern(&self, element_assembler: &impl ElementConnectivityAssembler) -> SparsityPattern {
         // Here we optimize for memory usage rather than performance: by collecting into a
         // BTreeSet we store each matrix entry exactly once. This is important, because depending
         // on the mesh, there may be a relatively large number of duplicate entries which would
@@ -122,10 +117,7 @@ impl<T: Scalar> CsrAssembler<T> {
 }
 
 impl<T: RealField> CsrAssembler<T> {
-    pub fn assemble(
-        &self,
-        element_assembler: &impl ElementMatrixAssembler<T>,
-    ) -> eyre::Result<CsrMatrix<T>> {
+    pub fn assemble(&self, element_assembler: &impl ElementMatrixAssembler<T>) -> eyre::Result<CsrMatrix<T>> {
         let pattern = self.assemble_pattern(element_assembler);
         let initial_matrix_values = vec![T::zero(); pattern.nnz()];
         let mut matrix = CsrMatrix::try_from_pattern_and_values(pattern, initial_matrix_values)
@@ -204,10 +196,7 @@ impl<T: Scalar + Send> Default for CsrParAssembler<T> {
 }
 
 impl<T: Scalar + Send> CsrParAssembler<T> {
-    pub fn assemble_pattern(
-        &self,
-        element_assembler: &(impl Sync + ElementConnectivityAssembler),
-    ) -> SparsityPattern {
+    pub fn assemble_pattern(&self, element_assembler: &(impl Sync + ElementConnectivityAssembler)) -> SparsityPattern {
         let sdim = element_assembler.solution_dim();
 
         // Count number of (including duplicate) triplets
@@ -279,13 +268,8 @@ impl<T: Scalar + Send> CsrParAssembler<T> {
         }
 
         // TODO: Avoid validation?
-        SparsityPattern::try_from_offsets_and_indices(
-            num_rows,
-            num_rows,
-            row_offsets,
-            column_indices,
-        )
-        .expect("Pattern data must be valid by definition")
+        SparsityPattern::try_from_offsets_and_indices(num_rows, num_rows, row_offsets, column_indices)
+            .expect("Pattern data must be valid by definition")
     }
 }
 
@@ -317,8 +301,7 @@ impl<T: RealField + Send> CsrParAssembler<T> {
 
                     let matrix_slice = DMatrixSliceMut::from(&mut ws.element_matrix);
                     element_assembler.assemble_element_matrix_into(element_index, matrix_slice)?;
-                    element_assembler
-                        .populate_element_nodes(&mut ws.element_global_nodes, element_index);
+                    element_assembler.populate_element_nodes(&mut ws.element_global_nodes, element_index);
                     debug_assert_eq!(subset.global_indices(), ws.element_global_nodes.as_slice());
 
                     {
@@ -357,11 +340,8 @@ impl<T: RealField + Send> CsrParAssembler<T> {
     }
 }
 
-pub fn apply_homogeneous_dirichlet_bc_csr<T>(
-    matrix: &mut CsrMatrix<T>,
-    nodes: &[usize],
-    solution_dim: usize,
-) where
+pub fn apply_homogeneous_dirichlet_bc_csr<T>(matrix: &mut CsrMatrix<T>, nodes: &[usize], solution_dim: usize)
+where
     T: RealField,
 {
     let d = solution_dim;
@@ -434,10 +414,8 @@ pub fn apply_homogeneous_dirichlet_bc_csr<T>(
     }
 }
 
-pub fn apply_homogeneous_dirichlet_bc_matrix<T, SolutionDim>(
-    matrix: &mut DMatrix<T>,
-    nodes: &[usize],
-) where
+pub fn apply_homogeneous_dirichlet_bc_matrix<T, SolutionDim>(matrix: &mut DMatrix<T>, nodes: &[usize])
+where
     T: RealField,
     SolutionDim: DimName,
 {
@@ -589,10 +567,7 @@ impl<T: RealField> SerialVectorAssembler<T> {
         Ok(())
     }
 
-    pub fn assemble_vector(
-        &self,
-        element_assembler: &impl ElementVectorAssembler<T>,
-    ) -> eyre::Result<DVector<T>> {
+    pub fn assemble_vector(&self, element_assembler: &impl ElementVectorAssembler<T>) -> eyre::Result<DVector<T>> {
         let n = element_assembler.num_nodes();
         let mut result = DVector::zeros(element_assembler.solution_dim() * n);
         self.assemble_vector_into(&mut result, element_assembler)?;
@@ -788,11 +763,7 @@ impl<T: RealField> BasisFunctionBuffer<T> {
         Space: FiniteElementSpace<T>,
         DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
     {
-        space.populate_element_basis(
-            element_index,
-            &mut self.element_basis_values,
-            reference_coords,
-        );
+        space.populate_element_basis(element_index, &mut self.element_basis_values, reference_coords);
     }
 
     pub fn populate_element_basis_gradients_from_space<Space>(

@@ -50,8 +50,8 @@ fn newton_converges_in_single_iteration_for_linear_system() {
     let mut x = DVector::zeros(3);
     let mut dx = DVector::zeros(3);
 
-    let iterations = newton(MockLinearVectorFunction, &mut x, &mut f, &mut dx, settings)
-        .expect("Newton iterations must succeed");
+    let iterations =
+        newton(MockLinearVectorFunction, &mut x, &mut f, &mut dx, settings).expect("Newton iterations must succeed");
     let diff = x - expected_solution;
     assert!(diff.norm() < 1e-6);
     assert_eq!(iterations, 1);

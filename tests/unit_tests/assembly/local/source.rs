@@ -2,13 +2,10 @@ use crate::unit_tests::assembly::local;
 use crate::unit_tests::assembly::local::density;
 use fenris::assembly::local::ElementVectorAssembler;
 use fenris::assembly::local::{
-    assemble_element_source_vector, ElementSourceAssemblerBuilder, GeneralQuadratureTable,
-    SourceFunction,
+    assemble_element_source_vector, ElementSourceAssemblerBuilder, GeneralQuadratureTable, SourceFunction,
 };
 use fenris::assembly::operators::Operator;
-use fenris::element::{
-    ElementConnectivity, FiniteElement, ReferenceFiniteElement, Tet10Element, Tet4Element,
-};
+use fenris::element::{ElementConnectivity, FiniteElement, ReferenceFiniteElement, Tet10Element, Tet4Element};
 use fenris::mesh::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::mesh::QuadMesh2d;
 use fenris::nalgebra::base::coordinates::XYZ;
@@ -86,8 +83,7 @@ fn element_source_vector_reproduces_inner_product() {
     let u_element = local::u_element_from_vertices_and_u_exact(element.vertices(), u);
 
     let (weights, points) = quadrature::total_order::tetrahedron(8).unwrap();
-    let quadrature_data =
-        local::evaluate_density_at_quadrature_points(&element, &points, local::density);
+    let quadrature_data = local::evaluate_density_at_quadrature_points(&element, &points, local::density);
     let mut basis_buffer = vec![0.0; element.num_nodes()];
     let mut f_element = DVector::repeat(u_element.len(), 2.0);
     assemble_element_source_vector(
@@ -105,19 +101,13 @@ fn element_source_vector_reproduces_inner_product() {
         // u is a quadratic function and f is together with the density function of order 4,
         // so the product is of order 6
         let reference_rule = quadrature::total_order::tetrahedron(6).unwrap();
-        let quadrature_rule =
-            local::construct_quadrature_rule_for_element(&element, &reference_rule);
+        let quadrature_rule = local::construct_quadrature_rule_for_element(&element, &reference_rule);
         quadrature_rule.integrate(|x| local::density(x) * f(x).dot(&u(x)))
     };
 
     let computed_inner_product = u_element.dot(&f_element);
 
-    assert_scalar_eq!(
-        computed_inner_product,
-        expected_inner_product,
-        comp = abs,
-        tol = 1e-12
-    );
+    assert_scalar_eq!(computed_inner_product, expected_inner_product, comp = abs, tol = 1e-12);
 }
 
 #[test]

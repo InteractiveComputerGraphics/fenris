@@ -1,8 +1,6 @@
 use crate::allocators::BiDimAllocator;
 use crate::nalgebra::allocator::Allocator;
-use crate::nalgebra::{
-    DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, MatrixMN, RealField, Scalar, VectorN,
-};
+use crate::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, MatrixMN, RealField, Scalar, VectorN};
 use crate::{SmallDim, Symmetry};
 
 mod laplace;
@@ -144,14 +142,8 @@ where
     ) {
         let d = GeometryDim::dim();
         let s = Self::SolutionDim::dim();
-        assert!(
-            a.len() % d == 0,
-            "Dimension of a must be divisible by d (GeometryDim)"
-        );
-        assert!(
-            b.len() % d == 0,
-            "Dimension of b must be divisible by d (GeometryDim)"
-        );
+        assert!(a.len() % d == 0, "Dimension of a must be divisible by d (GeometryDim)");
+        assert!(b.len() % d == 0, "Dimension of b must be divisible by d (GeometryDim)");
         let M = a.len() / d;
         let N = b.len() / d;
         assert_eq!(

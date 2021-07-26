@@ -32,10 +32,7 @@ impl ParseError {
     }
 
     fn float_parse_error(str: &str, label: &str, error: impl Error) -> Self {
-        ParseError::from_string(format!(
-            "Failed to parse {} ({}) as f64: {}",
-            str, label, error
-        ))
+        ParseError::from_string(format!("Failed to parse {} ({}) as f64: {}", str, label, error))
     }
 
     fn unexpected_entries(num_entries_found: usize, num_entries_expected: usize) -> Self {

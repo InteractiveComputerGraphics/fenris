@@ -110,11 +110,7 @@ pub fn gauss(num_points: usize) -> Rule<1> {
     }
 
     assert_eq!(points.len(), weights.len());
-    assert_eq!(
-        points.len(),
-        n,
-        "Internal error: incorrect number of points produced"
-    );
+    assert_eq!(points.len(), n, "Internal error: incorrect number of points produced");
 
     (weights, points)
 }
@@ -136,13 +132,9 @@ mod tests {
             |x| 0.5 * (5.0 * x.powi(3) - 3.0 * x),
             |x| (1.0 / 8.0) * (35.0 * x.powi(4) - 30.0 * x.powi(2) + 3.0),
         ];
-        let dp: Vec<fn(f64) -> f64> = vec![
-            |_| 0.0,
-            |_| 1.0,
-            |x| 3.0 * x,
-            |x| 0.5 * (15.0 * x.powi(2) - 3.0),
-            |x| (1.0 / 8.0) * (35.0 * 4.0 * x.powi(3) - 60.0 * x),
-        ];
+        let dp: Vec<fn(f64) -> f64> = vec![|_| 0.0, |_| 1.0, |x| 3.0 * x, |x| 0.5 * (15.0 * x.powi(2) - 3.0), |x| {
+            (1.0 / 8.0) * (35.0 * 4.0 * x.powi(3) - 60.0 * x)
+        }];
 
         for n in 0..p.len() {
             for i in 1..num_samples {

@@ -80,33 +80,19 @@ fn line_polygon_intersect_halfplane() {
         let intersection = poly.intersect_halfplane(&half_plane);
         let expected = ConvexPolygon::from_vertices(vec![x1, Point2::new(1.4, -0.6)]);
 
-        assert_approx_matrix_eq!(
-            intersection.vertices()[0],
-            expected.vertices()[0],
-            abstol = 1e-6
-        );
-        assert_approx_matrix_eq!(
-            intersection.vertices()[1],
-            expected.vertices()[1],
-            abstol = 1e-6
-        );
+        assert_approx_matrix_eq!(intersection.vertices()[0], expected.vertices()[0], abstol = 1e-6);
+        assert_approx_matrix_eq!(intersection.vertices()[1], expected.vertices()[1], abstol = 1e-6);
     }
 }
 
 #[test]
 fn line_line_intersection() {
-    let line1 =
-        Line2d::from_point_and_dir(Point2::new(0.0, -1.0), Vector2::new(1.0, 1.0).normalize());
-    let line2 =
-        Line2d::from_point_and_dir(Point2::new(-2.0, 2.0), Vector2::new(4.0, -2.0).normalize());
+    let line1 = Line2d::from_point_and_dir(Point2::new(0.0, -1.0), Vector2::new(1.0, 1.0).normalize());
+    let line2 = Line2d::from_point_and_dir(Point2::new(-2.0, 2.0), Vector2::new(4.0, -2.0).normalize());
 
     let intersection = line1.intersect(&line2).expect("Intersection exists");
 
-    assert_approx_matrix_eq!(
-        intersection,
-        Point2::new(4.0 / 3.0, 1.0 / 3.0),
-        abstol = 1e-6
-    );
+    assert_approx_matrix_eq!(intersection, Point2::new(4.0 / 3.0, 1.0 / 3.0), abstol = 1e-6);
 }
 
 #[test]
@@ -117,34 +103,16 @@ fn triangle_polygon_intersect_halfplane() {
         Point2::new(1.0, -1.0),
     ]);
 
-    let halfplane = HalfPlane::from_point_and_normal(
-        Point2::new(2.0, 2.0),
-        Unit::new_normalize(Vector2::new(-4.0, 3.0)),
-    );
+    let halfplane =
+        HalfPlane::from_point_and_normal(Point2::new(2.0, 2.0), Unit::new_normalize(Vector2::new(-4.0, 3.0)));
 
     let intersection = triangle.intersect_halfplane(&halfplane);
 
     assert_eq!(intersection.vertices().len(), 4);
-    assert_approx_matrix_eq!(
-        intersection.vertices()[0],
-        Point2::new(0.0, 3.0),
-        abstol = 1e-12
-    );
-    assert_approx_matrix_eq!(
-        intersection.vertices()[1],
-        Point2::new(-2.0, 0.0),
-        abstol = 1e-12
-    );
-    assert_approx_matrix_eq!(
-        intersection.vertices()[2],
-        Point2::new(0.0, -2.0 / 3.0),
-        abstol = 1e-12
-    );
-    assert_approx_matrix_eq!(
-        intersection.vertices()[3],
-        Point2::new(0.6875, 0.25),
-        abstol = 1e-12
-    );
+    assert_approx_matrix_eq!(intersection.vertices()[0], Point2::new(0.0, 3.0), abstol = 1e-12);
+    assert_approx_matrix_eq!(intersection.vertices()[1], Point2::new(-2.0, 0.0), abstol = 1e-12);
+    assert_approx_matrix_eq!(intersection.vertices()[2], Point2::new(0.0, -2.0 / 3.0), abstol = 1e-12);
+    assert_approx_matrix_eq!(intersection.vertices()[3], Point2::new(0.6875, 0.25), abstol = 1e-12);
 }
 
 #[test]
@@ -187,19 +155,11 @@ fn triangle_triangle_intersection() {
     assert_eq!(intersection.vertices().len(), 6);
     let v = intersection.vertices();
     assert_approx_matrix_eq!(v[0], Point2::new(-1.2, 1.2), abstol = 1e-12);
-    assert_approx_matrix_eq!(
-        v[1],
-        Point2::new(-1.714285714285714, 0.428571428571429),
-        abstol = 1e-12
-    );
+    assert_approx_matrix_eq!(v[1], Point2::new(-1.714285714285714, 0.428571428571429), abstol = 1e-12);
     assert_approx_matrix_eq!(v[2], Point2::new(-1.4, -0.2), abstol = 1e-12);
     assert_approx_matrix_eq!(v[3], Point2::new(-0.5, -0.5), abstol = 1e-12);
     assert_approx_matrix_eq!(v[4], Point2::new(0.6, 0.6), abstol = 1e-12);
-    assert_approx_matrix_eq!(
-        v[5],
-        Point2::new(0.352941176470588, 1.588235294117647),
-        abstol = 1e-12
-    );
+    assert_approx_matrix_eq!(v[5], Point2::new(0.352941176470588, 1.588235294117647), abstol = 1e-12);
 }
 
 #[test]
@@ -248,11 +208,7 @@ fn triangulate() {
         let poly = ConvexPolygon::from_vertices(vec![a, b, c, d, e]);
         assert_eq!(
             poly.triangulate_into_vec(),
-            vec![
-                Triangle([a, b, c]),
-                Triangle([a, c, d]),
-                Triangle([a, d, e])
-            ]
+            vec![Triangle([a, b, c]), Triangle([a, c, d]), Triangle([a, d, e])]
         )
     }
 }
@@ -280,20 +236,10 @@ fn line_segment_intersect_polygon() {
     let result = segment
         .intersect_polygon(&polygon)
         .expect("Intersection is not empty");
-    let expected_intersection =
-        LineSegment2d::new(Point2::new(2.0, 3.0), Point2::new(8.0 / 3.0, 1.0));
+    let expected_intersection = LineSegment2d::new(Point2::new(2.0, 3.0), Point2::new(8.0 / 3.0, 1.0));
 
     // The line segment may be defined in two ways, but its midpoint and length uniquely
     // defines its shape
-    assert_approx_matrix_eq!(
-        result.midpoint(),
-        expected_intersection.midpoint(),
-        abstol = 1e-12
-    );
-    assert_scalar_eq!(
-        result.length(),
-        expected_intersection.length(),
-        comp = abs,
-        tol = 1e-12
-    );
+    assert_approx_matrix_eq!(result.midpoint(), expected_intersection.midpoint(), abstol = 1e-12);
+    assert_scalar_eq!(result.length(), expected_intersection.length(), comp = abs, tol = 1e-12);
 }
