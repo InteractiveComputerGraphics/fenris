@@ -4,11 +4,11 @@ use crate::assembly::global::{gather_global_to_local, BasisFunctionBuffer, Quadr
 use crate::assembly::local::{compute_volume_u_grad, QuadratureTable};
 use crate::element::{MatrixSlice, ReferenceFiniteElement, VolumetricFiniteElement};
 use crate::nalgebra::{DVector, DVectorSlice, MatrixSliceMut, MatrixSliceMutMN};
-use crate::nalgebra::{DefaultAllocator, DimName, Dynamic, Point, RealField, VectorN};
+use crate::nalgebra::{DefaultAllocator, DimName, Dynamic, OPoint, OVector, RealField};
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
 use crate::SmallDim;
 use itertools::izip;
-use nalgebra::MatrixMN;
+use nalgebra::OMatrix;
 
 /// Estimate the squared $L^2$ error $\norm{u_h - u}^2_{L^2}$ on the given element with the given basis
 /// weights and quadrature points.
@@ -20,10 +20,10 @@ use nalgebra::MatrixMN;
 #[allow(non_snake_case)]
 pub fn estimate_element_L2_error_squared<T, Element, SolutionDim>(
     element: &Element,
-    u: impl Fn(&Point<T, Element::GeometryDim>) -> VectorN<T, SolutionDim>,
+    u: impl Fn(&OPoint<T, Element::GeometryDim>) -> OVector<T, SolutionDim>,
     u_h_element: DVectorSlice<T>,
     quadrature_weights: &[T],
-    quadrature_points: &[Point<T, Element::ReferenceDim>],
+    quadrature_points: &[OPoint<T, Element::ReferenceDim>],
     basis_buffer: &mut [T],
 ) -> T
 where
@@ -43,7 +43,7 @@ where
         let j = element.reference_jacobian(xi);
         element.populate_basis(phi, xi);
 
-        let u_h: VectorN<T, SolutionDim> = evaluate_u_h(&u_h_element, DVectorSlice::from_slice(phi, phi.len()));
+        let u_h: OVector<T, SolutionDim> = evaluate_u_h(&u_h_element, DVectorSlice::from_slice(phi, phi.len()));
         let u_at_x = u(&x);
         let error = u_h - u_at_x;
         result += *w * error.norm_squared() * j.determinant().abs();
@@ -61,10 +61,10 @@ where
 #[allow(non_snake_case)]
 pub fn estimate_element_H1_seminorm_error_squared<T, Element, SolutionDim>(
     element: &Element,
-    u_grad: impl Fn(&Point<T, Element::GeometryDim>) -> MatrixMN<T, Element::GeometryDim, SolutionDim>,
+    u_grad: impl Fn(&OPoint<T, Element::GeometryDim>) -> OMatrix<T, Element::GeometryDim, SolutionDim>,
     u_h_element: DVectorSlice<T>,
     quadrature_weights: &[T],
-    quadrature_points: &[Point<T, Element::ReferenceDim>],
+    quadrature_points: &[OPoint<T, Element::ReferenceDim>],
     basis_gradients_buffer: MatrixSliceMutMN<T, Element::ReferenceDim, Dynamic>,
 ) -> T
 where
@@ -92,7 +92,7 @@ where
             .transpose();
         element.populate_basis_gradients(MatrixSliceMut::from(&mut phi_grad_ref), xi);
 
-        let u_h_grad: MatrixMN<T, Element::ReferenceDim, SolutionDim> =
+        let u_h_grad: OMatrix<T, Element::ReferenceDim, SolutionDim> =
             compute_volume_u_grad(&j_inv_t, &phi_grad_ref, &u_h_element);
         let u_grad_at_x = u_grad(&x);
         let error = u_h_grad - u_grad_at_x;
@@ -111,10 +111,10 @@ where
 #[allow(non_snake_case)]
 pub fn estimate_element_H1_seminorm_error<T, Element, SolutionDim>(
     element: &Element,
-    u_grad: impl Fn(&Point<T, Element::GeometryDim>) -> MatrixMN<T, Element::GeometryDim, SolutionDim>,
+    u_grad: impl Fn(&OPoint<T, Element::GeometryDim>) -> OMatrix<T, Element::GeometryDim, SolutionDim>,
     u_h_element: DVectorSlice<T>,
     quadrature_weights: &[T],
-    quadrature_points: &[Point<T, Element::ReferenceDim>],
+    quadrature_points: &[OPoint<T, Element::ReferenceDim>],
     basis_gradients_buffer: MatrixSliceMutMN<T, Element::ReferenceDim, Dynamic>,
 ) -> T
 where
@@ -144,10 +144,10 @@ where
 #[allow(non_snake_case)]
 pub fn estimate_element_L2_error<T, Element, SolutionDim>(
     element: &Element,
-    u: impl Fn(&Point<T, Element::GeometryDim>) -> VectorN<T, SolutionDim>,
+    u: impl Fn(&OPoint<T, Element::GeometryDim>) -> OVector<T, SolutionDim>,
     u_h_element: DVectorSlice<T>,
     quadrature_weights: &[T],
-    quadrature_points: &[Point<T, Element::ReferenceDim>],
+    quadrature_points: &[OPoint<T, Element::ReferenceDim>],
     basis_buffer: &mut [T],
 ) -> T
 where
@@ -171,7 +171,7 @@ where
 fn evaluate_u_h<'a, T, SolutionDim>(
     u_h_element: impl Into<DVectorSlice<'a, T>>,
     phi: impl Into<DVectorSlice<'a, T>>,
-) -> VectorN<T, SolutionDim>
+) -> OVector<T, SolutionDim>
 where
     T: RealField,
     SolutionDim: DimName,
@@ -197,7 +197,7 @@ where
 #[allow(non_snake_case)]
 pub fn estimate_L2_error_squared<'a, T, Space, SolutionDim, QTable>(
     space: &Space,
-    u: impl Fn(&Point<T, Space::GeometryDim>) -> VectorN<T, SolutionDim>,
+    u: impl Fn(&OPoint<T, Space::GeometryDim>) -> OVector<T, SolutionDim>,
     u_h: impl Into<DVectorSlice<'a, T>>,
     qtable: &QTable,
 ) -> eyre::Result<T>
@@ -244,7 +244,7 @@ where
 #[allow(non_snake_case)]
 pub fn estimate_L2_error<'a, T, Space, SolutionDim, QTable>(
     space: &Space,
-    u: impl Fn(&Point<T, Space::GeometryDim>) -> VectorN<T, SolutionDim>,
+    u: impl Fn(&OPoint<T, Space::GeometryDim>) -> OVector<T, SolutionDim>,
     u_h: impl Into<DVectorSlice<'a, T>>,
     qtable: &QTable,
 ) -> eyre::Result<T>
@@ -263,7 +263,7 @@ where
 #[allow(non_snake_case)]
 pub fn estimate_H1_seminorm_error_squared<'a, T, Space, SolutionDim, QTable>(
     space: &Space,
-    u_grad: impl Fn(&Point<T, Space::GeometryDim>) -> MatrixMN<T, Space::GeometryDim, SolutionDim>,
+    u_grad: impl Fn(&OPoint<T, Space::GeometryDim>) -> OMatrix<T, Space::GeometryDim, SolutionDim>,
     u_h: impl Into<DVectorSlice<'a, T>>,
     qtable: &QTable,
 ) -> eyre::Result<T>
@@ -310,7 +310,7 @@ where
 #[allow(non_snake_case)]
 pub fn estimate_H1_seminorm_error<'a, T, Space, SolutionDim, QTable>(
     space: &Space,
-    u_grad: impl Fn(&Point<T, Space::GeometryDim>) -> MatrixMN<T, Space::GeometryDim, SolutionDim>,
+    u_grad: impl Fn(&OPoint<T, Space::GeometryDim>) -> OMatrix<T, Space::GeometryDim, SolutionDim>,
     u_h: impl Into<DVectorSlice<'a, T>>,
     qtable: &QTable,
 ) -> eyre::Result<T>

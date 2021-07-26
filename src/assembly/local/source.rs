@@ -4,7 +4,7 @@ use crate::assembly::local::{ElementConnectivityAssembler, ElementVectorAssemble
 use crate::assembly::operators::Operator;
 use crate::element::{MatrixSlice, ReferenceFiniteElement, VolumetricFiniteElement};
 use crate::nalgebra::{
-    DVectorSliceMut, DefaultAllocator, DimName, Dynamic, MatrixSliceMutMN, Point, RealField, Scalar, VectorN, U1,
+    DVectorSliceMut, DefaultAllocator, DimName, Dynamic, MatrixSliceMutMN, OPoint, OVector, RealField, Scalar, U1,
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
 use crate::workspace::Workspace;
@@ -20,7 +20,7 @@ where
     GeometryDim: SmallDim,
     DefaultAllocator: BiDimAllocator<T, GeometryDim, Self::SolutionDim>,
 {
-    fn evaluate(&self, coords: &Point<T, GeometryDim>, data: &Self::Parameters) -> VectorN<T, Self::SolutionDim>;
+    fn evaluate(&self, coords: &OPoint<T, GeometryDim>, data: &Self::Parameters) -> OVector<T, Self::SolutionDim>;
 }
 
 pub struct ElementSourceAssemblerBuilder<T, SpaceRef, SourceRef, QTableRef> {
@@ -222,7 +222,7 @@ pub fn assemble_element_source_vector<T, Element, Source>(
     element: &Element,
     source: &Source,
     quadrature_weights: &[T],
-    quadrature_points: &[Point<T, Element::ReferenceDim>],
+    quadrature_points: &[OPoint<T, Element::ReferenceDim>],
     quadrature_data: &[Source::Parameters],
     basis_values_buffer: &mut [T],
 ) where
@@ -276,7 +276,7 @@ pub fn assemble_element_source_vector<T, Element, Source>(
         // Then the contribution is given by
         //  w * |det J| * [ f * phi_1, f * phi_2, ... ] = w * |det J| * f * phi,
         // where phi is a row vector of basis values
-        let phi = MatrixSlice::from_slice_generic(&*basis_values_buffer, U1, Dynamic::new(n));
+        let phi = MatrixSlice::from_slice_generic(&*basis_values_buffer, U1::name(), Dynamic::new(n));
         output.gemm(*weight * j.determinant().abs(), &f, &phi, T::one());
     }
 }

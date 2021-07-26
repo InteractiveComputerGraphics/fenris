@@ -115,7 +115,7 @@ proptest! {
     //         .collect();
     //
     //     let interpolator = model.make_interpolator(&interpolation_vertices).unwrap();
-    //     let mut result = vec![VectorN::<f64, U1>::zeros(); interpolation_vertices.len()];
+    //     let mut result = vec![OVector::<f64, U1>::zeros(); interpolation_vertices.len()];
     //
     //     interpolator.interpolate_into(&mut result, &u);
     //

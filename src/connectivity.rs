@@ -1,7 +1,7 @@
 use crate::geometry::{Hexahedron, LineSegment2d, Quad2d, Tetrahedron, Triangle, Triangle2d, Triangle3d};
 use itertools::izip;
 use nalgebra::allocator::Allocator;
-use nalgebra::{DefaultAllocator, DimName, Point, Point2, Point3, RealField, Scalar, U2, U3};
+use nalgebra::{DefaultAllocator, DimName, OPoint, Point2, Point3, RealField, Scalar, U2, U3};
 use serde::{Deserialize, Serialize};
 use std::ops::{Deref, DerefMut};
 
@@ -62,7 +62,7 @@ where
         }
     }
 
-    fn cell(&self, vertices: &[Point<T, D>]) -> Option<Self::Cell>;
+    fn cell(&self, vertices: &[OPoint<T, D>]) -> Option<Self::Cell>;
 }
 
 /// Connectivity for a two-dimensional Quad9 element.

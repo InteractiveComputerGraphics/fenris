@@ -7,7 +7,7 @@
 // use crate::{ConvexPolygon, GeneralPolygon};
 // use ::vtkio::model::{Attributes, Cells, DataSet, PolyDataTopology};
 // use nalgebra::allocator::Allocator;
-// use nalgebra::{DefaultAllocator, DimName, Point, RealField, Scalar};
+// use nalgebra::{DefaultAllocator, DimName, OPoint, RealField, Scalar};
 // use num::Zero;
 // use std::fs::create_dir_all;
 // use std::path::Path;
@@ -45,7 +45,7 @@
 //     }
 // }
 //
-// pub fn create_vtk_data_set_from_points<T, D>(points: &[Point<T, D>]) -> DataSet
+// pub fn create_vtk_data_set_from_points<T, D>(points: &[OPoint<T, D>]) -> DataSet
 // where
 //     T: Scalar + Zero,
 //     D: DimName,

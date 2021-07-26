@@ -14,8 +14,8 @@ use fenris::element::{
 };
 use fenris::nalgebra::base::coordinates::{XY, XYZ};
 use fenris::nalgebra::{
-    DMatrix, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic, Matrix2, Matrix3x2, MatrixMN,
-    Point, Point2, Point3, Vector1, Vector2, Vector3, VectorN, U1, U2, U3,
+    DMatrix, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic, Matrix2, Matrix3x2, OMatrix,
+    OPoint, OVector, Point2, Point3, Vector1, Vector2, Vector3, U1, U2, U3,
 };
 use fenris::quadrature::{Quadrature, QuadraturePair};
 use fenris::{quadrature, Symmetry};
@@ -39,7 +39,7 @@ impl Operator<f64, U2> for MockScalarEllipticEnergy {
 }
 
 impl EllipticEnergy<f64, U2> for MockScalarEllipticEnergy {
-    fn compute_energy(&self, gradient: &MatrixMN<f64, U2, Self::SolutionDim>, _parameters: &Self::Parameters) -> f64 {
+    fn compute_energy(&self, gradient: &OMatrix<f64, U2, Self::SolutionDim>, _parameters: &Self::Parameters) -> f64 {
         3.0 * gradient[0] - 2.0 * gradient[1]
     }
 }
@@ -160,9 +160,9 @@ impl EllipticEnergy<f64, U3> for MockVectorEllipticEnergy {
 impl EllipticOperator<f64, U3> for MockVectorEllipticEnergy {
     fn compute_elliptic_operator(
         &self,
-        gradient: &MatrixMN<f64, U3, Self::SolutionDim>,
+        gradient: &OMatrix<f64, U3, Self::SolutionDim>,
         density: &Self::Parameters,
-    ) -> MatrixMN<f64, U3, Self::SolutionDim> {
+    ) -> OMatrix<f64, U3, Self::SolutionDim> {
         *density * (2.0 * gradient / (gradient.dot(&gradient)))
     }
 }
@@ -171,11 +171,11 @@ impl EllipticContraction<f64, U3> for MockVectorEllipticEnergy {
     #[allow(non_snake_case)]
     fn contract(
         &self,
-        gradient: &MatrixMN<f64, U3, Self::SolutionDim>,
-        a: &VectorN<f64, U3>,
-        b: &VectorN<f64, U3>,
+        gradient: &OMatrix<f64, U3, Self::SolutionDim>,
+        a: &OVector<f64, U3>,
+        b: &OVector<f64, U3>,
         density: &Self::Parameters,
-    ) -> MatrixMN<f64, Self::SolutionDim, Self::SolutionDim> {
+    ) -> OMatrix<f64, Self::SolutionDim, Self::SolutionDim> {
         let G = gradient;
         let G_dot_G = G.dot(&G);
 
@@ -197,9 +197,9 @@ impl Operator<f64, U3> for MockVectorSymmetricEllipticEnergy {
 impl EllipticOperator<f64, U3> for MockVectorSymmetricEllipticEnergy {
     fn compute_elliptic_operator(
         &self,
-        gradient: &MatrixMN<f64, U3, Self::SolutionDim>,
+        gradient: &OMatrix<f64, U3, Self::SolutionDim>,
         data: &Self::Parameters,
-    ) -> MatrixMN<f64, U3, Self::SolutionDim> {
+    ) -> OMatrix<f64, U3, Self::SolutionDim> {
         MockVectorEllipticEnergy.compute_elliptic_operator(gradient, data)
     }
 }
@@ -207,11 +207,11 @@ impl EllipticOperator<f64, U3> for MockVectorSymmetricEllipticEnergy {
 impl EllipticContraction<f64, U3> for MockVectorSymmetricEllipticEnergy {
     fn contract(
         &self,
-        gradient: &MatrixMN<f64, U3, Self::SolutionDim>,
-        a: &VectorN<f64, U3>,
-        b: &VectorN<f64, U3>,
+        gradient: &OMatrix<f64, U3, Self::SolutionDim>,
+        a: &OVector<f64, U3>,
+        b: &OVector<f64, U3>,
         parameters: &Self::Parameters,
-    ) -> MatrixMN<f64, Self::SolutionDim, Self::SolutionDim> {
+    ) -> OMatrix<f64, Self::SolutionDim, Self::SolutionDim> {
         MockVectorEllipticEnergy.contract(gradient, a, b, parameters)
     }
 
@@ -315,7 +315,7 @@ fn elliptic_element_vector_is_gradient_of_energy_tet10() {
     let quadrature_data = local::evaluate_density_at_quadrature_points(&element, &points, local::density);
     let mut output = DVector::repeat(2 * element.num_nodes(), 3.0);
     let mut gradient_buffer =
-        DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3, Dynamic::new(element.num_nodes()));
+        DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3::name(), Dynamic::new(element.num_nodes()));
     assemble_element_elliptic_vector(
         MatrixSliceMut::from(&mut output),
         &element,
@@ -358,8 +358,8 @@ fn elliptic_element_matrix_is_jacobian_of_vector_tet10() {
 
         // Set up a function f = f(u) that corresponds to the element vector given state u
         let f = |u: DVectorSlice<f64>, output: DVectorSliceMut<f64>| {
-            let mut gradient_buffer =
-                DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3, Dynamic::new(element.num_nodes()));
+            let mut gradient_buffer = DMatrix::repeat(3, element.num_nodes(), 3.0)
+                .reshape_generic(U3::name(), Dynamic::new(element.num_nodes()));
             assemble_element_elliptic_vector(
                 output,
                 &element,
@@ -381,7 +381,7 @@ fn elliptic_element_matrix_is_jacobian_of_vector_tet10() {
     let quadrature_data = local::evaluate_density_at_quadrature_points(&element, &points, local::density);
     let mut output = DMatrix::repeat(2 * element.num_nodes(), 2 * element.num_nodes(), 3.0);
     let mut gradient_buffer =
-        DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3, Dynamic::new(element.num_nodes()));
+        DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3::name(), Dynamic::new(element.num_nodes()));
     assemble_element_elliptic_matrix(
         MatrixSliceMut::from(&mut output),
         &element,
@@ -423,8 +423,8 @@ fn symmetric_elliptic_element_matrix_is_jacobian_of_vector_tet10() {
 
         // Set up a function f = f(u) that corresponds to the element vector given state u
         let f = |u: DVectorSlice<f64>, output: DVectorSliceMut<f64>| {
-            let mut gradient_buffer =
-                DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3, Dynamic::new(element.num_nodes()));
+            let mut gradient_buffer = DMatrix::repeat(3, element.num_nodes(), 3.0)
+                .reshape_generic(U3::name(), Dynamic::new(element.num_nodes()));
             assemble_element_elliptic_vector(
                 output,
                 &element,
@@ -446,7 +446,7 @@ fn symmetric_elliptic_element_matrix_is_jacobian_of_vector_tet10() {
     let quadrature_data = local::evaluate_density_at_quadrature_points(&element, &points, local::density);
     let mut output = DMatrix::repeat(2 * element.num_nodes(), 2 * element.num_nodes(), 3.0);
     let mut gradient_buffer =
-        DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3, Dynamic::new(element.num_nodes()));
+        DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3::name(), Dynamic::new(element.num_nodes()));
     assemble_element_elliptic_matrix(
         MatrixSliceMut::from(&mut output),
         &element,
@@ -543,7 +543,7 @@ fn elliptic_element_assembler_matches_individual_element_assembly() {
     let mut element_vector_expected = DVector::repeat(8, 4.0);
     let mut element_matrix_expected = DMatrix::repeat(8, 8, 4.0);
     let mut u_element = DVector::repeat(8, 5.0);
-    let mut basis_gradients_buffer = DMatrix::repeat(2, 4, 6.0).reshape_generic(U2, Dynamic::new(4));
+    let mut basis_gradients_buffer = DMatrix::repeat(2, 4, 6.0).reshape_generic(U2::name(), Dynamic::new(4));
     for (i, conn) in mesh.connectivity().iter().enumerate() {
         assembler
             .assemble_element_vector_into(i, DVectorSliceMut::from(&mut element_vector))
@@ -604,7 +604,7 @@ where
     let (weights, points) = quadrature;
 
     let d = Element::GeometryDim::dim();
-    let mut gradient_buffer = MatrixMN::from_vec_generic(
+    let mut gradient_buffer = OMatrix::from_vec_generic(
         Element::GeometryDim::name(),
         Dynamic::new(element.num_nodes()),
         // Fill buffer with something non-zero to check that the implementation isn't
@@ -632,14 +632,14 @@ fn compute_expected_energy_integral<Element, Energy, UGrad>(
 where
     Element: VolumetricFiniteElement<f64>,
     Energy: EllipticEnergy<f64, Element::GeometryDim, Parameters = f64>,
-    UGrad: Fn(&Point<f64, Element::GeometryDim>) -> MatrixMN<f64, Element::GeometryDim, Energy::SolutionDim>,
+    UGrad: Fn(&OPoint<f64, Element::GeometryDim>) -> OMatrix<f64, Element::GeometryDim, Energy::SolutionDim>,
     DefaultAllocator: BiDimAllocator<f64, Element::GeometryDim, Energy::SolutionDim>,
 {
     let quadrature_rule = local::construct_quadrature_rule_for_element(element, reference_rule);
     // Assuming f is a polynomial function (i.e. the energy is a polynomial in terms of the
     // components of u_grad and u_grad is polynomial), then we can hopefully compute this integral
     // exactly provided that the reference rule is sufficiently accurate
-    let f = |x: &Point<f64, Element::GeometryDim>| energy.compute_energy(&u_grad(x), &local::density(x));
+    let f = |x: &OPoint<f64, Element::GeometryDim>| energy.compute_energy(&u_grad(x), &local::density(x));
     let integral_expected = quadrature_rule.integrate(f);
     integral_expected
 }

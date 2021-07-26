@@ -95,12 +95,12 @@ impl Display for Error {
 impl std::error::Error for Error {}
 
 /// A D-dimensional point.
-pub type Point<const D: usize> = [f64; D];
+pub type OPoint<const D: usize> = [f64; D];
 
 /// A D-dimensional quadrature rule.
 ///
 /// A quadrature rule consists of weights and points.
-pub type Rule<const D: usize> = (Vec<f64>, Vec<Point<D>>);
+pub type Rule<const D: usize> = (Vec<f64>, Vec<OPoint<D>>);
 
 /// Integrates the given function with the given quadrature rule.
 ///
@@ -121,7 +121,7 @@ pub type Rule<const D: usize> = (Vec<f64>, Vec<Point<D>>);
 /// assert_scalar_eq!(integral, expected_integral, comp=abs, tol=1e-14);
 /// # Ok(()) }
 /// ```
-pub fn integrate<const D: usize>(rule: &Rule<D>, f: impl Fn(&Point<D>) -> f64) -> f64 {
+pub fn integrate<const D: usize>(rule: &Rule<D>, f: impl Fn(&OPoint<D>) -> f64) -> f64 {
     let (weights, points) = rule;
     weights.iter().zip(points).map(|(w, p)| w * f(p)).sum()
 }

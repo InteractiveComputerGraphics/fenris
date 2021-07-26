@@ -9,7 +9,7 @@ use fenris::element::{ElementConnectivity, FiniteElement, ReferenceFiniteElement
 use fenris::mesh::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::mesh::QuadMesh2d;
 use fenris::nalgebra::base::coordinates::XYZ;
-use fenris::nalgebra::{DVector, DVectorSliceMut, Point, Point2, Point3, Vector2, U2, U3};
+use fenris::nalgebra::{DVector, DVectorSliceMut, OPoint, Point2, Point3, Vector2, U2, U3};
 use fenris::quadrature;
 use fenris::quadrature::Quadrature;
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
@@ -65,7 +65,7 @@ fn element_source_vector_reproduces_inner_product() {
     }
 
     impl SourceFunction<f64, U3> for MockSourceFunction {
-        fn evaluate(&self, coords: &Point<f64, U3>, density: &Self::Parameters) -> Vector2<f64> {
+        fn evaluate(&self, coords: &OPoint<f64, U3>, density: &Self::Parameters) -> Vector2<f64> {
             // The actual function is rho(x) * f(x), where rho(x) is a scalar implicitly
             // determined by the parameters
             *density * f(coords)

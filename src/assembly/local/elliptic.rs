@@ -7,8 +7,8 @@ use crate::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOp
 use crate::element::{MatrixSlice, MatrixSliceMut, VolumetricFiniteElement};
 use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{
-    DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, Dim, DimName, Dynamic, MatrixMN,
-    MatrixSliceMN, MatrixSliceMutMN, Point, RealField, Scalar, U1,
+    DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, Dim, DimName, Dynamic, MatrixSliceMutMN,
+    OMatrix, OPoint, RealField, Scalar, U1,
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
 use crate::util::{clone_upper_to_lower, reshape_to_slice};
@@ -21,10 +21,10 @@ use std::cell::RefCell;
 // TODO: Move this to the right spot and don't make it pub(crate)
 #[allow(non_snake_case)]
 pub(crate) fn compute_volume_u_grad<'a, T, GeometryDim, SolutionDim>(
-    jacobian_inv_t: &MatrixMN<T, GeometryDim, GeometryDim>,
+    jacobian_inv_t: &OMatrix<T, GeometryDim, GeometryDim>,
     phi_grad_ref: impl Into<MatrixSlice<'a, T, GeometryDim, Dynamic>>,
     u: impl Into<MatrixSlice<'a, T, SolutionDim, Dynamic>>,
-) -> MatrixMN<T, GeometryDim, SolutionDim>
+) -> OMatrix<T, GeometryDim, SolutionDim>
 where
     T: RealField,
     SolutionDim: DimName,
@@ -44,7 +44,7 @@ where
     // A^T B through gemm_tr available in `nalgebra`. Therefore we instead compute
     // the sum of outer products
     let G_ref = phi_grad_ref;
-    let mut u_grad = MatrixMN::<_, GeometryDim, SolutionDim>::zeros();
+    let mut u_grad = OMatrix::<_, GeometryDim, SolutionDim>::zeros();
     for (phi_I_grad_ref, u_I) in G_ref.column_iter().zip(u.column_iter()) {
         // Instead of computing each column of G (gradients in physical space),
         // we instead use the reference coordinates and only multiply by J^{-T} for the end result,
@@ -342,7 +342,7 @@ pub fn assemble_element_elliptic_matrix<T, Element, Contraction>(
     operator: &Contraction,
     u_element: DVectorSlice<T>,
     quadrature_weights: &[T],
-    quadrature_points: &[Point<T, Element::ReferenceDim>],
+    quadrature_points: &[OPoint<T, Element::ReferenceDim>],
     quadrature_data: &[Contraction::Parameters],
     basis_gradients_buffer: MatrixSliceMutMN<T, Element::ReferenceDim, Dynamic>,
 ) -> eyre::Result<()>
@@ -438,7 +438,7 @@ pub fn assemble_element_elliptic_vector<T, Element, Operator>(
     operator: &Operator,
     u_element: DVectorSlice<T>,
     quadrature_weights: &[T],
-    quadrature_points: &[Point<T, Element::ReferenceDim>],
+    quadrature_points: &[OPoint<T, Element::ReferenceDim>],
     quadrature_data: &[Operator::Parameters],
     basis_gradients_buffer: MatrixSliceMutMN<T, Element::ReferenceDim, Dynamic>,
 ) -> eyre::Result<()>
@@ -480,7 +480,7 @@ where
         element.populate_basis_gradients(MatrixSliceMut::from(&mut phi_grad_ref), &point);
 
         let u_element =
-            MatrixSliceMN::from_slice_generic(u_element.as_slice(), Operator::SolutionDim::name(), Dynamic::new(n));
+            MatrixSlice::from_slice_generic(u_element.as_slice(), Operator::SolutionDim::name(), Dynamic::new(n));
         let u_grad = compute_volume_u_grad(&j_inv_t, &phi_grad_ref, u_element);
 
         // We want to compute the vector
@@ -532,7 +532,7 @@ pub fn compute_element_elliptic_energy<T, Element, Operator>(
     operator: &Operator,
     u_element: DVectorSlice<T>,
     quadrature_weights: &[T],
-    quadrature_points: &[Point<T, Element::ReferenceDim>],
+    quadrature_points: &[OPoint<T, Element::ReferenceDim>],
     quadrature_data: &[Operator::Parameters],
     basis_gradients_buffer: MatrixSliceMutMN<T, Element::ReferenceDim, Dynamic>,
 ) -> eyre::Result<T>
@@ -573,7 +573,7 @@ where
         element.populate_basis_gradients(MatrixSliceMut::from(&mut phi_grad_ref), &point);
 
         let u_element =
-            MatrixSliceMN::from_slice_generic(u_element.as_slice(), Operator::SolutionDim::name(), Dynamic::new(n));
+            MatrixSlice::from_slice_generic(u_element.as_slice(), Operator::SolutionDim::name(), Dynamic::new(n));
         let u_grad = compute_volume_u_grad(&j_inv_t, &phi_grad_ref, u_element);
 
         let psi = operator.compute_energy(&u_grad, data);

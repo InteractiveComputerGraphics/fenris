@@ -7,8 +7,8 @@ use nalgebra::constraint::{DimEq, ShapeConstraint};
 use nalgebra::storage::{ContiguousStorage, Storage, StorageMut};
 use nalgebra::{
     DMatrixSlice, DVector, DVectorSlice, DefaultAllocator, Dim, DimDiff, DimMin, DimMul, DimName, DimProd, DimSub,
-    Matrix, Matrix3, MatrixMN, MatrixN, MatrixSlice, MatrixSliceMut, Quaternion, RealField, Scalar, SliceStorage,
-    SliceStorageMut, SquareMatrix, UnitQuaternion, Vector, Vector3, VectorN, U1,
+    Matrix, Matrix3, MatrixSlice, MatrixSliceMut, OMatrix, OVector, Quaternion, RealField, Scalar, SliceStorage,
+    SliceStorageMut, SquareMatrix, UnitQuaternion, Vector, Vector3, U1,
 };
 use nalgebra_sparse::{CooMatrix, CsrMatrix};
 use num::Zero;
@@ -90,8 +90,12 @@ where
     );
 
     unsafe {
-        let data =
-            SliceStorage::new_with_strides_unchecked(&matrix.data, (0, 0), (slice_rows, slice_cols), (U1, slice_rows));
+        let data = SliceStorage::new_with_strides_unchecked(
+            &matrix.data,
+            (0, 0),
+            (slice_rows, slice_cols),
+            (U1::name(), slice_rows),
+        );
         Matrix::from_data_statically_unchecked(data)
     }
 }
@@ -107,7 +111,7 @@ where
 /// `sigma_i` is the `i`th singular value of `A`.
 ///
 /// Returns a tuple `(U, S, V^T)`.
-pub fn rotation_svd<T, D>(matrix: &MatrixN<T, D>) -> (MatrixN<T, D>, VectorN<T, D>, MatrixN<T, D>)
+pub fn rotation_svd<T, D>(matrix: &OMatrix<T, D, D>) -> (OMatrix<T, D, D>, OVector<T, D>, OMatrix<T, D, D>)
 where
     T: RealField,
     D: DimName + DimMin<D, Output = D> + DimSub<U1>,
@@ -225,7 +229,7 @@ pub fn apd<T: RealField>(
     q
 }
 
-pub fn diag_left_mul<T, D1, D2, S>(diag: &Vector<T, D1, S>, matrix: &MatrixMN<T, D1, D2>) -> MatrixMN<T, D1, D2>
+pub fn diag_left_mul<T, D1, D2, S>(diag: &Vector<T, D1, S>, matrix: &OMatrix<T, D1, D2>) -> OMatrix<T, D1, D2>
 where
     T: RealField,
     D1: DimName,
@@ -271,7 +275,7 @@ where
             &mut matrix.data,
             (0, 0),
             (slice_rows, slice_cols),
-            (U1, slice_rows),
+            (U1::name(), slice_rows),
         );
         Matrix::from_data_statically_unchecked(data)
     }
@@ -409,9 +413,9 @@ where
     let u = DVectorSlice::from(u);
     let mut extracted = DVector::zeros(D::dim() * node_indices.len());
     for (i_local, &i_global) in node_indices.iter().enumerate() {
-        let ui = u.fixed_rows::<D>(D::dim() * i_global);
+        let ui = u.rows_generic(D::dim() * i_global, D::name());
         extracted
-            .fixed_rows_mut::<D>(D::dim() * i_local)
+            .rows_generic_mut(D::dim() * i_local, D::name())
             .copy_from(&ui);
     }
     extracted

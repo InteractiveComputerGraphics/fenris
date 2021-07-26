@@ -1,5 +1,6 @@
 use nalgebra::{
-    DMatrix, DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, Dim, Dynamic, RealField, Scalar, Vector, U1,
+    DMatrix, DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, Dim, DimName, Dynamic, RealField, Scalar, Vector,
+    U1,
 };
 
 use nalgebra::base::storage::{Storage, StorageMut};
@@ -138,7 +139,7 @@ where
     S: Storage<T, R, U1, RStride = U1, CStride = Dynamic>,
     R: Dim,
 {
-    vector.generic_slice((0, 0), (Dynamic::new(vector.nrows()), U1))
+    vector.generic_slice((0, 0), (Dynamic::new(vector.nrows()), U1::name()))
 }
 
 // TODO: Move somewhere else? Ideally contribute as From<_> for DVectorSliceMut<T> in `nalgebra`
@@ -148,7 +149,7 @@ where
     S: StorageMut<T, R, U1, RStride = U1, CStride = Dynamic>,
     R: Dim,
 {
-    vector.generic_slice_mut((0, 0), (Dynamic::new(vector.nrows()), U1))
+    vector.generic_slice_mut((0, 0), (Dynamic::new(vector.nrows()), U1::name()))
 }
 
 /// Approximates the Jacobian of a vector function evaluated at `x`, using

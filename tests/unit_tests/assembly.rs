@@ -27,8 +27,8 @@ mod local;
 //     fn contract_stress_tensor_with(
 //         &self,
 //         _deformation_gradient: &Matrix2<T>,
-//         _a: &VectorN<T, U2>,
-//         _b: &VectorN<T, U2>,
+//         _a: &OVector<T, U2>,
+//         _b: &OVector<T, U2>,
 //     ) -> Matrix2<T> {
 //         Matrix2::zero()
 //     }
@@ -53,8 +53,8 @@ mod local;
 //     fn contract_stress_tensor_with(
 //         &self,
 //         _F: &Matrix2<T>,
-//         a: &VectorN<T, U2>,
-//         b: &VectorN<T, U2>,
+//         a: &OVector<T, U2>,
+//         b: &OVector<T, U2>,
 //     ) -> Matrix2<T> {
 //         Matrix2::identity() * a.dot(&b)
 //     }
@@ -68,7 +68,7 @@ mod local;
 //     };
 //     let material = fenris_solid::materials::LinearElasticMaterial::from(lame);
 //
-//     let u = 3.0 * MatrixMN::<f64, U2, Dynamic>::repeat(4, 1.0);
+//     let u = 3.0 * OMatrix::<f64, U2, Dynamic>::repeat(4, 1.0);
 //
 //     let quadrature = quad_quadrature_strength_5_f64();
 //     let quad = Quad4d2Element::from(reference_quad());
@@ -90,7 +90,7 @@ mod local;
 //         lambda: 3.0,
 //     };
 //     let material = fenris_solid::materials::LinearElasticMaterial::from(lame);
-//     let u = 3.0 * MatrixMN::<f64, U2, Dynamic>::repeat(4, 1.0);
+//     let u = 3.0 * OMatrix::<f64, U2, Dynamic>::repeat(4, 1.0);
 //
 //     let quadrature = quad_quadrature_strength_5_f64();
 //     let quad = Quad4d2Element::from_vertices([
@@ -112,7 +112,7 @@ mod local;
 
 // #[test]
 // fn analytic_comparison_of_element_elastic_force_for_reference_element() {
-//     let u = 3.0 * MatrixMN::<f64, U2, Dynamic>::repeat(4, 1.0);
+//     let u = 3.0 * OMatrix::<f64, U2, Dynamic>::repeat(4, 1.0);
 //     let quadrature = quad_quadrature_strength_5_f64();
 //     let material = MockIdentityMaterial;
 //     let quad = Quad4d2Element::from(reference_quad());
@@ -135,7 +135,7 @@ mod local;
 
 // #[test]
 // fn analytic_comparison_of_element_stiffness_matrix_for_reference_element() {
-//     let u = 3.0 * MatrixMN::<f64, U2, Dynamic>::repeat(4, 1.0);
+//     let u = 3.0 * OMatrix::<f64, U2, Dynamic>::repeat(4, 1.0);
 //     let material = MockSimpleMaterial;
 //     let quadrature = quad_quadrature_strength_5_f64();
 //     let quad = Quad4d2Element::from(reference_quad());
@@ -284,9 +284,9 @@ mod local;
 // {
 //     let d = Connectivity::GeometryDim::dim();
 //     let vector_space_dim = d * element.num_nodes();
-//     let mut f_element = MatrixMN::<f64, Connectivity::GeometryDim, Dynamic>::zeros(element.num_nodes());
+//     let mut f_element = OMatrix::<f64, Connectivity::GeometryDim, Dynamic>::zeros(element.num_nodes());
 //     VectorFunctionBuilder::with_dimension(vector_space_dim).with_function(move |f, u| {
-//         let u_element: MatrixMN<f64, Connectivity::GeometryDim, Dynamic> = indices.element_variables(u);
+//         let u_element: OMatrix<f64, Connectivity::GeometryDim, Dynamic> = indices.element_variables(u);
 //         let elliptic_operator = MaterialEllipticOperator(&material);
 //         assemble_generalized_element_elliptic_term(
 //             MatrixSliceMut::from(&mut f_element),
@@ -320,7 +320,7 @@ mod local;
 //
 //     let quad_indices = Quad4d2Connectivity([0, 1, 2, 3]);
 //
-//     let u_element: MatrixMN<_, U2, Dynamic> = quad_indices.element_variables(&u);
+//     let u_element: OMatrix<_, U2, Dynamic> = quad_indices.element_variables(&u);
 //     let elliptic_operator = MaterialEllipticOperator(&material);
 //     let mut a = DMatrix::zeros(8, 8);
 //     assemble_generalized_element_stiffness(DMatrixSliceMut::from(&mut a),
@@ -364,7 +364,7 @@ mod local;
 //     ]);
 //     let tet_conn = Tet4Connectivity([0, 1, 2, 3]);
 //
-//     let u_element: MatrixMN<_, U3, Dynamic> = tet_conn.element_variables(&u);
+//     let u_element: OMatrix<_, U3, Dynamic> = tet_conn.element_variables(&u);
 //     let elliptic_operator = MaterialEllipticOperator(&material);
 //     let mut a = DMatrix::zeros(12, 12);
 //     assemble_generalized_element_stiffness(DMatrixSliceMut::from(&mut a),
@@ -407,7 +407,7 @@ mod local;
 //
 //     let quad_indices = Quad4d2Connectivity([0, 1, 2, 3]);
 //
-//     let u_element: MatrixMN<_, U2, _> = quad_indices.element_variables(&u);
+//     let u_element: OMatrix<_, U2, _> = quad_indices.element_variables(&u);
 //     let elliptic_operator = MaterialEllipticOperator(&material);
 //
 //     let mut a = DMatrix::zeros(8, 8);
@@ -463,7 +463,7 @@ mod local;
 //
 //     let quad_indices = Quad4d2Connectivity([0, 1, 2, 3]);
 //
-//     let u_element: MatrixMN<_, U2, _> = quad_indices.element_variables(&u);
+//     let u_element: OMatrix<_, U2, _> = quad_indices.element_variables(&u);
 //     let elliptic_operator = MaterialEllipticOperator(&material);
 //     let mut a = DMatrix::zeros(8, 8);
 //     assemble_generalized_element_stiffness(DMatrixSliceMut::from(&mut a),

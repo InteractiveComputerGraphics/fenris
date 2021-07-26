@@ -2,12 +2,11 @@ use fenris::allocators::{BiDimAllocator, SmallDimAllocator};
 use fenris::assembly::local::assemble_generalized_element_mass;
 use fenris::element::{MatrixSliceMut, Quad4d2Element, VolumetricFiniteElement};
 use fenris::geometry::Quad2d;
-use fenris::nalgebra::{
-    DMatrix, DVector, DefaultAllocator, DimName, Matrix4, MatrixN, Point, Point2, RealField, VectorN, U2, U8,
-};
+use fenris::nalgebra::{DMatrix, DVector, DefaultAllocator, DimName, Matrix4, OPoint, OVector, Point2, RealField, U2};
 use fenris::quadrature;
 use fenris::quadrature::QuadraturePair;
 use itertools::izip;
+use nalgebra::SMatrix;
 use num::Zero;
 
 mod elliptic;
@@ -43,7 +42,7 @@ fn analytic_comparison_of_element_mass_matrix_for_reference_element() {
         1.0, 2.0, 4.0, 2.0,
         2.0, 1.0, 2.0, 4.0);
 
-    let mut expected8x8: MatrixN<f64, U8> = MatrixN::zero();
+    let mut expected8x8: SMatrix<f64, 8, 8> = SMatrix::zero();
     expected8x8
         .slice_with_steps_mut((0, 0), (4, 4), (1, 1))
         .copy_from(&expected4x4);
@@ -57,7 +56,7 @@ fn analytic_comparison_of_element_mass_matrix_for_reference_element() {
 
 /// An artificial density function that we use to validate that quadrature parameters are correctly
 /// employed in the assembly.
-fn density<D>(x: &Point<f64, D>) -> f64
+fn density<D>(x: &OPoint<f64, D>) -> f64
 where
     D: DimName,
     DefaultAllocator: SmallDimAllocator<f64, D>,
@@ -88,8 +87,8 @@ where
 }
 
 fn u_element_from_vertices_and_u_exact<D, S>(
-    vertices: &[Point<f64, D>],
-    u_exact: impl Fn(&Point<f64, D>) -> VectorN<f64, S>,
+    vertices: &[OPoint<f64, D>],
+    u_exact: impl Fn(&OPoint<f64, D>) -> OVector<f64, S>,
 ) -> DVector<f64>
 where
     D: DimName,
@@ -106,8 +105,8 @@ where
 
 fn evaluate_density_at_quadrature_points<Element>(
     element: &Element,
-    points: &[Point<f64, Element::GeometryDim>],
-    density: impl Fn(&Point<f64, Element::GeometryDim>) -> f64,
+    points: &[OPoint<f64, Element::GeometryDim>],
+    density: impl Fn(&OPoint<f64, Element::GeometryDim>) -> f64,
 ) -> Vec<f64>
 where
     Element: VolumetricFiniteElement<f64>,

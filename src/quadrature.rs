@@ -1,7 +1,7 @@
 use std::ops::{Add, AddAssign, Deref, Mul};
 
 use nalgebra::allocator::Allocator;
-use nalgebra::{DefaultAllocator, DimName, Point, Scalar, U2, U3};
+use nalgebra::{DefaultAllocator, DimName, OPoint, Scalar, U2, U3};
 use num::Zero;
 
 /// Errors returned by quadrature methods.
@@ -14,7 +14,7 @@ use crate::nalgebra::{convert, Point2, Point3, RealField};
 pub mod tensor;
 pub mod total_order;
 
-pub type QuadraturePair<T, D> = (Vec<T>, Vec<Point<T, D>>);
+pub type QuadraturePair<T, D> = (Vec<T>, Vec<OPoint<T, D>>);
 pub type QuadraturePair2d<T> = QuadraturePair<T, U2>;
 pub type QuadraturePair3d<T> = QuadraturePair<T, U3>;
 
@@ -25,12 +25,12 @@ where
     DefaultAllocator: Allocator<T, D>,
 {
     fn weights(&self) -> &[T];
-    fn points(&self) -> &[Point<T, D>];
+    fn points(&self) -> &[OPoint<T, D>];
 
     /// Approximates the integral of the given function using this quadrature rule.
     fn integrate<U, Function>(&self, f: Function) -> U
     where
-        Function: Fn(&Point<T, D>) -> U,
+        Function: Fn(&OPoint<T, D>) -> U,
         U: Zero + Mul<T, Output = U> + Add<T, Output = U> + AddAssign<U>,
     {
         let mut integral = U::zero();
@@ -60,14 +60,14 @@ where
     T: Scalar,
     D: DimName,
     A: Deref<Target = [T]>,
-    B: Deref<Target = [Point<T, D>]>,
+    B: Deref<Target = [OPoint<T, D>]>,
     DefaultAllocator: Allocator<T, D>,
 {
     fn weights(&self) -> &[T] {
         self.0.deref()
     }
 
-    fn points(&self) -> &[Point<T, D>] {
+    fn points(&self) -> &[OPoint<T, D>] {
         self.1.deref()
     }
 }
@@ -83,7 +83,7 @@ where
         X::weights(self)
     }
 
-    fn points(&self) -> &[Point<T, D>] {
+    fn points(&self) -> &[OPoint<T, D>] {
         X::points(self)
     }
 }

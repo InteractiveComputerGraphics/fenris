@@ -1,7 +1,7 @@
 //! Solid mechanics functionality for `fenris`.
 use fenris::allocators::SmallDimAllocator;
 use fenris::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
-use fenris::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, MatrixMN, RealField, VectorN};
+use fenris::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, OMatrix, OVector, RealField};
 use fenris::{SmallDim, Symmetry};
 use std::cmp::min;
 
@@ -16,16 +16,16 @@ where
     /// Compute the energy density $\psi = \psi(\vec F)$ associated with the material.
     fn compute_energy_density(
         &self,
-        deformation_gradient: &MatrixMN<T, GeometryDim, GeometryDim>,
+        deformation_gradient: &OMatrix<T, GeometryDim, GeometryDim>,
         parameters: &Self::Parameters,
     ) -> T;
 
     /// Compute the First Piola-Kirchhoff stress tensor $\vec P = \vec P(\vec F)$.
     fn compute_stress_tensor(
         &self,
-        deformation_gradient: &MatrixMN<T, GeometryDim, GeometryDim>,
+        deformation_gradient: &OMatrix<T, GeometryDim, GeometryDim>,
         parameters: &Self::Parameters,
-    ) -> MatrixMN<T, GeometryDim, GeometryDim>;
+    ) -> OMatrix<T, GeometryDim, GeometryDim>;
 
     /// Compute the stress contraction operator $\\mathcal{C}\_{\vec P}(\vec F, \vec a, \vec b)$ with the given
     /// material parameters.
@@ -37,11 +37,11 @@ where
     /// $$
     fn compute_stress_contraction(
         &self,
-        deformation_gradient: &MatrixMN<T, GeometryDim, GeometryDim>,
-        a: &VectorN<T, GeometryDim>,
-        b: &VectorN<T, GeometryDim>,
+        deformation_gradient: &OMatrix<T, GeometryDim, GeometryDim>,
+        a: &OVector<T, GeometryDim>,
+        b: &OVector<T, GeometryDim>,
         parameters: &Self::Parameters,
-    ) -> MatrixMN<T, GeometryDim, GeometryDim>;
+    ) -> OMatrix<T, GeometryDim, GeometryDim>;
 
     /// Compute the contraction for a number of vectors at the same time, with the given
     /// parameters.
@@ -114,7 +114,7 @@ where
         &self,
         mut output: DMatrixSliceMut<T>,
         alpha: T,
-        deformation_gradient: &MatrixMN<T, GeometryDim, GeometryDim>,
+        deformation_gradient: &OMatrix<T, GeometryDim, GeometryDim>,
         a: DVectorSlice<T>,
         b: DVectorSlice<T>,
         parameters: &Self::Parameters,
@@ -175,7 +175,7 @@ where
     Material: HyperelasticMaterial<T, GeometryDim>,
     DefaultAllocator: SmallDimAllocator<T, GeometryDim>,
 {
-    fn compute_energy(&self, gradient: &MatrixMN<T, GeometryDim, GeometryDim>, parameters: &Self::Parameters) -> T {
+    fn compute_energy(&self, gradient: &OMatrix<T, GeometryDim, GeometryDim>, parameters: &Self::Parameters) -> T {
         let f = gradient.transpose();
         self.0.compute_energy_density(&f, parameters)
     }
@@ -190,9 +190,9 @@ where
 {
     fn compute_elliptic_operator(
         &self,
-        gradient: &MatrixMN<T, GeometryDim, GeometryDim>,
+        gradient: &OMatrix<T, GeometryDim, GeometryDim>,
         parameters: &Self::Parameters,
-    ) -> MatrixMN<T, GeometryDim, Self::SolutionDim> {
+    ) -> OMatrix<T, GeometryDim, Self::SolutionDim> {
         let f = gradient.transpose();
         let p = self.0.compute_stress_tensor(&f, parameters);
         p.transpose()
@@ -208,11 +208,11 @@ where
 {
     fn contract(
         &self,
-        gradient: &MatrixMN<T, GeometryDim, GeometryDim>,
-        a: &VectorN<T, GeometryDim>,
-        b: &VectorN<T, GeometryDim>,
+        gradient: &OMatrix<T, GeometryDim, GeometryDim>,
+        a: &OVector<T, GeometryDim>,
+        b: &OVector<T, GeometryDim>,
         parameters: &Self::Parameters,
-    ) -> MatrixMN<T, Self::SolutionDim, Self::SolutionDim> {
+    ) -> OMatrix<T, Self::SolutionDim, Self::SolutionDim> {
         let f = gradient.transpose();
         self.0.compute_stress_contraction(&f, a, b, parameters)
     }
@@ -226,7 +226,7 @@ where
         &self,
         output: DMatrixSliceMut<T>,
         alpha: T,
-        gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
+        gradient: &OMatrix<T, GeometryDim, Self::SolutionDim>,
         a: DVectorSlice<T>,
         b: DVectorSlice<T>,
         parameters: &Self::Parameters,

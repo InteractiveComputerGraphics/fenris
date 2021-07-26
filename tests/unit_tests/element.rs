@@ -12,8 +12,8 @@ use fenris::quadrature;
 use fenris_optimize::calculus::{approximate_jacobian, VectorFunctionBuilder};
 
 use nalgebra::{
-    DVectorSlice, Dynamic, MatrixMN, Point, Point1, Point2, Point3, Vector1, Vector2, Vector3, U1, U10, U2, U20, U27,
-    U3, U4, U6, U8, U9,
+    DVectorSlice, DimName, Dynamic, OMatrix, OPoint, Point1, Point2, Point3, Vector1, Vector2, Vector3, U1, U10, U2,
+    U20, U27, U3, U4, U6, U8, U9,
 };
 
 use fenris::util::proptest::point2_f64_strategy;
@@ -114,7 +114,7 @@ fn tri3d2_lagrange_property() {
     for (i, xi) in element.vertices().into_iter().enumerate() {
         let phi = element.evaluate_basis(&xi);
 
-        let mut expected = MatrixMN::<f64, U1, U3>::zeros();
+        let mut expected = OMatrix::<f64, U1, U3>::zeros();
         expected[i] = 1.0;
 
         assert_approx_matrix_eq!(phi, expected, abstol = 1e-12);
@@ -131,7 +131,7 @@ fn tri6d2_lagrange_property() {
     for (i, xi) in element.vertices().into_iter().enumerate() {
         let phi = element.evaluate_basis(&xi);
 
-        let mut expected = MatrixMN::<f64, U1, U6>::zeros();
+        let mut expected = OMatrix::<f64, U1, U6>::zeros();
         expected[i] = 1.0;
 
         assert_approx_matrix_eq!(phi, expected, abstol = 1e-12);
@@ -148,7 +148,7 @@ fn quad9_lagrange_property() {
     for (i, xi) in element.vertices().into_iter().enumerate() {
         let phi = element.evaluate_basis(&xi);
 
-        let mut expected = MatrixMN::<f64, U1, U9>::zeros();
+        let mut expected = OMatrix::<f64, U1, U9>::zeros();
         expected[i] = 1.0;
 
         assert_approx_matrix_eq!(phi, expected, abstol = 1e-12);
@@ -165,7 +165,7 @@ fn tet4_lagrange_property() {
     for (i, xi) in element.vertices().into_iter().enumerate() {
         let phi = element.evaluate_basis(&xi);
 
-        let mut expected = MatrixMN::<f64, U1, U4>::zeros();
+        let mut expected = OMatrix::<f64, U1, U4>::zeros();
         expected[i] = 1.0;
 
         assert_approx_matrix_eq!(phi, expected, abstol = 1e-12);
@@ -182,7 +182,7 @@ fn tet10_lagrange_property() {
     for (i, xi) in element.vertices().into_iter().enumerate() {
         let phi = element.evaluate_basis(&xi);
 
-        let mut expected = MatrixMN::<f64, U1, U10>::zeros();
+        let mut expected = OMatrix::<f64, U1, U10>::zeros();
         expected[i] = 1.0;
 
         assert_approx_matrix_eq!(phi, expected, abstol = 1e-12);
@@ -199,7 +199,7 @@ fn tet20_lagrange_property() {
     for (i, xi) in element.vertices().into_iter().enumerate() {
         let phi = element.evaluate_basis(&xi);
 
-        let mut expected = MatrixMN::<f64, U1, U20>::zeros();
+        let mut expected = OMatrix::<f64, U1, U20>::zeros();
         expected[i] = 1.0;
 
         assert_approx_matrix_eq!(phi, expected, abstol = 1e-12);
@@ -216,7 +216,7 @@ fn hex8_lagrange_property() {
     for (i, xi) in element.vertices().into_iter().enumerate() {
         let phi = element.evaluate_basis(&xi);
 
-        let mut expected = MatrixMN::<f64, U1, U8>::zeros();
+        let mut expected = OMatrix::<f64, U1, U8>::zeros();
         expected[i] = 1.0;
 
         assert_approx_matrix_eq!(phi, expected, abstol = 1e-12);
@@ -233,7 +233,7 @@ fn hex27_lagrange_property() {
     for (i, xi) in element.vertices().into_iter().enumerate() {
         let phi = element.evaluate_basis(&xi);
 
-        let mut expected = MatrixMN::<f64, U1, U27>::zeros();
+        let mut expected = OMatrix::<f64, U1, U27>::zeros();
         expected[i] = 1.0;
 
         assert_approx_matrix_eq!(phi, expected, abstol = 1e-12);
@@ -250,7 +250,7 @@ fn hex20_lagrange_property() {
     for (i, xi) in element.vertices().into_iter().enumerate() {
         let phi = element.evaluate_basis(&xi);
 
-        let mut expected = MatrixMN::<f64, U1, U20>::zeros();
+        let mut expected = OMatrix::<f64, U1, U20>::zeros();
         expected[i] = 1.0;
 
         assert_approx_matrix_eq!(phi, expected, abstol = 1e-12);
@@ -763,7 +763,7 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(3).with_function(move |x, xi| {
-            let xi = Point::from(xi.fixed_slice::<U2, U1>(0, 0).clone_owned());
+            let xi = OPoint::from(xi.generic_slice((0, 0), (U2::name(), U1::name())).clone_owned());
             x.copy_from(&elem.evaluate_basis(&xi).transpose());
         });
 
@@ -785,7 +785,7 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(6).with_function(move |x, xi| {
-            let xi = Point::from(xi.fixed_slice::<U2, U1>(0, 0).clone_owned());
+            let xi = OPoint::from(xi.generic_slice((0, 0), (U2::name(), U1::name())).clone_owned());
             x.copy_from(&elem.evaluate_basis(&xi).transpose());
         });
 
@@ -804,7 +804,7 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(4).with_function(move |x, xi| {
-            let xi = Point::from(xi.fixed_slice::<U3, U1>(0, 0).clone_owned());
+            let xi = OPoint::from(xi.generic_slice((0, 0), (U3::name(), U1::name())).clone_owned());
             x.copy_from(&tet.evaluate_basis(&xi).transpose());
         });
 
@@ -824,7 +824,7 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(10).with_function(move |x, xi| {
-            let xi = Point::from(xi.fixed_slice::<U3, U1>(0, 0).clone_owned());
+            let xi = OPoint::from(xi.generic_slice((0, 0), (U3::name(), U1::name())).clone_owned());
             x.copy_from(&tet.evaluate_basis(&xi).transpose());
         });
 
@@ -844,7 +844,7 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(20).with_function(move |x, xi| {
-            let xi = Point::from(xi.fixed_slice::<U3, U1>(0, 0).clone_owned());
+            let xi = OPoint::from(xi.generic_slice((0, 0), (U3::name(), U1::name())).clone_owned());
             x.copy_from(&tet.evaluate_basis(&xi).transpose());
         });
 
@@ -864,7 +864,7 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(27).with_function(move |x, xi| {
-            let xi = Point::from(xi.fixed_slice::<U3, U1>(0, 0).clone_owned());
+            let xi = OPoint::from(xi.generic_slice((0, 0), (U3::name(), U1::name())).clone_owned());
             x.copy_from(&hex.evaluate_basis(&xi).transpose());
         });
 
@@ -885,7 +885,7 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(20).with_function(move |x, xi| {
-            let xi = Point::from(xi.fixed_slice::<U3, U1>(0, 0).clone_owned());
+            let xi = OPoint::from(xi.generic_slice((0, 0), (U3::name(), U1::name())).clone_owned());
             x.copy_from(&hex.evaluate_basis(&xi).transpose());
         });
 
@@ -904,7 +904,7 @@ proptest! {
         let h = 1e-6;
         // Function is x = f(xi)
         let f = VectorFunctionBuilder::with_dimension(3).with_function(move |x, xi| {
-            let xi = Point::from(xi.fixed_slice::<U3, U1>(0, 0).clone_owned());
+            let xi = OPoint::from(xi.generic_slice((0, 0), (U3::name(), U1::name())).clone_owned());
             x.copy_from(&tet.map_reference_coords(&xi).coords);
         });
 

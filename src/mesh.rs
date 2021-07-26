@@ -5,7 +5,7 @@ use crate::connectivity::{
 };
 use crate::geometry::{AxisAlignedBoundingBox, BoundedGeometry, GeometryCollection};
 use nalgebra::allocator::Allocator;
-use nalgebra::{DefaultAllocator, DimName, Point, RealField, Scalar, VectorN, U2, U3};
+use nalgebra::{DefaultAllocator, DimName, OPoint, OVector, RealField, Scalar, U2, U3};
 use nested_vec::NestedVec;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -16,6 +16,8 @@ pub mod reorder;
 
 /// Index-based data structure for conforming meshes (i.e. no hanging nodes).
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+// TODO: Remove T: De(Serialize) bounds once nalgebra PR #953 has been merged and released
+#[serde(bound(serialize = "T: Serialize", deserialize = "T: Deserialize<'de>"))]
 pub struct Mesh<T: Scalar, D, Connectivity>
 where
     D: DimName,
@@ -27,7 +29,7 @@ where
         serialize = "<DefaultAllocator as Allocator<T, D>>::Buffer: Serialize",
         deserialize = "<DefaultAllocator as Allocator<T, D>>::Buffer: Deserialize<'de>"
     ))]
-    vertices: Vec<Point<T, D>>,
+    vertices: Vec<OPoint<T, D>>,
     #[serde(bound(
         serialize = "Connectivity: Serialize",
         deserialize = "Connectivity: Deserialize<'de>"
@@ -58,11 +60,11 @@ where
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
-    pub fn vertices_mut(&mut self) -> &mut [Point<T, D>] {
+    pub fn vertices_mut(&mut self) -> &mut [OPoint<T, D>] {
         &mut self.vertices
     }
 
-    pub fn vertices(&self) -> &[Point<T, D>] {
+    pub fn vertices(&self) -> &[OPoint<T, D>] {
         &self.vertices
     }
 
@@ -80,7 +82,7 @@ where
     /// incorrect. However, since this can be done exclusively with safe code, unchecked
     /// or unsafe indexing in which the user is *trusted* to provide valid indices may
     /// produce undefined behavior.Therefore, the connectivity must always be checked.
-    pub fn from_vertices_and_connectivity(vertices: Vec<Point<T, D>>, connectivity: Vec<Connectivity>) -> Self {
+    pub fn from_vertices_and_connectivity(vertices: Vec<OPoint<T, D>>, connectivity: Vec<Connectivity>) -> Self {
         Self { vertices, connectivity }
     }
 }
@@ -226,7 +228,7 @@ where
         let mut bbs = self.cell_iter().map(|cell| cell.bounding_box());
         bbs.next()
             .map(|first_bb| bbs.fold(first_bb, |bb1, bb2| bb1.enclose(&bb2)))
-            .unwrap_or_else(|| AxisAlignedBoundingBox::new(VectorN::zeros(), VectorN::zeros()))
+            .unwrap_or_else(|| AxisAlignedBoundingBox::new(OVector::zeros(), OVector::zeros()))
     }
 }
 
@@ -237,14 +239,14 @@ where
     DefaultAllocator: Allocator<T, D>,
 {
     /// Translates all vertices of the mesh by the given translation vector.
-    pub fn translate(&mut self, translation: &VectorN<T, D>) {
+    pub fn translate(&mut self, translation: &OVector<T, D>) {
         self.transform_vertices(|p| *p += translation);
     }
 
     /// Transform all vertices of the mesh by the given transformation function.
     pub fn transform_vertices<F>(&mut self, mut transformation: F)
     where
-        F: FnMut(&mut Point<T, D>),
+        F: FnMut(&mut OPoint<T, D>),
     {
         for p in &mut self.vertices {
             transformation(p);
@@ -253,7 +255,7 @@ where
 
     pub fn transform_all_vertices<F>(&mut self, mut transformation: F)
     where
-        F: FnMut(&mut [Point<T, D>]),
+        F: FnMut(&mut [OPoint<T, D>]),
     {
         transformation(&mut self.vertices);
     }
@@ -565,7 +567,7 @@ where
 // {
 //     type Dimension: DimName;
 //
-//     fn normal(&self) -> VectorN<T, Self::Dimension>;
+//     fn normal(&self) -> OVector<T, Self::Dimension>;
 // }
 //
 // impl<T> PlanarFace<T> for LineSegment2d<T>

@@ -1,9 +1,9 @@
 use crate::allocators::FiniteElementAllocator;
 use crate::element::{FiniteElement, MatrixSliceMut, ReferenceFiniteElement};
 use crate::geometry::GeometryCollection;
-use crate::nalgebra::{Dynamic, MatrixMN};
+use crate::nalgebra::{Dynamic, OMatrix};
 use crate::SmallDim;
-use nalgebra::{DefaultAllocator, Point, Scalar};
+use nalgebra::{DefaultAllocator, OPoint, Scalar};
 
 /// Describes the connectivity of elements in a finite element space.
 pub trait FiniteElementConnectivity {
@@ -28,14 +28,14 @@ where
         &self,
         element_index: usize,
         basis_values: &mut [T],
-        reference_coords: &Point<T, Self::ReferenceDim>,
+        reference_coords: &OPoint<T, Self::ReferenceDim>,
     );
 
     fn populate_element_gradients(
         &self,
         element_index: usize,
         gradients: MatrixSliceMut<T, Self::ReferenceDim, Dynamic>,
-        reference_coords: &Point<T, Self::ReferenceDim>,
+        reference_coords: &OPoint<T, Self::ReferenceDim>,
     );
 
     /// Compute the Jacobian of the transformation from the reference element to the given
@@ -43,15 +43,15 @@ where
     fn element_reference_jacobian(
         &self,
         element_index: usize,
-        reference_coords: &Point<T, Self::ReferenceDim>,
-    ) -> MatrixMN<T, Self::GeometryDim, Self::ReferenceDim>;
+        reference_coords: &OPoint<T, Self::ReferenceDim>,
+    ) -> OMatrix<T, Self::GeometryDim, Self::ReferenceDim>;
 
     /// Maps reference coordinates to physical coordinates in the element.
     fn map_element_reference_coords(
         &self,
         element_index: usize,
-        reference_coords: &Point<T, Self::ReferenceDim>,
-    ) -> Point<T, Self::GeometryDim>;
+        reference_coords: &OPoint<T, Self::ReferenceDim>,
+    ) -> OPoint<T, Self::GeometryDim>;
 
     /// The diameter of the finite element.
     ///
@@ -117,7 +117,7 @@ where
         self.space.element_node_count(self.element_index)
     }
 
-    fn populate_basis(&self, basis_values: &mut [T], reference_coords: &Point<T, Self::ReferenceDim>) {
+    fn populate_basis(&self, basis_values: &mut [T], reference_coords: &OPoint<T, Self::ReferenceDim>) {
         self.space
             .populate_element_basis(self.element_index, basis_values, reference_coords)
     }
@@ -125,7 +125,7 @@ where
     fn populate_basis_gradients(
         &self,
         basis_gradients: MatrixSliceMut<T, Self::ReferenceDim, Dynamic>,
-        reference_coords: &Point<T, Self::ReferenceDim>,
+        reference_coords: &OPoint<T, Self::ReferenceDim>,
     ) {
         self.space
             .populate_element_gradients(self.element_index, basis_gradients, reference_coords)
@@ -142,13 +142,13 @@ where
 
     fn reference_jacobian(
         &self,
-        reference_coords: &Point<T, Self::ReferenceDim>,
-    ) -> MatrixMN<T, Self::GeometryDim, Self::ReferenceDim> {
+        reference_coords: &OPoint<T, Self::ReferenceDim>,
+    ) -> OMatrix<T, Self::GeometryDim, Self::ReferenceDim> {
         self.space
             .element_reference_jacobian(self.element_index, reference_coords)
     }
 
-    fn map_reference_coords(&self, reference_coords: &Point<T, Self::ReferenceDim>) -> Point<T, Self::GeometryDim> {
+    fn map_reference_coords(&self, reference_coords: &OPoint<T, Self::ReferenceDim>) -> OPoint<T, Self::GeometryDim> {
         self.space
             .map_element_reference_coords(self.element_index, reference_coords)
     }

@@ -10,7 +10,7 @@ use fenris::io::vtk::VtkCellConnectivity;
 use fenris::mesh::procedural::{create_unit_box_uniform_hex_mesh_3d, create_unit_box_uniform_tet_mesh_3d};
 use fenris::mesh::{Hex20Mesh, Hex27Mesh, Mesh3d, Tet10Mesh};
 use fenris::nalgebra::coordinates::XYZ;
-use fenris::nalgebra::{Point, Point3, Vector1, Vector3, VectorN, U1, U3};
+use fenris::nalgebra::{OPoint, OVector, Point3, Vector1, Vector3, U1, U3};
 use fenris::quadrature;
 use fenris::quadrature::QuadraturePair3d;
 use std::f64::consts::PI;
@@ -51,7 +51,7 @@ impl Operator<f64, U3> for PoissonProblemSourceFunction {
 }
 
 impl SourceFunction<f64, U3> for PoissonProblemSourceFunction {
-    fn evaluate(&self, coords: &Point<f64, U3>, _data: &Self::Parameters) -> VectorN<f64, Self::SolutionDim> {
+    fn evaluate(&self, coords: &OPoint<f64, U3>, _data: &Self::Parameters) -> OVector<f64, Self::SolutionDim> {
         Vector1::new(f(coords))
     }
 }

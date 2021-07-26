@@ -12,8 +12,8 @@ rustdoc-args = [ "--html-in-header assets/doc-header.html"]
 default = [ "proptest" ]
 
 [dependencies]
-nalgebra = { version = "0.25", features = [ "serde-serialize" ] }
-nalgebra-sparse = "0.1.0"
+nalgebra = { version = "0.28", features = [ "serde-serialize" ] }
+nalgebra-sparse = "0.4"
 alga = { version = "0.9", default-features = false }
 vtkio = "0.6"
 num = "0.2"
@@ -37,7 +37,7 @@ fenris-optimize = { path = "fenris-optimize" }
 fenris-quadrature = { path = "fenris-quadrature" }
 
 [dev-dependencies]
-nalgebra = { version = "0.25", features = [ "serde-serialize", "compare" ] }
+nalgebra = { version = "0.28", features = [ "serde-serialize", "compare" ] }
 proptest = "1.0"
 prettytable-rs = "^0.8"
 matrixcompare = "0.3"

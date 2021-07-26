@@ -5,7 +5,7 @@ use crate::connectivity::{
 use crate::element::{ElementConnectivity, FiniteElement};
 use crate::mesh::{HexMesh, Mesh, Mesh2d, Mesh3d, Tet4Mesh};
 use nalgebra::allocator::Allocator;
-use nalgebra::{DefaultAllocator, DimName, Point, Point2, Point3, RealField, Scalar, U3};
+use nalgebra::{DefaultAllocator, DimName, OPoint, Point2, Point3, RealField, Scalar, U3};
 
 use crate::geometry::polymesh::{PolyMesh, PolyMesh3d};
 use crate::geometry::{OrientationTestResult, Triangle};
@@ -30,8 +30,8 @@ where
     /// TODO: Explain how this works
     fn refine(
         connectivity: &Connectivity,
-        mesh_vertices: &[Point<T, D>],
-        vertices: &mut Vec<Point<T, D>>,
+        mesh_vertices: &[OPoint<T, D>],
+        vertices: &mut Vec<OPoint<T, D>>,
         child_indices: &mut Vec<usize>,
         parents: &mut NestedVec<usize>,
     ) -> Self;

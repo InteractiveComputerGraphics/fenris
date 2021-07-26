@@ -2,10 +2,10 @@ use crate::allocators::ElementConnectivityAllocator;
 use crate::connectivity::CellConnectivity;
 use crate::element::{ElementConnectivity, FiniteElement, MatrixSliceMut, ReferenceFiniteElement};
 use crate::mesh::Mesh;
-use crate::nalgebra::{Dynamic, MatrixMN};
+use crate::nalgebra::{Dynamic, OMatrix};
 use crate::space::{FiniteElementConnectivity, FiniteElementSpace, GeometricFiniteElementSpace};
 use crate::SmallDim;
-use nalgebra::{DefaultAllocator, DimName, Point, Scalar};
+use nalgebra::{DefaultAllocator, DimName, OPoint, Scalar};
 
 impl<'a, T, D, C> GeometricFiniteElementSpace<'a, T> for Mesh<T, D, C>
 where
@@ -70,7 +70,7 @@ where
         &self,
         element_index: usize,
         basis_values: &mut [T],
-        reference_coords: &Point<T, Self::ReferenceDim>,
+        reference_coords: &OPoint<T, Self::ReferenceDim>,
     ) {
         let element = self
             .connectivity()
@@ -90,7 +90,7 @@ where
         &self,
         element_index: usize,
         gradients: MatrixSliceMut<T, Self::ReferenceDim, Dynamic>,
-        reference_coords: &Point<T, Self::ReferenceDim>,
+        reference_coords: &OPoint<T, Self::ReferenceDim>,
     ) {
         let element = self
             .connectivity()
@@ -109,8 +109,8 @@ where
     fn element_reference_jacobian(
         &self,
         element_index: usize,
-        reference_coords: &Point<T, Self::ReferenceDim>,
-    ) -> MatrixMN<T, Self::GeometryDim, Self::ReferenceDim> {
+        reference_coords: &OPoint<T, Self::ReferenceDim>,
+    ) -> OMatrix<T, Self::GeometryDim, Self::ReferenceDim> {
         // TODO: Avoid this repetition
         let element = self
             .connectivity()
@@ -124,15 +124,15 @@ where
     fn map_element_reference_coords(
         &self,
         element_index: usize,
-        reference_coords: &Point<T, Self::ReferenceDim>,
-    ) -> Point<T, Self::GeometryDim> {
+        reference_coords: &OPoint<T, Self::ReferenceDim>,
+    ) -> OPoint<T, Self::GeometryDim> {
         let element = self
             .connectivity()
             .get(element_index)
             .expect("Element index out of bounds")
             .element(self.vertices())
             .unwrap();
-        Point::from(element.map_reference_coords(&reference_coords))
+        OPoint::from(element.map_reference_coords(&reference_coords))
     }
 
     fn diameter(&self, element_index: usize) -> T {

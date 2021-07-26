@@ -2,7 +2,7 @@ use crate::allocators::FiniteElementAllocator;
 use crate::geometry::DistanceQuery;
 use crate::space::GeometricFiniteElementSpace;
 use nalgebra::allocator::Allocator;
-use nalgebra::{DVector, DefaultAllocator, DimMin, DimName, Point, RealField, VectorN, U1};
+use nalgebra::{DVector, DefaultAllocator, DimMin, DimName, OPoint, OVector, RealField, U1};
 use serde::{Deserialize, Serialize};
 
 /// Interpolates solution variables onto a fixed set of interpolation points.
@@ -37,19 +37,19 @@ impl<T> FiniteElementInterpolator<T>
 where
     T: RealField,
 {
-    pub fn interpolate<SolutionDim>(&self, u: &DVector<T>) -> Vec<VectorN<T, SolutionDim>>
+    pub fn interpolate<SolutionDim>(&self, u: &DVector<T>) -> Vec<OVector<T, SolutionDim>>
     where
         SolutionDim: DimName,
         DefaultAllocator: Allocator<T, SolutionDim, U1>,
     {
         let num_sol_vectors = self.supported_node_offsets.len().saturating_sub(1);
-        let mut sol_vectors = vec![VectorN::zeros(); num_sol_vectors];
+        let mut sol_vectors = vec![OVector::zeros(); num_sol_vectors];
         self.interpolate_into(&mut sol_vectors, u);
         sol_vectors
     }
 
     // TODO: Take "arbitrary" u, not just DVector
-    pub fn interpolate_into<SolutionDim>(&self, result: &mut [VectorN<T, SolutionDim>], u: &DVector<T>)
+    pub fn interpolate_into<SolutionDim>(&self, result: &mut [OVector<T, SolutionDim>], u: &DVector<T>)
     where
         SolutionDim: DimName,
         DefaultAllocator: Allocator<T, SolutionDim, U1>,
@@ -71,7 +71,7 @@ where
             result[i].fill(T::zero());
 
             for (v, j) in &self.node_values[i_support_start..i_support_end] {
-                let u_j = u.fixed_slice::<SolutionDim, U1>(SolutionDim::dim() * j, 0);
+                let u_j = u.generic_slice((SolutionDim::dim() * j, 0), (SolutionDim::name(), U1::name()));
                 result[i] += u_j * v.clone();
             }
         }
@@ -98,19 +98,19 @@ impl<T> FiniteElementInterpolator<T> {
 impl<T> FiniteElementInterpolator<T> {
     pub fn interpolate_space<'a, Space, D>(
         _space: &'a Space,
-        _interpolation_points: &'a [Point<T, D>],
+        _interpolation_points: &'a [OPoint<T, D>],
     ) -> Result<Self, Box<dyn std::error::Error>>
     where
         T: RealField,
         D: DimName + DimMin<D, Output = D>,
-        Space: GeometricFiniteElementSpace<'a, T, GeometryDim = D> + DistanceQuery<'a, Point<T, D>>,
+        Space: GeometricFiniteElementSpace<'a, T, GeometryDim = D> + DistanceQuery<'a, OPoint<T, D>>,
         DefaultAllocator: FiniteElementAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
     {
         todo!("Reimplement this function or scrap it in favor of a different design?");
         // let mut supported_node_offsets = Vec::new();
         // let mut node_values = Vec::new();
         //
-        // let mut basis_buffer = MatrixMN::<_, U1, Dynamic>::zeros(0);
+        // let mut basis_buffer = OMatrix::<_, U1, Dynamic>::zeros(0);
         //
         // for point in interpolation_points {
         //     let point_node_support_begin = node_values.len();
@@ -152,6 +152,6 @@ where
 {
     fn make_interpolator(
         &self,
-        interpolation_points: &[Point<T, D>],
+        interpolation_points: &[OPoint<T, D>],
     ) -> Result<FiniteElementInterpolator<T>, Box<dyn std::error::Error>>;
 }

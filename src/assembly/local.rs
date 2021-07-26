@@ -4,7 +4,7 @@ use crate::element::VolumetricFiniteElement;
 use crate::mesh::Mesh;
 use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{DMatrix, DMatrixSliceMut, DefaultAllocator, DimMin, DimName, RealField, Scalar, U1};
-use crate::nalgebra::{DVectorSliceMut, Point};
+use crate::nalgebra::{DVectorSliceMut, OPoint};
 use crate::nested_vec::NestedVec;
 use crate::quadrature::Quadrature;
 use crate::SmallDim;
@@ -134,14 +134,14 @@ where
     fn populate_element_quadrature(
         &self,
         element_index: usize,
-        points: &mut [Point<T, GeometryDim>],
+        points: &mut [OPoint<T, GeometryDim>],
         weights: &mut [T],
     );
 
     fn populate_element_quadrature_and_data(
         &self,
         element_index: usize,
-        points: &mut [Point<T, GeometryDim>],
+        points: &mut [OPoint<T, GeometryDim>],
         weights: &mut [T],
         data: &mut [Self::Data],
     ) {
@@ -158,7 +158,7 @@ where
     GeometryDim: DimName,
     DefaultAllocator: Allocator<T, GeometryDim>,
 {
-    points: NestedVec<Point<T, GeometryDim>>,
+    points: NestedVec<OPoint<T, GeometryDim>>,
     weights: NestedVec<T>,
     data: NestedVec<Data>,
 }
@@ -169,7 +169,7 @@ where
     GeometryDim: DimName,
     DefaultAllocator: Allocator<T, GeometryDim>,
 {
-    pub fn from_points_and_weights(points: NestedVec<Point<T, GeometryDim>>, weights: NestedVec<T>) -> Self {
+    pub fn from_points_and_weights(points: NestedVec<OPoint<T, GeometryDim>>, weights: NestedVec<T>) -> Self {
         let mut data = NestedVec::new();
         for i in 0..points.len() {
             data.push(&vec![(); points.get(i).unwrap().len()]);
@@ -185,7 +185,7 @@ where
     DefaultAllocator: Allocator<T, GeometryDim>,
 {
     pub fn from_points_weights_and_data(
-        points: NestedVec<Point<T, GeometryDim>>,
+        points: NestedVec<OPoint<T, GeometryDim>>,
         weights: NestedVec<T>,
         data: NestedVec<Data>,
     ) -> Self {
@@ -244,7 +244,7 @@ where
     fn populate_element_quadrature(
         &self,
         element_index: usize,
-        points: &mut [Point<T, GeometryDim>],
+        points: &mut [OPoint<T, GeometryDim>],
         weights: &mut [T],
     ) {
         let points_for_element = self
@@ -269,7 +269,7 @@ where
     GeometryDim: DimName,
     DefaultAllocator: Allocator<T, GeometryDim>,
 {
-    points: Vec<Point<T, GeometryDim>>,
+    points: Vec<OPoint<T, GeometryDim>>,
     weights: Vec<T>,
     data: Vec<Data>,
 }
@@ -280,7 +280,7 @@ where
     GeometryDim: DimName,
     DefaultAllocator: Allocator<T, GeometryDim>,
 {
-    pub fn from_points_and_weights(points: Vec<Point<T, GeometryDim>>, weights: Vec<T>) -> Self {
+    pub fn from_points_and_weights(points: Vec<OPoint<T, GeometryDim>>, weights: Vec<T>) -> Self {
         let data = vec![(); points.len()];
         Self::from_points_weights_and_data(points, weights, data)
     }
@@ -292,7 +292,7 @@ where
     GeometryDim: DimName,
     DefaultAllocator: Allocator<T, GeometryDim>,
 {
-    pub fn from_points_weights_and_data(points: Vec<Point<T, GeometryDim>>, weights: Vec<T>, data: Vec<Data>) -> Self {
+    pub fn from_points_weights_and_data(points: Vec<OPoint<T, GeometryDim>>, weights: Vec<T>, data: Vec<Data>) -> Self {
         let msg = "Points, weights and data must have the same length.";
         assert_eq!(points.len(), weights.len(), "{}", msg);
         assert_eq!(points.len(), data.len(), "{}", msg);
@@ -321,7 +321,7 @@ where
     fn populate_element_quadrature(
         &self,
         _element_index: usize,
-        points: &mut [Point<T, GeometryDim>],
+        points: &mut [OPoint<T, GeometryDim>],
         weights: &mut [T],
     ) {
         assert_eq!(points.len(), self.points.len());

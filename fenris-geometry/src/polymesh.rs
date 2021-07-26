@@ -7,7 +7,7 @@ use std::hash::Hash;
 
 use itertools::Itertools;
 use nalgebra::allocator::Allocator;
-use nalgebra::{DefaultAllocator, DimName, Point, Point3, RealField, Scalar, Vector3, U3};
+use nalgebra::{DefaultAllocator, DimName, OPoint, Point3, RealField, Scalar, Vector3, U3};
 use numeric_literals::replace_float_literals;
 use serde::{Deserialize, Serialize};
 
@@ -39,7 +39,7 @@ pub struct PolyMeshFace<'a, T: Scalar, D: DimName>
 where
     DefaultAllocator: Allocator<T, D>,
 {
-    all_vertices: &'a [Point<T, D>],
+    all_vertices: &'a [OPoint<T, D>],
     face_vertex_indices: &'a [usize],
 }
 
@@ -48,7 +48,7 @@ impl<'a, T: Scalar> ConvexPolygon3d<'a, T> for PolyMeshFace<'a, T, U3> {
         self.face_vertex_indices.len()
     }
 
-    fn get_vertex(&self, index: usize) -> Option<Point<T, U3>> {
+    fn get_vertex(&self, index: usize) -> Option<OPoint<T, U3>> {
         let v = self
             .all_vertices
             .get(*self.face_vertex_indices.get(index)?)
@@ -61,8 +61,8 @@ impl<'a, T: Scalar> ConvexPolygon3d<'a, T> for PolyMeshFace<'a, T, U3> {
 ///
 /// It is assumed that each polytopal cell is convex.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(bound(serialize = "Point<T, D>: Serialize"))]
-#[serde(bound(deserialize = "Point<T, D>: Deserialize<'de>"))]
+#[serde(bound(serialize = "OPoint<T, D>: Serialize"))]
+#[serde(bound(deserialize = "OPoint<T, D>: Deserialize<'de>"))]
 pub struct PolyMesh<T, D>
 where
     T: Scalar,
@@ -71,7 +71,7 @@ where
 {
     #[serde(bound(serialize = "<DefaultAllocator as Allocator<T, D>>::Buffer: Serialize"))]
     #[serde(bound(deserialize = "<DefaultAllocator as Allocator<T, D>>::Buffer: Deserialize<'de>"))]
-    vertices: Vec<Point<T, D>>,
+    vertices: Vec<OPoint<T, D>>,
     faces: NestedVec<usize>,
     cells: NestedVec<usize>,
 }
@@ -89,7 +89,7 @@ where
         Self::from_poly_data(vec![], NestedVec::new(), NestedVec::new())
     }
 
-    pub fn from_poly_data(vertices: Vec<Point<T, D>>, faces: NestedVec<usize>, cells: NestedVec<usize>) -> Self {
+    pub fn from_poly_data(vertices: Vec<OPoint<T, D>>, faces: NestedVec<usize>, cells: NestedVec<usize>) -> Self {
         let num_vertices = vertices.len();
         let num_faces = faces.len();
 
@@ -108,11 +108,11 @@ where
         }
     }
 
-    pub fn vertices(&self) -> &[Point<T, D>] {
+    pub fn vertices(&self) -> &[OPoint<T, D>] {
         &self.vertices
     }
 
-    pub fn vertices_mut(&mut self) -> &mut [Point<T, D>] {
+    pub fn vertices_mut(&mut self) -> &mut [OPoint<T, D>] {
         &mut self.vertices
     }
 
@@ -124,7 +124,7 @@ where
         self.cells.len()
     }
 
-    pub fn face_vertices<'a>(&'a self, face_idx: usize) -> impl 'a + Iterator<Item = &'a Point<T, D>> {
+    pub fn face_vertices<'a>(&'a self, face_idx: usize) -> impl 'a + Iterator<Item = &'a OPoint<T, D>> {
         self.get_face_connectivity(face_idx)
             .into_iter()
             .flatten()
@@ -308,7 +308,7 @@ where
                 let edge = [v1.min(v2), v1.max(v2)];
                 let v12 = *subdivided_edges.entry(edge).or_insert_with(|| {
                     let new_vertex_index = vertex_offset + additional_vertices.len();
-                    let midpoint = Point::from((&self.vertices[v1].coords + &self.vertices[v2].coords) * 0.5);
+                    let midpoint = OPoint::from((&self.vertices[v1].coords + &self.vertices[v2].coords) * 0.5);
                     additional_vertices.push(midpoint);
                     new_vertex_index
                 });

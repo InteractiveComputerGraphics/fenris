@@ -211,7 +211,7 @@ impl VtkCellConnectivity for Hex27Connectivity {
 // }
 
 // pub fn create_vtk_data_set_from_quadratures<T, C, D>(
-//     vertices: &[Point<T, D>],
+//     vertices: &[OPoint<T, D>],
 //     connectivity: &[C],
 //     quadrature_rules: impl IntoIterator<Item = impl Quadrature<T, C::ReferenceDim>>,
 // ) -> DataSet
@@ -236,7 +236,7 @@ impl VtkCellConnectivity for Hex27Connectivity {
 //             let j = element.reference_jacobian(xi);
 //             let x = element.map_reference_coords(xi);
 //             let w_physical = j.determinant().abs() * *w_ref;
-//             physical_points.push(Point::from(x));
+//             physical_points.push(OPoint::from(x));
 //             physical_weights.push(w_physical);
 //             cell_indices.push(cell_idx as u64);
 //         }

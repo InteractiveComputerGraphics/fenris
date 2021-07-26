@@ -11,12 +11,12 @@ use fenris::element::ElementConnectivity;
 use fenris::error::{estimate_H1_seminorm_error, estimate_L2_error};
 use fenris::io::vtk::{FiniteElementMeshDataSetBuilder, VtkCellConnectivity};
 use fenris::mesh::Mesh;
-use fenris::nalgebra::{DVector, DefaultAllocator, Dynamic, Point, UniformNorm, Vector1, U1};
+use fenris::nalgebra::{DVector, DefaultAllocator, DimName, Dynamic, OPoint, UniformNorm, Vector1, U1};
 use fenris::nalgebra_sparse::CsrMatrix;
 use fenris::quadrature::QuadraturePair;
 use fenris::SmallDim;
 use itertools::izip;
-use nalgebra::VectorN;
+use nalgebra::OVector;
 use nalgebra_sparse::factorization::CscCholesky;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
@@ -110,7 +110,7 @@ where
         .enumerate()
         // TODO: Clean this up a bit
         .filter_map(|(idx, x)| {
-            ((&x.coords - VectorN::<f64, D>::repeat(0.5)).apply_norm(&UniformNorm) > 0.4999).then(|| idx)
+            ((&x.coords - OVector::<f64, D>::repeat(0.5)).apply_norm(&UniformNorm) > 0.4999).then(|| idx)
         })
         .collect();
 
@@ -129,7 +129,7 @@ pub fn solve_linear_system(matrix: &CsrMatrix<f64>, rhs: &DVector<f64>) -> eyre:
     // any kind of matrix, especially vectors (DVector in particular)!
     // Need to make a PR for this
     let u = cholesky.solve(rhs);
-    Ok(u.reshape_generic(Dynamic::new(rhs.len()), U1))
+    Ok(u.reshape_generic(Dynamic::new(rhs.len()), U1::name()))
 }
 
 #[allow(non_snake_case)]
@@ -145,8 +145,8 @@ pub fn solve_poisson<C, D, Source>(
     quadrature: QuadraturePair<f64, D>,
     error_quadrature: QuadraturePair<f64, D>,
     poisson_source_function: &Source,
-    u_exact: impl Fn(&Point<f64, D>) -> f64,
-    u_exact_grad: impl Fn(&Point<f64, D>) -> VectorN<f64, D>,
+    u_exact: impl Fn(&OPoint<f64, D>) -> f64,
+    u_exact_grad: impl Fn(&OPoint<f64, D>) -> OVector<f64, D>,
 ) -> PoissonSolveResult
 where
     C: ElementConnectivity<f64, GeometryDim = D, ReferenceDim = D>,
@@ -164,7 +164,7 @@ where
     let error_quadrature = UniformQuadratureTable::from_points_and_weights(points, weights);
     let L2_error = estimate_L2_error(
         mesh,
-        |x: &Point<f64, D>| Vector1::repeat(u_exact(x)),
+        |x: &OPoint<f64, D>| Vector1::repeat(u_exact(x)),
         &u_h,
         &error_quadrature,
     )
@@ -186,8 +186,8 @@ pub fn solve_and_produce_output<C, D, Source>(
     quadrature: QuadraturePair<f64, D>,
     error_quadrature: QuadraturePair<f64, D>,
     poisson_source_function: &Source,
-    u_exact: impl Fn(&Point<f64, D>) -> f64,
-    u_exact_grad: impl Fn(&Point<f64, D>) -> VectorN<f64, D>,
+    u_exact: impl Fn(&OPoint<f64, D>) -> f64,
+    u_exact_grad: impl Fn(&OPoint<f64, D>) -> OVector<f64, D>,
 ) where
     C: VtkCellConnectivity + ElementConnectivity<f64, GeometryDim = D, ReferenceDim = D>,
     D: SmallDim,

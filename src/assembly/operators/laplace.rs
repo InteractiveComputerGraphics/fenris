@@ -1,6 +1,6 @@
 use crate::allocators::{BiDimAllocator, SmallDimAllocator};
 use crate::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
-use crate::nalgebra::{DefaultAllocator, MatrixMN, RealField, Vector1, VectorN, U1};
+use crate::nalgebra::{DefaultAllocator, OMatrix, OVector, RealField, Vector1, U1};
 use crate::{SmallDim, Symmetry};
 use numeric_literals::replace_float_literals;
 
@@ -30,7 +30,7 @@ where
     DefaultAllocator: BiDimAllocator<T, D, Self::SolutionDim>,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
-    fn compute_energy(&self, gradient: &MatrixMN<T, D, Self::SolutionDim>, _parameters: &Self::Parameters) -> T {
+    fn compute_energy(&self, gradient: &OMatrix<T, D, Self::SolutionDim>, _parameters: &Self::Parameters) -> T {
         0.5 * gradient.dot(&gradient)
     }
 }
@@ -43,9 +43,9 @@ where
 {
     fn compute_elliptic_operator(
         &self,
-        gradient: &MatrixMN<T, D, Self::SolutionDim>,
+        gradient: &OMatrix<T, D, Self::SolutionDim>,
         _data: &Self::Parameters,
-    ) -> MatrixMN<T, D, Self::SolutionDim> {
+    ) -> OMatrix<T, D, Self::SolutionDim> {
         gradient.clone()
     }
 }
@@ -59,11 +59,11 @@ where
     // TODO: Document
     fn contract(
         &self,
-        _gradient: &MatrixMN<T, D, Self::SolutionDim>,
-        a: &VectorN<T, D>,
-        b: &VectorN<T, D>,
+        _gradient: &OMatrix<T, D, Self::SolutionDim>,
+        a: &OVector<T, D>,
+        b: &OVector<T, D>,
         _data: &Self::Parameters,
-    ) -> MatrixMN<T, Self::SolutionDim, Self::SolutionDim> {
+    ) -> OMatrix<T, Self::SolutionDim, Self::SolutionDim> {
         Vector1::new(a.dot(&b))
     }
 

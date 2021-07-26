@@ -1,7 +1,7 @@
 mod polytope;
 use itertools::izip;
 use nalgebra::{
-    distance_squared, DefaultAllocator, DimName, Point, Point2, Point3, RealField, Scalar, Unit, Vector3, VectorN, U2,
+    distance_squared, DefaultAllocator, DimName, OPoint, OVector, Point2, Point3, RealField, Scalar, Unit, Vector3, U2,
     U3,
 };
 pub use polytope::*;
@@ -89,7 +89,7 @@ where
     DefaultAllocator: Allocator<T, D>,
 {
     pub feature_id: usize,
-    pub point: Point<T, D>,
+    pub point: OPoint<T, D>,
     pub signed_distance: T,
 }
 
@@ -99,13 +99,13 @@ where
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
-    fn query_signed_distance(&self, point: &Point<T, D>) -> Option<SignedDistanceResult<T, D>>;
+    fn query_signed_distance(&self, point: &OPoint<T, D>) -> Option<SignedDistanceResult<T, D>>;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(bound(
-    serialize = "VectorN<T, D>: Serialize",
-    deserialize = "VectorN<T, D>: Deserialize<'de>"
+    serialize = "OVector<T, D>: Serialize",
+    deserialize = "OVector<T, D>: Deserialize<'de>"
 ))]
 pub struct AxisAlignedBoundingBox<T, D>
 where
@@ -113,8 +113,8 @@ where
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
-    min: VectorN<T, D>,
-    max: VectorN<T, D>,
+    min: OVector<T, D>,
+    max: OVector<T, D>,
 }
 
 impl<T, D> Copy for AxisAlignedBoundingBox<T, D>
@@ -122,7 +122,7 @@ where
     T: Scalar,
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
-    VectorN<T, D>: Copy,
+    OVector<T, D>: Copy,
     // <DefaultAllocator as Allocator<T, D>>::Buffer: Copy,
 {
 }
@@ -136,29 +136,29 @@ where
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
-    pub fn new(min: VectorN<T, D>, max: VectorN<T, D>) -> Self {
+    pub fn new(min: OVector<T, D>, max: OVector<T, D>) -> Self {
         for i in 0..D::dim() {
             assert!(min[i] <= max[i]);
         }
         Self { min, max }
     }
 
-    pub fn min(&self) -> &VectorN<T, D> {
+    pub fn min(&self) -> &OVector<T, D> {
         &self.min
     }
 
-    pub fn max(&self) -> &VectorN<T, D> {
+    pub fn max(&self) -> &OVector<T, D> {
         &self.max
     }
 }
 
-impl<T, D> From<Point<T, D>> for AxisAlignedBoundingBox<T, D>
+impl<T, D> From<OPoint<T, D>> for AxisAlignedBoundingBox<T, D>
 where
     T: Scalar + PartialOrd,
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
-    fn from(point: Point<T, D>) -> Self {
+    fn from(point: OPoint<T, D>) -> Self {
         AxisAlignedBoundingBox::new(point.coords.clone(), point.coords)
     }
 }
@@ -172,15 +172,15 @@ where
     /// Computes the minimal bounding box which encloses both `this` and `other`.
     pub fn enclose(&self, other: &AxisAlignedBoundingBox<T, D>) -> Self {
         let min = self.min.iter().zip(&other.min).map(|(a, b)| T::min(*a, *b));
-        let min = VectorN::<T, D>::from_iterator(min);
+        let min = OVector::<T, D>::from_iterator(min);
 
         let max = self.max.iter().zip(&other.max).map(|(a, b)| T::max(*a, *b));
-        let max = VectorN::<T, D>::from_iterator(max);
+        let max = OVector::<T, D>::from_iterator(max);
 
         AxisAlignedBoundingBox::new(min, max)
     }
 
-    pub fn from_points<'a>(points: impl IntoIterator<Item = &'a Point<T, D>>) -> Option<Self> {
+    pub fn from_points<'a>(points: impl IntoIterator<Item = &'a OPoint<T, D>>) -> Option<Self> {
         let mut points = points.into_iter();
         points.next().map(|first_point| {
             points.fold(AxisAlignedBoundingBox::from(first_point.clone()), |aabb, point| {
@@ -189,7 +189,7 @@ where
         })
     }
 
-    pub fn extents(&self) -> VectorN<T, D> {
+    pub fn extents(&self) -> OVector<T, D> {
         self.max() - self.min()
     }
 
@@ -197,8 +197,8 @@ where
         (self.max() - self.min()).amax()
     }
 
-    pub fn center(&self) -> Point<T, D> {
-        Point::from((self.max() + self.min()) / T::from_f64(2.0).unwrap())
+    pub fn center(&self) -> OPoint<T, D> {
+        OPoint::from((self.max() + self.min()) / T::from_f64(2.0).unwrap())
     }
 
     pub fn uniformly_scale(&self, scale: T) -> Self {
@@ -208,7 +208,7 @@ where
         }
     }
 
-    pub fn contains_point(&self, point: &Point<T, D>) -> bool {
+    pub fn contains_point(&self, point: &OPoint<T, D>) -> bool {
         (0..D::dim()).all(|dim| point[dim] > self.min[dim] && point[dim] < self.max[dim])
     }
 }
@@ -233,8 +233,11 @@ pub enum Orientation {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(bound(serialize = "Point<T, D>: Serialize", deserialize = "Point<T, D>: Deserialize<'de>"))]
-pub struct Triangle<T, D>(pub [Point<T, D>; 3])
+#[serde(bound(
+    serialize = "OPoint<T, D>: Serialize",
+    deserialize = "OPoint<T, D>: Deserialize<'de>"
+))]
+pub struct Triangle<T, D>(pub [OPoint<T, D>; 3])
 where
     T: Scalar,
     D: DimName,
@@ -245,7 +248,7 @@ where
     T: Scalar,
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
-    Point<T, D>: Copy,
+    OPoint<T, D>: Copy,
 {
 }
 
@@ -274,16 +277,16 @@ where
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
-    pub fn centroid(&self) -> Point<T, D> {
-        let mut centroid = VectorN::zeros();
+    pub fn centroid(&self) -> OPoint<T, D> {
+        let mut centroid = OVector::zeros();
         for p in &self.0 {
             centroid += &p.coords * T::from_f64(1.0 / 3.0).unwrap();
         }
-        Point::from(centroid)
+        OPoint::from(centroid)
     }
 
     /// Returns an array of vectors corresponding to the three sides of the triangle.
-    pub fn sides(&self) -> [VectorN<T, D>; 3] {
+    pub fn sides(&self) -> [OVector<T, D>; 3] {
         let a = &self.0[0];
         let b = &self.0[1];
         let c = &self.0[2];
@@ -461,7 +464,7 @@ where
     T: RealField,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
-    fn distance(&self, point: &Point<T, U3>) -> T {
+    fn distance(&self, point: &OPoint<T, U3>) -> T {
         self.project_point(point).distance
     }
 }
@@ -471,7 +474,7 @@ impl<'a, T: RealField> ConvexPolygon3d<'a, T> for Triangle3d<T> {
         3
     }
 
-    fn get_vertex(&self, index: usize) -> Option<Point<T, U3>> {
+    fn get_vertex(&self, index: usize) -> Option<OPoint<T, U3>> {
         self.0.get(index).copied()
     }
 }
@@ -592,7 +595,7 @@ impl<T> SignedDistance<T, U3> for Hexahedron<T>
 where
     T: RealField,
 {
-    fn query_signed_distance(&self, point: &Point<T, U3>) -> Option<SignedDistanceResult<T, U3>> {
+    fn query_signed_distance(&self, point: &OPoint<T, U3>) -> Option<SignedDistanceResult<T, U3>> {
         Some(self.compute_signed_distance(point))
     }
 }
@@ -1105,7 +1108,7 @@ impl<T> Distance<T, Point3<T>> for Tetrahedron<T>
 where
     T: RealField,
 {
-    fn distance(&self, point: &Point<T, U3>) -> T {
+    fn distance(&self, point: &OPoint<T, U3>) -> T {
         let triangle = |i, j, k| Triangle([self.vertices[i], self.vertices[j], self.vertices[k]]);
 
         let tri_faces = [

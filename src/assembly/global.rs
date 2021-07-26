@@ -23,7 +23,7 @@ use crate::assembly::local::{
 use crate::connectivity::Connectivity;
 use crate::element::MatrixSliceMut;
 use crate::nalgebra::allocator::Allocator;
-use crate::nalgebra::{DVector, DVectorSlice, DefaultAllocator, Point};
+use crate::nalgebra::{DVector, DVectorSlice, DefaultAllocator, OPoint};
 use crate::space::FiniteElementSpace;
 use crate::SmallDim;
 use fenris_sparse::ParallelCsrRowCollection;
@@ -643,7 +643,7 @@ where
     DefaultAllocator: Allocator<T, D>,
 {
     quad_weights: Vec<T>,
-    quad_points: Vec<Point<T, D>>,
+    quad_points: Vec<OPoint<T, D>>,
     quad_data: Vec<Data>,
 }
 
@@ -671,7 +671,7 @@ where
 {
     /// Resizes the internal buffer storages to the given size.
     pub fn resize(&mut self, quadrature_size: usize) {
-        self.quad_points.resize(quadrature_size, Point::origin());
+        self.quad_points.resize(quadrature_size, OPoint::origin());
         self.quad_weights.resize(quadrature_size, T::zero());
         self.quad_data.resize(quadrature_size, Data::default());
     }
@@ -696,7 +696,7 @@ where
         &self.quad_weights
     }
 
-    pub fn points(&self) -> &[Point<T, GeometryDim>] {
+    pub fn points(&self) -> &[OPoint<T, GeometryDim>] {
         &self.quad_points
     }
 
@@ -707,7 +707,7 @@ where
     /// Calls a closure for each quadrature point currently in the workspace.
     pub fn for_each_quadrature_point<F>(&self, mut f: F) -> eyre::Result<()>
     where
-        F: FnMut(T, &Point<T, GeometryDim>, &Data) -> eyre::Result<()>,
+        F: FnMut(T, &OPoint<T, GeometryDim>, &Data) -> eyre::Result<()>,
     {
         assert_eq!(self.quad_weights.len(), self.quad_points.len());
         assert_eq!(self.quad_weights.len(), self.quad_data.len());
@@ -758,7 +758,7 @@ impl<T: RealField> BasisFunctionBuffer<T> {
         &mut self,
         element_index: usize,
         space: &Space,
-        reference_coords: &Point<T, Space::ReferenceDim>,
+        reference_coords: &OPoint<T, Space::ReferenceDim>,
     ) where
         Space: FiniteElementSpace<T>,
         DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
@@ -770,7 +770,7 @@ impl<T: RealField> BasisFunctionBuffer<T> {
         &mut self,
         element_index: usize,
         space: &Space,
-        reference_coords: &Point<T, Space::ReferenceDim>,
+        reference_coords: &OPoint<T, Space::ReferenceDim>,
     ) where
         Space: FiniteElementSpace<T>,
         DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,

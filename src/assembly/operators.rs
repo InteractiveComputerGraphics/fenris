@@ -1,6 +1,6 @@
 use crate::allocators::BiDimAllocator;
 use crate::nalgebra::allocator::Allocator;
-use crate::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, MatrixMN, RealField, Scalar, VectorN};
+use crate::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, OMatrix, OVector, RealField, Scalar};
 use crate::{SmallDim, Symmetry};
 
 mod laplace;
@@ -28,9 +28,9 @@ where
     /// [operator parameters](Operator::Parameters).
     fn compute_elliptic_operator(
         &self,
-        gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
+        gradient: &OMatrix<T, GeometryDim, Self::SolutionDim>,
         parameters: &Self::Parameters,
-    ) -> MatrixMN<T, GeometryDim, Self::SolutionDim>;
+    ) -> OMatrix<T, GeometryDim, Self::SolutionDim>;
 }
 
 /// A contraction operator encoding derivative information for an elliptic operator.
@@ -54,11 +54,11 @@ where
     /// Compute $ \mathcal{C}_g(\nabla u, a, b)$ with the given parameters.
     fn contract(
         &self,
-        gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
-        a: &VectorN<T, GeometryDim>,
-        b: &VectorN<T, GeometryDim>,
+        gradient: &OMatrix<T, GeometryDim, Self::SolutionDim>,
+        a: &OVector<T, GeometryDim>,
+        b: &OVector<T, GeometryDim>,
         parameters: &Self::Parameters,
-    ) -> MatrixMN<T, Self::SolutionDim, Self::SolutionDim>;
+    ) -> OMatrix<T, Self::SolutionDim, Self::SolutionDim>;
 
     /// Whether the contraction operator is symmetric.
     ///
@@ -135,7 +135,7 @@ where
         &self,
         mut output: DMatrixSliceMut<T>,
         alpha: T,
-        gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
+        gradient: &OMatrix<T, GeometryDim, Self::SolutionDim>,
         a: DVectorSlice<T>,
         b: DVectorSlice<T>,
         parameters: &Self::Parameters,
@@ -214,9 +214,6 @@ where
     GeometryDim: SmallDim,
     DefaultAllocator: BiDimAllocator<T, GeometryDim, Self::SolutionDim>,
 {
-    fn compute_energy(
-        &self,
-        gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
-        parameters: &Self::Parameters,
-    ) -> T;
+    fn compute_energy(&self, gradient: &OMatrix<T, GeometryDim, Self::SolutionDim>, parameters: &Self::Parameters)
+        -> T;
 }

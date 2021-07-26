@@ -9,7 +9,8 @@ use fenris::error::{
 use fenris::mesh::procedural::create_unit_box_uniform_hex_mesh_3d;
 use fenris::nalgebra::coordinates::XYZ;
 use fenris::nalgebra::{
-    DMatrix, DVector, DVectorSlice, Dynamic, MatrixMN, MatrixSliceMut, Point3, Vector1, Vector2, VectorN, U3, U8,
+    DMatrix, DVector, DVectorSlice, DimName, Dynamic, MatrixSliceMut, OMatrix, OVector, Point3, Vector1, Vector2, U3,
+    U8,
 };
 use fenris::nested_vec::NestedVec;
 use fenris::quadrature;
@@ -127,7 +128,7 @@ fn test_element_H1_seminorm_error_scalar() {
     // (since we compute a squared norm, we need double the polynomial degree of the gradient
     // polynomial order)
     let (weights, points) = quadrature::total_order::tetrahedron(8).unwrap();
-    let mut gradient_buffer = DMatrix::repeat(3, 20, 3.0).reshape_generic(U3, Dynamic::new(20));
+    let mut gradient_buffer = DMatrix::repeat(3, 20, 3.0).reshape_generic(U3::name(), Dynamic::new(20));
     let H1_seminorm_computed = estimate_element_H1_seminorm_error(
         &element,
         u1_scalar_grad,
@@ -157,7 +158,7 @@ fn test_element_H1_seminorm_error_vector() {
     // Use a quadrature rule with sufficient strength such that it can exactly capture the error
     // (since we compute a squared norm, we need double the polynomial degree)
     let (weights, points) = quadrature::total_order::tetrahedron(10).unwrap();
-    let mut gradient_buffer = DMatrix::repeat(3, 20, 3.0).reshape_generic(U3, Dynamic::new(20));
+    let mut gradient_buffer = DMatrix::repeat(3, 20, 3.0).reshape_generic(U3::name(), Dynamic::new(20));
     let H1_seminorm_computed = estimate_element_H1_seminorm_error(
         &element,
         u1_vector_grad,
@@ -213,7 +214,7 @@ fn test_estimate_L2_error_on_mesh() {
             .enumerate()
             .map(|(i, conn)| {
                 let element = conn.element(mesh.vertices()).unwrap();
-                let mut u_h_element = VectorN::from([0.0; 2 * 8]);
+                let mut u_h_element = OVector::from([0.0; 2 * 8]);
                 gather_global_to_local(&u_h, &mut u_h_element, conn.vertex_indices(), 2);
                 let weights = error_quadrature_weights.get(i).unwrap();
                 let points = error_quadrature_points.get(i).unwrap();
@@ -271,11 +272,11 @@ fn test_estimate_H1_seminorm_error_on_mesh() {
             .enumerate()
             .map(|(i, conn)| {
                 let element = conn.element(mesh.vertices()).unwrap();
-                let mut u_h_element = VectorN::from([0.0; 2 * 8]);
+                let mut u_h_element = OVector::from([0.0; 2 * 8]);
                 gather_global_to_local(&u_h, &mut u_h_element, conn.vertex_indices(), 2);
                 let weights = error_quadrature_weights.get(i).unwrap();
                 let points = error_quadrature_points.get(i).unwrap();
-                let mut gradient_buffer = MatrixMN::<_, U3, U8>::zeros();
+                let mut gradient_buffer = OMatrix::<_, U3, U8>::zeros();
                 estimate_element_H1_seminorm_error_squared(
                     &element,
                     u_vector_grad,
