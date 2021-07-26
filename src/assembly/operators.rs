@@ -53,7 +53,7 @@ where
     GeometryDim: SmallDim,
     DefaultAllocator: BiDimAllocator<T, GeometryDim, Self::SolutionDim>,
 {
-    /// Compute $ C_g(\nabla u, a, b)$ with the given parameters.
+    /// Compute $ \mathcal{C}_g(\nabla u, a, b)$ with the given parameters.
     fn contract(
         &self,
         gradient: &MatrixMN<T, GeometryDim, Self::SolutionDim>,
@@ -67,10 +67,10 @@ where
     /// The contraction operator is *symmetric* if, for all $\nabla u, a, b$, regardless
     /// of [operator parameters](Operator::Parameters),
     /// $$
-    ///     C_g(\nabla u, a, b) = C_g(\nabla u, b, a)^T.
+    ///     \mathcal{C}_g(\nabla u, a, b) = \mathcal{C}_g(\nabla u, b, a)^T.
     /// $$
     ///
-    /// Symmetry can be exploited to only fill half of the matrix entries in batch operations
+    /// Symmetry can be exploited to only fill about half of the matrix entries in batch operations
     /// (see [accumulate_contractions_into](Self::accumulate_contractions_into)). The default
     /// implementation indicates non-symmetry.
     fn symmetry(&self) -> Symmetry {
@@ -112,7 +112,7 @@ where
     /// block-wise **scaled** contractions in the following manner:
     ///
     /// $$
-    /// C_{IJ} \gets C_{IJ} + \alpha C_g(\nabla u, a_I, b_J).
+    /// C_{IJ} \gets C_{IJ} + \alpha \mathcal{C}_g(\nabla u, a_I, b_J).
     /// $$
     ///
     /// The default implementation repeatedly calls [contract](Self::contract). However,
@@ -122,7 +122,9 @@ where
     /// often advisable to override this method.
     ///
     /// The method can exploit symmetry: If [self.symmetry()](Self::symmetry) indicates symmetry,
-    /// then only the **upper triangle** needs to be filled. Consumers of this method
+    /// then only the **block upper triangle** needs to be filled. More precisely,
+    /// only $C_{IJ}$ for $I \leq J$ need to be populated.
+    /// Consumers of this method
     /// **must** take this into account by checking for symmetry of the operator.
     ///
     /// # Panics
@@ -142,14 +144,12 @@ where
     ) {
         let d = GeometryDim::dim();
         let s = Self::SolutionDim::dim();
-        assert_eq!(
-            a.len() % d,
-            0,
+        assert!(
+            a.len() % d == 0,
             "Dimension of a must be divisible by d (GeometryDim)"
         );
-        assert_eq!(
-            b.len() % d,
-            0,
+        assert!(
+            b.len() % d == 0,
             "Dimension of b must be divisible by d (GeometryDim)"
         );
         let M = a.len() / d;
