@@ -5,6 +5,8 @@ use fenris::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName,
 use fenris::{SmallDim, Symmetry};
 use std::cmp::min;
 
+pub mod materials;
+
 pub trait HyperelasticMaterial<T, GeometryDim>
 where
     T: RealField,
