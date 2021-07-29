@@ -124,8 +124,12 @@ fn linear_elastic_stress_tensor_is_derivative_of_energy_2d() {
         h,
     );
 
-    // TODO: Find a way to get more accurate approximation so we can use stricter tolerances
-    assert_matrix_eq!(stress_tensor, approx_stress_tensor, comp = abs, tol = 1e-5);
+    assert_matrix_eq!(
+        stress_tensor,
+        approx_stress_tensor,
+        comp = abs,
+        tol = 1e-9 * stress_tensor.amax()
+    );
 }
 
 #[test]
@@ -146,8 +150,12 @@ fn linear_elastic_stress_contraction_is_consistent_with_tensor_3d() {
         h,
     );
 
-    // TODO: Find a way to get more accurate approximation so we can use stricter tolerances
-    assert_matrix_eq!(contraction, approx_contraction, comp = abs, tol = 1e-5);
+    assert_matrix_eq!(
+        contraction,
+        approx_contraction,
+        comp = abs,
+        tol = 1e-9 * contraction.amax()
+    );
 }
 
 #[test]
@@ -174,8 +182,12 @@ fn linear_elastic_stress_tensor_is_derivative_of_energy_3d() {
         h,
     );
 
-    // TODO: Find a way to get more accurate approximation so we can use stricter tolerances
-    assert_matrix_eq!(stress_tensor, approx_stress_tensor, comp = abs, tol = 1e-5);
+    assert_matrix_eq!(
+        stress_tensor,
+        approx_stress_tensor,
+        comp = abs,
+        tol = 1e-9 * stress_tensor.amax()
+    );
 }
 
 #[test]
@@ -196,8 +208,12 @@ fn linear_elastic_stress_contraction_is_consistent_with_tensor_2d() {
         h,
     );
 
-    // TODO: Find a way to get more accurate approximation so we can use stricter tolerances
-    assert_matrix_eq!(contraction, approx_contraction, comp = abs, tol = 1e-5);
+    assert_matrix_eq!(
+        contraction,
+        approx_contraction,
+        comp = abs,
+        tol = 1e-9 * contraction.amax()
+    );
 }
 
 /// Test that the multi-contraction for the given material is consistent with contraction for a single pair
