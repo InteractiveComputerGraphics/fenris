@@ -41,7 +41,7 @@ where
     }
 }
 
-/// A linear elastic material.
+/// The linear elastic material model.
 ///
 /// Given Lamé parameters $\mu$ and $\lambda$, the strain energy density is
 /// $$
@@ -118,5 +118,56 @@ where
         // TODO: Implement multi-contraction for efficiency? There doesn't seem to be any
         // computations that can be re-used across different vectors though, so it's not clear
         // if there are any efficiency gains to be found
+    }
+}
+
+/// The Neo-Hookean material model.
+///
+/// The strain energy density is given by
+/// $$
+/// \psi(\vec F) = \frac{\mu}{2}(I_C - 3) - \mu \log J + \frac{\lambda}{2}(\log J)^2,
+/// $$
+/// where $J = \det \vec F$ and $I_C = \tr{\vec C} = \tr{\vec F^T \vec F}$ is the first right Cauchy-Green invariant.
+///
+///
+///
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NeoHookeanMaterial;
+
+#[allow(non_snake_case)]
+#[replace_float_literals(T::from_f64(literal).expect("literal must fit in T"))]
+impl<T, D> HyperelasticMaterial<T, D> for NeoHookeanMaterial
+where
+    T: RealField,
+    D: DimName,
+    DefaultAllocator: SmallDimAllocator<T, D>,
+{
+    type Parameters = LameParameters<T>;
+
+    fn compute_energy_density(&self, deformation_gradient: &OMatrix<T, D, D>, parameters: &Self::Parameters) -> T {
+        let _ = (deformation_gradient, parameters);
+        // let F = deformation_gradient;
+        // let C = F.transpose() * F;
+        todo!()
+    }
+
+    fn compute_stress_tensor(
+        &self,
+        deformation_gradient: &OMatrix<T, D, D>,
+        parameters: &Self::Parameters,
+    ) -> OMatrix<T, D, D> {
+        let _ = (deformation_gradient, parameters);
+        todo!()
+    }
+
+    fn compute_stress_contraction(
+        &self,
+        deformation_gradient: &OMatrix<T, D, D>,
+        a: &OVector<T, D>,
+        b: &OVector<T, D>,
+        parameters: &Self::Parameters,
+    ) -> OMatrix<T, D, D> {
+        let _ = (deformation_gradient, a, b, parameters);
+        todo!()
     }
 }

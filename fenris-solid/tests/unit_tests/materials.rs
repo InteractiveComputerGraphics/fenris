@@ -1,5 +1,7 @@
 use fenris::nalgebra;
-use fenris::nalgebra::{matrix, vector, Matrix2, Matrix3, SMatrix, SVector};
+use fenris::nalgebra::{
+    dvector, matrix, vector, DMatrix, DMatrixSliceMut, DVectorSlice, Matrix2, Matrix3, SMatrix, SVector,
+};
 use fenris_solid::materials::{LameParameters, LinearElasticMaterial, YoungPoisson};
 use fenris_solid::HyperelasticMaterial;
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
@@ -197,3 +199,82 @@ fn linear_elastic_stress_contraction_is_consistent_with_tensor_2d() {
     // TODO: Find a way to get more accurate approximation so we can use stricter tolerances
     assert_matrix_eq!(contraction, approx_contraction, comp = abs, tol = 1e-5);
 }
+
+/// Test that the multi-contraction for the given material is consistent with contraction for a single pair
+/// of vectors.
+macro_rules! test_multi_contraction_consistency {
+    (dim = 2, $material:expr, $test_name: ident) => {
+        #[test]
+        #[allow(non_snake_case)]
+        fn $test_name() {
+            let a = dvector![2.0, -3.0, 4.0, 1.0, 3.0, -2.0];
+            let b = dvector![-1.0, 2.0, 5.0, -3.0, 2.0, 3.0];
+            test_multi_contraction_consistency!(
+                dim = 2,
+                $material,
+                $test_name,
+                test_deformation_gradient_2d(),
+                a,
+                b
+            );
+        }
+    };
+    (dim = 3, $material:expr, $test_name: ident) => {
+        #[test]
+        #[allow(non_snake_case)]
+        fn $test_name() {
+            let a = dvector![2.0, -3.0, 4.0, 1.0, 3.0, -2.0, 0.0, 2.0, -2.0];
+            let b = dvector![-1.0, 2.0, 5.0, -3.0, 2.0, 3.0, 1.0, 5.0, -4.0];
+            test_multi_contraction_consistency!(
+                dim = 3,
+                $material,
+                $test_name,
+                test_deformation_gradient_3d(),
+                a,
+                b
+            );
+        }
+    };
+    // Implementation detail, not supposed to be called outside of this macro
+    (dim = $dim:expr, $material:expr, $test_name: ident, $deformation_gradient:expr, $a:expr, $b:expr) => {
+        let material = $material;
+        let (a, b) = ($a, $b);
+        let lame = test_lame_parameters();
+        let deformation_gradient = $deformation_gradient;
+        let alpha = 2.0;
+        // TODO: Add non-zero values here
+        let mut output = DMatrix::zeros(3 * $dim, 3 * $dim);
+        material.accumulate_stress_contractions_into(
+            DMatrixSliceMut::from(&mut output),
+            alpha,
+            &deformation_gradient,
+            DVectorSlice::from(&a),
+            DVectorSlice::from(&b),
+            &lame,
+        );
+
+        // Compare each block in the output matrix to individual calls to compute_stress_contraction
+        let N = 3;
+        for I in 0..N {
+            for J in I..N {
+                let a_I = a.fixed_rows::<$dim>($dim * I).clone_owned();
+                let b_J = b.fixed_rows::<$dim>($dim * J).clone_owned();
+                let C_IJ = output.fixed_slice::<$dim, $dim>($dim * I, $dim * J);
+                let contraction = material.compute_stress_contraction(&deformation_gradient, &a_I, &b_J, &lame);
+                // TODO: Exact equality might not work for every material! Revise this as needed
+                assert_matrix_eq!(C_IJ, alpha * contraction);
+            }
+        }
+    };
+}
+
+test_multi_contraction_consistency!(
+    dim = 2,
+    LinearElasticMaterial,
+    linear_elastic_multi_contraction_consistency_2d
+);
+test_multi_contraction_consistency!(
+    dim = 3,
+    LinearElasticMaterial,
+    linear_elastic_multi_contraction_consistency_3d
+);
