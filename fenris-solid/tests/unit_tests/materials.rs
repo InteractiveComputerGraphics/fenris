@@ -1,10 +1,11 @@
+use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
+
 use fenris::nalgebra;
-use fenris::nalgebra::{
-    dvector, matrix, vector, DMatrix, DMatrixSliceMut, DVectorSlice, Matrix2, Matrix3, SMatrix, SVector,
-};
+use fenris::nalgebra::{dvector, vector, DMatrix, DMatrixSliceMut, DVectorSlice, SMatrix, SVector};
 use fenris_solid::materials::{LameParameters, LinearElasticMaterial, StVKMaterial, YoungPoisson};
 use fenris_solid::HyperelasticMaterial;
-use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
+
+use crate::unit_tests::{deformation_gradient_2d, deformation_gradient_3d, lame_parameters};
 
 /// Approximates stress tensor using central Finite Differences with step size `h`.
 #[allow(non_snake_case)]
@@ -80,24 +81,6 @@ fn lame_from_young_poisson() {
 
     assert_scalar_eq!(lame.mu, 384.6153846153846, comp = float);
     assert_scalar_eq!(lame.lambda, 576.9230769230769, comp = float);
-}
-
-fn lame_parameters() -> LameParameters<f64> {
-    LameParameters {
-        mu: 384.0,
-        lambda: 577.0,
-    }
-}
-
-fn deformation_gradient_2d() -> Matrix2<f64> {
-    matrix![1.0, 2.0;
-            3.0, 4.0]
-}
-
-fn deformation_gradient_3d() -> Matrix3<f64> {
-    matrix![1.0, 2.0, 3.0;
-            4.0, 5.0, 6.0;
-            7.0, 8.0, 9.0]
 }
 
 /// Uses finite differences to check that the stress tensor is the derivative of the energy

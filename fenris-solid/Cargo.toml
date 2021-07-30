@@ -13,3 +13,4 @@ numeric_literals = "0.2.0"
 
 [dev-dependencies]
 matrixcompare = "0.3.0"
+fenris-optimize = { path = "../fenris-optimize" }

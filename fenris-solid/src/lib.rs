@@ -159,6 +159,12 @@ where
 /// with `fenris` assembly operations.
 pub struct MaterialEllipticOperator<'a, Material>(&'a Material);
 
+impl<'a, Material> MaterialEllipticOperator<'a, Material> {
+    pub fn new(material: &'a Material) -> Self {
+        Self(material)
+    }
+}
+
 impl<'a, T, GeometryDim, Material> Operator<T, GeometryDim> for MaterialEllipticOperator<'a, Material>
 where
     T: RealField,
