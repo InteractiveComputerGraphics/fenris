@@ -325,9 +325,57 @@ where
         }
     }
 
-    /// Adds the given attribute data as scalar point attributes.
+    /// Adds the given attribute data as vector point attributes.
     ///
-    /// The number of components per scalar is inferred from the length of the attribute array.
+    /// The size of each vector is inferred from the size of the attributes array. For example, if the number of
+    /// elements in the attributes array is 20 and the number of points is 10, each vector will be interpreted as
+    /// two-dimensional.
+    ///
+    /// # Panics
+    /// Panics if the number of attribute entries is not divisible by the number of points,
+    /// if there are 0 components per vector or if there are more than 3 components per vector.
+    pub fn with_point_vector_attributes(self, name: impl Into<String>, attributes: &[T]) -> Self {
+        let num_points = self.mesh.vertices().len();
+
+        assert_eq!(
+            attributes.len() % num_points,
+            0,
+            "Number of attribute elements must be a multiple of point count"
+        );
+
+        let num_components = attributes.len() / num_points;
+        assert!(num_components > 0, "Each vector must have at least 1 component.");
+        assert!(num_components <= 3, "Each vector must not have more than 3 components.");
+
+        let mut attribute_vec = Vec::new();
+
+        // Vectors are always 3-dimensional in VTK
+        attribute_vec.reserve(3 * num_points);
+
+        for i in 0 .. num_points {
+            for j in 0 .. num_components {
+                attribute_vec.push(attributes[num_components * i + j]);
+            }
+            for _ in num_components .. 3 {
+                // Pad with zeros for remaining dimensions
+                attribute_vec.push(T::zero());
+            }
+        }
+
+        let mut attribs = self.attributes;
+        let data_array = DataArray::vectors(name).with_data(attribute_vec);
+        attribs.point.push(Attribute::DataArray(data_array));
+
+        Self {
+            mesh: self.mesh,
+            attributes: attribs,
+            title: self.title,
+        }
+    }
+
+    /// Adds the given attribute data as vector point attributes.
+    ///
+    /// The number of components per vector is inferred from the length of the attribute array.
     /// For example, if the mesh has 10 points and there are 20 attribute entries, we assign
     /// 2 scalars per point.
     ///
