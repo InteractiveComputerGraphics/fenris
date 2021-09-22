@@ -4,9 +4,7 @@ use fenris::assembly::local::{
 };
 use fenris::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator};
 use fenris::nalgebra;
-use fenris::nalgebra::{
-    vector, DMatrix, DVector, DVectorSlice, DVectorSliceMut, DimName, Dynamic, MatrixSliceMut, OMatrix, U3,
-};
+use fenris::nalgebra::{vector, DMatrix, DVector, DVectorSlice, DVectorSliceMut, DimName, Dynamic, MatrixSliceMut, OMatrix, U3, Matrix2, Matrix3};
 use fenris::quadrature;
 use fenris_optimize::calculus::{approximate_gradient_fd, approximate_jacobian_fd};
 use fenris_solid::materials::StVKMaterial;
@@ -24,7 +22,8 @@ fn material_elliptic_operator_stvk_2d() {
     let material = StVKMaterial;
 
     let operator = MaterialEllipticOperator::new(&material);
-    let u_grad = F.transpose();
+    // MaterialEllipticOperator uses displacement (u) as solution field
+    let u_grad = F.transpose() - Matrix2::identity();
 
     // We have that psi_elliptic(grad u) = psi_material(F)
     // with F = transpose(grad u)
@@ -54,7 +53,8 @@ fn material_elliptic_operator_stvk_3d() {
     let material = StVKMaterial;
 
     let operator = MaterialEllipticOperator::new(&material);
-    let u_grad = F.transpose();
+    // MaterialEllipticOperator uses displacement (u) as solution field
+    let u_grad = F.transpose() - Matrix3::identity();
 
     let energy_as_elliptic = operator.compute_energy(&u_grad, &lame);
     let energy_as_material = material.compute_energy_density(&F, &lame);

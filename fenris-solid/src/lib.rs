@@ -157,6 +157,22 @@ where
 
 /// A wrapper that turns any hyper elastic material into an elliptic operator for use
 /// with `fenris` assembly operations.
+///
+/// The wrapper assumes a **displacement-based** formulation, i.e. that the solution field is the displacement
+/// $\vec u (\vec X) = \vec x(\vec X) - \vec X$. In other words, the nodal weights should correspond to displacements,
+/// not deformed positions. Alternatively, you may transform deformed positions to displacements as a
+/// preprocessing step before handing off the resulting displacements to assembly functionality relying on this
+/// operator wrapper.
+///
+/// This implies the following relations:
+///
+/// $$
+/// \begin{aligned}
+/// \vec F &= \vec I + (\nabla \vec u)^T, \\\\
+/// \vec P (\vec F) &= g^T (\nabla \vec u), \\\\
+/// \mathcal{C}_{\vec P}(\vec F, \vec a, \vec b) &= \mathcal{C}_g(\nabla \vec u, \vec a, \vec b). \\\\
+/// \end{aligned}
+/// $$
 pub struct MaterialEllipticOperator<'a, Material>(&'a Material);
 
 impl<'a, Material> MaterialEllipticOperator<'a, Material> {
@@ -183,8 +199,8 @@ where
     Material: HyperelasticMaterial<T, GeometryDim>,
     DefaultAllocator: SmallDimAllocator<T, GeometryDim>,
 {
-    fn compute_energy(&self, gradient: &OMatrix<T, GeometryDim, GeometryDim>, parameters: &Self::Parameters) -> T {
-        let f = gradient.transpose();
+    fn compute_energy(&self, u_grad: &OMatrix<T, GeometryDim, GeometryDim>, parameters: &Self::Parameters) -> T {
+        let f = u_grad.transpose() + OMatrix::<T, GeometryDim, GeometryDim>::identity();
         self.0.compute_energy_density(&f, parameters)
     }
 }
@@ -198,10 +214,10 @@ where
 {
     fn compute_elliptic_operator(
         &self,
-        gradient: &OMatrix<T, GeometryDim, GeometryDim>,
+        u_grad: &OMatrix<T, GeometryDim, GeometryDim>,
         parameters: &Self::Parameters,
     ) -> OMatrix<T, GeometryDim, Self::SolutionDim> {
-        let f = gradient.transpose();
+        let f = u_grad.transpose() + OMatrix::<T, GeometryDim, GeometryDim>::identity();
         let p = self.0.compute_stress_tensor(&f, parameters);
         p.transpose()
     }
@@ -216,12 +232,12 @@ where
 {
     fn contract(
         &self,
-        gradient: &OMatrix<T, GeometryDim, GeometryDim>,
+        u_grad: &OMatrix<T, GeometryDim, GeometryDim>,
         a: &OVector<T, GeometryDim>,
         b: &OVector<T, GeometryDim>,
         parameters: &Self::Parameters,
     ) -> OMatrix<T, Self::SolutionDim, Self::SolutionDim> {
-        let f = gradient.transpose();
+        let f = u_grad.transpose() + OMatrix::<T, GeometryDim, GeometryDim>::identity();
         self.0.compute_stress_contraction(&f, a, b, parameters)
     }
 
@@ -234,14 +250,12 @@ where
         &self,
         output: DMatrixSliceMut<T>,
         alpha: T,
-        gradient: &OMatrix<T, GeometryDim, Self::SolutionDim>,
+        u_grad: &OMatrix<T, GeometryDim, Self::SolutionDim>,
         a: DVectorSlice<T>,
         b: DVectorSlice<T>,
         parameters: &Self::Parameters,
     ) {
-        // Note: This implementation is basically the same as the default implementation,
-        // however we must
-        let f = gradient.transpose();
+        let f = u_grad.transpose() + OMatrix::<T, GeometryDim, GeometryDim>::identity();
         self.0
             .accumulate_stress_contractions_into(output, alpha, &f, a, b, parameters)
     }
