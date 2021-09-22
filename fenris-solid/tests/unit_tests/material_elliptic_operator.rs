@@ -4,7 +4,10 @@ use fenris::assembly::local::{
 };
 use fenris::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator};
 use fenris::nalgebra;
-use fenris::nalgebra::{vector, DMatrix, DVector, DVectorSlice, DVectorSliceMut, DimName, Dynamic, MatrixSliceMut, OMatrix, U3, Matrix2, Matrix3};
+use fenris::nalgebra::{
+    vector, DMatrix, DVector, DVectorSlice, DVectorSliceMut, DimName, Dynamic, Matrix2, Matrix3, MatrixSliceMut,
+    OMatrix, U3,
+};
 use fenris::quadrature;
 use fenris_optimize::calculus::{approximate_gradient_fd, approximate_jacobian_fd};
 use fenris_solid::materials::StVKMaterial;

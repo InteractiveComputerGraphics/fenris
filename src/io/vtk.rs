@@ -352,11 +352,11 @@ where
         // Vectors are always 3-dimensional in VTK
         attribute_vec.reserve(3 * num_points);
 
-        for i in 0 .. num_points {
-            for j in 0 .. num_components {
+        for i in 0..num_points {
+            for j in 0..num_components {
                 attribute_vec.push(attributes[num_components * i + j]);
             }
-            for _ in num_components .. 3 {
+            for _ in num_components..3 {
                 // Pad with zeros for remaining dimensions
                 attribute_vec.push(T::zero());
             }
