@@ -13,7 +13,7 @@ default = [ "proptest" ]
 
 [dependencies]
 nalgebra = { version = "0.28", features = [ "serde-serialize" ] }
-nalgebra-sparse = "0.4"
+nalgebra-sparse = { version = "0.4", features = ["compare"] }
 alga = { version = "0.9", default-features = false }
 vtkio = "0.6"
 num = "0.2"

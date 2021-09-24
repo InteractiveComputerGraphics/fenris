@@ -100,7 +100,7 @@ fn squared_norm_agrees_with_mass_matrix_quadratic_form_full_mesh_tet20() {
     // This is basically the same test as the test for a single element - except we do it for a full mesh this time.
     // Unfortunately we cannot use Tet20Mesh at the moment because we're lacking the conversion functionality,
     // so we use Tet10 instead and lower the order of the functions involved
-    let tet4_mesh = create_unit_box_uniform_tet_mesh_3d(4);
+    let tet4_mesh = create_unit_box_uniform_tet_mesh_3d(3);
     let mesh = Tet10Mesh::from(&tet4_mesh);
 
     // f is an arbitrary linear function
@@ -152,5 +152,25 @@ fn squared_norm_agrees_with_mass_matrix_quadratic_form_full_mesh_tet20() {
         .map(|v| f(v.x, v.y, v.z)));
     let fT_M_f = f_h.dot(&(&M * &f_h));
 
-    assert_scalar_eq!(fT_M_f, g_h_squared_norm);
+    assert_scalar_eq!(fT_M_f, g_h_squared_norm, comp=float, ulp = 50);
+
+    // Check that M_s = M kron I_s like in the single-element test
+
+    // solution dim 2
+    {
+        let assembler2 = ElementMassAssembler::with_solution_dim(2)
+            .with_space(&mesh)
+            .with_quadrature_table(&quadrature_table);
+        let M2 = CsrAssembler::default().assemble(&assembler2).unwrap();
+        assert_matrix_eq!(M2, DMatrix::from(&M).kronecker(&Matrix2::identity()));
+    }
+
+    // solution dim 3
+    {
+        let assembler3 = ElementMassAssembler::with_solution_dim(3)
+            .with_space(&mesh)
+            .with_quadrature_table(&quadrature_table);
+        let M3 = CsrAssembler::default().assemble(&assembler3).unwrap();
+        assert_matrix_eq!(M3, DMatrix::from(&M).kronecker(&Matrix3::identity()));
+    }
 }
