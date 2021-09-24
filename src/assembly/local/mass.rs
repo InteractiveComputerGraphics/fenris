@@ -17,6 +17,36 @@ pub struct ElementMassAssembler<'a, Space, QTable> {
     solution_dim: usize,
 }
 
+impl<'a> ElementMassAssembler<'a, (), ()> {
+    pub fn with_solution_dim(solution_dim: usize) -> Self {
+        Self {
+            space: &(),
+            qtable: &(),
+            solution_dim
+        }
+    }
+}
+
+impl<'a, QTable> ElementMassAssembler<'a, (), QTable> {
+    pub fn with_space<Space>(self, space: &'a Space) -> ElementMassAssembler<'a, Space, QTable> {
+        ElementMassAssembler {
+            space,
+            qtable: self.qtable,
+            solution_dim: self.solution_dim
+        }
+    }
+}
+
+impl<'a, Space> ElementMassAssembler<'a, Space, ()> {
+    pub fn with_quadrature_table<QTable>(self, table: &'a QTable) -> ElementMassAssembler<'a, Space, QTable> {
+        ElementMassAssembler {
+            space: self.space,
+            qtable: table,
+            solution_dim: self.solution_dim
+        }
+    }
+}
+
 thread_local! { static WORKSPACE: RefCell<Workspace> = RefCell::new(Workspace::default());  }
 
 
