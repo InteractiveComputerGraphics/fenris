@@ -1,15 +1,15 @@
-use fenris::element::{Tet4Element, Tet20Element, MatrixSliceMut, FiniteElement, ElementConnectivity};
-use nalgebra::{Point3, Vector1, Matrix2, Matrix3};
-use fenris::nalgebra::{DVector, DVectorSlice, DMatrix};
-use fenris::error::{estimate_element_L2_error_squared, estimate_L2_error_squared};
+use fenris::assembly::global::CsrAssembler;
+use fenris::assembly::local::{assemble_element_mass_matrix, ElementMassAssembler, GeneralQuadratureTable};
+use fenris::element::{ElementConnectivity, FiniteElement, MatrixSliceMut, Tet20Element, Tet4Element};
+use fenris::error::{estimate_L2_error_squared, estimate_element_L2_error_squared};
+use fenris::mesh::procedural::create_unit_box_uniform_tet_mesh_3d;
+use fenris::mesh::Tet10Mesh;
+use fenris::nalgebra::{DMatrix, DVector, DVectorSlice};
 use fenris::quadrature;
 use fenris::quadrature::Quadrature;
-use fenris::assembly::local::{assemble_element_mass_matrix, ElementMassAssembler, GeneralQuadratureTable};
-use matrixcompare::{assert_scalar_eq, assert_matrix_eq};
-use fenris::mesh::procedural::create_unit_box_uniform_tet_mesh_3d;
-use fenris::mesh::{Tet10Mesh};
-use std::iter::{repeat};
-use fenris::assembly::global::CsrAssembler;
+use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
+use nalgebra::{Matrix2, Matrix3, Point3, Vector1};
+use std::iter::repeat;
 
 #[test]
 #[allow(non_snake_case)]
@@ -40,17 +40,14 @@ fn squared_norm_agrees_with_element_mass_matrix_quadratic_form_tet20() {
     let element = Tet20Element::from(&tet4_element);
 
     // Interpolate f and g onto the nodes of the element
-    let f_h: DVector<_> = DVector::from_iterator(20, element.vertices()
-        .iter()
-        .map(|v| f(v.x, v.y, v.z)));
-    let g_h: DVector<_> = DVector::from_iterator(20, element.vertices()
-        .iter()
-        .map(|v| g(v.x, v.y, v.z)));
+    let f_h: DVector<_> = DVector::from_iterator(20, element.vertices().iter().map(|v| f(v.x, v.y, v.z)));
+    let g_h: DVector<_> = DVector::from_iterator(20, element.vertices().iter().map(|v| g(v.x, v.y, v.z)));
 
     // We need a quadrature rule of polynomial strength 8 to guarantee exact computation of the integrals
     // (since mass matrix needs rho * phi_I * phi_J and phi_I, phi_J are cubic)
     let quadrature = quadrature::total_order::tetrahedron(8).unwrap();
-    let quadrature_density: Vec<_> = quadrature.points()
+    let quadrature_density: Vec<_> = quadrature
+        .points()
         .iter()
         .map(|xi| {
             let p = element.map_reference_coords(xi);
@@ -61,15 +58,26 @@ fn squared_norm_agrees_with_element_mass_matrix_quadratic_form_tet20() {
     let mut basis_buffer = vec![0.0; 20];
 
     // Compute the squared norm of g_h as the L^2 squared error ||0 - g_h||^2
-    let g_h_squared_norm = estimate_element_L2_error_squared(&element,
-                                                             |_| Vector1::zeros(),
-                                                             DVectorSlice::from(&g_h),
-                                                             quadrature.weights(),
-                                                             quadrature.points(),
-                                                             &mut basis_buffer);
+    let g_h_squared_norm = estimate_element_L2_error_squared(
+        &element,
+        |_| Vector1::zeros(),
+        DVectorSlice::from(&g_h),
+        quadrature.weights(),
+        quadrature.points(),
+        &mut basis_buffer,
+    );
 
     let mut M = DMatrix::zeros(20, 20);
-    assemble_element_mass_matrix(MatrixSliceMut::from(&mut M), &element, quadrature.weights(), quadrature.points(), &quadrature_density, 1, &mut basis_buffer).unwrap();
+    assemble_element_mass_matrix(
+        MatrixSliceMut::from(&mut M),
+        &element,
+        quadrature.weights(),
+        quadrature.points(),
+        &quadrature_density,
+        1,
+        &mut basis_buffer,
+    )
+    .unwrap();
 
     let fT_M_f = f_h.dot(&(&M * &f_h));
 
@@ -82,16 +90,33 @@ fn squared_norm_agrees_with_element_mass_matrix_quadratic_form_tet20() {
     // and kron denotes the kronecker product. So let's check that this holds for some values of s!
     {
         let mut M2 = DMatrix::zeros(40, 40);
-        assemble_element_mass_matrix(MatrixSliceMut::from(&mut M2), &element, quadrature.weights(), quadrature.points(), &quadrature_density, 2, &mut basis_buffer).unwrap();
+        assemble_element_mass_matrix(
+            MatrixSliceMut::from(&mut M2),
+            &element,
+            quadrature.weights(),
+            quadrature.points(),
+            &quadrature_density,
+            2,
+            &mut basis_buffer,
+        )
+        .unwrap();
         assert_matrix_eq!(M2, M.kronecker(&Matrix2::identity()));
     }
 
     {
         let mut M3 = DMatrix::zeros(60, 60);
-        assemble_element_mass_matrix(MatrixSliceMut::from(&mut M3), &element, quadrature.weights(), quadrature.points(), &quadrature_density, 3, &mut basis_buffer).unwrap();
+        assemble_element_mass_matrix(
+            MatrixSliceMut::from(&mut M3),
+            &element,
+            quadrature.weights(),
+            quadrature.points(),
+            &quadrature_density,
+            3,
+            &mut basis_buffer,
+        )
+        .unwrap();
         assert_matrix_eq!(M3, M.kronecker(&Matrix3::identity()));
     }
-
 }
 
 #[test]
@@ -112,17 +137,26 @@ fn squared_norm_agrees_with_mass_matrix_quadratic_form_full_mesh_tet20() {
     // And rho becomes a quadratic function
     let rho = |x, y, z| f64::powi(omega(x, y, z), 2);
 
+    // We need to construct a quadrature table where every element has a different quadrature rule
+    // in order to accommodate varying density values (TODO: Should be possible to combine a uniform quadrature rule
+    // with per-element data/parameters)
     let quadrature_table = {
         let base_quadrature = quadrature::total_order::tetrahedron(6).unwrap();
         let num_elements = mesh.connectivity().len();
-        let points: Vec<_> = repeat(base_quadrature.1.clone()).take(num_elements).collect();
-        let weights: Vec<_> = repeat(base_quadrature.0.clone()).take(num_elements).collect();
-        let density: Vec<_> = mesh.connectivity()
+        let points: Vec<_> = repeat(base_quadrature.1.clone())
+            .take(num_elements)
+            .collect();
+        let weights: Vec<_> = repeat(base_quadrature.0.clone())
+            .take(num_elements)
+            .collect();
+        let density: Vec<_> = mesh
+            .connectivity()
             .iter()
             .map(|conn| {
                 let element = conn.element(mesh.vertices()).unwrap();
                 // Evaluate densities at quadrature points
-                let densities = base_quadrature.points()
+                let densities = base_quadrature
+                    .points()
                     .iter()
                     .map(|xi| {
                         let p = element.map_reference_coords(xi);
@@ -142,17 +176,21 @@ fn squared_norm_agrees_with_mass_matrix_quadratic_form_full_mesh_tet20() {
 
     // We compute the squared norm by computing the error ||g - 0||^2_L^2, where 0 corresponds to a finite element
     // interpolation of the zero function
-    let g_h_squared_norm = estimate_L2_error_squared(&mesh, |p| Vector1::new(g(p.x, p.y, p.z)),
-                                                     &DVector::zeros(mesh.vertices().len()),
-                                                     &quadrature_table).unwrap();
+    let g_h_squared_norm = estimate_L2_error_squared(
+        &mesh,
+        |p| Vector1::new(g(p.x, p.y, p.z)),
+        &DVector::zeros(mesh.vertices().len()),
+        &quadrature_table,
+    )
+    .unwrap();
 
-    let M = CsrAssembler::default().assemble(&element_mass_assembler).unwrap();
-    let f_h = DVector::from_iterator(mesh.vertices().len(), mesh.vertices()
-        .iter()
-        .map(|v| f(v.x, v.y, v.z)));
+    let M = CsrAssembler::default()
+        .assemble(&element_mass_assembler)
+        .unwrap();
+    let f_h = DVector::from_iterator(mesh.vertices().len(), mesh.vertices().iter().map(|v| f(v.x, v.y, v.z)));
     let fT_M_f = f_h.dot(&(&M * &f_h));
 
-    assert_scalar_eq!(fT_M_f, g_h_squared_norm, comp=float, ulp = 50);
+    assert_scalar_eq!(fT_M_f, g_h_squared_norm, comp = float, ulp = 50);
 
     // Check that M_s = M kron I_s like in the single-element test
 

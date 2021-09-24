@@ -7,7 +7,7 @@ use crate::nalgebra::{
     DVectorSliceMut, DefaultAllocator, DimName, Dynamic, MatrixSliceMutMN, OPoint, OVector, RealField, Scalar, U1,
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
-use crate::workspace::{Workspace, with_thread_local_workspace};
+use crate::workspace::{with_thread_local_workspace, Workspace};
 use crate::SmallDim;
 use itertools::izip;
 use std::cell::RefCell;
@@ -165,28 +165,30 @@ where
     DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Source::SolutionDim>,
 {
     fn assemble_element_vector_into(&self, element_index: usize, output: DVectorSliceMut<T>) -> eyre::Result<()> {
-        with_thread_local_workspace(&SOURCE_WORKSPACE,
-                                    |ws: &mut SourceTermWorkspace<T, Space::ReferenceDim, Source::Parameters>| {
-            let element = ElementInSpace::from_space_and_element_index(self.space, element_index);
-            ws.basis_buffer
-                .resize(element.num_nodes(), Space::ReferenceDim::dim());
-            ws.basis_buffer
-                .populate_element_nodes_from_space(element_index, self.space);
-            ws.quadrature_buffer
-                .populate_element_quadrature_from_table(element_index, self.qtable);
+        with_thread_local_workspace(
+            &SOURCE_WORKSPACE,
+            |ws: &mut SourceTermWorkspace<T, Space::ReferenceDim, Source::Parameters>| {
+                let element = ElementInSpace::from_space_and_element_index(self.space, element_index);
+                ws.basis_buffer
+                    .resize(element.num_nodes(), Space::ReferenceDim::dim());
+                ws.basis_buffer
+                    .populate_element_nodes_from_space(element_index, self.space);
+                ws.quadrature_buffer
+                    .populate_element_quadrature_from_table(element_index, self.qtable);
 
-            assemble_element_source_vector(
-                output,
-                &element,
-                self.source,
-                ws.quadrature_buffer.weights(),
-                ws.quadrature_buffer.points(),
-                ws.quadrature_buffer.data(),
-                ws.basis_buffer.element_basis_values_mut(),
-            );
+                assemble_element_source_vector(
+                    output,
+                    &element,
+                    self.source,
+                    ws.quadrature_buffer.weights(),
+                    ws.quadrature_buffer.points(),
+                    ws.quadrature_buffer.data(),
+                    ws.basis_buffer.element_basis_values_mut(),
+                );
 
-            Ok(())
-        })
+                Ok(())
+            },
+        )
     }
 }
 

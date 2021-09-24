@@ -82,8 +82,8 @@ impl Workspace {
 /// ```
 pub fn with_thread_local_workspace<W: 'static + Default, T>(
     workspace: &'static LocalKey<RefCell<Workspace>>,
-    f: impl FnOnce(&mut W) -> T)
--> T {
+    f: impl FnOnce(&mut W) -> T,
+) -> T {
     workspace.with(|refcell_ws| {
         let mut type_erased_workspace = refcell_ws.borrow_mut();
         let workspace = type_erased_workspace.get_or_default();

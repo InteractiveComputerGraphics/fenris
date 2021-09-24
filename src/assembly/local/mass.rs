@@ -1,14 +1,14 @@
-use nalgebra::{RealField, Scalar};
-use crate::assembly::local::{ElementMatrixAssembler, ElementConnectivityAssembler, QuadratureTable};
-use crate::nalgebra::{DMatrixSliceMut, DefaultAllocator, OPoint, DimName};
-use crate::space::{VolumetricFiniteElementSpace, FiniteElementConnectivity, ElementInSpace};
 use crate::allocators::SmallDimAllocator;
-use crate::element::{VolumetricFiniteElement, ReferenceFiniteElement};
-use itertools::izip;
+use crate::assembly::global::{BasisFunctionBuffer, QuadratureBuffer};
+use crate::assembly::local::{ElementConnectivityAssembler, ElementMatrixAssembler, QuadratureTable};
+use crate::element::{ReferenceFiniteElement, VolumetricFiniteElement};
+use crate::nalgebra::{DMatrixSliceMut, DefaultAllocator, DimName, OPoint};
+use crate::space::{ElementInSpace, FiniteElementConnectivity, VolumetricFiniteElementSpace};
 use crate::util::clone_upper_to_lower;
+use crate::workspace::{with_thread_local_workspace, Workspace};
+use itertools::izip;
+use nalgebra::{RealField, Scalar};
 use std::cell::RefCell;
-use crate::workspace::{Workspace, with_thread_local_workspace};
-use crate::assembly::global::{QuadratureBuffer, BasisFunctionBuffer};
 
 #[derive(Debug)]
 pub struct ElementMassAssembler<'a, Space, QTable> {
@@ -22,7 +22,7 @@ impl<'a> ElementMassAssembler<'a, (), ()> {
         Self {
             space: &(),
             qtable: &(),
-            solution_dim
+            solution_dim,
         }
     }
 }
@@ -32,7 +32,7 @@ impl<'a, QTable> ElementMassAssembler<'a, (), QTable> {
         ElementMassAssembler {
             space,
             qtable: self.qtable,
-            solution_dim: self.solution_dim
+            solution_dim: self.solution_dim,
         }
     }
 }
@@ -42,13 +42,12 @@ impl<'a, Space> ElementMassAssembler<'a, Space, ()> {
         ElementMassAssembler {
             space: self.space,
             qtable: table,
-            solution_dim: self.solution_dim
+            solution_dim: self.solution_dim,
         }
     }
 }
 
 thread_local! { static WORKSPACE: RefCell<Workspace> = RefCell::new(Workspace::default());  }
-
 
 impl<'a, Space, QTable> ElementConnectivityAssembler for ElementMassAssembler<'a, Space, QTable>
 where
@@ -78,20 +77,20 @@ where
 #[derive(Debug)]
 struct MassAssemblerWorkspace<T: Scalar, D: DimName>
 where
-    DefaultAllocator: SmallDimAllocator<T, D>
+    DefaultAllocator: SmallDimAllocator<T, D>,
 {
     quadrature_buffer: QuadratureBuffer<T, D, T>,
-    basis_buffer: BasisFunctionBuffer<T>
+    basis_buffer: BasisFunctionBuffer<T>,
 }
 
 impl<T: RealField, D: DimName> Default for MassAssemblerWorkspace<T, D>
 where
-    DefaultAllocator: SmallDimAllocator<T, D>
+    DefaultAllocator: SmallDimAllocator<T, D>,
 {
     fn default() -> Self {
         Self {
             quadrature_buffer: Default::default(),
-            basis_buffer: Default::default()
+            basis_buffer: Default::default(),
         }
     }
 }
@@ -113,13 +112,15 @@ where
             ws.quadrature_buffer
                 .populate_element_quadrature_from_table(element_index, self.qtable);
 
-            assemble_element_mass_matrix(output,
-                                         &element,
-                                         ws.quadrature_buffer.weights(),
-                                         ws.quadrature_buffer.points(),
-                                         ws.quadrature_buffer.data(),
-                                         self.solution_dim,
-                                         ws.basis_buffer.element_basis_values_mut())
+            assemble_element_mass_matrix(
+                output,
+                &element,
+                ws.quadrature_buffer.weights(),
+                ws.quadrature_buffer.points(),
+                ws.quadrature_buffer.data(),
+                self.solution_dim,
+                ws.basis_buffer.element_basis_values_mut(),
+            )
         })
     }
 }
@@ -211,7 +212,7 @@ where
 
                 // Block contribution: update diagonal entries belonging to M_IJ
                 let mut M_IJ = output.slice_mut((s * I, s * J), (s, s));
-                for i in 0 .. s {
+                for i in 0..s {
                     M_IJ[(i, i)] += m_IJ_contrib;
                 }
             }

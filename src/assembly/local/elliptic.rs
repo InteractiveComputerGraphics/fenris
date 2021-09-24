@@ -12,7 +12,7 @@ use crate::nalgebra::{
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
 use crate::util::{clone_upper_to_lower, reshape_to_slice};
-use crate::workspace::{Workspace, with_thread_local_workspace};
+use crate::workspace::{with_thread_local_workspace, Workspace};
 use crate::Symmetry;
 use eyre::eyre;
 use itertools::izip;
@@ -225,28 +225,31 @@ where
         let n = self.element_node_count(element_index);
         assert_eq!(output.len(), s * n, "Output vector dimension mismatch");
 
-        with_thread_local_workspace(&WORKSPACE, |ws: &mut EllipticAssemblerWorkspace<T, Space::ReferenceDim, Op::Parameters>| {
-            ws.basis_buffer.resize(n, Space::ReferenceDim::dim());
-            ws.basis_buffer
-                .populate_element_nodes_from_space(element_index, self.space);
-            ws.u_element.resize_vertically_mut(s * n, T::zero());
-            gather_global_to_local(&self.u, &mut ws.u_element, ws.basis_buffer.element_nodes(), s);
+        with_thread_local_workspace(
+            &WORKSPACE,
+            |ws: &mut EllipticAssemblerWorkspace<T, Space::ReferenceDim, Op::Parameters>| {
+                ws.basis_buffer.resize(n, Space::ReferenceDim::dim());
+                ws.basis_buffer
+                    .populate_element_nodes_from_space(element_index, self.space);
+                ws.u_element.resize_vertically_mut(s * n, T::zero());
+                gather_global_to_local(&self.u, &mut ws.u_element, ws.basis_buffer.element_nodes(), s);
 
-            ws.quadrature_buffer
-                .populate_element_quadrature_from_table(element_index, self.qtable);
+                ws.quadrature_buffer
+                    .populate_element_quadrature_from_table(element_index, self.qtable);
 
-            let element = ElementInSpace::from_space_and_element_index(self.space, element_index);
-            assemble_element_elliptic_vector(
-                output,
-                &element,
-                self.op,
-                DVectorSlice::from(&ws.u_element),
-                ws.quadrature_buffer.weights(),
-                ws.quadrature_buffer.points(),
-                ws.quadrature_buffer.data(),
-                ws.basis_buffer.element_gradients_mut(),
-            )
-        })
+                let element = ElementInSpace::from_space_and_element_index(self.space, element_index);
+                assemble_element_elliptic_vector(
+                    output,
+                    &element,
+                    self.op,
+                    DVectorSlice::from(&ws.u_element),
+                    ws.quadrature_buffer.weights(),
+                    ws.quadrature_buffer.points(),
+                    ws.quadrature_buffer.data(),
+                    ws.basis_buffer.element_gradients_mut(),
+                )
+            },
+        )
     }
 }
 
@@ -265,28 +268,31 @@ where
         assert_eq!(output.nrows(), s * n, "Output matrix dimension mismatch");
         assert_eq!(output.ncols(), s * n, "Output matrix dimension mismatch");
 
-        with_thread_local_workspace(&WORKSPACE, |ws: &mut EllipticAssemblerWorkspace<T, Space::ReferenceDim, Op::Parameters>| {
-            ws.basis_buffer.resize(n, Space::ReferenceDim::dim());
-            ws.basis_buffer
-                .populate_element_nodes_from_space(element_index, self.space);
-            ws.u_element.resize_vertically_mut(s * n, T::zero());
-            gather_global_to_local(&self.u, &mut ws.u_element, ws.basis_buffer.element_nodes(), s);
+        with_thread_local_workspace(
+            &WORKSPACE,
+            |ws: &mut EllipticAssemblerWorkspace<T, Space::ReferenceDim, Op::Parameters>| {
+                ws.basis_buffer.resize(n, Space::ReferenceDim::dim());
+                ws.basis_buffer
+                    .populate_element_nodes_from_space(element_index, self.space);
+                ws.u_element.resize_vertically_mut(s * n, T::zero());
+                gather_global_to_local(&self.u, &mut ws.u_element, ws.basis_buffer.element_nodes(), s);
 
-            ws.quadrature_buffer
-                .populate_element_quadrature_from_table(element_index, self.qtable);
+                ws.quadrature_buffer
+                    .populate_element_quadrature_from_table(element_index, self.qtable);
 
-            let element = ElementInSpace::from_space_and_element_index(self.space, element_index);
-            assemble_element_elliptic_matrix(
-                output,
-                &element,
-                self.op,
-                DVectorSlice::from(&ws.u_element),
-                ws.quadrature_buffer.weights(),
-                ws.quadrature_buffer.points(),
-                ws.quadrature_buffer.data(),
-                ws.basis_buffer.element_gradients_mut(),
-            )
-        })
+                let element = ElementInSpace::from_space_and_element_index(self.space, element_index);
+                assemble_element_elliptic_matrix(
+                    output,
+                    &element,
+                    self.op,
+                    DVectorSlice::from(&ws.u_element),
+                    ws.quadrature_buffer.weights(),
+                    ws.quadrature_buffer.points(),
+                    ws.quadrature_buffer.data(),
+                    ws.basis_buffer.element_gradients_mut(),
+                )
+            },
+        )
     }
 }
 
