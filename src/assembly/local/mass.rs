@@ -154,8 +154,7 @@ where
 
     let quadrature_iter = izip!(quadrature_weights, quadrature_points, quadrature_density);
     for (&weight, point, density) in quadrature_iter {
-        let j = element.reference_jacobian(point);
-        let j_det = j.determinant();
+        let j_det = element.reference_jacobian(point).determinant();
 
         // First populate basis values with respect to reference coords
         element.populate_basis(phi, &point);

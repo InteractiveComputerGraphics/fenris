@@ -10,6 +10,7 @@ use nalgebra::SMatrix;
 use num::Zero;
 
 mod elliptic;
+mod mass;
 mod source;
 
 fn reference_quad<T>() -> Quad2d<T>
