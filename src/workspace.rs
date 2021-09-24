@@ -1,4 +1,6 @@
 use std::any::Any;
+use std::cell::RefCell;
+use std::thread::LocalKey;
 
 /// A workspace that contains type-erased objects.
 ///
@@ -47,4 +49,44 @@ impl Workspace {
     {
         self.get_or_insert_with(Default::default)
     }
+}
+
+/// Runs the provided closure with the thread-local workspace as an argument.
+///
+/// This simplifies working with [`Workspace`] when it's stored as a thread-local variable.
+///
+/// Note that the typed workspace must have a [`Default`] implementation.
+///
+/// # Examples
+///
+/// ```rust
+/// # use std::cell::RefCell;
+/// # use fenris::workspace::{with_thread_local_workspace, Workspace};
+/// thread_local! { static WORKSPACE: RefCell<Workspace> = RefCell::new(Workspace::default()); }
+///
+/// #[derive(Default)]
+/// struct MyWorkspace {
+///     buffer: Vec<usize>
+/// }
+///
+/// fn main() {
+///     let sum: usize = with_thread_local_workspace(&WORKSPACE, |ws: &mut MyWorkspace| {
+///         // This is of course completely nonsense, we just show how you can easily use a thread-local workspace
+///         // and produce a result which is returned.
+///         ws.buffer.clear();
+///         ws.buffer.extend_from_slice(&[1, 4, 3]);
+///         ws.buffer.iter().sum()
+///     });
+///     println!("Sum = {}", sum);
+/// }
+/// ```
+pub fn with_thread_local_workspace<W: 'static + Default, T>(
+    workspace: &'static LocalKey<RefCell<Workspace>>,
+    f: impl FnOnce(&mut W) -> T)
+-> T {
+    workspace.with(|refcell_ws| {
+        let mut type_erased_workspace = refcell_ws.borrow_mut();
+        let workspace = type_erased_workspace.get_or_default();
+        f(workspace)
+    })
 }

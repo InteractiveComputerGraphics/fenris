@@ -11,9 +11,11 @@ use crate::SmallDim;
 use itertools::izip;
 
 mod elliptic;
+mod mass;
 mod source;
 
 pub use elliptic::*;
+pub use mass::*;
 pub use source::*;
 
 pub trait ElementConnectivityAssembler {

@@ -12,7 +12,7 @@ use crate::nalgebra::{
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
 use crate::util::{clone_upper_to_lower, reshape_to_slice};
-use crate::workspace::Workspace;
+use crate::workspace::{Workspace, with_thread_local_workspace};
 use crate::Symmetry;
 use eyre::eyre;
 use itertools::izip;
@@ -209,34 +209,7 @@ where
     }
 }
 
-impl<'a, T: Scalar, S, O, Q> ElementEllipticAssembler<'a, T, S, O, Q> {
-    thread_local! { static WORKSPACE: RefCell<Workspace> = RefCell::new(Workspace::default());  }
-}
-
-impl<'a, T: Scalar, Space, Op, QTable> ElementEllipticAssembler<'a, T, Space, Op, QTable>
-where
-    T: RealField,
-    Space: VolumetricFiniteElementSpace<T>,
-    Op: Operator<T, Space::ReferenceDim>,
-    QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters>,
-    DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Op::SolutionDim>,
-{
-    /// Calls the given function with a mutable reference to a thread-local workspace.
-    ///
-    /// Helper method that abstracts away the boilerplate of obtaining the workspace.
-    fn with_workspace<F, R>(&self, f: F) -> R
-    where
-        F: FnOnce(&mut EllipticAssemblerWorkspace<T, Space::GeometryDim, Op::Parameters>) -> R,
-    {
-        Self::WORKSPACE.with(|workspace| {
-            // First get through the RefCell
-            let mut ws = workspace.borrow_mut();
-            // Then get the concrete type from the type-erased workspace
-            let ws = ws.get_or_default::<EllipticAssemblerWorkspace<T, Space::GeometryDim, Op::Parameters>>();
-            f(ws)
-        })
-    }
-}
+thread_local! { static WORKSPACE: RefCell<Workspace> = RefCell::new(Workspace::default());  }
 
 impl<'a, T, Space, Op, QTable> ElementVectorAssembler<T> for ElementEllipticAssembler<'a, T, Space, Op, QTable>
 where
@@ -252,7 +225,7 @@ where
         let n = self.element_node_count(element_index);
         assert_eq!(output.len(), s * n, "Output vector dimension mismatch");
 
-        self.with_workspace(|ws| {
+        with_thread_local_workspace(&WORKSPACE, |ws: &mut EllipticAssemblerWorkspace<T, Space::ReferenceDim, Op::Parameters>| {
             ws.basis_buffer.resize(n, Space::ReferenceDim::dim());
             ws.basis_buffer
                 .populate_element_nodes_from_space(element_index, self.space);
@@ -292,7 +265,7 @@ where
         assert_eq!(output.nrows(), s * n, "Output matrix dimension mismatch");
         assert_eq!(output.ncols(), s * n, "Output matrix dimension mismatch");
 
-        self.with_workspace(|ws| {
+        with_thread_local_workspace(&WORKSPACE, |ws: &mut EllipticAssemblerWorkspace<T, Space::ReferenceDim, Op::Parameters>| {
             ws.basis_buffer.resize(n, Space::ReferenceDim::dim());
             ws.basis_buffer
                 .populate_element_nodes_from_space(element_index, self.space);

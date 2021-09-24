@@ -7,11 +7,10 @@ use crate::nalgebra::{
     DVectorSliceMut, DefaultAllocator, DimName, Dynamic, MatrixSliceMutMN, OPoint, OVector, RealField, Scalar, U1,
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
-use crate::workspace::Workspace;
+use crate::workspace::{Workspace, with_thread_local_workspace};
 use crate::SmallDim;
 use itertools::izip;
 use std::cell::RefCell;
-use std::cell::RefMut;
 use std::marker::PhantomData;
 
 pub trait SourceFunction<T, GeometryDim>: Operator<T, GeometryDim>
@@ -166,12 +165,8 @@ where
     DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Source::SolutionDim>,
 {
     fn assemble_element_vector_into(&self, element_index: usize, output: DVectorSliceMut<T>) -> eyre::Result<()> {
-        SOURCE_WORKSPACE.with(|ws| {
-            // TODO: Is it possible to simplify retrieving a mutable reference to the workspace?
-            let mut ws: RefMut<SourceTermWorkspace<T, Space::ReferenceDim, Source::Parameters>> =
-                RefMut::map(ws.borrow_mut(), |ws| ws.get_or_default());
-            let ws: &mut _ = &mut *ws;
-
+        with_thread_local_workspace(&SOURCE_WORKSPACE,
+                                    |ws: &mut SourceTermWorkspace<T, Space::ReferenceDim, Source::Parameters>| {
             let element = ElementInSpace::from_space_and_element_index(self.space, element_index);
             ws.basis_buffer
                 .resize(element.num_nodes(), Space::ReferenceDim::dim());
