@@ -4,14 +4,13 @@ use proptest::collection::vec;
 use proptest::num::i32;
 use proptest::prelude::*;
 
-use fenris::assembly::global::{
-    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_matrix, gather_global_to_local, CsrAssembler,
-    CsrParAssembler,
-};
-use fenris::assembly::local::ElementConnectivityAssembler;
+use fenris::assembly::global::{apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_matrix, gather_global_to_local, CsrAssembler, CsrParAssembler, compute_global_potential};
+use fenris::assembly::local::{ElementConnectivityAssembler, ElementScalarAssembler};
 use fenris::nalgebra::{DMatrix, DVector, U2};
 use fenris::nalgebra_sparse::pattern::SparsityPattern;
 use fenris::nalgebra_sparse::CsrMatrix;
+use eyre::eyre;
+use matrixcompare::assert_scalar_eq;
 
 #[test]
 fn apply_homogeneous_dirichlet_bc_matrix_simple_example() {
@@ -259,6 +258,37 @@ impl ElementConnectivityAssembler for MockElementAssembler {
     fn populate_element_nodes(&self, output: &mut [usize], element_index: usize) {
         output.copy_from_slice(&self.element_connectivities[element_index])
     }
+}
+
+#[test]
+fn test_compute_global_potential() {
+    struct MockScalarElementAssembler;
+
+    #[rustfmt::skip]
+    impl ElementConnectivityAssembler for MockScalarElementAssembler {
+        fn solution_dim(&self) -> usize { unreachable!() }
+        fn num_elements(&self) -> usize { 4 }
+        fn num_nodes(&self) -> usize { unreachable!() }
+        fn element_node_count(&self, _element_index: usize) -> usize { unreachable!() }
+        fn populate_element_nodes(&self, _output: &mut [usize], _element_index: usize) { unreachable!() }
+    }
+
+    #[rustfmt::skip]
+    impl ElementScalarAssembler<f64> for MockScalarElementAssembler {
+        fn assemble_element_scalar(&self, element_index: usize) -> eyre::Result<f64> {
+            match element_index {
+                0 => Ok(3.0),
+                1 => Ok(4.0),
+                2 => Ok(5.0),
+                3 => Ok(-3.0),
+                _ => Err(eyre!("Element out of bounds"))
+            }
+        }
+    }
+
+    let global_potential = compute_global_potential(&MockScalarElementAssembler).unwrap();
+
+    assert_scalar_eq!(global_potential, 9.0, comp=float);
 }
 
 #[derive(Debug)]
