@@ -10,12 +10,9 @@ edition = "2018"
 itertools = "0.9"
 nalgebra = "0.28"
 serde = { version="1.0", features = [ "derive" ] }
-numeric_literals = { git = "https://github.com/Andlon/numeric_literals", rev = "c43f098e617f0b768b43c185711ed106f4170cd7" }
+numeric_literals = "0.2.0"
 nested-vec = { path="../nested-vec" }
-vtkio = { version = "0.3", optional = true }
 proptest = { version="1.0", optional = true }
-# TODO: num isn't really necessary, except for some vtk stuff
-num = "0.2"
 
 [dev-dependencies]
 matrixcompare = "0.3"

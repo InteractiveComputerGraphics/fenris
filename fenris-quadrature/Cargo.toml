@@ -5,11 +5,11 @@ authors = ["Andreas Longva"]
 edition = "2018"
 
 [features]
-doc-images = []
+doc-images = [ "embed-doc-image" ]
 
 [dependencies]
 # TODO: Make this optional along with a "doc-images" feature
-embed-doc-image = "0.1.4"
+embed-doc-image = { version="0.1.4", optional = true }
 
 [dev-dependencies]
 matrixcompare = "0.3.0"

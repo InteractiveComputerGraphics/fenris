@@ -15,7 +15,8 @@ use std::convert::TryInto;
 // TODO: This is kind of a dirty hack to get around the fact that some VTK things are in
 // the geometry crate and some are in this crate. Need to clean this up!
 use crate::vtkio::model::{Attributes, ByteOrder, DataArray, Piece, Version, Vtk};
-pub use fenris_geometry::vtkio::*;
+// TODO: We've currently disabled all vtkio impls, might have to re-enable/re-implement some of them in the future
+//pub use fenris_geometry::vtkio::*;
 use num::ToPrimitive;
 use std::fs::create_dir_all;
 use std::path::Path;

@@ -10,9 +10,7 @@ edition = "2018"
 nalgebra = "0.28"
 nalgebra-sparse = "0.4"
 rayon = "1.3"
-alga = { version = "0.9", default-features = false }
-num = "0.2"
-itertools = "0.9"
+num = "0.4"
 paradis = { path = "../paradis" }
 
 [dev-dependencies]

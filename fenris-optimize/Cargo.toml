@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 nalgebra = { version = "0.28", features = ["compare"] }
-numeric_literals = { git = "https://github.com/Andlon/numeric_literals", rev = "c43f098e617f0b768b43c185711ed106f4170cd7" }
+numeric_literals = "0.2.0"
 itertools = "0.9"
 log = "0.4"
 
