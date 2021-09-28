@@ -1,7 +1,8 @@
 use crate::allocators::{BiDimAllocator, SmallDimAllocator, TriDimAllocator};
 use crate::assembly::global::{gather_global_to_local, BasisFunctionBuffer, QuadratureBuffer};
 use crate::assembly::local::{
-    ElementConnectivityAssembler, ElementMatrixAssembler, ElementVectorAssembler, QuadratureTable,
+    ElementConnectivityAssembler, ElementMatrixAssembler, ElementScalarAssembler, ElementVectorAssembler,
+    QuadratureTable,
 };
 use crate::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
 use crate::element::{MatrixSlice, MatrixSliceMut, VolumetricFiniteElement};
@@ -210,6 +211,45 @@ where
 }
 
 thread_local! { static WORKSPACE: RefCell<Workspace> = RefCell::new(Workspace::default());  }
+
+impl<'a, T, Space, Op, QTable> ElementScalarAssembler<T> for ElementEllipticAssembler<'a, T, Space, Op, QTable>
+where
+    T: RealField,
+    Space: VolumetricFiniteElementSpace<T>,
+    Op: EllipticEnergy<T, Space::ReferenceDim>,
+    QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters>,
+    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Op::SolutionDim>,
+{
+    fn assemble_element_scalar(&self, element_index: usize) -> eyre::Result<T> {
+        let s = self.solution_dim();
+        let n = self.element_node_count(element_index);
+
+        with_thread_local_workspace(
+            &WORKSPACE,
+            |ws: &mut EllipticAssemblerWorkspace<T, Space::ReferenceDim, Op::Parameters>| {
+                ws.basis_buffer.resize(n, Space::ReferenceDim::dim());
+                ws.basis_buffer
+                    .populate_element_nodes_from_space(element_index, self.space);
+                ws.u_element.resize_vertically_mut(s * n, T::zero());
+                gather_global_to_local(&self.u, &mut ws.u_element, ws.basis_buffer.element_nodes(), s);
+
+                ws.quadrature_buffer
+                    .populate_element_quadrature_from_table(element_index, self.qtable);
+
+                let element = ElementInSpace::from_space_and_element_index(self.space, element_index);
+                compute_element_elliptic_energy(
+                    &element,
+                    self.op,
+                    DVectorSlice::from(&ws.u_element),
+                    ws.quadrature_buffer.weights(),
+                    ws.quadrature_buffer.points(),
+                    ws.quadrature_buffer.data(),
+                    ws.basis_buffer.element_gradients_mut(),
+                )
+            },
+        )
+    }
+}
 
 impl<'a, T, Space, Op, QTable> ElementVectorAssembler<T> for ElementEllipticAssembler<'a, T, Space, Op, QTable>
 where

@@ -63,6 +63,10 @@ pub trait ElementVectorAssembler<T: Scalar>: ElementConnectivityAssembler {
     fn assemble_element_vector_into(&self, element_index: usize, output: DVectorSliceMut<T>) -> eyre::Result<()>;
 }
 
+pub trait ElementScalarAssembler<T: Scalar>: ElementConnectivityAssembler {
+    fn assemble_element_scalar(&self, element_index: usize) -> eyre::Result<T>;
+}
+
 /// Lookup table mapping elements to quadrature rules.
 ///
 /// TODO: Eventually replace the existing trait with this one
