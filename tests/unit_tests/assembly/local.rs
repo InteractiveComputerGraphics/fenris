@@ -1,13 +1,14 @@
 use fenris::allocators::{BiDimAllocator, SmallDimAllocator};
-use fenris::assembly::local::assemble_generalized_element_mass;
-use fenris::element::{MatrixSliceMut, Quad4d2Element, VolumetricFiniteElement};
+use fenris::assembly::local::assemble_element_mass_matrix;
+use fenris::element::{Quad4d2Element, VolumetricFiniteElement};
 use fenris::geometry::Quad2d;
-use fenris::nalgebra::{DMatrix, DVector, DefaultAllocator, DimName, Matrix4, OPoint, OVector, Point2, RealField, U2};
+use fenris::nalgebra::{DMatrix, DVector, DefaultAllocator, DimName, Matrix4, OPoint, OVector, Point2, RealField};
 use fenris::quadrature;
 use fenris::quadrature::QuadraturePair;
 use itertools::izip;
-use nalgebra::SMatrix;
-use num::Zero;
+use matrixcompare::assert_matrix_eq;
+use nalgebra::{DMatrixSliceMut, Matrix2};
+use std::iter::repeat;
 
 mod elliptic;
 mod mass;
@@ -29,30 +30,33 @@ where
 fn analytic_comparison_of_element_mass_matrix_for_reference_element() {
     let density = 3.0;
 
-    let quadrature = quadrature::total_order::quadrilateral(5).unwrap();
+    let (weights, points) = quadrature::total_order::quadrilateral(5).unwrap();
+    let densities: Vec<_> = repeat(density).take(weights.len()).collect();
     let quad = Quad4d2Element::from(reference_quad());
 
     let ndof = 8;
     let mut m = DMatrix::zeros(ndof, ndof);
-    assemble_generalized_element_mass::<_, U2, _, _>(MatrixSliceMut::from(&mut m), &quad, density, &quadrature);
+
+    let mut buffer = vec![3.0; 4];
+    assemble_element_mass_matrix(
+        DMatrixSliceMut::from(&mut m),
+        &quad,
+        &weights,
+        &points,
+        &densities,
+        2,
+        &mut buffer,
+    )
+    .unwrap();
 
     #[rustfmt::skip]
-    let expected4x4 = (density / 9.0) * Matrix4::new(
+    let expected4x4 = (density / 9.0) * Matrix4::<f64>::new(
         4.0, 2.0, 1.0, 2.0,
         2.0, 4.0, 2.0, 1.0,
         1.0, 2.0, 4.0, 2.0,
         2.0, 1.0, 2.0, 4.0);
-
-    let mut expected8x8: SMatrix<f64, 8, 8> = SMatrix::zero();
-    expected8x8
-        .slice_with_steps_mut((0, 0), (4, 4), (1, 1))
-        .copy_from(&expected4x4);
-    expected8x8
-        .slice_with_steps_mut((1, 1), (4, 4), (1, 1))
-        .copy_from(&expected4x4);
-
-    let diff = m - expected8x8;
-    assert!(diff.norm() <= 1e-6);
+    let expected8x8 = expected4x4.kronecker(&Matrix2::identity());
+    assert_matrix_eq!(expected8x8, m, comp = float);
 }
 
 /// An artificial density function that we use to validate that quadrature parameters are correctly
