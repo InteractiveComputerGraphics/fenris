@@ -574,7 +574,7 @@ impl<T: RealField> SerialVectorAssembler<T> {
 }
 
 /// Computes the value of a global scalar potential as a sum of element-wise scalars.
-pub fn compute_global_potential<T>(element_assembler: &impl ElementScalarAssembler<T>) -> eyre::Result<T>
+pub fn compute_global_potential<T>(element_assembler: &(impl ElementScalarAssembler<T> + ?Sized)) -> eyre::Result<T>
 where
     T: RealField
 {
@@ -693,7 +693,7 @@ where
     pub fn populate_element_quadrature_from_table(
         &mut self,
         element_index: usize,
-        table: &impl QuadratureTable<T, GeometryDim, Data = Data>,
+        table: &(impl ?Sized + QuadratureTable<T, GeometryDim, Data = Data>),
     ) {
         let quadrature_size = table.element_quadrature_size(element_index);
         self.resize(quadrature_size);

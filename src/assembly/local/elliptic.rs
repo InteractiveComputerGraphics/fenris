@@ -105,8 +105,8 @@ impl<Space, QTable, U> ElementEllipticAssemblerBuilder<Space, (), QTable, U> {
 impl<Space, Op, U> ElementEllipticAssemblerBuilder<Space, Op, (), U> {
     pub fn with_quadrature_table<QTable>(
         self,
-        qtable: &QTable,
-    ) -> ElementEllipticAssemblerBuilder<Space, Op, &QTable, U> {
+        qtable: QTable,
+    ) -> ElementEllipticAssemblerBuilder<Space, Op, QTable, U> {
         ElementEllipticAssemblerBuilder {
             space: self.space,
             op: self.op,
@@ -136,6 +136,7 @@ impl<Space, Op, QTable> ElementEllipticAssemblerBuilder<Space, Op, QTable, ()> {
 impl<'a, T, Space, Op, QTable> ElementEllipticAssemblerBuilder<&'a Space, &'a Op, &'a QTable, DVectorSlice<'a, T>>
 where
     T: Scalar,
+    QTable: ?Sized,
 {
     pub fn build(self) -> ElementEllipticAssembler<'a, T, Space, Op, QTable> {
         ElementEllipticAssembler {
@@ -148,7 +149,7 @@ where
 }
 
 #[derive(Debug)]
-pub struct ElementEllipticAssembler<'a, T: Scalar, Space, Op, QTable> {
+pub struct ElementEllipticAssembler<'a, T: Scalar, Space, Op, QTable: ?Sized> {
     space: &'a Space,
     op: &'a Op,
     qtable: &'a QTable,
@@ -160,6 +161,7 @@ where
     T: Scalar,
     Space: VolumetricFiniteElementSpace<T>,
     Op: Operator<T, Space::GeometryDim>,
+    QTable: ?Sized,
     DefaultAllocator: SmallDimAllocator<T, Space::GeometryDim>,
 {
     fn solution_dim(&self) -> usize {
@@ -217,7 +219,7 @@ where
     T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
     Op: EllipticEnergy<T, Space::ReferenceDim>,
-    QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters>,
+    QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters> + ?Sized,
     DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Op::SolutionDim>,
 {
     fn assemble_element_scalar(&self, element_index: usize) -> eyre::Result<T> {
@@ -256,7 +258,7 @@ where
     T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
     Op: EllipticOperator<T, Space::ReferenceDim>,
-    QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters>,
+    QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters> + ?Sized,
     DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Op::SolutionDim>,
 {
     #[allow(non_snake_case)]
@@ -298,7 +300,7 @@ where
     T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
     Op: EllipticContraction<T, Space::ReferenceDim>,
-    QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters>,
+    QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters> + ?Sized,
     DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Op::SolutionDim>,
 {
     #[allow(non_snake_case)]
