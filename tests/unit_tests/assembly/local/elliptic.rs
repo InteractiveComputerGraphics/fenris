@@ -72,8 +72,6 @@ fn compute_element_energy_scalar_quad4() {
     // interpolation, we would expect to get the same result from our element-wise energy
     // computation routines, provided that the element is able to reproduce `u` exactly.
 
-    // TODO: Include parameters in the test? Currently we don't test this at all...
-
     {
         // Rectangular element: here we should be able to reproduce any bilinear function
         let element = Quad4d2Element::from_vertices([
@@ -244,7 +242,6 @@ fn compute_element_energy_vector_tet10() {
     // interpolation, we would expect to get the same result from our element-wise energy
     // computation routines, provided that the element is able to reproduce `u` exactly.
 
-    // TODO: Include parameters in the test? Currently we don't test this at all...
     {
         let a = Point3::new(2.0, 0.0, 1.0);
         let b = Point3::new(3.0, 4.0, 1.0);
@@ -284,8 +281,6 @@ fn elliptic_element_vector_is_gradient_of_energy_tet10() {
     // The element vector associated with an elliptic operator should work out
     // to be exactly the gradient of the associated elliptic energy. We check this here
     // using finite differences
-
-    // TODO: Test that it works with parameters?
 
     let a = Point3::new(2.0, 0.0, 1.0);
     let b = Point3::new(3.0, 4.0, 1.0);
@@ -336,8 +331,6 @@ fn elliptic_element_matrix_is_jacobian_of_vector_tet10() {
     // The element matrix associated with an elliptic operator should work out
     // to be exactly the Jacobian of the associated element vector.
     // We check this with finite differences
-
-    // TODO: Test that it works with parameters?
 
     let a = Point3::new(2.0, 0.0, 1.0);
     let b = Point3::new(3.0, 4.0, 1.0);
@@ -401,8 +394,6 @@ fn elliptic_element_matrix_is_jacobian_of_vector_tet10() {
 fn symmetric_elliptic_element_matrix_is_jacobian_of_vector_tet10() {
     // This test is the same as the non-symmetric test, except we use an operator
     // that is explicitly symmetric
-
-    // TODO: Test that it works with parameters?
 
     let a = Point3::new(2.0, 0.0, 1.0);
     let b = Point3::new(3.0, 4.0, 1.0);
