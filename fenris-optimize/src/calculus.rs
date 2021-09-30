@@ -205,7 +205,7 @@ where
 /// The vector `x` is mutable in order to contain intermediate computations, but upon returning,
 /// its content remains unchanged.
 pub fn approximate_gradient_fd<'a, T>(
-    f: impl Fn(DVectorSlice<T>) -> T,
+    f: impl FnMut(DVectorSlice<T>) -> T,
     x: impl Into<DVectorSliceMut<'a, T>>,
     h: T,
 ) -> DVector<T>
@@ -227,7 +227,7 @@ where
 /// its content remains unchanged.
 pub fn approximate_gradient_fd_into<'a, T>(
     mut df: DVectorSliceMut<T>,
-    f: impl Fn(DVectorSlice<T>) -> T,
+    f: impl FnMut(DVectorSlice<T>) -> T,
     x: impl Into<DVectorSliceMut<'a, T>>,
     h: T,
 ) where
@@ -239,7 +239,7 @@ pub fn approximate_gradient_fd_into<'a, T>(
 #[replace_float_literals(T::from_f64(literal).unwrap())]
 fn approximate_gradient_fd_into_<T>(
     mut df: DVectorSliceMut<T>,
-    f: impl Fn(DVectorSlice<T>) -> T,
+    mut f: impl FnMut(DVectorSlice<T>) -> T,
     mut x: DVectorSliceMut<T>,
     h: T,
 ) where
@@ -267,7 +267,7 @@ fn approximate_gradient_fd_into_<T>(
 /// The parameter `h` determines the step size of the finite difference approximation.
 pub fn approximate_jacobian_fd<'a, T>(
     m: usize,
-    f: impl Fn(DVectorSlice<T>, DVectorSliceMut<T>),
+    f: impl FnMut(DVectorSlice<T>, DVectorSliceMut<T>),
     x: impl Into<DVectorSliceMut<'a, T>>,
     h: T,
 ) -> DMatrix<T>
@@ -287,7 +287,7 @@ where
 /// Same as [`approximate_jacobian_fd`], but stores the result in the provided output matrix.
 pub fn approximate_jacobian_fd_into<'a, T>(
     jacobian: impl Into<DMatrixSliceMut<'a, T>>,
-    f: impl Fn(DVectorSlice<T>, DVectorSliceMut<T>),
+    f: impl FnMut(DVectorSlice<T>, DVectorSliceMut<T>),
     x: impl Into<DVectorSliceMut<'a, T>>,
     h: T,
 ) where
@@ -299,7 +299,7 @@ pub fn approximate_jacobian_fd_into<'a, T>(
 #[replace_float_literals(T::from_f64(literal).unwrap())]
 fn approximate_jacobian_fd_into_<T>(
     mut j: DMatrixSliceMut<T>,
-    f: impl Fn(DVectorSlice<T>, DVectorSliceMut<T>),
+    mut f: impl FnMut(DVectorSlice<T>, DVectorSliceMut<T>),
     mut x: DVectorSliceMut<T>,
     h: T,
 ) where
