@@ -1,6 +1,6 @@
-use crate::HyperelasticMaterial;
+use crate::{HyperelasticMaterial, compute_batch_contraction};
 use fenris::allocators::SmallDimAllocator;
-use fenris::nalgebra::{min, DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, OMatrix, OVector, RealField};
+use fenris::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, OMatrix, OVector, RealField};
 use numeric_literals::replace_float_literals;
 use serde::{Deserialize, Serialize};
 use fenris::SmallDim;
@@ -301,6 +301,33 @@ where
             + I * (mu * a.dot(&b))
         }
     }
+
+    fn accumulate_stress_contractions_into(&self, output: DMatrixSliceMut<T>, alpha: T, deformation_gradient: &OMatrix<T, D, D>, a: DVectorSlice<T>, b: DVectorSlice<T>, parameters: &Self::Parameters) {
+        let LameParameters { mu, lambda } = parameters.clone();
+        let F = deformation_gradient;
+        let J = F.determinant();
+
+        if J <= T::zero() {
+            todo!("How to address non-positive J?");
+        } else {
+            // Precompute all the quantities that are independent of a and b
+            let logJ = J.ln();
+            let F_inv = F.clone().try_inverse().expect("F is guaranteed to be invertible here");
+            let F_inv_T = F_inv.transpose();
+            let ref I = OMatrix::<_, D, D>::identity();
+            // Note: This alpha is from the formula, not from the alpha contraction parameter!
+            // TODO: Use different formula in derivation?
+            let alpha_nh = -mu + lambda * logJ;
+
+            compute_batch_contraction(output, alpha, a, b, |a, b| {
+                let ref F_inv_T_a = &F_inv_T * a;
+                let ref F_inv_T_b = &F_inv_T * b;
+                (F_inv_T_a) * (F_inv_T_b.transpose() * lambda)
+                    - F_inv_T_b * (F_inv_T_a.transpose() * alpha_nh)
+                    + I * (mu * a.dot(&b))
+            })
+        }
+    }
 }
 
 /// The Saint Venant-Kirchhoff material model.
@@ -390,32 +417,13 @@ where
 
     fn accumulate_stress_contractions_into(
         &self,
-        mut output: DMatrixSliceMut<T>,
+        output: DMatrixSliceMut<T>,
         alpha: T,
         deformation_gradient: &OMatrix<T, D, D>,
         a: DVectorSlice<T>,
         b: DVectorSlice<T>,
         parameters: &Self::Parameters,
     ) {
-        // Note: this is an adaption of the default implementation that exploits structure of the StVK material model
-        // by computing some shared quantities once for all contraction vectors
-        let d = D::dim();
-        assert!(a.len() % d == 0, "Dimension of a must be divisible by d (GeometryDim)");
-        assert!(b.len() % d == 0, "Dimension of b must be divisible by d (GeometryDim)");
-        let M = a.len() / d;
-        let N = b.len() / d;
-        assert_eq!(
-            output.nrows(),
-            d * M,
-            "Number of rows in output matrix is not consistent with a"
-        );
-        assert_eq!(
-            output.ncols(),
-            d * N,
-            "Number of columns in output matrix is not consistent with b"
-        );
-        let d_times_d = (D::name(), D::name());
-
         let &LameParameters { mu, lambda } = parameters;
         let eye = &OMatrix::<T, D, D>::identity();
         let F = deformation_gradient;
@@ -423,27 +431,17 @@ where
         let E_trace = E.trace();
         let ref FFt = F * F.transpose();
 
-        // Note: We fill the matrix (block) column-by-column since the matrix is stored in
-        // column-major format
-        for J in 0..N {
-            // Compute quantities that only depend on J to prevent computing these over and over again
-            let b_J = b.rows_generic(d * J, D::name()).clone_owned();
-            let ref Fb = F * &b_J;
-            let Eb = &E * &b_J;
+        compute_batch_contraction(output, alpha, a, b, |a_I, b_J| {
+            let a_dot_b = a_I.dot(&b_J);
+            let ref Fa = F * a_I;
+            let ref Fb = F * b_J;
+            let Eb = &E * b_J;
 
-            for I in 0..min(J + 1, M) {
-                let a_I = a.rows_generic(d * I, D::name()).clone_owned();
-
-                let a_dot_b = a_I.dot(&b_J);
-                let ref Fa = F * &a_I;
-
-                let contraction = eye * ((2.0 * mu * a_I.dot(&Eb) + lambda * E_trace * a_dot_b) * alpha)
-                    + Fb * Fa.transpose() * (mu * alpha)
-                    + Fa * Fb.transpose() * (lambda * alpha)
-                    + FFt * (mu * a_dot_b * alpha);
-                let mut c_IJ = output.generic_slice_mut((d * I, d * J), d_times_d);
-                c_IJ += contraction;
-            }
-        }
+            let contraction = eye * (2.0 * mu * a_I.dot(&Eb) + lambda * E_trace * a_dot_b)
+                + Fb * (Fa.transpose() * mu)
+                + Fa * (Fb.transpose() * lambda)
+                + FFt * (mu * a_dot_b);
+            contraction
+        })
     }
 }

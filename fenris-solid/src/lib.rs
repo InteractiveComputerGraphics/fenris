@@ -114,43 +114,68 @@ where
     #[allow(non_snake_case)]
     fn accumulate_stress_contractions_into(
         &self,
-        mut output: DMatrixSliceMut<T>,
+        output: DMatrixSliceMut<T>,
         alpha: T,
         deformation_gradient: &OMatrix<T, GeometryDim, GeometryDim>,
         a: DVectorSlice<T>,
         b: DVectorSlice<T>,
         parameters: &Self::Parameters,
     ) {
-        // Note: This implementation is just an adaption of the default impl
-        // of EllipticContraction::accumulate_contractions_into
-        let d = GeometryDim::dim();
-        assert!(a.len() % d == 0, "Dimension of a must be divisible by d (GeometryDim)");
-        assert!(b.len() % d == 0, "Dimension of b must be divisible by d (GeometryDim)");
-        let M = a.len() / d;
-        let N = b.len() / d;
-        assert_eq!(
-            output.nrows(),
-            d * M,
-            "Number of rows in output matrix is not consistent with a"
-        );
-        assert_eq!(
-            output.ncols(),
-            d * N,
-            "Number of columns in output matrix is not consistent with b"
-        );
-        let d_times_d = (GeometryDim::name(), GeometryDim::name());
+            compute_batch_contraction(output,
+                                      alpha,
+                                      a,
+                                      b,
+                                      |a_I, b_J| self.compute_stress_contraction(deformation_gradient, a_I, b_J, parameters))
+    }
+}
 
-        // Note: We fill the matrix (block) column-by-column since the matrix is stored in
-        // column-major format
-        for J in 0..N {
-            // Contraction is always symmetric
-            for I in 0..min(J + 1, M) {
-                let a_I = a.rows_generic(d * I, GeometryDim::name()).clone_owned();
-                let b_J = b.rows_generic(d * J, GeometryDim::name()).clone_owned();
-                let mut c_IJ = output.generic_slice_mut((d * I, d * J), d_times_d);
-                let contraction = self.compute_stress_contraction(deformation_gradient, &a_I, &b_J, parameters);
-                c_IJ += contraction * alpha;
-            }
+/// Helper function to ease implementation of [`HyperelasticMaterial::accumulate_stress_contractions_into`].
+///
+/// Often implementations of this method will tend to look very similar. This method is provided as a means
+/// to eliminate most of the boilerplate. See implementations of various materials for how to use it.
+#[allow(non_snake_case)]
+#[inline]
+pub fn compute_batch_contraction<T, GeometryDim>(
+    mut output: DMatrixSliceMut<T>,
+    alpha: T,
+    a: DVectorSlice<T>,
+    b: DVectorSlice<T>,
+    mut contraction: impl FnMut(&OVector<T, GeometryDim>, &OVector<T, GeometryDim>) -> OMatrix<T, GeometryDim, GeometryDim>)
+where
+    T: RealField,
+    GeometryDim: DimName,
+    DefaultAllocator: SmallDimAllocator<T, GeometryDim>,
+{
+    // Note: This implementation is just an adaptation of the default impl
+    // of EllipticContraction::accumulate_contractions_into
+    let d = GeometryDim::dim();
+    assert!(a.len() % d == 0, "Dimension of a must be divisible by d (GeometryDim)");
+    assert!(b.len() % d == 0, "Dimension of b must be divisible by d (GeometryDim)");
+    let M = a.len() / d;
+    let N = b.len() / d;
+    assert_eq!(
+        output.nrows(),
+        d * M,
+        "Number of rows in output matrix is not consistent with a"
+    );
+    assert_eq!(
+        output.ncols(),
+        d * N,
+        "Number of columns in output matrix is not consistent with b"
+    );
+    let d_times_d = (GeometryDim::name(), GeometryDim::name());
+
+    // Note: We fill the matrix (block) column-by-column since the matrix is stored in
+    // column-major format
+    for J in 0..N {
+        // Contraction is always symmetric
+        for I in 0..min(J + 1, M) {
+            let a_I = a.rows_generic(d * I, GeometryDim::name()).clone_owned();
+            let b_J = b.rows_generic(d * J, GeometryDim::name()).clone_owned();
+            let mut c_IJ = output.generic_slice_mut((d * I, d * J), d_times_d);
+            let contraction = contraction(&a_I, &b_J);
+            // c_IJ += contraction * alpha
+            c_IJ.zip_apply(&contraction, |c: T, y: T| c + alpha * y);
         }
     }
 }
