@@ -14,14 +14,16 @@ fn lame_parameters() -> LameParameters<f64> {
 }
 
 fn deformation_gradient_2d() -> Matrix2<f64> {
-    matrix![1.0, 2.0;
+    // Note: this is deliberately chosen so that it has det(F) > 0
+    matrix![2.0, 1.0;
             3.0, 4.0]
 }
 
 fn deformation_gradient_3d() -> Matrix3<f64> {
-    matrix![1.0, 2.0, 3.0;
-            4.0, 5.0, 6.0;
-            7.0, 8.0, 9.0]
+    // Note: this is deliberately chosen so that it has det(F) > 0
+    matrix![2.0, 1.0, 3.0;
+            4.0, 6.0, 5.0;
+            2.0, 8.0, 9.0]
 }
 
 /// An arbitrary Tet10 element used in tests.

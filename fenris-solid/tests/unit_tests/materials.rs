@@ -249,7 +249,7 @@ fn linear_elastic_strain_energy_2d() {
     let deformation_gradient = deformation_gradient_2d();
     let psi = LinearElasticMaterial.compute_energy_density(&deformation_gradient, &lame);
 
-    assert_scalar_eq!(psi, 10852.5, comp = float);
+    assert_scalar_eq!(psi, 11528.0, comp = float);
 }
 
 #[test]
@@ -258,7 +258,7 @@ fn linear_elastic_strain_energy_3d() {
     let deformation_gradient = deformation_gradient_3d();
     let psi = LinearElasticMaterial.compute_energy_density(&deformation_gradient, &lame);
 
-    assert_scalar_eq!(psi, 136008.0, comp = float);
+    assert_scalar_eq!(psi, 133154.0, comp = float);
 }
 
 test_stress_is_derivative_of_energy!(
@@ -302,7 +302,7 @@ fn stvk_strain_energy_2d() {
     let deformation_gradient = deformation_gradient_2d();
     let psi = StVKMaterial.compute_energy_density(&deformation_gradient, &lame);
 
-    assert_scalar_eq!(psi, 136610.0, comp = float);
+    assert_scalar_eq!(psi, 132578.0, comp = float);
 }
 
 #[test]
@@ -311,7 +311,7 @@ fn stvk_strain_energy_3d() {
     let deformation_gradient = deformation_gradient_3d();
     let psi = StVKMaterial.compute_energy_density(&deformation_gradient, &lame);
 
-    assert_scalar_eq!(psi, 13416628.5, comp = float);
+    assert_scalar_eq!(psi, 9136789.125, comp = float);
 }
 
 test_stress_is_derivative_of_energy!(dim = 2, StVKMaterial, stvk_stress_is_derivative_of_energy_2d);
