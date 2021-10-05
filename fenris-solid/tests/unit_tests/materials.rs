@@ -2,7 +2,7 @@ use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
 
 use fenris::nalgebra;
 use fenris::nalgebra::{dvector, vector, DMatrix, DMatrixSliceMut, DVectorSlice, SMatrix, SVector};
-use fenris_solid::materials::{LameParameters, LinearElasticMaterial, StVKMaterial, YoungPoisson};
+use fenris_solid::materials::{LameParameters, LinearElasticMaterial, StVKMaterial, YoungPoisson, NeoHookeanMaterial};
 use fenris_solid::HyperelasticMaterial;
 
 use crate::unit_tests::{deformation_gradient_2d, deformation_gradient_3d, lame_parameters};
@@ -331,3 +331,39 @@ test_contraction_is_consistent_with_tensor!(
 
 test_multi_contraction_consistency!(dim = 2, StVKMaterial, stvk_multi_contraction_consistency_2d);
 test_multi_contraction_consistency!(dim = 3, StVKMaterial, stvk_multi_contraction_consistency_3d);
+
+#[test]
+fn neo_hookean_strain_energy_2d() {
+    let lame = lame_parameters();
+    let deformation_gradient = deformation_gradient_2d();
+    let psi = NeoHookeanMaterial.compute_energy_density(&deformation_gradient, &lame);
+
+    assert_scalar_eq!(psi, 5313.274620288603, comp = float);
+}
+
+#[test]
+fn neo_hookean_strain_energy_3d() {
+    let lame = lame_parameters();
+    let deformation_gradient = deformation_gradient_3d();
+    let psi = NeoHookeanMaterial.compute_energy_density(&deformation_gradient, &lame);
+
+    assert_scalar_eq!(psi, 48833.26962613859, comp = float);
+}
+
+test_stress_is_derivative_of_energy!(dim = 2, NeoHookeanMaterial, neo_hookean_stress_is_derivative_of_energy_2d);
+test_stress_is_derivative_of_energy!(dim = 3, NeoHookeanMaterial, neo_hookean_stress_is_derivative_of_energy_3d);
+
+test_contraction_is_consistent_with_tensor!(
+    dim = 2,
+    NeoHookeanMaterial,
+    neo_hookean_stress_contraction_is_consistent_with_tensor_2d
+);
+
+test_contraction_is_consistent_with_tensor!(
+    dim = 3,
+    NeoHookeanMaterial,
+    neo_hookean_stress_contraction_is_consistent_with_tensor_3d
+);
+
+test_multi_contraction_consistency!(dim = 2, NeoHookeanMaterial, neo_hookean_multi_contraction_consistency_2d);
+test_multi_contraction_consistency!(dim = 3, NeoHookeanMaterial, neo_hookean_multi_contraction_consistency_3d);

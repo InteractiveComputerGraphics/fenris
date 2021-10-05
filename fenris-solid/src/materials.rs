@@ -3,6 +3,7 @@ use fenris::allocators::SmallDimAllocator;
 use fenris::nalgebra::{min, DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, OMatrix, OVector, RealField};
 use numeric_literals::replace_float_literals;
 use serde::{Deserialize, Serialize};
+use fenris::SmallDim;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LameParameters<T> {
@@ -129,7 +130,103 @@ where
 /// $$
 /// where $J = \det \vec F$ and $I_C = \tr{\vec C} = \tr{\vec F^T \vec F}$ is the first right Cauchy-Green invariant.
 ///
+/// Note that the energy is only well-defined when $J > 0$. We explicitly return infinity in this case, so that
+/// it may be used e.g. as a barrier in optimization.
 ///
+/// The Piola-Kirchhoff stress tensor is given by
+/// $$
+///  \vec P = (-\mu + \lambda \log J) \vec F^{-T} + \mu \vec F.
+/// $$
+/// With $\alpha = -\mu + \lambda \log J$, the stress contraction for arbitrary vectors
+/// $\vec a, \vec b \in \mathbb{R}^d$ is given by
+/// <div>$$
+/// \begin{align*}
+///   \mathcal{C}_{\vec P}(\vec F, \vec a, \vec b)
+///   &= \lambda (\vec F^{-T} \vec a) \otimes (\vec F^{-T} \vec b)
+///    - \alpha (\vec F^{-T} \vec b) \otimes (\vec F^{-T} \vec a)
+///    + \mu (\vec a \cdot \vec b) \vec I.
+/// \end{align*}
+/// $$</div>
+///
+/// # Derivation
+///
+/// For posterity, we sketch out the derivation. We assume throughout that $J > 0$, and thus $\vec F$ is invertible.
+///
+/// ## Stress tensor (first derivative)
+///
+/// We have that
+///
+/// $$
+///  \pd{J}{\vec F} = J \vec F^{-T}
+///  \qquad \qquad
+///  \pd{I_C}{\vec F} = 2 \vec F.
+/// $$
+/// and
+/// $$
+///  \pd{\psi}{J} = J^{-1} (-\mu + \lambda \log J)
+///  \qquad \qquad
+///  \pd{\psi}{I_C} = \frac{\mu}{2}.
+/// $$
+///
+/// The Piola-Kirchhoff stress tensor becomes
+/// $$
+///  \vec P = \pd{\psi}{\vec F} = \pd{\psi}{J} \pd{J}{\vec F} + \pd{\psi}{I_C} \pd{I_C}{\vec F}
+///         = (-\mu + \lambda \log J) \vec F^{-T} + \mu \vec F
+/// $$
+///
+/// ## Stress contraction (second derivative)
+///
+/// We define $\alpha := -\mu + \lambda \log J$, and write out the derivative of $\vec P$ as
+/// <div>$$
+///  \pd{P_{ij}}{F_{kl}} =
+///     \pd{\alpha}{F_{kl}} (\vec F^{-T})_{ij}
+///     + \alpha \pd{(\vec F^{-T})_{ij}}{F_{kl}}
+///     + \mu \pd{F_{ij}}{F_{kl}}
+///  \\
+///  = A + B + C.
+/// $$</div>
+///
+/// Next, we'll find expressions for $A$, $B$ and $C$ in turn. We have
+/// <div>$$
+///  \pd{\alpha}{F_{kl}} = \lambda (\vec F^{-T})_{kl},
+/// $$</div>
+/// and so
+/// <div>$$
+///  A = \lambda \, (\vec F^{-T})_{ij} (\vec F^{-T})_{kl}.
+/// $$</div>
+///
+/// Using the relation (see, e.g., The Matrix Cookbook)
+/// <div>$$
+///   \pd{(\vec X^{-1})_{ij}}{X_{kl}} = - (\vec X^{-1})_{ik} (\vec X)^{-1}_{lj},
+/// $$</div>
+/// we have that
+/// <div>$$
+///   B = - \alpha \; (\vec F^{-T})_{il} (\vec F^{-T})_{kj}.
+/// $$</div>
+///
+/// Finally,
+/// <div>$$
+///   C = \mu \delta_{ik} \delta_{jl}.
+/// $$</div>
+///
+/// Our final expression for the second derivative thus becomes
+/// <div>$$
+/// \pd{P_{ij}}{F_{kl}} =
+///     \lambda \, (\vec F^{-T})_{ij} (\vec F^{-T})_{kl}
+///     - \alpha \; (\vec F^{-T})_{il} (\vec F^{-T})_{kj}
+///     + \mu \delta_{ik} \delta_{jl}.
+/// $$</div>
+///
+/// The stress contraction becomes
+/// <div>$$
+/// \begin{align*}
+///   \mathcal{C}_{\vec P}(\vec F, \vec a, \vec b)
+///   &= a_k \pd{P_{ik}}{F_{jm}} (\vec F) \, b_m \; \vec e_i \otimes \vec e_j \\
+///   &= \lambda (\vec F^{-T} \vec a) \otimes (\vec F^{-T} \vec b)
+///    - \alpha (\vec F^{-T} \vec b) \otimes (\vec F^{-T} \vec a)
+///    + \mu (\vec a \cdot \vec b) \vec I.
+/// \end{align*}
+/// $$</div>
 ///
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NeoHookeanMaterial;
@@ -139,16 +236,24 @@ pub struct NeoHookeanMaterial;
 impl<T, D> HyperelasticMaterial<T, D> for NeoHookeanMaterial
 where
     T: RealField,
-    D: DimName,
+    D: SmallDim,
     DefaultAllocator: SmallDimAllocator<T, D>,
 {
     type Parameters = LameParameters<T>;
 
     fn compute_energy_density(&self, deformation_gradient: &OMatrix<T, D, D>, parameters: &Self::Parameters) -> T {
-        let _ = (deformation_gradient, parameters);
-        // let F = deformation_gradient;
-        // let C = F.transpose() * F;
-        todo!()
+        let LameParameters { mu, lambda } = parameters.clone();
+        let F = deformation_gradient;
+        let J = F.determinant();
+
+        if J <= T::zero() {
+            T::from_f64(f64::INFINITY).expect("T must be able to represent infinity")
+        } else {
+            let C = F.transpose() * F;
+            let I_C = C.trace();
+            let logJ = J.ln();
+            mu / 2.0 * (I_C - 3.0) - mu * logJ + (lambda / 2.0) * (logJ.powi(2))
+        }
     }
 
     fn compute_stress_tensor(
@@ -156,8 +261,18 @@ where
         deformation_gradient: &OMatrix<T, D, D>,
         parameters: &Self::Parameters,
     ) -> OMatrix<T, D, D> {
-        let _ = (deformation_gradient, parameters);
-        todo!()
+        let LameParameters { mu, lambda } = parameters.clone();
+        let F = deformation_gradient;
+        let J = F.determinant();
+
+        if J <= T::zero() {
+            todo!("How to address non-positive J?");
+        } else {
+            let logJ = J.ln();
+            let F_inv = F.clone().try_inverse().expect("F is guaranteed to be invertible here");
+            let F_inv_T = F_inv.transpose();
+            F_inv_T * (- mu + lambda * logJ) + F * mu
+        }
     }
 
     fn compute_stress_contraction(
@@ -167,8 +282,24 @@ where
         b: &OVector<T, D>,
         parameters: &Self::Parameters,
     ) -> OMatrix<T, D, D> {
-        let _ = (deformation_gradient, a, b, parameters);
-        todo!()
+        let LameParameters { mu, lambda } = parameters.clone();
+        let F = deformation_gradient;
+        let J = F.determinant();
+
+        if J <= T::zero() {
+            todo!("How to address non-positive J?");
+        } else {
+            let logJ = J.ln();
+            let F_inv = F.clone().try_inverse().expect("F is guaranteed to be invertible here");
+            let F_inv_T = F_inv.transpose();
+            let ref F_inv_T_a = &F_inv_T * a;
+            let ref F_inv_T_b = &F_inv_T * b;
+            let ref I = OMatrix::<_, D, D>::identity();
+            let alpha = -mu + lambda * logJ;
+            (F_inv_T_a) * (F_inv_T_b.transpose() * lambda)
+            - F_inv_T_b * (F_inv_T_a.transpose() * alpha)
+            + I * (mu * a.dot(&b))
+        }
     }
 }
 
