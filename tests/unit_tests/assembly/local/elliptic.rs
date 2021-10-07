@@ -3,7 +3,11 @@ use std::ops::Deref;
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
 
 use fenris::allocators::BiDimAllocator;
-use fenris::assembly::local::{assemble_element_elliptic_matrix, assemble_element_elliptic_vector, compute_element_elliptic_energy, ElementEllipticAssemblerBuilder, ElementMatrixAssembler, ElementVectorAssembler, GeneralQuadratureTable, ElementScalarAssembler};
+use fenris::assembly::local::{
+    assemble_element_elliptic_matrix, assemble_element_elliptic_vector, compute_element_elliptic_energy,
+    ElementEllipticAssemblerBuilder, ElementMatrixAssembler, ElementScalarAssembler, ElementVectorAssembler,
+    GeneralQuadratureTable,
+};
 use fenris::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
 use fenris::element::{
     ElementConnectivity, FiniteElement, MatrixSlice, MatrixSliceMut, Quad4d2Element, ReferenceFiniteElement,
@@ -547,8 +551,7 @@ fn elliptic_element_assembler_matches_individual_element_assembly() {
             .assemble_element_matrix_into(i, DMatrixSliceMut::from(&mut element_matrix))
             .unwrap();
 
-        let element_scalar = assembler.assemble_element_scalar(i)
-            .unwrap();
+        let element_scalar = assembler.assemble_element_scalar(i).unwrap();
 
         // Compute expected element scalar, vector and matrix for this element
         let element_scalar_expected;
@@ -561,8 +564,13 @@ fn elliptic_element_assembler_matches_individual_element_assembly() {
             element_scalar_expected = compute_element_elliptic_energy(
                 &element,
                 &MockEllipticOperator,
-                DVectorSlice::from(&u_element), weights, points, &data,
-                MatrixSliceMut::from(&mut basis_gradients_buffer)).unwrap();
+                DVectorSlice::from(&u_element),
+                weights,
+                points,
+                &data,
+                MatrixSliceMut::from(&mut basis_gradients_buffer),
+            )
+            .unwrap();
 
             assemble_element_elliptic_vector(
                 DVectorSliceMut::from(&mut element_vector_expected),

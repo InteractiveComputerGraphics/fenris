@@ -17,7 +17,10 @@ use paradis::coloring::sequential_greedy_coloring;
 use paradis::DisjointSubsets;
 
 use crate::allocators::{BiDimAllocator, SmallDimAllocator};
-use crate::assembly::local::{ElementConnectivityAssembler, ElementMatrixAssembler, ElementVectorAssembler, QuadratureTable, ElementScalarAssembler};
+use crate::assembly::local::{
+    ElementConnectivityAssembler, ElementMatrixAssembler, ElementScalarAssembler, ElementVectorAssembler,
+    QuadratureTable,
+};
 use crate::connectivity::Connectivity;
 use crate::element::MatrixSliceMut;
 use crate::nalgebra::allocator::Allocator;
@@ -576,12 +579,13 @@ impl<T: RealField> SerialVectorAssembler<T> {
 /// Computes the value of a global scalar potential as a sum of element-wise scalars.
 pub fn compute_global_potential<T>(element_assembler: &(impl ElementScalarAssembler<T> + ?Sized)) -> eyre::Result<T>
 where
-    T: RealField
+    T: RealField,
 {
     let num_elements = element_assembler.num_elements();
     let mut global_potential = T::zero();
-    for i in 0 .. num_elements {
-        let element_contrib = element_assembler.assemble_element_scalar(i)
+    for i in 0..num_elements {
+        let element_contrib = element_assembler
+            .assemble_element_scalar(i)
             .map_err(|error| error.wrap_err(format!("Assembling scalar failed for element {}", i)))?;
         global_potential += element_contrib;
     }

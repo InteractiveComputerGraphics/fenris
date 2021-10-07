@@ -121,11 +121,9 @@ where
         b: DVectorSlice<T>,
         parameters: &Self::Parameters,
     ) {
-            compute_batch_contraction(output,
-                                      alpha,
-                                      a,
-                                      b,
-                                      |a_I, b_J| self.compute_stress_contraction(deformation_gradient, a_I, b_J, parameters))
+        compute_batch_contraction(output, alpha, a, b, |a_I, b_J| {
+            self.compute_stress_contraction(deformation_gradient, a_I, b_J, parameters)
+        })
     }
 }
 
@@ -140,8 +138,8 @@ pub fn compute_batch_contraction<T, GeometryDim>(
     alpha: T,
     a: DVectorSlice<T>,
     b: DVectorSlice<T>,
-    mut contraction: impl FnMut(&OVector<T, GeometryDim>, &OVector<T, GeometryDim>) -> OMatrix<T, GeometryDim, GeometryDim>)
-where
+    mut contraction: impl FnMut(&OVector<T, GeometryDim>, &OVector<T, GeometryDim>) -> OMatrix<T, GeometryDim, GeometryDim>,
+) where
     T: RealField,
     GeometryDim: DimName,
     DefaultAllocator: SmallDimAllocator<T, GeometryDim>,

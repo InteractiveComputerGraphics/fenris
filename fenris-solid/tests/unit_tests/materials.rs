@@ -2,7 +2,7 @@ use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
 
 use fenris::nalgebra;
 use fenris::nalgebra::{dvector, vector, DMatrix, DMatrixSliceMut, DVectorSlice, SMatrix, SVector};
-use fenris_solid::materials::{LameParameters, LinearElasticMaterial, StVKMaterial, YoungPoisson, NeoHookeanMaterial};
+use fenris_solid::materials::{LameParameters, LinearElasticMaterial, NeoHookeanMaterial, StVKMaterial, YoungPoisson};
 use fenris_solid::HyperelasticMaterial;
 
 use crate::unit_tests::{deformation_gradient_2d, deformation_gradient_3d, lame_parameters};
@@ -350,8 +350,16 @@ fn neo_hookean_strain_energy_3d() {
     assert_scalar_eq!(psi, 48833.26962613859, comp = float);
 }
 
-test_stress_is_derivative_of_energy!(dim = 2, NeoHookeanMaterial, neo_hookean_stress_is_derivative_of_energy_2d);
-test_stress_is_derivative_of_energy!(dim = 3, NeoHookeanMaterial, neo_hookean_stress_is_derivative_of_energy_3d);
+test_stress_is_derivative_of_energy!(
+    dim = 2,
+    NeoHookeanMaterial,
+    neo_hookean_stress_is_derivative_of_energy_2d
+);
+test_stress_is_derivative_of_energy!(
+    dim = 3,
+    NeoHookeanMaterial,
+    neo_hookean_stress_is_derivative_of_energy_3d
+);
 
 test_contraction_is_consistent_with_tensor!(
     dim = 2,
@@ -365,5 +373,13 @@ test_contraction_is_consistent_with_tensor!(
     neo_hookean_stress_contraction_is_consistent_with_tensor_3d
 );
 
-test_multi_contraction_consistency!(dim = 2, NeoHookeanMaterial, neo_hookean_multi_contraction_consistency_2d);
-test_multi_contraction_consistency!(dim = 3, NeoHookeanMaterial, neo_hookean_multi_contraction_consistency_3d);
+test_multi_contraction_consistency!(
+    dim = 2,
+    NeoHookeanMaterial,
+    neo_hookean_multi_contraction_consistency_2d
+);
+test_multi_contraction_consistency!(
+    dim = 3,
+    NeoHookeanMaterial,
+    neo_hookean_multi_contraction_consistency_3d
+);

@@ -1,9 +1,9 @@
-use crate::{HyperelasticMaterial, compute_batch_contraction};
+use crate::{compute_batch_contraction, HyperelasticMaterial};
 use fenris::allocators::SmallDimAllocator;
 use fenris::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, OMatrix, OVector, RealField};
+use fenris::SmallDim;
 use numeric_literals::replace_float_literals;
 use serde::{Deserialize, Serialize};
-use fenris::SmallDim;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LameParameters<T> {
@@ -269,9 +269,12 @@ where
             todo!("How to address non-positive J?");
         } else {
             let logJ = J.ln();
-            let F_inv = F.clone().try_inverse().expect("F is guaranteed to be invertible here");
+            let F_inv = F
+                .clone()
+                .try_inverse()
+                .expect("F is guaranteed to be invertible here");
             let F_inv_T = F_inv.transpose();
-            F_inv_T * (- mu + lambda * logJ) + F * mu
+            F_inv_T * (-mu + lambda * logJ) + F * mu
         }
     }
 
@@ -290,19 +293,29 @@ where
             todo!("How to address non-positive J?");
         } else {
             let logJ = J.ln();
-            let F_inv = F.clone().try_inverse().expect("F is guaranteed to be invertible here");
+            let F_inv = F
+                .clone()
+                .try_inverse()
+                .expect("F is guaranteed to be invertible here");
             let F_inv_T = F_inv.transpose();
             let ref F_inv_T_a = &F_inv_T * a;
             let ref F_inv_T_b = &F_inv_T * b;
             let ref I = OMatrix::<_, D, D>::identity();
             let alpha = -mu + lambda * logJ;
-            (F_inv_T_a) * (F_inv_T_b.transpose() * lambda)
-            - F_inv_T_b * (F_inv_T_a.transpose() * alpha)
-            + I * (mu * a.dot(&b))
+            (F_inv_T_a) * (F_inv_T_b.transpose() * lambda) - F_inv_T_b * (F_inv_T_a.transpose() * alpha)
+                + I * (mu * a.dot(&b))
         }
     }
 
-    fn accumulate_stress_contractions_into(&self, output: DMatrixSliceMut<T>, alpha: T, deformation_gradient: &OMatrix<T, D, D>, a: DVectorSlice<T>, b: DVectorSlice<T>, parameters: &Self::Parameters) {
+    fn accumulate_stress_contractions_into(
+        &self,
+        output: DMatrixSliceMut<T>,
+        alpha: T,
+        deformation_gradient: &OMatrix<T, D, D>,
+        a: DVectorSlice<T>,
+        b: DVectorSlice<T>,
+        parameters: &Self::Parameters,
+    ) {
         let LameParameters { mu, lambda } = parameters.clone();
         let F = deformation_gradient;
         let J = F.determinant();
@@ -312,7 +325,10 @@ where
         } else {
             // Precompute all the quantities that are independent of a and b
             let logJ = J.ln();
-            let F_inv = F.clone().try_inverse().expect("F is guaranteed to be invertible here");
+            let F_inv = F
+                .clone()
+                .try_inverse()
+                .expect("F is guaranteed to be invertible here");
             let F_inv_T = F_inv.transpose();
             let ref I = OMatrix::<_, D, D>::identity();
             // Note: This alpha is from the formula, not from the alpha contraction parameter!
@@ -322,8 +338,7 @@ where
             compute_batch_contraction(output, alpha, a, b, |a, b| {
                 let ref F_inv_T_a = &F_inv_T * a;
                 let ref F_inv_T_b = &F_inv_T * b;
-                (F_inv_T_a) * (F_inv_T_b.transpose() * lambda)
-                    - F_inv_T_b * (F_inv_T_a.transpose() * alpha_nh)
+                (F_inv_T_a) * (F_inv_T_b.transpose() * lambda) - F_inv_T_b * (F_inv_T_a.transpose() * alpha_nh)
                     + I * (mu * a.dot(&b))
             })
         }
