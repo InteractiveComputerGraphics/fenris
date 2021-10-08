@@ -1,4 +1,3 @@
-# fenris
 
 ![Fenris logo](assets/logo/fenris_logo.svg)
 
