@@ -1,9 +1,14 @@
 [package]
 name = "fenris"
+description = "A library for advanced finite element computations in Rust"
 version = "0.0.1"
 authors = ["Andreas Longva <longva@cs.rwth-aachen.de>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
+keywords = ["finite element", "fem", "pde"]
+categories = ["science"]
+readme = "README.md"
+resolver = "2"
 
 [package.metadata.docs.rs]
 # For rendering KaTeX on docs.rs
