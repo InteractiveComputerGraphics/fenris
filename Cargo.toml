@@ -34,12 +34,12 @@ log = "0.4"
 rustc-hash = "1.1.0"
 thread_local = "1.1.2"
 eyre = "0.6"
-fenris-paradis = { path = "fenris-paradis" }
-fenris-nested-vec = { path = "fenris-nested-vec" }
-fenris-sparse = { path = "fenris-sparse" }
-fenris-geometry = { path = "fenris-geometry", features = [ "proptest" ] }
-fenris-optimize = { path = "fenris-optimize" }
-fenris-quadrature = { path = "fenris-quadrature" }
+fenris-paradis = { version="0.0.1", path = "fenris-paradis" }
+fenris-nested-vec = { version="0.0.1", path = "fenris-nested-vec" }
+fenris-sparse = { version="0.0.1", path = "fenris-sparse" }
+fenris-geometry = { version="0.0.1", path = "fenris-geometry", features = [ "proptest" ] }
+fenris-optimize = { version="0.0.1", path = "fenris-optimize" }
+fenris-quadrature = { version="0.0.1", path = "fenris-quadrature" }
 
 [dev-dependencies]
 nalgebra = { version = "0.28", features = [ "serde-serialize", "compare" ] }
