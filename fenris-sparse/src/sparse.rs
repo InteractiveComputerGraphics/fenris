@@ -3,7 +3,7 @@
 //! Some of it is intended to be ported to `nalgebra-sparse` later.
 use nalgebra_sparse::pattern::SparsityPattern;
 use nalgebra_sparse::CsrMatrix;
-use paradis::{ParallelIndexedAccess, ParallelIndexedCollection};
+use fenris_paradis::{ParallelIndexedAccess, ParallelIndexedCollection};
 use std::slice;
 
 // // TODO: Do we want to try to remove duplicates? Probably not...

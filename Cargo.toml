@@ -22,14 +22,14 @@ itertools = "0.9"
 ordered-float = "1.0"
 proptest = { version = "1.0", optional = true }
 rayon = "1.3"
-fenris-nested-vec = { path="fenris-nested-vec" }
 # TODO: Make serde optional
 serde = { version="1.0", features = [ "derive" ] }
 log = "0.4"
-paradis = { path = "paradis" }
 rustc-hash = "1.1.0"
 thread_local = "1.1.2"
 eyre = "0.6"
+fenris-paradis = { path = "fenris-paradis" }
+fenris-nested-vec = { path = "fenris-nested-vec" }
 fenris-sparse = { path = "fenris-sparse" }
 fenris-geometry = { path = "fenris-geometry", features = [ "proptest" ] }
 fenris-optimize = { path = "fenris-optimize" }
@@ -44,10 +44,6 @@ util = { path = "util" }
 # For outputting e.g. convergence test results for later analysis
 serde_json = "1.0.64"
 
-# Many of our integration tests depend on fenris-solid for historical reasons
-# TODO: Fix this
-#fenris-solid = { path = "../fenris-solid" }
-
 [workspace]
 members = [
     "fenris-quadrature",
@@ -56,5 +52,5 @@ members = [
     "fenris-sparse",
     "fenris-solid",
     "fenris-nested-vec",
-    "paradis",
+    "fenris-paradis",
     "polyquad-parse" ]

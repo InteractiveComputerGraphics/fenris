@@ -1,5 +1,5 @@
 [package]
-name = "paradis"
+name = "fenris-paradis"
 version = "0.0.1"
 authors = ["Andreas Longva <longva@cs.rwth-aachen.de>"]
 edition = "2018"

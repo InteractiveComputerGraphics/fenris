@@ -12,9 +12,9 @@ use thread_local::ThreadLocal;
 
 use nalgebra_sparse::{pattern::SparsityPattern, CsrMatrix};
 use fenris_nested_vec::NestedVec;
-use paradis::adapter::BlockAdapter;
-use paradis::coloring::sequential_greedy_coloring;
-use paradis::DisjointSubsets;
+use fenris_paradis::adapter::BlockAdapter;
+use fenris_paradis::coloring::sequential_greedy_coloring;
+use fenris_paradis::DisjointSubsets;
 
 use crate::allocators::{BiDimAllocator, SmallDimAllocator};
 use crate::assembly::local::{
