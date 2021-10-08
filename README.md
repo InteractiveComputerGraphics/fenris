@@ -49,7 +49,7 @@ and less time on dealing with auxiliary issues largely caused by language defici
 
 ### Non-goals
 
-- Fenris is not intended to compete with the likes of [fenics](https://fenicsproject.org/) or similar libraries that
+- Fenris is not intended to compete with the likes of [FEniCS](https://fenicsproject.org/) or similar libraries that
   let users provide high-level weak formulations of PDEs. In contrast, Fenris targets users who need lower-level
   functionality, and is perhaps more comparable to the likes of [deal.II](https://www.dealii.org/).
 - Fenris by itself provides no functionality for solving (non-)linear systems, only the functionality
@@ -66,11 +66,6 @@ An older incarnation of Fenris was used for the code associated with the followi
 - Löschner, F., Longva, A., Jeske, S., Kugelstadt, T., & Bender, J. (2020).  
   *Higher‐Order Time Integration for Deformable Solids*.
   In Computer Graphics Forum (Vol. 39, No. 8, pp. 157-169).
-
-
-
-
-
 
 ## Contribution
 
