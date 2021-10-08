@@ -29,7 +29,7 @@ use fenris::connectivity::Connectivity;
 use fenris::mesh::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::mesh::QuadMesh2d;
 use nalgebra::DMatrixSliceMut;
-use nested_vec::NestedVec;
+use fenris_nested_vec::NestedVec;
 
 struct MockScalarEllipticEnergy;
 

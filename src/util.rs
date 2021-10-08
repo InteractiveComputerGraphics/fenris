@@ -20,6 +20,8 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
 
+pub use fenris_nested_vec::*;
+
 /// Clones the upper triangle entries into the lower triangle entries.
 ///
 /// The primary use case for this is to construct a full symmetric matrix from a symmetric

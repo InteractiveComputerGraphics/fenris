@@ -1,6 +1,6 @@
 [package]
-name = "nested-vec"
-version = "0.1.0"
+name = "fenris-nested-vec"
+version = "0.0.1"
 authors = ["Andreas Longva <longva@cs.rwth-aachen.de>"]
 edition = "2018"
 

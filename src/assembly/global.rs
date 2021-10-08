@@ -11,7 +11,7 @@ use rayon::slice::ParallelSliceMut;
 use thread_local::ThreadLocal;
 
 use nalgebra_sparse::{pattern::SparsityPattern, CsrMatrix};
-use nested_vec::NestedVec;
+use fenris_nested_vec::NestedVec;
 use paradis::adapter::BlockAdapter;
 use paradis::coloring::sequential_greedy_coloring;
 use paradis::DisjointSubsets;

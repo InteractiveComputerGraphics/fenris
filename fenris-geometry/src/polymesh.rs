@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 // use crate::connectivity::Connectivity;
 use crate::{compute_polyhedron_volume_from_faces, ConvexPolygon3d, ConvexPolyhedron, HalfSpace, LineSegment3d};
 // use crate::mesh::Mesh;
-use nested_vec::NestedVec;
+use fenris_nested_vec::NestedVec;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 struct UndirectedEdge {

@@ -13,7 +13,7 @@ use fenris::nalgebra::{DVector, DVectorSliceMut, OPoint, Point2, Point3, Vector2
 use fenris::quadrature;
 use fenris::quadrature::Quadrature;
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
-use nested_vec::NestedVec;
+use fenris_nested_vec::NestedVec;
 use std::ops::Deref;
 
 #[test]

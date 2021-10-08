@@ -7,7 +7,7 @@ pub mod adapter;
 pub mod coloring;
 pub mod slice;
 
-use nested_vec::NestedVec;
+use fenris_nested_vec::NestedVec;
 use rayon::iter::plumbing::{bridge, Consumer, Producer, ProducerCallback, UnindexedConsumer};
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
@@ -447,7 +447,7 @@ mod tests {
     use super::DisjointSubsets;
     use super::DisjointSubsetsIter;
     use super::ParallelIndexedCollection;
-    use nested_vec::NestedVec;
+    use fenris_nested_vec::NestedVec;
     use proptest::collection::{btree_set, vec};
     use proptest::prelude::*;
     use rand::rngs::StdRng;

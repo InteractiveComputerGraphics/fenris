@@ -3,7 +3,7 @@ use crate::mesh::Mesh;
 use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{DMatrixSliceMut, DefaultAllocator, DimName, Scalar, U1};
 use crate::nalgebra::{DVectorSliceMut, OPoint};
-use crate::nested_vec::NestedVec;
+use crate::util::NestedVec;
 use crate::SmallDim;
 use itertools::izip;
 

@@ -12,7 +12,7 @@ use fenris::nalgebra::{
     DMatrix, DVector, DVectorSlice, DimName, Dynamic, MatrixSliceMut, OMatrix, OVector, Point3, Vector1, Vector2, U3,
     U8,
 };
-use fenris::nested_vec::NestedVec;
+use fenris::util::NestedVec;
 use fenris::quadrature;
 use fenris::quadrature::{Quadrature, QuadraturePair3d};
 use matrixcompare::assert_scalar_eq;

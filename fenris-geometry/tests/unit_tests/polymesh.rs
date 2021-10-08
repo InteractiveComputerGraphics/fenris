@@ -1,5 +1,5 @@
 use fenris_geometry::polymesh::{PolyMesh, PolyMesh3d};
-use nested_vec::NestedVec;
+use fenris_nested_vec::NestedVec;
 
 use nalgebra::Point3;
 

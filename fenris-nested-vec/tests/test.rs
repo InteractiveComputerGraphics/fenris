@@ -1,4 +1,4 @@
-use nested_vec::NestedVec;
+use fenris_nested_vec::NestedVec;
 
 #[test]
 fn begin_array() {

@@ -1,5 +1,5 @@
 use crate::DisjointSubsets;
-use nested_vec::NestedVec;
+use fenris_nested_vec::NestedVec;
 use std::collections::BTreeSet;
 
 #[derive(Debug)]
@@ -75,7 +75,7 @@ pub fn sequential_greedy_coloring(subsets: &NestedVec<usize>) -> Vec<DisjointSub
 mod tests {
     use super::sequential_greedy_coloring;
     use crate::DisjointSubsets;
-    use nested_vec::NestedVec;
+    use fenris_nested_vec::NestedVec;
     use proptest::collection::vec;
     use proptest::prelude::*;
     use proptest::proptest;

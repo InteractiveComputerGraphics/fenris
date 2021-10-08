@@ -6,7 +6,7 @@ use crate::connectivity::{
 use crate::geometry::{AxisAlignedBoundingBox, BoundedGeometry, GeometryCollection};
 use nalgebra::allocator::Allocator;
 use nalgebra::{DefaultAllocator, DimName, OPoint, OVector, RealField, Scalar, U2, U3};
-use nested_vec::NestedVec;
+use fenris_nested_vec::NestedVec;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::iter::once;

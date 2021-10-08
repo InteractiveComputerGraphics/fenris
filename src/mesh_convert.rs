@@ -10,7 +10,7 @@ use nalgebra::{DefaultAllocator, DimName, OPoint, Point2, Point3, RealField, Sca
 use crate::geometry::polymesh::{PolyMesh, PolyMesh3d};
 use crate::geometry::{OrientationTestResult, Triangle};
 use itertools::{izip, Itertools};
-use nested_vec::NestedVec;
+use fenris_nested_vec::NestedVec;
 use numeric_literals::replace_float_literals;
 use rustc_hash::FxHashMap;
 use std::collections::HashMap;
