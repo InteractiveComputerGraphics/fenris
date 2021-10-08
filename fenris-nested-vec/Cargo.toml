@@ -3,8 +3,9 @@ name = "fenris-nested-vec"
 version = "0.0.1"
 authors = ["Andreas Longva <longva@cs.rwth-aachen.de>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/InteractiveComputerGraphics/fenris"
+description = "A data structure used by fenris"
 
 [dependencies]
 # TODO: Make optional feature
