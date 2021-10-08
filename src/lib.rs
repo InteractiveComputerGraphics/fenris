@@ -3,6 +3,8 @@
 //! **Although featureful, the library API is completely unstable, the functionality is not
 //! sufficiently well tested and documentation is sparse. Production usage strongly discouraged
 //! at this point.**
+//!
+//! Please see the [repository README](https://github.com/InteractiveComputerGraphics/fenris) for more information.
 use nalgebra::{DimMin, DimName};
 
 pub mod allocators;
