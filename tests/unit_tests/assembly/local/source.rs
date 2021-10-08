@@ -12,8 +12,8 @@ use fenris::nalgebra::base::coordinates::XYZ;
 use fenris::nalgebra::{DVector, DVectorSliceMut, OPoint, Point2, Point3, Vector2, U2, U3};
 use fenris::quadrature;
 use fenris::quadrature::Quadrature;
-use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
 use fenris_nested_vec::NestedVec;
+use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
 use std::ops::Deref;
 
 #[test]

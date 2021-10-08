@@ -10,11 +10,11 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterato
 use rayon::slice::ParallelSliceMut;
 use thread_local::ThreadLocal;
 
-use nalgebra_sparse::{pattern::SparsityPattern, CsrMatrix};
 use fenris_nested_vec::NestedVec;
 use fenris_paradis::adapter::BlockAdapter;
 use fenris_paradis::coloring::sequential_greedy_coloring;
 use fenris_paradis::DisjointSubsets;
+use nalgebra_sparse::{pattern::SparsityPattern, CsrMatrix};
 
 use crate::allocators::{BiDimAllocator, SmallDimAllocator};
 use crate::assembly::local::{

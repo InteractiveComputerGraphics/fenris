@@ -4,9 +4,9 @@ use crate::connectivity::{
     Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity,
 };
 use crate::geometry::{AxisAlignedBoundingBox, BoundedGeometry, GeometryCollection};
+use fenris_nested_vec::NestedVec;
 use nalgebra::allocator::Allocator;
 use nalgebra::{DefaultAllocator, DimName, OPoint, OVector, RealField, Scalar, U2, U3};
-use fenris_nested_vec::NestedVec;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::iter::once;

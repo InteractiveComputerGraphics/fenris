@@ -28,8 +28,8 @@ use fenris::assembly::global::gather_global_to_local;
 use fenris::connectivity::Connectivity;
 use fenris::mesh::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::mesh::QuadMesh2d;
-use nalgebra::DMatrixSliceMut;
 use fenris_nested_vec::NestedVec;
+use nalgebra::DMatrixSliceMut;
 
 struct MockScalarEllipticEnergy;
 

@@ -1,9 +1,9 @@
 //! Functionality for sparse linear algebra.
 //!
 //! Some of it is intended to be ported to `nalgebra-sparse` later.
+use fenris_paradis::{ParallelIndexedAccess, ParallelIndexedCollection};
 use nalgebra_sparse::pattern::SparsityPattern;
 use nalgebra_sparse::CsrMatrix;
-use fenris_paradis::{ParallelIndexedAccess, ParallelIndexedCollection};
 use std::slice;
 
 // // TODO: Do we want to try to remove duplicates? Probably not...
