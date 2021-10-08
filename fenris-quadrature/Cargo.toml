@@ -1,14 +1,14 @@
 [package]
 name = "fenris-quadrature"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Andreas Longva"]
 edition = "2018"
+license = "MIT OR Apache-2.0"
 
 [features]
 doc-images = [ "embed-doc-image" ]
 
 [dependencies]
-# TODO: Make this optional along with a "doc-images" feature
 embed-doc-image = { version="0.1.4", optional = true }
 
 [dev-dependencies]
