@@ -1,5 +1,7 @@
 # fenris
 
+![Fenris logo](assets/logo/fenris_logo.svg)
+
 A Rust library for building advanced applications with the Finite Element Method (FEM).
 
 Although developed with a special emphasis on solid mechanics in computer graphics,
