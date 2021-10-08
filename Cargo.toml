@@ -13,7 +13,7 @@ resolver = "2"
 
 [package.metadata.docs.rs]
 # For rendering KaTeX on docs.rs
-rustdoc-args = [ "--html-in-header assets/doc-header.html"]
+rustdoc-args = [ "--html-in-header", "assets/doc-header.html"]
 
 [features]
 default = [ "proptest" ]
