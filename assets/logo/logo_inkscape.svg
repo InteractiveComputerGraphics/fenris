@@ -25,7 +25,7 @@
      inkscape:pagecheckerboard="0"
      showgrid="false"
      inkscape:zoom="0.25"
-     inkscape:cx="-198"
+     inkscape:cx="-200"
      inkscape:cy="238"
      inkscape:window-width="1976"
      inkscape:window-height="1088"
@@ -169,7 +169,7 @@
      inkscape:label="FENRIS (text)">
     <text
        xml:space="preserve"
-       style="font-style:normal;font-weight:normal;font-size:480px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;display:none;fill:#000000;fill-opacity:1;stroke:none;stroke-width:10;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="font-style:normal;font-weight:normal;font-size:480px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;display:none;fill:#000000;fill-opacity:1;stroke:#ffffff;stroke-width:10;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        x="677.61591"
        y="574.41132"
        id="text37392"
@@ -178,36 +178,36 @@
          id="tspan37390"
          x="0"
          y="0"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:480px;font-family:'Roboto Condensed';-inkscape-font-specification:'Roboto Condensed, ';fill:#2b2b2b;fill-opacity:1;stroke:none;stroke-width:10;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1">FENRIS</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:480px;font-family:'Roboto Condensed';-inkscape-font-specification:'Roboto Condensed, ';fill:#2b2b2b;fill-opacity:1;stroke:#ffffff;stroke-width:10;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1">FENRIS</tspan></text>
     <g
        aria-label="FENRIS"
-       id="text6856"
-       style="font-size:480px;line-height:1.25;letter-spacing:0px;word-spacing:0px;display:inline;stroke-width:10"
+       id="text7729"
+       style="font-size:480px;line-height:1.25;letter-spacing:0px;word-spacing:0px;display:inline;stroke:#ffffff;stroke-width:10"
        inkscape:label="Fenris Text (Path)">
       <path
          d="m 714.41278,574.41132 v -341.25 h 177.65625 v 37.03125 H 757.53778 v 116.48437 h 115.07813 v 37.03125 H 757.53778 v 150.70313 z"
          style="font-family:'Roboto Condensed';-inkscape-font-specification:'Roboto Condensed, ';fill:#2b2b2b"
-         id="path6858" />
+         id="path7731" />
       <path
          d="m 945.27216,574.41132 v -341.25 H 1126.444 v 37.03125 H 988.39716 v 109.6875 h 120.46874 v 36.79687 H 988.39716 v 120.9375 h 140.39064 v 36.79688 z"
          style="font-family:'Roboto Condensed';-inkscape-font-specification:'Roboto Condensed, ';fill:#2b2b2b"
-         id="path6860" />
+         id="path7733" />
       <path
          d="m 1406.9909,233.16132 v 341.25 h -43.3594 L 1226.9909,311.20819 v 263.20313 h -43.125 v -341.25 h 43.125 l 137.3438,263.90625 V 233.16132 Z"
          style="font-family:'Roboto Condensed';-inkscape-font-specification:'Roboto Condensed, ';fill:#2b2b2b"
-         id="path6862" />
+         id="path7735" />
       <path
          d="m 1645.3503,574.41132 -60.7031,-138.28125 h -60 v 138.28125 h -43.125 v -341.25 h 95.3906 q 50.8594,0 76.1719,25.78125 25.5468,25.54687 25.5468,76.64062 0,66.09375 -53.4375,90.70313 l 66.3282,145.3125 v 2.8125 z M 1524.6472,270.19257 v 129.14062 h 51.7968 q 29.5313,0 44.2969,-18.51562 14.7656,-18.75 14.7656,-45.23438 0,-29.53125 -13.3593,-47.34375 -13.3594,-18.04687 -45.2344,-18.04687 z"
          style="font-family:'Roboto Condensed';-inkscape-font-specification:'Roboto Condensed, ';fill:#2b2b2b"
-         id="path6864" />
+         id="path7737" />
       <path
          d="m 1781.0534,233.16132 v 341.25 h -43.125 v -341.25 z"
          style="font-family:'Roboto Condensed';-inkscape-font-specification:'Roboto Condensed, ';fill:#2b2b2b"
-         id="path6866" />
+         id="path7739" />
       <path
          d="m 2005.3503,488.16132 q 0,-23.90625 -12.6563,-37.96875 -12.6562,-14.0625 -54.1406,-28.82813 -41.4844,-15 -65.8594,-37.96875 -24.375,-22.96875 -24.375,-62.10937 0,-39.84375 26.4844,-66.32813 26.4844,-26.48437 71.25,-26.48437 49.9219,0 76.1719,31.64062 26.25,31.64063 26.25,71.48438 h -43.125 q 0,-28.59375 -14.0625,-47.34375 -14.0625,-18.75 -45.2344,-18.75 -28.3594,0 -41.4844,15.9375 -12.8906,15.70312 -12.8906,39.375 0,21.5625 15.2344,35.85937 15.4687,14.29688 47.8125,26.01563 50.1562,16.40625 71.9531,40.78125 21.7969,24.375 21.7969,64.21875 0,41.71875 -27.1875,66.5625 -26.9531,24.84375 -73.125,24.84375 -26.7188,0 -51.7969,-11.71875 -25.0781,-11.71875 -41.25,-34.6875 -15.9375,-23.20313 -15.9375,-57.1875 h 43.125 q 0,34.92187 19.2188,50.85937 19.4531,15.9375 46.6406,15.9375 28.125,0 42.6562,-14.53125 14.5313,-14.76562 14.5313,-39.60937 z"
          style="font-family:'Roboto Condensed';-inkscape-font-specification:'Roboto Condensed, ';fill:#2b2b2b"
-         id="path6868" />
+         id="path7741" />
     </g>
   </g>
 </svg>
