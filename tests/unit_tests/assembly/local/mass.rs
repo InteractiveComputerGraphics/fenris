@@ -121,7 +121,7 @@ fn squared_norm_agrees_with_element_mass_matrix_quadratic_form_tet20() {
 
 #[test]
 #[allow(non_snake_case)]
-fn squared_norm_agrees_with_mass_matrix_quadratic_form_full_mesh_tet20() {
+fn squared_norm_agrees_with_mass_matrix_quadratic_form_full_mesh_tet10() {
     // This is basically the same test as the test for a single element - except we do it for a full mesh this time.
     // Unfortunately we cannot use Tet20Mesh at the moment because we're lacking the conversion functionality,
     // so we use Tet10 instead and lower the order of the functions involved
