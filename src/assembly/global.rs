@@ -146,7 +146,6 @@ impl<T: RealField> CsrAssembler<T> {
 
             element_global_nodes.resize(element_node_count, 0);
             element_matrix.resize_mut(element_matrix_dim, element_matrix_dim, T::zero());
-            element_matrix.fill(T::zero());
 
             let matrix_slice = DMatrixSliceMut::from(&mut *element_matrix);
             element_assembler.assemble_element_matrix_into(i, matrix_slice)?;
@@ -298,7 +297,6 @@ impl<T: RealField + Send> CsrParAssembler<T> {
                     ws.element_global_nodes.resize(element_node_count, 0);
                     ws.element_matrix
                         .resize_mut(element_matrix_dim, element_matrix_dim, T::zero());
-                    ws.element_matrix.fill(T::zero());
 
                     let matrix_slice = DMatrixSliceMut::from(&mut ws.element_matrix);
                     element_assembler.assemble_element_matrix_into(element_index, matrix_slice)?;
