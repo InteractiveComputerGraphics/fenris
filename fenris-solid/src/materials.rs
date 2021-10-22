@@ -266,7 +266,7 @@ where
         let J = F.determinant();
 
         if J <= T::zero() {
-            todo!("How to address non-positive J?");
+            todo!("How to address non-positive J? (J = {})", J);
         } else {
             let logJ = J.ln();
             let F_inv = F
@@ -290,7 +290,7 @@ where
         let J = F.determinant();
 
         if J <= T::zero() {
-            todo!("How to address non-positive J?");
+            todo!("How to address non-positive J? (J = {})", J);
         } else {
             let logJ = J.ln();
             let F_inv = F
@@ -321,7 +321,7 @@ where
         let J = F.determinant();
 
         if J <= T::zero() {
-            todo!("How to address non-positive J?");
+            todo!("How to address non-positive J? (J = {})", J);
         } else {
             // Precompute all the quantities that are independent of a and b
             let logJ = J.ln();
