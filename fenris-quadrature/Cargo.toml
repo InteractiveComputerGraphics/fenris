@@ -2,7 +2,7 @@
 name = "fenris-quadrature"
 version = "0.0.1"
 authors = ["Andreas Longva"]
-edition = "2018"
+edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/InteractiveComputerGraphics/fenris"
 description = "Quadrature rules for finite element applications"
