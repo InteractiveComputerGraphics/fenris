@@ -21,3 +21,6 @@ nalgebra = "0.28"
 polyquad-parse = { path = "../polyquad-parse", version = "0.1" }
 quote = "1.0.9"
 proc-macro2 = "1.0"
+
+[package.metadata.docs.rs]
+features = ["doc-images"]
