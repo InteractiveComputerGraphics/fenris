@@ -1,7 +1,7 @@
 [package]
 name = "fenris"
 description = "A library for advanced finite element computations in Rust"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Andreas Longva <longva@cs.rwth-aachen.de>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -39,7 +39,7 @@ fenris-nested-vec = { version="0.0.1", path = "fenris-nested-vec" }
 fenris-sparse = { version="0.0.1", path = "fenris-sparse" }
 fenris-geometry = { version="0.0.1", path = "fenris-geometry", features = [ "proptest" ] }
 fenris-optimize = { version="0.0.1", path = "fenris-optimize" }
-fenris-quadrature = { version="0.0.1", path = "fenris-quadrature" }
+fenris-quadrature = { version="0.0.2", path = "fenris-quadrature" }
 
 [dev-dependencies]
 nalgebra = { version = "0.28", features = [ "serde-serialize", "compare" ] }
