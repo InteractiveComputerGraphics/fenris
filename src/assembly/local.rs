@@ -5,6 +5,7 @@ use crate::nalgebra::{DMatrixSliceMut, DefaultAllocator, DimName, Scalar, U1};
 use crate::nalgebra::{DVectorSliceMut, OPoint};
 use crate::util::NestedVec;
 use crate::SmallDim;
+use serde::{Serialize, Deserialize};
 use itertools::izip;
 
 mod elliptic;
@@ -102,13 +103,15 @@ where
 }
 
 /// A quadrature table that keeps a separate quadrature rule per element.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GeneralQuadratureTable<T, GeometryDim, Data = ()>
 where
     T: Scalar,
     GeometryDim: DimName,
     DefaultAllocator: Allocator<T, GeometryDim>,
 {
+    #[serde(bound(serialize = "OPoint<T, GeometryDim>: Serialize"))]
+    #[serde(bound(deserialize = "OPoint<T, GeometryDim>: Deserialize<'de>"))]
     points: NestedVec<OPoint<T, GeometryDim>>,
     weights: NestedVec<T>,
     data: NestedVec<Data>,
@@ -213,13 +216,15 @@ where
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UniformQuadratureTable<T, GeometryDim, Data = ()>
 where
     T: Scalar,
     GeometryDim: DimName,
     DefaultAllocator: Allocator<T, GeometryDim>,
 {
+    #[serde(bound(serialize = "OPoint<T, GeometryDim>: Serialize"))]
+    #[serde(bound(deserialize = "OPoint<T, GeometryDim>: Deserialize<'de>"))]
     points: Vec<OPoint<T, GeometryDim>>,
     weights: Vec<T>,
     data: Vec<Data>,
