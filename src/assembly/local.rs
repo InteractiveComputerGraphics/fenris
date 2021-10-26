@@ -15,6 +15,7 @@ mod source;
 pub use elliptic::*;
 pub use mass::*;
 pub use source::*;
+use crate::quadrature::QuadraturePair;
 
 pub trait ElementConnectivityAssembler {
     fn solution_dim(&self) -> usize;
@@ -253,6 +254,15 @@ where
         assert_eq!(points.len(), weights.len(), "{}", msg);
         assert_eq!(points.len(), data.len(), "{}", msg);
         Self { points, weights, data }
+    }
+
+    pub fn from_quadrature_and_uniform_data(quadrature: QuadraturePair<T, GeometryDim>, data: Data) -> Self
+    where
+        Data: Clone
+    {
+        let (weights, points) = quadrature;
+        let data = vec![data; weights.len()];
+        Self::from_points_weights_and_data(points, weights, data)
     }
 }
 
