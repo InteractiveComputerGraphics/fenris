@@ -70,8 +70,6 @@ pub trait ElementScalarAssembler<T: Scalar>: ElementConnectivityAssembler {
 }
 
 /// Lookup table mapping elements to quadrature rules.
-///
-/// TODO: Eventually replace the existing trait with this one
 pub trait QuadratureTable<T, GeometryDim>
 where
     T: Scalar,
