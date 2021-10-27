@@ -3,10 +3,11 @@ use crate::mesh::Mesh;
 use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{DMatrixSliceMut, DefaultAllocator, DimName, Scalar, U1};
 use crate::nalgebra::{DVectorSliceMut, OPoint};
+use crate::quadrature::QuadraturePair;
 use crate::util::NestedVec;
 use crate::SmallDim;
-use serde::{Serialize, Deserialize};
 use itertools::izip;
+use serde::{Deserialize, Serialize};
 
 mod elliptic;
 mod mass;
@@ -15,7 +16,6 @@ mod source;
 pub use elliptic::*;
 pub use mass::*;
 pub use source::*;
-use crate::quadrature::QuadraturePair;
 
 pub trait ElementConnectivityAssembler {
     fn solution_dim(&self) -> usize;
@@ -27,6 +27,17 @@ pub trait ElementConnectivityAssembler {
     fn element_node_count(&self, element_index: usize) -> usize;
 
     fn populate_element_nodes(&self, output: &mut [usize], element_index: usize);
+
+    /// Returns an adapter that modifies element node indices according to the provided function.
+    fn map_element_nodes<F>(self, f: F) -> MapElementNodes<Self, F>
+    where
+        Self: Sized,
+    {
+        MapElementNodes {
+            mapped: self,
+            function: f,
+        }
+    }
 }
 
 impl<T, D, C> ElementConnectivityAssembler for Mesh<T, D, C>
@@ -67,6 +78,75 @@ pub trait ElementVectorAssembler<T: Scalar>: ElementConnectivityAssembler {
 
 pub trait ElementScalarAssembler<T: Scalar>: ElementConnectivityAssembler {
     fn assemble_element_scalar(&self, element_index: usize) -> eyre::Result<T>;
+}
+
+pub struct MapElementNodes<Mapped, F> {
+    mapped: Mapped,
+    function: F,
+}
+
+impl<Assembler, F> ElementConnectivityAssembler for MapElementNodes<Assembler, F>
+where
+    Assembler: ElementConnectivityAssembler,
+    F: Fn(usize) -> usize,
+{
+    fn solution_dim(&self) -> usize {
+        self.mapped.solution_dim()
+    }
+
+    fn num_elements(&self) -> usize {
+        self.mapped.num_elements()
+    }
+
+    fn num_nodes(&self) -> usize {
+        self.mapped.num_elements()
+    }
+
+    fn element_node_count(&self, element_index: usize) -> usize {
+        self.mapped.element_node_count(element_index)
+    }
+
+    fn populate_element_nodes(&self, output: &mut [usize], element_index: usize) {
+        self.mapped.populate_element_nodes(output, element_index);
+        for idx in output {
+            *idx = (self.function)(*idx);
+        }
+    }
+}
+
+impl<T, Assembler, F> ElementScalarAssembler<T> for MapElementNodes<Assembler, F>
+where
+    T: Scalar,
+    Assembler: ElementScalarAssembler<T>,
+    F: Fn(usize) -> usize,
+{
+    fn assemble_element_scalar(&self, element_index: usize) -> eyre::Result<T> {
+        self.mapped.assemble_element_scalar(element_index)
+    }
+}
+
+impl<T, Assembler, F> ElementVectorAssembler<T> for MapElementNodes<Assembler, F>
+where
+    T: Scalar,
+    Assembler: ElementVectorAssembler<T>,
+    F: Fn(usize) -> usize,
+{
+    fn assemble_element_vector_into(&self, element_index: usize, output: DVectorSliceMut<T>) -> eyre::Result<()> {
+        self.mapped
+            .assemble_element_vector_into(element_index, output)
+    }
+}
+
+impl<T, Assembler, F> ElementMatrixAssembler<T> for MapElementNodes<Assembler, F>
+where
+    T: Scalar,
+    Assembler: ElementMatrixAssembler<T>,
+    F: Fn(usize) -> usize,
+{
+    fn assemble_element_matrix_into(&self, element_index: usize, output: DMatrixSliceMut<T>) -> eyre::Result<()> {
+        self.mapped
+            .assemble_element_matrix_into(element_index, output)
+    }
 }
 
 /// Lookup table mapping elements to quadrature rules.
@@ -256,7 +336,7 @@ where
 
     pub fn from_quadrature_and_uniform_data(quadrature: QuadraturePair<T, GeometryDim>, data: Data) -> Self
     where
-        Data: Clone
+        Data: Clone,
     {
         let (weights, points) = quadrature;
         let data = vec![data; weights.len()];

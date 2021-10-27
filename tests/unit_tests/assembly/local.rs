@@ -1,5 +1,5 @@
 use fenris::allocators::{BiDimAllocator, SmallDimAllocator};
-use fenris::assembly::local::assemble_element_mass_matrix;
+use fenris::assembly::local::{assemble_element_mass_matrix, ElementConnectivityAssembler};
 use fenris::element::{Quad4d2Element, VolumetricFiniteElement};
 use fenris::geometry::Quad2d;
 use fenris::nalgebra::{DMatrix, DVector, DefaultAllocator, DimName, Matrix4, OPoint, OVector, Point2, RealField};
@@ -122,4 +122,55 @@ where
         .map(|xi| element.map_reference_coords(xi))
         .map(|x| density(&x))
         .collect()
+}
+
+#[test]
+fn element_connectivity_assembler_map_node() {
+    struct MockElementConnectivityAssembler;
+
+    impl ElementConnectivityAssembler for MockElementConnectivityAssembler {
+        fn solution_dim(&self) -> usize {
+            2
+        }
+
+        fn num_elements(&self) -> usize {
+            3
+        }
+
+        fn num_nodes(&self) -> usize {
+            6
+        }
+
+        fn element_node_count(&self, element_index: usize) -> usize {
+            match element_index {
+                0 => 3,
+                1 => 5,
+                2 => 4,
+                _ => panic!(),
+            }
+        }
+
+        fn populate_element_nodes(&self, output: &mut [usize], element_index: usize) {
+            let slice = match element_index {
+                0 => &[0, 2, 4].as_ref(),
+                1 => [1, 2, 3, 4, 5].as_ref(),
+                2 => &[0, 1, 3, 5].as_ref(),
+                _ => panic!(),
+            };
+            output.copy_from_slice(slice);
+        }
+    }
+
+    let mapped_assembler = MockElementConnectivityAssembler.map_element_nodes(|node_idx| 2 * node_idx);
+
+    let mut nodes = vec![0; 5];
+
+    mapped_assembler.populate_element_nodes(&mut nodes[0..3], 0);
+    assert_eq!(&nodes[0..3], &vec![0, 4, 8]);
+
+    mapped_assembler.populate_element_nodes(&mut nodes[0..5], 1);
+    assert_eq!(&nodes[0..5], &vec![2, 4, 6, 8, 10]);
+
+    mapped_assembler.populate_element_nodes(&mut nodes[0..4], 2);
+    assert_eq!(&nodes[0..4], &vec![0, 2, 6, 10]);
 }
