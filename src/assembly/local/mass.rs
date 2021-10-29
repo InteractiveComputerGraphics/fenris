@@ -10,7 +10,7 @@ use itertools::izip;
 use nalgebra::{RealField, Scalar};
 use std::cell::RefCell;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ElementMassAssembler<'a, Space, QTable> {
     space: &'a Space,
     qtable: &'a QTable,

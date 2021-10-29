@@ -148,7 +148,7 @@ where
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ElementEllipticAssembler<'a, T: Scalar, Space, Op, QTable: ?Sized> {
     space: &'a Space,
     op: &'a Op,

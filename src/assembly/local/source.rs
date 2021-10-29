@@ -95,6 +95,7 @@ impl<'a, Space, Source, QTable> ElementSourceAssemblerBuilder<(), &'a Space, &'a
 /// An element assembler for source functions.
 ///
 /// TODO: Docs
+#[derive(Debug, Clone)]
 pub struct ElementSourceAssembler<'a, T, Space, Source, QTable> {
     space: &'a Space,
     qtable: &'a QTable,
