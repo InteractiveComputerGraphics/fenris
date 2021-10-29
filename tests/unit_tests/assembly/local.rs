@@ -161,7 +161,9 @@ fn element_connectivity_assembler_map_node() {
         }
     }
 
-    let mapped_assembler = MockElementConnectivityAssembler.map_element_nodes(|node_idx| 2 * node_idx);
+    let new_node_count = 11;
+    let mapped_assembler = MockElementConnectivityAssembler.map_element_nodes(new_node_count, |node_idx| 2 * node_idx);
+    assert_eq!(mapped_assembler.num_nodes(), new_node_count);
 
     let mut nodes = vec![0; 5];
 

@@ -26,13 +26,21 @@ pub trait ElementConnectivityAssembler {
     fn populate_element_nodes(&self, output: &mut [usize], element_index: usize);
 
     /// Returns an adapter that modifies element node indices according to the provided function.
-    fn map_element_nodes<F>(self, f: F) -> MapElementNodes<Self, F>
+    ///
+    /// In general, changing the node indices is often accompanied by a change in the total number of nodes.
+    /// Therefore the new total number of nodes has to be provided.
+    ///
+    /// This is often used to enlarge the index space and populate only parts of a matrix.
+    /// For example, we might use an element assembler for a single body and offset its indices so that
+    /// we can assemble directly into a larger matrix containing the results of multiple bodies.
+    fn map_element_nodes<F>(self, new_num_nodes: usize, f: F) -> MapElementNodes<Self, F>
     where
         Self: Sized,
     {
         MapElementNodes {
             mapped: self,
             function: f,
+            num_nodes: new_num_nodes
         }
     }
 }
@@ -77,9 +85,11 @@ pub trait ElementScalarAssembler<T: Scalar>: ElementConnectivityAssembler {
     fn assemble_element_scalar(&self, element_index: usize) -> eyre::Result<T>;
 }
 
+#[derive(Debug, Clone)]
 pub struct MapElementNodes<Mapped, F> {
     mapped: Mapped,
     function: F,
+    num_nodes: usize,
 }
 
 impl<Assembler, F> ElementConnectivityAssembler for MapElementNodes<Assembler, F>
@@ -96,7 +106,7 @@ where
     }
 
     fn num_nodes(&self) -> usize {
-        self.mapped.num_elements()
+        self.num_nodes
     }
 
     fn element_node_count(&self, element_index: usize) -> usize {
