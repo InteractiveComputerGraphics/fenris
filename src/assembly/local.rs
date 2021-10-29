@@ -155,3 +155,113 @@ where
             .assemble_element_matrix_into(element_index, output)
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct AggregateElementAssembler<'a, ElementAssembler> {
+    assemblers: &'a [ElementAssembler],
+    solution_dim: usize,
+    num_elements: usize,
+    num_nodes: usize,
+    element_offsets: Vec<usize>,
+}
+
+impl<'a, ElementAssembler> AggregateElementAssembler<'a, ElementAssembler>
+where
+    ElementAssembler: ElementConnectivityAssembler
+{
+    /// Constructs a new aggregate element assembler from a slice of assemblers.
+    ///
+    /// Te
+    ///
+    /// # Panics
+    ///
+    /// - Panics if the slice of assemblers is empty.
+    /// - Panics if the assemblers do not all have the same solution dimension.
+    pub fn from_assemblers(assemblers: &'a [ElementAssembler]) -> Self {
+        assert!(!assemblers.is_empty(), "Must have at least one assembler in aggregate");
+        let solution_dim = assemblers[0].solution_dim();
+        let num_nodes = assemblers[0].num_nodes();
+        assert!(assemblers.iter().all(|assembler| assembler.solution_dim() == solution_dim),
+            "All assemblers must have the same solution dimension");
+        assert!(assemblers.iter().all(|assembler| assembler.num_nodes() == num_nodes),
+            "All assemblers must share the same node index space (same num_nodes)");
+
+        let mut num_total_elements = 0;
+        let mut element_offsets = Vec::with_capacity(assemblers.len());
+        for assembler in assemblers {
+            element_offsets.push(num_total_elements);
+            num_total_elements += assembler.num_elements();
+        }
+
+        Self { assemblers, solution_dim, element_offsets, num_elements: num_total_elements, num_nodes: num_nodes }
+    }
+
+    fn find_assembler_and_offset_for_element_index(&self, element_index: usize) -> (&ElementAssembler, usize) {
+        assert!(element_index <= self.num_elements);
+        let assembler_idx = match self.element_offsets.binary_search(&element_index) {
+            Ok(idx) => { idx },
+            Err(idx) => { idx - 1 }
+        };
+        (&self.assemblers[assembler_idx], self.element_offsets[assembler_idx])
+    }
+}
+
+impl<'a, ElementAssembler> ElementConnectivityAssembler for AggregateElementAssembler<'a, ElementAssembler>
+where
+    ElementAssembler: ElementConnectivityAssembler
+{
+    fn solution_dim(&self) -> usize {
+        self.solution_dim
+    }
+
+    fn num_elements(&self) -> usize {
+        self.num_elements
+    }
+
+    fn num_nodes(&self) -> usize {
+        self.num_nodes
+    }
+
+    fn element_node_count(&self, aggregate_element_index: usize) -> usize {
+        let (assembler, element_offset) = self.find_assembler_and_offset_for_element_index(aggregate_element_index);
+        assembler.element_node_count(aggregate_element_index - element_offset)
+    }
+
+    fn populate_element_nodes(&self, output: &mut [usize], aggregate_element_index: usize) {
+        let (assembler, element_offset) = self.find_assembler_and_offset_for_element_index(aggregate_element_index);
+        assembler.populate_element_nodes(output, aggregate_element_index - element_offset)
+    }
+}
+
+impl<'a, T, ElementAssembler> ElementScalarAssembler<T> for AggregateElementAssembler<'a, ElementAssembler>
+    where
+        T: Scalar,
+        ElementAssembler: ElementScalarAssembler<T>
+{
+    fn assemble_element_scalar(&self, aggregate_element_index: usize) -> eyre::Result<T> {
+        let (assembler, element_offset) = self.find_assembler_and_offset_for_element_index(aggregate_element_index);
+        assembler.assemble_element_scalar(aggregate_element_index - element_offset)
+    }
+}
+
+impl<'a, T, ElementAssembler> ElementVectorAssembler<T> for AggregateElementAssembler<'a, ElementAssembler>
+where
+    T: Scalar,
+    ElementAssembler: ElementVectorAssembler<T>
+{
+    fn assemble_element_vector_into(&self, aggregate_element_index: usize, output: DVectorSliceMut<T>) -> eyre::Result<()> {
+        let (assembler, element_offset) = self.find_assembler_and_offset_for_element_index(aggregate_element_index);
+        assembler.assemble_element_vector_into(aggregate_element_index - element_offset, output)
+    }
+}
+
+impl<'a, T, ElementAssembler> ElementMatrixAssembler<T> for AggregateElementAssembler<'a, ElementAssembler>
+    where
+        T: Scalar,
+        ElementAssembler: ElementMatrixAssembler<T>
+{
+    fn assemble_element_matrix_into(&self, aggregate_element_index: usize, output: DMatrixSliceMut<T>) -> eyre::Result<()> {
+        let (assembler, element_offset) = self.find_assembler_and_offset_for_element_index(aggregate_element_index);
+        assembler.assemble_element_matrix_into(aggregate_element_index - element_offset, output)
+    }
+}
