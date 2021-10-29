@@ -1,7 +1,14 @@
 use fenris::allocators::{BiDimAllocator, SmallDimAllocator};
-use fenris::assembly::local::{assemble_element_mass_matrix, ElementConnectivityAssembler, UniformQuadratureTable, AggregateElementAssembler, ElementEllipticAssemblerBuilder};
+use fenris::assembly::global::{compute_global_potential, CsrAssembler, SerialVectorAssembler};
+use fenris::assembly::local::{
+    assemble_element_mass_matrix, AggregateElementAssembler, ElementConnectivityAssembler,
+    ElementEllipticAssemblerBuilder, UniformQuadratureTable,
+};
+use fenris::assembly::operators::LaplaceOperator;
 use fenris::element::{Quad4d2Element, VolumetricFiniteElement};
 use fenris::geometry::Quad2d;
+use fenris::mesh::procedural::create_unit_square_uniform_quad_mesh_2d;
+use fenris::mesh::QuadMesh2d;
 use fenris::nalgebra::{DMatrix, DVector, DefaultAllocator, DimName, Matrix4, OPoint, OVector, Point2, RealField};
 use fenris::quadrature;
 use fenris::quadrature::QuadraturePair;
@@ -9,10 +16,6 @@ use itertools::izip;
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
 use nalgebra::{DMatrixSliceMut, Matrix2};
 use std::iter::repeat;
-use fenris::mesh::procedural::{create_unit_square_uniform_quad_mesh_2d};
-use fenris::mesh::QuadMesh2d;
-use fenris::assembly::global::{compute_global_potential, SerialVectorAssembler, CsrAssembler};
-use fenris::assembly::operators::LaplaceOperator;
 
 mod elliptic;
 mod mass;
@@ -184,7 +187,8 @@ fn element_connectivity_assembler_map_node() {
 #[test]
 fn aggregate_element_assembler_repeated_assembler() {
     let mesh: QuadMesh2d<f64> = create_unit_square_uniform_quad_mesh_2d(3);
-    let qtable = UniformQuadratureTable::from_quadrature_and_uniform_data(quadrature::tensor::quadrilateral_gauss(1), ());
+    let qtable =
+        UniformQuadratureTable::from_quadrature_and_uniform_data(quadrature::tensor::quadrilateral_gauss(1), ());
     let u = DVector::zeros(mesh.vertices().len());
     let assembler = ElementEllipticAssemblerBuilder::new()
         .with_operator(&LaplaceOperator)
@@ -198,17 +202,22 @@ fn aggregate_element_assembler_repeated_assembler() {
     // Scalar
     let aggregate_scalar = compute_global_potential(&aggregate).unwrap();
     let expected_scalar = 2.0 * compute_global_potential(&assembler).unwrap();
-    assert_scalar_eq!(aggregate_scalar, expected_scalar, comp=float);
+    assert_scalar_eq!(aggregate_scalar, expected_scalar, comp = float);
 
     // Vector
-    let aggregate_vector = SerialVectorAssembler::default().assemble_vector(&aggregate).unwrap();
-    let expected_vector = 2.0 * SerialVectorAssembler::default().assemble_vector(&assembler).unwrap();
-    assert_matrix_eq!(aggregate_vector, expected_vector, comp=float);
+    let aggregate_vector = SerialVectorAssembler::default()
+        .assemble_vector(&aggregate)
+        .unwrap();
+    let expected_vector = 2.0
+        * SerialVectorAssembler::default()
+            .assemble_vector(&assembler)
+            .unwrap();
+    assert_matrix_eq!(aggregate_vector, expected_vector, comp = float);
 
     // Matrix
     let aggregate_matrix = CsrAssembler::default().assemble(&aggregate).unwrap();
     let expected_matrix = 2.0 * CsrAssembler::default().assemble(&assembler).unwrap();
-    assert_matrix_eq!(aggregate_matrix, expected_matrix, comp=float);
+    assert_matrix_eq!(aggregate_matrix, expected_matrix, comp = float);
 }
 
 #[test]
@@ -216,7 +225,8 @@ fn aggregate_element_assembler_multibody() {
     // "Simulate" a multibody setup where we want to assemble into different blocks, e.g.
     // [ K_1   0 ]
     // [  0   K2 ]
-    let qtable = UniformQuadratureTable::from_quadrature_and_uniform_data(quadrature::tensor::quadrilateral_gauss(1), ());
+    let qtable =
+        UniformQuadratureTable::from_quadrature_and_uniform_data(quadrature::tensor::quadrilateral_gauss(1), ());
     let mesh1: QuadMesh2d<f64> = create_unit_square_uniform_quad_mesh_2d(3);
     let mesh2: QuadMesh2d<f64> = create_unit_square_uniform_quad_mesh_2d(4);
     let u1 = DVector::zeros(mesh1.vertices().len());
@@ -232,8 +242,7 @@ fn aggregate_element_assembler_multibody() {
             .build()
     };
     let build_assembler_with_offset = |mesh, u, offset| {
-        build_assembler(mesh, u)
-            .map_element_nodes(num_global_nodes, move |node_idx: usize| node_idx + offset)
+        build_assembler(mesh, u).map_element_nodes(num_global_nodes, move |node_idx: usize| node_idx + offset)
     };
 
     // build "local" and "globaL" (with offset into global node list) assemblers
@@ -247,8 +256,9 @@ fn aggregate_element_assembler_multibody() {
 
     // Scalar
     let aggregate_scalar = compute_global_potential(&aggregate).unwrap();
-    let expected_scalar = compute_global_potential(&assembler1).unwrap() + compute_global_potential(&assembler2).unwrap();
-    assert_scalar_eq!(aggregate_scalar, expected_scalar, comp=float);
+    let expected_scalar =
+        compute_global_potential(&assembler1).unwrap() + compute_global_potential(&assembler2).unwrap();
+    assert_scalar_eq!(aggregate_scalar, expected_scalar, comp = float);
 
     // Vector
     let vector_assembler = SerialVectorAssembler::default();
@@ -256,8 +266,11 @@ fn aggregate_element_assembler_multibody() {
     let expected_vector1 = vector_assembler.assemble_vector(&assembler1).unwrap();
     let expected_vector2 = vector_assembler.assemble_vector(&assembler2).unwrap();
     assert_eq!(aggregate_vector.len(), num_global_nodes);
-    assert_matrix_eq!(aggregate_vector.index((0 .. expected_vector1.len(), 0)), expected_vector1);
-    assert_matrix_eq!(aggregate_vector.index((expected_vector1.len() .. num_global_nodes, 0)), expected_vector2);
+    assert_matrix_eq!(aggregate_vector.index((0..expected_vector1.len(), 0)), expected_vector1);
+    assert_matrix_eq!(
+        aggregate_vector.index((expected_vector1.len()..num_global_nodes, 0)),
+        expected_vector2
+    );
 
     // Matrix
     // Here we convert to a dense matrix in order to be able to extract blocks
@@ -268,10 +281,10 @@ fn aggregate_element_assembler_multibody() {
     let expected_matrix2 = DMatrix::from(&matrix_assembler.assemble(&assembler2).unwrap());
 
     let n1 = mesh1.vertices().len();
-    let top_left_block = aggregate_matrix.index((0 .. n1, 0 .. n1));
-    let top_right_block = aggregate_matrix.index((0 .. n1, n1 .. ));
-    let bottom_left_block = aggregate_matrix.index((n1 .. , 0 .. n1));
-    let bottom_right_block = aggregate_matrix.index((n1 .., n1 ..));
+    let top_left_block = aggregate_matrix.index((0..n1, 0..n1));
+    let top_right_block = aggregate_matrix.index((0..n1, n1..));
+    let bottom_left_block = aggregate_matrix.index((n1.., 0..n1));
+    let bottom_right_block = aggregate_matrix.index((n1.., n1..));
 
     assert_matrix_eq!(top_left_block, expected_matrix1);
     assert_matrix_eq!(bottom_right_block, expected_matrix2);
