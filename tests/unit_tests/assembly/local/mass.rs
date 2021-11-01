@@ -1,5 +1,5 @@
 use fenris::assembly::global::CsrAssembler;
-use fenris::assembly::local::{assemble_element_mass_matrix, ElementMassAssembler, GeneralQuadratureTable};
+use fenris::assembly::local::{assemble_element_mass_matrix, Density, ElementMassAssembler, GeneralQuadratureTable};
 use fenris::element::{ElementConnectivity, FiniteElement, MatrixSliceMut, Tet20Element, Tet4Element};
 use fenris::error::{estimate_L2_error_squared, estimate_element_L2_error_squared};
 use fenris::mesh::procedural::create_unit_box_uniform_tet_mesh_3d;
@@ -135,7 +135,7 @@ fn squared_norm_agrees_with_mass_matrix_quadratic_form_full_mesh_tet10() {
     // Consequently, g becomes a quadratic function
     let g = |x, y, z| omega(x, y, z) * f(x, y, z);
     // And rho becomes a quadratic function
-    let rho = |x, y, z| f64::powi(omega(x, y, z), 2);
+    let rho = |x, y, z| Density(f64::powi(omega(x, y, z), 2));
 
     // We need to construct a quadrature table where every element has a different quadrature rule
     // in order to accommodate varying density values (TODO: Should be possible to combine a uniform quadrature rule

@@ -8,7 +8,40 @@ use crate::util::clone_upper_to_lower;
 use crate::workspace::{with_thread_local_workspace, Workspace};
 use itertools::izip;
 use nalgebra::{RealField, Scalar};
+use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
+use std::fmt::{Display, Formatter};
+
+/// A wrapper type for a number that represents a *density*.
+///
+/// This is primarily used as a parameter for mass matrix construction.
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
+#[repr(transparent)]
+pub struct Density<T>(pub T);
+
+impl<T> Density<T> {
+    pub fn as_inner_slice<'a>(slice: &'a [Density<T>]) -> &'a [T] {
+        // SAFETY: This is sound because `Density` is `repr(transparent)`
+        unsafe { std::mem::transmute(slice) }
+    }
+
+    pub fn from_inner_slice<'a>(slice: &'a [T]) -> &'a [Density<T>] {
+        // SAFETY: This is sound because `Density` is `repr(transparent)`
+        unsafe { std::mem::transmute(slice) }
+    }
+}
+
+impl<T: RealField> Default for Density<T> {
+    fn default() -> Self {
+        Density(T::zero())
+    }
+}
+
+impl<T: Display> Display for Density<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Density({})", self.0)
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct ElementMassAssembler<'a, Space, QTable> {
@@ -79,7 +112,7 @@ struct MassAssemblerWorkspace<T: Scalar, D: DimName>
 where
     DefaultAllocator: SmallDimAllocator<T, D>,
 {
-    quadrature_buffer: QuadratureBuffer<T, D, T>,
+    quadrature_buffer: QuadratureBuffer<T, D, Density<T>>,
     basis_buffer: BasisFunctionBuffer<T>,
 }
 
@@ -97,9 +130,9 @@ where
 
 impl<'a, T, Space, QTable> ElementMatrixAssembler<T> for ElementMassAssembler<'a, Space, QTable>
 where
-    T: RealField + Default,
+    T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
-    QTable: QuadratureTable<T, Space::GeometryDim, Data = T>,
+    QTable: QuadratureTable<T, Space::GeometryDim, Data = Density<T>>,
     DefaultAllocator: SmallDimAllocator<T, Space::GeometryDim>,
 {
     fn assemble_element_matrix_into(&self, element_index: usize, output: DMatrixSliceMut<T>) -> eyre::Result<()> {
@@ -117,7 +150,7 @@ where
                 &element,
                 ws.quadrature_buffer.weights(),
                 ws.quadrature_buffer.points(),
-                ws.quadrature_buffer.data(),
+                Density::as_inner_slice(ws.quadrature_buffer.data()),
                 self.solution_dim,
                 ws.basis_buffer.element_basis_values_mut(),
             )
