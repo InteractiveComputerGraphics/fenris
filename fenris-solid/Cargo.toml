@@ -7,6 +7,11 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/InteractiveComputerGraphics/fenris"
 description = "Solid mechanics functionality for fenris"
 
+[package.metadata.docs.rs]
+# For rendering KaTeX on docs.rs
+# TODO: Find a way to sync assets/ with root folder assets/
+rustdoc-args = [ "--html-in-header", "assets/doc-header.html"]
+
 [dependencies]
 fenris = { version = "^0.0.6", path = ".." }
 serde = "1.0.126"
