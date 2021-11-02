@@ -7,6 +7,9 @@ use std::cmp::min;
 
 pub mod materials;
 
+mod gravity_source;
+pub use gravity_source::GravitySource;
+
 pub trait HyperelasticMaterial<T, GeometryDim>
 where
     T: RealField,

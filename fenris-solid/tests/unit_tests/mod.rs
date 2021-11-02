@@ -3,6 +3,7 @@ use fenris::nalgebra;
 use fenris::nalgebra::{matrix, Matrix2, Matrix3, Point3};
 use fenris_solid::materials::LameParameters;
 
+mod gravity_source;
 mod material_elliptic_operator;
 mod materials;
 
