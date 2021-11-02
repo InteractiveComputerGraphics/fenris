@@ -8,7 +8,7 @@ repository = "https://github.com/InteractiveComputerGraphics/fenris"
 description = "Solid mechanics functionality for fenris"
 
 [dependencies]
-fenris = { version = "^0.0.5", path = ".." }
+fenris = { version = "^0.0.6", path = ".." }
 serde = "1.0.126"
 numeric_literals = "0.2.0"
 
