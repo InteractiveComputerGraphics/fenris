@@ -479,9 +479,20 @@ where
         if let Some(parent) = filepath.parent() {
             create_dir_all(parent)?;
         }
+
+        // Set VTK format version depending on detected file extension
+        // Workaround for vtkio not setting version number automatically depending on format
+        // Issue: https://github.com/elrnv/vtkio/issues/12
+        let extension = filepath
+            .extension()
+            .map(|os_str| os_str.to_string_lossy().to_ascii_lowercase());
+        let version = match extension.as_ref().map(|s| s.as_str()) {
+            Some("vtu") => Version { major: 2, minor: 2 },
+            Some("vtk") | _ => Version { major: 4, minor: 1 },
+        };
+
         Vtk {
-            // TODO: What to choose here? Depends on format?
-            version: Version { major: 4, minor: 1 },
+            version,
             // If we don't have a title then just make the filepath the title
             title: self.title.clone().unwrap_or(fallback_title),
             byte_order: ByteOrder::BigEndian,
