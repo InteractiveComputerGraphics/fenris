@@ -34,6 +34,7 @@ mod space_impl;
 pub extern crate nalgebra;
 pub extern crate nalgebra_sparse;
 pub extern crate vtkio;
+pub extern crate eyre;
 
 /// A small, fixed-size dimension.
 ///
