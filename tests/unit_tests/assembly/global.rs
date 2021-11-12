@@ -7,7 +7,7 @@ use proptest::prelude::*;
 use eyre::eyre;
 use fenris::assembly::global::{
     apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_matrix, compute_global_potential,
-    gather_global_to_local, CsrAssembler, CsrParAssembler,
+    gather_global_to_local, par_compute_global_potential, CsrAssembler, CsrParAssembler,
 };
 use fenris::assembly::local::{ElementConnectivityAssembler, ElementScalarAssembler};
 use fenris::nalgebra::{DMatrix, DVector, U2};
@@ -290,8 +290,10 @@ fn test_compute_global_potential() {
     }
 
     let global_potential = compute_global_potential(&MockScalarElementAssembler).unwrap();
-
     assert_scalar_eq!(global_potential, 9.0, comp = float);
+
+    let par_global_potential = par_compute_global_potential(&MockScalarElementAssembler).unwrap();
+    assert_scalar_eq!(par_global_potential, 9.0, comp = float);
 }
 
 #[derive(Debug)]

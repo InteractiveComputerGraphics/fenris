@@ -590,6 +590,26 @@ where
     Ok(global_potential)
 }
 
+/// Computes the value of a global scalar potential as a sum of element-wise scalars in parallel.
+pub fn par_compute_global_potential<T>(
+    element_assembler: &(impl ElementScalarAssembler<T> + ?Sized + Sync),
+) -> eyre::Result<T>
+where
+    T: RealField,
+{
+    let num_elements = element_assembler.num_elements();
+    let global_potential = (0..num_elements)
+        .into_par_iter()
+        .map(|i| {
+            element_assembler
+                .assemble_element_scalar(i)
+                .map_err(|error| error.wrap_err(format!("Assembling scalar failed for element {}", i)))
+        })
+        .try_reduce(|| T::zero(), |a, b| Ok(a + b));
+
+    global_potential
+}
+
 // TODO: Maybe move to some other module?
 pub fn gather_global_to_local<'a, T: Scalar>(
     global: impl Into<DVectorSlice<'a, T>>,
