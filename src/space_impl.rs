@@ -1,8 +1,8 @@
 use crate::allocators::ElementConnectivityAllocator;
 use crate::connectivity::CellConnectivity;
-use crate::element::{ElementConnectivity, FiniteElement, MatrixSliceMut, ReferenceFiniteElement};
+use crate::element::{ElementConnectivity, FiniteElement, ReferenceFiniteElement};
 use crate::mesh::Mesh;
-use crate::nalgebra::{Dynamic, OMatrix};
+use crate::nalgebra::{Dynamic, MatrixSliceMut, OMatrix};
 use crate::space::{FiniteElementConnectivity, FiniteElementSpace, GeometricFiniteElementSpace};
 use crate::SmallDim;
 use nalgebra::{DefaultAllocator, DimName, OPoint, Scalar};

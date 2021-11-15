@@ -1,28 +1,23 @@
 use fenris::element::{
     map_physical_coordinates, project_physical_coordinates, FiniteElement, FixedNodesReferenceFiniteElement,
-    Hex20Element, Hex27Element, Hex8Element, MatrixSlice, Quad4d2Element, Quad9d2Element, Segment2d2Element,
-    Tet10Element, Tet20Element, Tet4Element, Tri3d2Element, Tri6d2Element,
+    Hex20Element, Hex27Element, Hex8Element, Quad4d2Element, Quad9d2Element, Segment2d2Element, Tet10Element,
+    Tet20Element, Tet4Element, Tri3d2Element, Tri6d2Element,
 };
 use fenris::error::estimate_element_L2_error;
 use fenris::geometry::proptest_strategies::{
     clockwise_triangle2d_strategy_f64, nondegenerate_convex_quad2d_strategy_f64,
 };
 use fenris::geometry::{LineSegment2d, Quad2d, Triangle2d};
-use fenris::quadrature;
-use fenris_optimize::calculus::{approximate_jacobian, VectorFunctionBuilder};
-
-use nalgebra::{
-    DVectorSlice, DimName, Dynamic, OMatrix, OPoint, Point1, Point2, Point3, Vector1, Vector2, Vector3, U1, U10, U2,
-    U20, U27, U3, U4, U6, U8, U9,
-};
-
-use fenris::util::proptest::point2_f64_strategy;
-
-use matrixcompare::assert_scalar_eq;
-
-use proptest::prelude::*;
-
 use fenris::nalgebra::DVector;
+use fenris::quadrature;
+use fenris::util::proptest::point2_f64_strategy;
+use fenris_optimize::calculus::{approximate_jacobian, VectorFunctionBuilder};
+use matrixcompare::assert_scalar_eq;
+use nalgebra::{
+    DVectorSlice, DimName, Dynamic, MatrixSlice, OMatrix, OPoint, Point1, Point2, Point3, Vector1, Vector2, Vector3,
+    U1, U10, U2, U20, U27, U3, U4, U6, U8, U9,
+};
+use proptest::prelude::*;
 use util::assert_approx_matrix_eq;
 
 #[test]

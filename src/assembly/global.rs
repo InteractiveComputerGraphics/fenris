@@ -22,9 +22,8 @@ use crate::assembly::local::{
     QuadratureTable,
 };
 use crate::connectivity::Connectivity;
-use crate::element::MatrixSliceMut;
 use crate::nalgebra::allocator::Allocator;
-use crate::nalgebra::{DVector, DVectorSlice, DefaultAllocator, OPoint};
+use crate::nalgebra::{DVector, DVectorSlice, DefaultAllocator, MatrixSliceMut, OPoint};
 use crate::space::FiniteElementSpace;
 use crate::SmallDim;
 use fenris_sparse::ParallelCsrRowCollection;

@@ -2,9 +2,10 @@ use crate::allocators::{BiDimAllocator, SmallDimAllocator, TriDimAllocator};
 use crate::assembly::global::{BasisFunctionBuffer, QuadratureBuffer};
 use crate::assembly::local::{ElementConnectivityAssembler, ElementVectorAssembler, QuadratureTable};
 use crate::assembly::operators::Operator;
-use crate::element::{MatrixSlice, ReferenceFiniteElement, VolumetricFiniteElement};
+use crate::element::{ReferenceFiniteElement, VolumetricFiniteElement};
 use crate::nalgebra::{
-    DVectorSliceMut, DefaultAllocator, DimName, Dynamic, MatrixSliceMutMN, OPoint, OVector, RealField, Scalar, U1,
+    DVectorSliceMut, DefaultAllocator, DimName, Dynamic, MatrixSlice, MatrixSliceMutMN, OPoint, OVector, RealField,
+    Scalar, U1,
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
 use crate::workspace::{with_thread_local_workspace, Workspace};

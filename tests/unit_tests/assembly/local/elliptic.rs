@@ -10,13 +10,13 @@ use fenris::assembly::local::{
 };
 use fenris::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
 use fenris::element::{
-    ElementConnectivity, FiniteElement, MatrixSlice, MatrixSliceMut, Quad4d2Element, ReferenceFiniteElement,
-    Tet10Element, Tet4Element, VolumetricFiniteElement,
+    ElementConnectivity, FiniteElement, Quad4d2Element, ReferenceFiniteElement, Tet10Element, Tet4Element,
+    VolumetricFiniteElement,
 };
 use fenris::nalgebra::base::coordinates::{XY, XYZ};
 use fenris::nalgebra::{
-    DMatrix, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic, Matrix2, Matrix3x2, OMatrix,
-    OPoint, OVector, Point2, Point3, Vector1, Vector2, Vector3, U1, U2, U3,
+    DMatrix, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic, Matrix2, Matrix3x2,
+    MatrixSlice, MatrixSliceMut, OMatrix, OPoint, OVector, Point2, Point3, Vector1, Vector2, Vector3, U1, U2, U3,
 };
 use fenris::quadrature::{Quadrature, QuadraturePair};
 use fenris::{quadrature, Symmetry};

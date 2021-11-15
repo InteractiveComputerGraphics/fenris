@@ -2,6 +2,7 @@ use crate::allocators::{
     BiDimAllocator, FiniteElementAllocator, ReferenceFiniteElementAllocator, VolumeFiniteElementAllocator,
 };
 use crate::connectivity::Connectivity;
+use crate::nalgebra::MatrixSliceMut;
 use crate::SmallDim;
 use fenris_optimize::newton::NewtonSettings;
 use nalgebra::allocator::Allocator;
@@ -23,10 +24,6 @@ pub use quadrilateral::*;
 pub use segment::*;
 pub use tetrahedron::*;
 pub use triangle::*;
-
-/// TODO: Contribute these defaults to `nalgebra`
-pub type MatrixSlice<'a, T, R, C> = nalgebra::base::MatrixSlice<'a, T, R, C, U1, R>;
-pub type MatrixSliceMut<'a, T, R, C> = nalgebra::base::MatrixSliceMut<'a, T, R, C, U1, R>;
 
 pub trait ReferenceFiniteElement<T>
 where

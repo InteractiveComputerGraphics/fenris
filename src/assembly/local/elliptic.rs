@@ -5,11 +5,11 @@ use crate::assembly::local::{
     QuadratureTable,
 };
 use crate::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
-use crate::element::{MatrixSlice, MatrixSliceMut, VolumetricFiniteElement};
+use crate::element::VolumetricFiniteElement;
 use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{
-    DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, Dim, DimName, Dynamic, MatrixSliceMutMN,
-    OMatrix, OPoint, RealField, Scalar, U1,
+    DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, Dim, DimName, Dynamic, MatrixSlice,
+    MatrixSliceMut, MatrixSliceMutMN, OMatrix, OPoint, RealField, Scalar, U1,
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
 use crate::util::{clone_upper_to_lower, reshape_to_slice};

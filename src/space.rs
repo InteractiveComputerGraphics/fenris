@@ -1,7 +1,7 @@
 use crate::allocators::FiniteElementAllocator;
-use crate::element::{FiniteElement, MatrixSliceMut, ReferenceFiniteElement};
+use crate::element::{FiniteElement, ReferenceFiniteElement};
 use crate::geometry::GeometryCollection;
-use crate::nalgebra::{Dynamic, OMatrix};
+use crate::nalgebra::{Dynamic, MatrixSliceMut, OMatrix};
 use crate::SmallDim;
 use nalgebra::{DefaultAllocator, OPoint, Scalar};
 

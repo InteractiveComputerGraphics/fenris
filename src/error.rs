@@ -2,8 +2,8 @@
 use crate::allocators::{SmallDimAllocator, TriDimAllocator};
 use crate::assembly::global::{gather_global_to_local, BasisFunctionBuffer, QuadratureBuffer};
 use crate::assembly::local::{compute_volume_u_grad, QuadratureTable};
-use crate::element::{MatrixSlice, ReferenceFiniteElement, VolumetricFiniteElement};
-use crate::nalgebra::{DVector, DVectorSlice, MatrixSliceMut, MatrixSliceMutMN};
+use crate::element::{ReferenceFiniteElement, VolumetricFiniteElement};
+use crate::nalgebra::{DVector, DVectorSlice, MatrixSlice, MatrixSliceMut, MatrixSliceMutMN};
 use crate::nalgebra::{DefaultAllocator, DimName, Dynamic, OPoint, OVector, RealField};
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
 use crate::SmallDim;

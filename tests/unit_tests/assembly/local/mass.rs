@@ -1,6 +1,6 @@
 use fenris::assembly::global::CsrAssembler;
 use fenris::assembly::local::{assemble_element_mass_matrix, Density, ElementMassAssembler, GeneralQuadratureTable};
-use fenris::element::{ElementConnectivity, FiniteElement, MatrixSliceMut, Tet20Element, Tet4Element};
+use fenris::element::{ElementConnectivity, FiniteElement, Tet20Element, Tet4Element};
 use fenris::error::{estimate_L2_error_squared, estimate_element_L2_error_squared};
 use fenris::mesh::procedural::create_unit_box_uniform_tet_mesh_3d;
 use fenris::mesh::Tet10Mesh;
@@ -8,7 +8,7 @@ use fenris::nalgebra::{DMatrix, DVector, DVectorSlice};
 use fenris::quadrature;
 use fenris::quadrature::Quadrature;
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
-use nalgebra::{Matrix2, Matrix3, Point3, Vector1};
+use nalgebra::{Matrix2, Matrix3, MatrixSliceMut, Point3, Vector1};
 use std::iter::repeat;
 
 #[test]

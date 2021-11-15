@@ -31,10 +31,10 @@ pub mod proptest;
 mod mesh_convert;
 mod space_impl;
 
+pub extern crate eyre;
 pub extern crate nalgebra;
 pub extern crate nalgebra_sparse;
 pub extern crate vtkio;
-pub extern crate eyre;
 
 /// A small, fixed-size dimension.
 ///
