@@ -2,7 +2,7 @@ use eyre::eyre;
 use nalgebra::Vector1;
 
 use fenris::assembly::global::{
-    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, CsrAssembler, SerialVectorAssembler,
+    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, CsrAssembler, VectorAssembler,
 };
 use fenris::assembly::local::{
     ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, SourceFunction, UniformQuadratureTable,
@@ -43,7 +43,7 @@ fn assemble_linear_system(mesh: &QuadMesh2d<f64>) -> eyre::Result<(CsrMatrix<f64
 
     // Set up global assemblers. These are responsible for adding element matrix/vector entries from
     // each element into the global matrix/vector
-    let vector_assembler = SerialVectorAssembler::<f64>::default();
+    let vector_assembler = VectorAssembler::<f64>::default();
     let matrix_assembler = CsrAssembler::default();
 
     // Set up local matrix assembler for the Laplace operator. This assembler is responsible

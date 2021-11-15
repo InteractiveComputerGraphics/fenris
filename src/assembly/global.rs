@@ -514,12 +514,12 @@ pub fn color_nodes<C: FiniteElementConnectivity + ?Sized>(connectivity: &C) -> V
 }
 
 #[derive(Debug)]
-struct SerialVectorAssemblerWorkspace<T: Scalar> {
+struct VectorAssemblerWorkspace<T: Scalar> {
     vector: DVector<T>,
     nodes: Vec<usize>,
 }
 
-impl<T: RealField> Default for SerialVectorAssemblerWorkspace<T> {
+impl<T: RealField> Default for VectorAssemblerWorkspace<T> {
     fn default() -> Self {
         Self {
             vector: DVector::zeros(0),
@@ -529,19 +529,19 @@ impl<T: RealField> Default for SerialVectorAssemblerWorkspace<T> {
 }
 
 #[derive(Debug)]
-pub struct SerialVectorAssembler<T: Scalar> {
-    workspace: RefCell<SerialVectorAssemblerWorkspace<T>>,
+pub struct VectorAssembler<T: Scalar> {
+    workspace: RefCell<VectorAssemblerWorkspace<T>>,
 }
 
-impl<T: RealField> Default for SerialVectorAssembler<T> {
+impl<T: RealField> Default for VectorAssembler<T> {
     fn default() -> Self {
         Self {
-            workspace: RefCell::new(SerialVectorAssemblerWorkspace::default()),
+            workspace: RefCell::new(VectorAssemblerWorkspace::default()),
         }
     }
 }
 
-impl<T: RealField> SerialVectorAssembler<T> {
+impl<T: RealField> VectorAssembler<T> {
     pub fn assemble_vector_into<'a>(
         &self,
         output: impl Into<DVectorSliceMut<'a, T>>,
@@ -580,7 +580,7 @@ impl<T: RealField> SerialVectorAssembler<T> {
 
 #[derive(Debug)]
 pub struct VectorParAssembler<T: Scalar + Send> {
-    workspace: ThreadLocal<RefCell<SerialVectorAssemblerWorkspace<T>>>,
+    workspace: ThreadLocal<RefCell<VectorAssemblerWorkspace<T>>>,
 }
 
 impl<T: RealField> Default for VectorParAssembler<T> {

@@ -1,6 +1,9 @@
 use eyre::eyre;
 use fenris::allocators::{SmallDimAllocator, TriDimAllocator};
-use fenris::assembly::global::{CsrAssembler, CsrParAssembler, SerialVectorAssembler, VectorParAssembler, apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, color_nodes};
+use fenris::assembly::global::{
+    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, color_nodes, CsrAssembler, CsrParAssembler,
+    VectorAssembler, VectorParAssembler,
+};
 use fenris::assembly::local::{
     ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, SourceFunction, UniformQuadratureTable,
 };
@@ -84,7 +87,7 @@ where
     // Node coloring for test of parallel assembler
     let colors = color_nodes(mesh);
 
-    let vector_assembler = SerialVectorAssembler::<f64>::default();
+    let vector_assembler = VectorAssembler::<f64>::default();
     let matrix_assembler = CsrAssembler::default();
 
     let source_assembler = ElementSourceAssemblerBuilder::new()
@@ -119,7 +122,9 @@ where
         let pattern = par_matrix_assembler.assemble_pattern(&laplace_assembler);
         let nnz = pattern.nnz();
         let mut par_a_global = CsrMatrix::try_from_pattern_and_values(pattern, vec![0.0; nnz]).unwrap();
-        par_matrix_assembler.assemble_into_csr(&mut par_a_global, &colors, &laplace_assembler).unwrap();
+        par_matrix_assembler
+            .assemble_into_csr(&mut par_a_global, &colors, &laplace_assembler)
+            .unwrap();
         assert_matrix_eq!(a_global, par_a_global, comp = float);
     }
 

@@ -1,4 +1,4 @@
-use fenris::assembly::global::{CsrAssembler, SerialVectorAssembler};
+use fenris::assembly::global::{CsrAssembler, VectorAssembler};
 use fenris::assembly::local::{Density, ElementMassAssembler, ElementSourceAssemblerBuilder, UniformQuadratureTable};
 use fenris::mesh::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::mesh::QuadMesh2d;
@@ -29,7 +29,7 @@ fn gravity_source_agrees_with_mass_matrix_vector_product_quad4() {
         .with_quadrature_table(&mass_quadrature)
         .with_finite_element_space(&mesh)
         .build();
-    let f_gravity = SerialVectorAssembler::default()
+    let f_gravity = VectorAssembler::default()
         .assemble_vector(&gravity_assembler)
         .unwrap();
 

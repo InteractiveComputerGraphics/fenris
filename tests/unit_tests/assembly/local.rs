@@ -1,5 +1,5 @@
 use fenris::allocators::{BiDimAllocator, SmallDimAllocator};
-use fenris::assembly::global::{compute_global_potential, CsrAssembler, SerialVectorAssembler};
+use fenris::assembly::global::{compute_global_potential, CsrAssembler, VectorAssembler};
 use fenris::assembly::local::{
     assemble_element_mass_matrix, AggregateElementAssembler, ElementConnectivityAssembler,
     ElementEllipticAssemblerBuilder, UniformQuadratureTable,
@@ -205,11 +205,11 @@ fn aggregate_element_assembler_repeated_assembler() {
     assert_scalar_eq!(aggregate_scalar, expected_scalar, comp = float);
 
     // Vector
-    let aggregate_vector = SerialVectorAssembler::default()
+    let aggregate_vector = VectorAssembler::default()
         .assemble_vector(&aggregate)
         .unwrap();
     let expected_vector = 2.0
-        * SerialVectorAssembler::default()
+        * VectorAssembler::default()
             .assemble_vector(&assembler)
             .unwrap();
     assert_matrix_eq!(aggregate_vector, expected_vector, comp = float);
@@ -261,7 +261,7 @@ fn aggregate_element_assembler_multibody() {
     assert_scalar_eq!(aggregate_scalar, expected_scalar, comp = float);
 
     // Vector
-    let vector_assembler = SerialVectorAssembler::default();
+    let vector_assembler = VectorAssembler::default();
     let aggregate_vector = vector_assembler.assemble_vector(&aggregate).unwrap();
     let expected_vector1 = vector_assembler.assemble_vector(&assembler1).unwrap();
     let expected_vector2 = vector_assembler.assemble_vector(&assembler2).unwrap();
