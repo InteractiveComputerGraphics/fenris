@@ -12,7 +12,7 @@ fn aabb_intersects_2d() {
             assert!(!aabb1.intersects(&$aabb2));
             // Check that we get the same result when reversing the order
             assert!(!$aabb2.intersects(&aabb1));
-        }
+        };
     }
 
     macro_rules! assert_intersection {
@@ -20,7 +20,7 @@ fn aabb_intersects_2d() {
             assert!(aabb1.intersects(&$aabb2));
             // Check that we get the same result when reversing the order
             assert!($aabb2.intersects(&aabb1));
-        }
+        };
     }
 
     assert_no_intersection!(Aabb::new(vector![6.0, 4.0], vector![9.0, 6.0]));

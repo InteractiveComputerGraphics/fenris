@@ -193,9 +193,9 @@ where
     }
 
     pub fn intersects(&self, other: &Self) -> bool {
-        for i in 0 .. D::dim() {
+        for i in 0..D::dim() {
             if !intervals_intersect([self.min[i], self.max[i]], [other.min[i], other.max[i]]) {
-                return false
+                return false;
             }
         }
         true
