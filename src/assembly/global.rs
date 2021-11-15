@@ -578,6 +578,64 @@ impl<T: RealField> SerialVectorAssembler<T> {
     }
 }
 
+#[derive(Debug)]
+pub struct VectorParAssembler<T: Scalar + Send> {
+    workspace: ThreadLocal<RefCell<SerialVectorAssemblerWorkspace<T>>>,
+}
+
+impl<T: RealField> Default for VectorParAssembler<T> {
+    fn default() -> Self {
+        Self {
+            workspace: Default::default(),
+        }
+    }
+}
+
+impl<T: RealField> VectorParAssembler<T> {
+    pub fn assemble_vector_into<'a>(
+        &self,
+        output: impl Into<DVectorSliceMut<'a, T>>,
+        colors: &[DisjointSubsets],
+        element_assembler: &(impl ElementVectorAssembler<T> + ?Sized + Sync),
+    ) -> eyre::Result<()> {
+        let mut output = output.into();
+        let n = element_assembler.num_nodes();
+        let s = element_assembler.solution_dim();
+        assert_eq!(output.len(), s * n, "Output dimensions mismatch");
+
+        for color in colors {
+            let mut block_adapter = BlockAdapter::with_block_size(output.as_mut_slice(), s);
+
+            color
+                .subsets_par_iter(&mut block_adapter)
+                .for_each(|mut subset| {
+                    let ws = &mut *self.workspace.get_or_default().borrow_mut();
+
+                    let element_index = subset.label();
+                    let element_node_count = element_assembler.element_node_count(element_index);
+
+                    ws.nodes.resize(element_node_count, usize::MAX);
+                    ws.vector
+                        .resize_vertically_mut(s * element_node_count, T::zero());
+                    element_assembler.populate_element_nodes(&mut ws.nodes, element_index);
+                    element_assembler
+                        .assemble_element_vector_into(element_index, (&mut ws.vector).into())
+                        .unwrap();
+
+                    for local_node_idx in 0..element_node_count {
+                        let mut block = subset.get_mut(local_node_idx);
+                        let v_rows = ws.vector.rows(s * local_node_idx, s);
+                        for i in 0..s {
+                            *block.index_mut(i) += v_rows[i];
+                        }
+                    }
+                });
+        }
+
+        Ok(())
+    }
+}
+
 /// Computes the value of a global scalar potential as a sum of element-wise scalars.
 pub fn compute_global_potential<T>(element_assembler: &(impl ElementScalarAssembler<T> + ?Sized)) -> eyre::Result<T>
 where
