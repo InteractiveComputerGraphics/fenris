@@ -1,6 +1,6 @@
 [package]
 name = "fenris-geometry"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Andreas Longva <longva@cs.rwth-aachen.de>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/InteractiveComputerGraphics/fenris"
