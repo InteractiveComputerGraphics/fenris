@@ -292,7 +292,6 @@ impl<T: RealField + Send> CsrParAssembler<T> {
         colors: &[DisjointSubsets],
         element_assembler: &(dyn Sync + ElementMatrixAssembler<T>),
     ) -> eyre::Result<()> {
-        // -> Result<(), Box<dyn Error + Send + Sync>> {
         let sdim = element_assembler.solution_dim();
 
         for color in colors {
