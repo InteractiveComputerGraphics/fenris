@@ -1,7 +1,7 @@
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
 
 use fenris::nalgebra;
-use fenris::nalgebra::{dvector, vector, DMatrix, DMatrixSliceMut, DVectorSlice, SMatrix, SVector};
+use fenris::nalgebra::{dvector, vector, DMatrix, DMatrixSliceMut, DVectorSlice, Matrix2, Matrix3, SMatrix, SVector};
 use fenris_solid::materials::{LameParameters, LinearElasticMaterial, NeoHookeanMaterial, StVKMaterial, YoungPoisson};
 use fenris_solid::HyperelasticMaterial;
 
@@ -338,7 +338,7 @@ fn neo_hookean_strain_energy_2d() {
     let deformation_gradient = deformation_gradient_2d();
     let psi = NeoHookeanMaterial.compute_energy_density(&deformation_gradient, &lame);
 
-    assert_scalar_eq!(psi, 5313.274620288603, comp = float);
+    assert_scalar_eq!(psi, 5505.274620288603, comp = float);
 }
 
 #[test]
@@ -383,3 +383,17 @@ test_multi_contraction_consistency!(
     NeoHookeanMaterial,
     neo_hookean_multi_contraction_consistency_3d
 );
+
+#[test]
+fn neo_hookean_zero_for_rest_state_2d() {
+    let lame = lame_parameters();
+    let energy = NeoHookeanMaterial.compute_energy_density(&Matrix2::identity(), &lame);
+    assert_scalar_eq!(energy, 0.0, comp = float);
+}
+
+#[test]
+fn neo_hookean_zero_for_rest_state_3d() {
+    let lame = lame_parameters();
+    let energy = NeoHookeanMaterial.compute_energy_density(&Matrix3::identity(), &lame);
+    assert_scalar_eq!(energy, 0.0, comp = float);
+}

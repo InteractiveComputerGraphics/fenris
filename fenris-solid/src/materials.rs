@@ -252,7 +252,9 @@ where
             let C = F.transpose() * F;
             let I_C = C.trace();
             let logJ = J.ln();
-            mu / 2.0 * (I_C - 3.0) - mu * logJ + (lambda / 2.0) * (logJ.powi(2))
+            // Note: 2D/3D need different constants to ensure rest state has zero energy
+            let d = T::from_usize(D::dim()).unwrap();
+            mu / 2.0 * (I_C - d) - mu * logJ + (lambda / 2.0) * (logJ.powi(2))
         }
     }
 
