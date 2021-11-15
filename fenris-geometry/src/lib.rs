@@ -191,6 +191,19 @@ where
     pub fn contains_point(&self, point: &OPoint<T, D>) -> bool {
         (0..D::dim()).all(|dim| point[dim] > self.min[dim] && point[dim] < self.max[dim])
     }
+
+    pub fn intersects(&self, other: &Self) -> bool {
+        for i in 0 .. D::dim() {
+            if !intervals_intersect([self.min[i], self.max[i]], [other.min[i], other.max[i]]) {
+                return false
+            }
+        }
+        true
+    }
+}
+
+fn intervals_intersect<T: RealField>([l1, u1]: [T; 2], [l2, u2]: [T; 2]) -> bool {
+    l2 <= u1 && u2 >= l1
 }
 
 impl<T, D> BoundedGeometry<T> for AxisAlignedBoundingBox<T, D>
