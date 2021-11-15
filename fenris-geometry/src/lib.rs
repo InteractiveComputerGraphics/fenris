@@ -200,6 +200,25 @@ where
         }
         true
     }
+
+    /// Grows the bounding box by `distance` in all directions.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use fenris_geometry::AxisAlignedBoundingBox;
+    /// # use nalgebra::vector;
+    /// let aabb = AxisAlignedBoundingBox::new(vector![0.0, 0.0], vector![1.0, 1.0]);
+    /// let grown = aabb.grow_uniformly(1.0);
+    /// assert_eq!(grown.min(), &vector![-1.0, -1.0]);
+    /// assert_eq!(grown.max(), &vector![2.0, 2.0]);
+    /// ```
+    ///
+    pub fn grow_uniformly(&self, distance: T) -> Self {
+        let min = self.min().map(|b_i| b_i - distance);
+        let max = self.max().map(|b_i| b_i + distance);
+        Self::new(min, max)
+    }
 }
 
 fn intervals_intersect<T: RealField>([l1, u1]: [T; 2], [l2, u2]: [T; 2]) -> bool {
