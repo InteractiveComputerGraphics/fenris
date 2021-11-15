@@ -4,8 +4,12 @@ use std::error::Error;
 use std::ops::AddAssign;
 
 use itertools::izip;
+use nalgebra::allocator::Allocator;
 use nalgebra::base::storage::Storage;
-use nalgebra::{DMatrix, DMatrixSliceMut, DVectorSliceMut, DimName, Dynamic, Matrix, RealField, Scalar, U1};
+use nalgebra::{
+    DMatrix, DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic, Matrix,
+    MatrixSliceMut, OPoint, RealField, Scalar, U1,
+};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
 use thread_local::ThreadLocal;
@@ -21,10 +25,7 @@ use crate::assembly::local::{
     ElementConnectivityAssembler, ElementMatrixAssembler, ElementScalarAssembler, ElementVectorAssembler,
     QuadratureTable,
 };
-use crate::connectivity::Connectivity;
-use crate::nalgebra::allocator::Allocator;
-use crate::nalgebra::{DVector, DVectorSlice, DefaultAllocator, MatrixSliceMut, OPoint};
-use crate::space::FiniteElementSpace;
+use crate::space::{FiniteElementConnectivity, FiniteElementSpace};
 use crate::SmallDim;
 use fenris_sparse::ParallelCsrRowCollection;
 
@@ -498,11 +499,15 @@ fn add_element_row_to_csr_row<T, S>(
     }
 }
 
-pub fn color_nodes<C: Connectivity>(connectivity: &[C]) -> Vec<DisjointSubsets> {
+/// Computes a coloring for the nodes of the given element connectivity.
+pub fn color_nodes<C: FiniteElementConnectivity + ?Sized>(connectivity: &C) -> Vec<DisjointSubsets> {
     let mut nested = NestedVec::new();
 
-    for conn in connectivity {
-        nested.push(conn.vertex_indices());
+    let mut node_buffer = Vec::new();
+    for element_index in 0..connectivity.num_elements() {
+        node_buffer.resize(connectivity.element_node_count(element_index), 0);
+        connectivity.populate_element_nodes(&mut node_buffer, element_index);
+        nested.push(&node_buffer);
     }
 
     sequential_greedy_coloring(&nested)
