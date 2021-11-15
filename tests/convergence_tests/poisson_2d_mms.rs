@@ -63,7 +63,7 @@ pub fn solve_and_produce_output<C>(
     quadrature: QuadraturePair2d<f64>,
     error_quadrature: QuadraturePair2d<f64>,
 ) where
-    C: VtkCellConnectivity + ElementConnectivity<f64, GeometryDim = U2, ReferenceDim = U2>,
+    C: VtkCellConnectivity + ElementConnectivity<f64, GeometryDim = U2, ReferenceDim = U2> + Sync,
 {
     crate::convergence_tests::poisson_mms_common::solve_and_produce_output(
         element_name,

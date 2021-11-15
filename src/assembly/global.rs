@@ -1,11 +1,14 @@
 use std::cell::RefCell;
 use std::collections::BTreeSet;
-use std::error::Error;
 use std::ops::AddAssign;
 
 use itertools::izip;
+use nalgebra::allocator::Allocator;
 use nalgebra::base::storage::Storage;
-use nalgebra::{DMatrix, DMatrixSliceMut, DVectorSliceMut, DimName, Dynamic, Matrix, RealField, Scalar, U1};
+use nalgebra::{
+    DMatrix, DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic, Matrix,
+    MatrixSliceMut, OPoint, RealField, Scalar, U1,
+};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
 use thread_local::ThreadLocal;
@@ -21,10 +24,7 @@ use crate::assembly::local::{
     ElementConnectivityAssembler, ElementMatrixAssembler, ElementScalarAssembler, ElementVectorAssembler,
     QuadratureTable,
 };
-use crate::connectivity::Connectivity;
-use crate::nalgebra::allocator::Allocator;
-use crate::nalgebra::{DVector, DVectorSlice, DefaultAllocator, MatrixSliceMut, OPoint};
-use crate::space::FiniteElementSpace;
+use crate::space::{FiniteElementConnectivity, FiniteElementSpace};
 use crate::SmallDim;
 use fenris_sparse::ParallelCsrRowCollection;
 
@@ -273,12 +273,25 @@ impl<T: Scalar + Send> CsrParAssembler<T> {
 }
 
 impl<T: RealField + Send> CsrParAssembler<T> {
+    pub fn assemble(
+        &self,
+        colors: &[DisjointSubsets],
+        element_assembler: &(impl ElementMatrixAssembler<T> + Sync),
+    ) -> eyre::Result<CsrMatrix<T>> {
+        let pattern = self.assemble_pattern(element_assembler);
+        let initial_matrix_values = vec![T::zero(); pattern.nnz()];
+        let mut matrix = CsrMatrix::try_from_pattern_and_values(pattern, initial_matrix_values)
+            .expect("CSR data must be valid by definition");
+        self.assemble_into_csr(&mut matrix, colors, element_assembler)?;
+        Ok(matrix)
+    }
+
     pub fn assemble_into_csr(
         &self,
         csr: &mut CsrMatrix<T>,
         colors: &[DisjointSubsets],
         element_assembler: &(dyn Sync + ElementMatrixAssembler<T>),
-    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+    ) -> eyre::Result<()> {
         let sdim = element_assembler.solution_dim();
 
         for color in colors {
@@ -331,7 +344,7 @@ impl<T: RealField + Send> CsrParAssembler<T> {
 
                     Ok(())
                 })
-                .collect::<Result<(), Box<dyn Error + Send + Sync>>>()?;
+                .collect::<eyre::Result<()>>()?;
         }
 
         Ok(())
@@ -498,23 +511,27 @@ fn add_element_row_to_csr_row<T, S>(
     }
 }
 
-pub fn color_nodes<C: Connectivity>(connectivity: &[C]) -> Vec<DisjointSubsets> {
+/// Computes a coloring for the nodes of the given element connectivity.
+pub fn color_nodes<C: FiniteElementConnectivity + ?Sized>(connectivity: &C) -> Vec<DisjointSubsets> {
     let mut nested = NestedVec::new();
 
-    for conn in connectivity {
-        nested.push(conn.vertex_indices());
+    let mut node_buffer = Vec::new();
+    for element_index in 0..connectivity.num_elements() {
+        node_buffer.resize(connectivity.element_node_count(element_index), 0);
+        connectivity.populate_element_nodes(&mut node_buffer, element_index);
+        nested.push(&node_buffer);
     }
 
     sequential_greedy_coloring(&nested)
 }
 
 #[derive(Debug)]
-struct SerialVectorAssemblerWorkspace<T: Scalar> {
+struct VectorAssemblerWorkspace<T: Scalar> {
     vector: DVector<T>,
     nodes: Vec<usize>,
 }
 
-impl<T: RealField> Default for SerialVectorAssemblerWorkspace<T> {
+impl<T: RealField> Default for VectorAssemblerWorkspace<T> {
     fn default() -> Self {
         Self {
             vector: DVector::zeros(0),
@@ -524,19 +541,19 @@ impl<T: RealField> Default for SerialVectorAssemblerWorkspace<T> {
 }
 
 #[derive(Debug)]
-pub struct SerialVectorAssembler<T: Scalar> {
-    workspace: RefCell<SerialVectorAssemblerWorkspace<T>>,
+pub struct VectorAssembler<T: Scalar> {
+    workspace: RefCell<VectorAssemblerWorkspace<T>>,
 }
 
-impl<T: RealField> Default for SerialVectorAssembler<T> {
+impl<T: RealField> Default for VectorAssembler<T> {
     fn default() -> Self {
         Self {
-            workspace: RefCell::new(SerialVectorAssemblerWorkspace::default()),
+            workspace: RefCell::new(VectorAssemblerWorkspace::default()),
         }
     }
 }
 
-impl<T: RealField> SerialVectorAssembler<T> {
+impl<T: RealField> VectorAssembler<T> {
     pub fn assemble_vector_into<'a>(
         &self,
         output: impl Into<DVectorSliceMut<'a, T>>,
@@ -570,6 +587,76 @@ impl<T: RealField> SerialVectorAssembler<T> {
         let mut result = DVector::zeros(element_assembler.solution_dim() * n);
         self.assemble_vector_into(&mut result, element_assembler)?;
         Ok(result)
+    }
+}
+
+#[derive(Debug)]
+pub struct VectorParAssembler<T: Scalar + Send> {
+    workspace: ThreadLocal<RefCell<VectorAssemblerWorkspace<T>>>,
+}
+
+impl<T: RealField> Default for VectorParAssembler<T> {
+    fn default() -> Self {
+        Self {
+            workspace: Default::default(),
+        }
+    }
+}
+
+impl<T: RealField> VectorParAssembler<T> {
+    pub fn assemble_vector(
+        &self,
+        colors: &[DisjointSubsets],
+        element_assembler: &(impl ElementVectorAssembler<T> + Sync),
+    ) -> eyre::Result<DVector<T>> {
+        let n = element_assembler.num_nodes();
+        let mut result = DVector::zeros(element_assembler.solution_dim() * n);
+        self.assemble_vector_into(&mut result, colors, element_assembler)?;
+        Ok(result)
+    }
+
+    pub fn assemble_vector_into<'a>(
+        &self,
+        output: impl Into<DVectorSliceMut<'a, T>>,
+        colors: &[DisjointSubsets],
+        element_assembler: &(impl ElementVectorAssembler<T> + ?Sized + Sync),
+    ) -> eyre::Result<()> {
+        let mut output = output.into();
+        let n = element_assembler.num_nodes();
+        let s = element_assembler.solution_dim();
+        assert_eq!(output.len(), s * n, "Output dimensions mismatch");
+
+        for color in colors {
+            let mut block_adapter = BlockAdapter::with_block_size(output.as_mut_slice(), s);
+
+            color
+                .subsets_par_iter(&mut block_adapter)
+                .map(|mut subset| {
+                    let ws = &mut *self.workspace.get_or_default().borrow_mut();
+
+                    let element_index = subset.label();
+                    let element_node_count = element_assembler.element_node_count(element_index);
+
+                    ws.nodes.resize(element_node_count, usize::MAX);
+                    ws.vector
+                        .resize_vertically_mut(s * element_node_count, T::zero());
+                    element_assembler.populate_element_nodes(&mut ws.nodes, element_index);
+                    element_assembler.assemble_element_vector_into(element_index, (&mut ws.vector).into())?;
+
+                    for local_node_idx in 0..element_node_count {
+                        let mut block = subset.get_mut(local_node_idx);
+                        let v_rows = ws.vector.rows(s * local_node_idx, s);
+                        for i in 0..s {
+                            *block.index_mut(i) += v_rows[i];
+                        }
+                    }
+
+                    Ok(())
+                })
+                .collect::<eyre::Result<()>>()?;
+        }
+
+        Ok(())
     }
 }
 

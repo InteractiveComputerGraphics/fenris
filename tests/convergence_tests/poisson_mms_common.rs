@@ -1,7 +1,8 @@
 use eyre::eyre;
 use fenris::allocators::{SmallDimAllocator, TriDimAllocator};
 use fenris::assembly::global::{
-    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, CsrAssembler, SerialVectorAssembler,
+    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, color_nodes, CsrAssembler, CsrParAssembler,
+    VectorAssembler, VectorParAssembler,
 };
 use fenris::assembly::local::{
     ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, SourceFunction, UniformQuadratureTable,
@@ -16,6 +17,8 @@ use fenris::nalgebra_sparse::CsrMatrix;
 use fenris::quadrature::QuadraturePair;
 use fenris::SmallDim;
 use itertools::izip;
+use matrixcompare::assert_matrix_eq;
+use nalgebra::allocator::Allocator;
 use nalgebra::OVector;
 use nalgebra_sparse::factorization::CscCholesky;
 use serde::{Deserialize, Serialize};
@@ -69,9 +72,10 @@ pub fn assemble_linear_system<C, D, Source>(
 ) -> eyre::Result<(CsrMatrix<f64>, DVector<f64>)>
 where
     D: SmallDim,
-    C: ElementConnectivity<f64, GeometryDim = D, ReferenceDim = D>,
-    Source: SourceFunction<f64, D, SolutionDim = U1, Parameters = ()>,
+    C: ElementConnectivity<f64, GeometryDim = D, ReferenceDim = D> + Sync,
+    Source: SourceFunction<f64, D, SolutionDim = U1, Parameters = ()> + Sync,
     DefaultAllocator: SmallDimAllocator<f64, D>,
+    <DefaultAllocator as Allocator<f64, D>>::Buffer: Sync,
 {
     let (weights, points) = quadrature;
     let quadrature = UniformQuadratureTable::from_points_and_weights(points, weights);
@@ -80,8 +84,26 @@ where
     // for linear contractions
     let u = DVector::<f64>::zeros(mesh.vertices().len());
 
-    let vector_assembler = SerialVectorAssembler::<f64>::default();
+    // Node coloring for test of parallel assembler
+    let colors = color_nodes(mesh);
+
+    let vector_assembler = VectorAssembler::default();
     let matrix_assembler = CsrAssembler::default();
+
+    let source_assembler = ElementSourceAssemblerBuilder::new()
+        .with_finite_element_space(mesh)
+        // TODO: Use better quadrature
+        .with_quadrature_table(&quadrature)
+        .with_source(poisson_source_function)
+        .build();
+
+    let mut b_global = vector_assembler.assemble_vector(&source_assembler)?;
+
+    // Compare with parallel vector assembler
+    {
+        let par_b_global = VectorParAssembler::default().assemble_vector(&colors, &source_assembler)?;
+        assert_matrix_eq!(b_global, par_b_global, comp = float);
+    }
 
     let laplace_assembler = ElementEllipticAssemblerBuilder::new()
         .with_finite_element_space(mesh)
@@ -92,14 +114,11 @@ where
 
     let mut a_global = matrix_assembler.assemble(&laplace_assembler)?;
 
-    let source_assembler = ElementSourceAssemblerBuilder::new()
-        .with_finite_element_space(mesh)
-        // TODO: Use better quadrature
-        .with_quadrature_table(&quadrature)
-        .with_source(poisson_source_function)
-        .build();
-
-    let mut b_global = vector_assembler.assemble_vector(&source_assembler)?;
+    // Compare with parallel CSR assembler
+    {
+        let par_a_global = CsrParAssembler::default().assemble(&colors, &laplace_assembler)?;
+        assert_matrix_eq!(a_global, par_a_global, comp = float);
+    }
 
     // We want to have a Dirichlet boundary for |x| == 1. To account for slight numerical errors,
     // we determine the indices of the Dirichlet nodes by extracting those node indices
@@ -149,12 +168,13 @@ pub fn solve_poisson<C, D, Source>(
     u_exact_grad: impl Fn(&OPoint<f64, D>) -> OVector<f64, D>,
 ) -> PoissonSolveResult
 where
-    C: ElementConnectivity<f64, GeometryDim = D, ReferenceDim = D>,
+    C: ElementConnectivity<f64, GeometryDim = D, ReferenceDim = D> + Sync,
     D: SmallDim,
-    Source: SourceFunction<f64, D, SolutionDim = U1, Parameters = ()>,
+    Source: SourceFunction<f64, D, SolutionDim = U1, Parameters = ()> + Sync,
     // TODO: We should technically only require SmallDimAllocator<_, D>, but Rust gets type
     // inference wrong without this bound...
     DefaultAllocator: TriDimAllocator<f64, D, D, U1>,
+    <DefaultAllocator as Allocator<f64, D>>::Buffer: Sync,
 {
     let (a, b) = assemble_linear_system(&mesh, quadrature, poisson_source_function).unwrap();
     let u_h = solve_linear_system(&a, &b).unwrap();
@@ -189,12 +209,13 @@ pub fn solve_and_produce_output<C, D, Source>(
     u_exact: impl Fn(&OPoint<f64, D>) -> f64,
     u_exact_grad: impl Fn(&OPoint<f64, D>) -> OVector<f64, D>,
 ) where
-    C: VtkCellConnectivity + ElementConnectivity<f64, GeometryDim = D, ReferenceDim = D>,
+    C: VtkCellConnectivity + ElementConnectivity<f64, GeometryDim = D, ReferenceDim = D> + Sync,
     D: SmallDim,
-    Source: SourceFunction<f64, D, SolutionDim = U1, Parameters = ()>,
+    Source: SourceFunction<f64, D, SolutionDim = U1, Parameters = ()> + Sync,
     // TODO: We should technically only require SmallDimAllocator<_, D>, but Rust gets type
     // inference wrong without this bound...
     DefaultAllocator: TriDimAllocator<f64, D, D, U1>,
+    <DefaultAllocator as Allocator<f64, D>>::Buffer: Sync,
 {
     let element_name_file_component = element_name.to_ascii_lowercase();
 
