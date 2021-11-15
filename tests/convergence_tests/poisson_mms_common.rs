@@ -87,7 +87,7 @@ where
     // Node coloring for test of parallel assembler
     let colors = color_nodes(mesh);
 
-    let vector_assembler = VectorAssembler::<f64>::default();
+    let vector_assembler = VectorAssembler::default();
     let matrix_assembler = CsrAssembler::default();
 
     let source_assembler = ElementSourceAssemblerBuilder::new()
@@ -99,11 +99,9 @@ where
 
     let mut b_global = vector_assembler.assemble_vector(&source_assembler)?;
 
-    // Compare with parallel assembler
+    // Compare with parallel vector assembler
     {
-        let par_vector_assembler = VectorParAssembler::<f64>::default();
-        let mut par_b_global = DVector::zeros(b_global.len());
-        par_vector_assembler.assemble_vector_into(&mut par_b_global, &colors, &source_assembler)?;
+        let par_b_global = VectorParAssembler::default().assemble_vector(&colors, &source_assembler)?;
         assert_matrix_eq!(b_global, par_b_global, comp = float);
     }
 
@@ -116,15 +114,9 @@ where
 
     let mut a_global = matrix_assembler.assemble(&laplace_assembler)?;
 
-    // Compare with parallel assembler
+    // Compare with parallel CSR assembler
     {
-        let par_matrix_assembler = CsrParAssembler::default();
-        let pattern = par_matrix_assembler.assemble_pattern(&laplace_assembler);
-        let nnz = pattern.nnz();
-        let mut par_a_global = CsrMatrix::try_from_pattern_and_values(pattern, vec![0.0; nnz]).unwrap();
-        par_matrix_assembler
-            .assemble_into_csr(&mut par_a_global, &colors, &laplace_assembler)
-            .unwrap();
+        let par_a_global = CsrParAssembler::default().assemble(&colors, &laplace_assembler)?;
         assert_matrix_eq!(a_global, par_a_global, comp = float);
     }
 

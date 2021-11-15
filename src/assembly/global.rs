@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::collections::BTreeSet;
-use std::error::Error;
 use std::ops::AddAssign;
 
 use itertools::izip;
@@ -274,12 +273,26 @@ impl<T: Scalar + Send> CsrParAssembler<T> {
 }
 
 impl<T: RealField + Send> CsrParAssembler<T> {
+    pub fn assemble(
+        &self,
+        colors: &[DisjointSubsets],
+        element_assembler: &(impl ElementMatrixAssembler<T> + Sync),
+    ) -> eyre::Result<CsrMatrix<T>> {
+        let pattern = self.assemble_pattern(element_assembler);
+        let initial_matrix_values = vec![T::zero(); pattern.nnz()];
+        let mut matrix = CsrMatrix::try_from_pattern_and_values(pattern, initial_matrix_values)
+            .expect("CSR data must be valid by definition");
+        self.assemble_into_csr(&mut matrix, colors, element_assembler)?;
+        Ok(matrix)
+    }
+
     pub fn assemble_into_csr(
         &self,
         csr: &mut CsrMatrix<T>,
         colors: &[DisjointSubsets],
         element_assembler: &(dyn Sync + ElementMatrixAssembler<T>),
-    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+    ) -> eyre::Result<()> {
+        // -> Result<(), Box<dyn Error + Send + Sync>> {
         let sdim = element_assembler.solution_dim();
 
         for color in colors {
@@ -332,7 +345,7 @@ impl<T: RealField + Send> CsrParAssembler<T> {
 
                     Ok(())
                 })
-                .collect::<Result<(), Box<dyn Error + Send + Sync>>>()?;
+                .collect::<eyre::Result<()>>()?;
         }
 
         Ok(())
@@ -592,6 +605,17 @@ impl<T: RealField> Default for VectorParAssembler<T> {
 }
 
 impl<T: RealField> VectorParAssembler<T> {
+    pub fn assemble_vector(
+        &self,
+        colors: &[DisjointSubsets],
+        element_assembler: &(impl ElementVectorAssembler<T> + Sync),
+    ) -> eyre::Result<DVector<T>> {
+        let n = element_assembler.num_nodes();
+        let mut result = DVector::zeros(element_assembler.solution_dim() * n);
+        self.assemble_vector_into(&mut result, colors, element_assembler)?;
+        Ok(result)
+    }
+
     pub fn assemble_vector_into<'a>(
         &self,
         output: impl Into<DVectorSliceMut<'a, T>>,
@@ -608,7 +632,7 @@ impl<T: RealField> VectorParAssembler<T> {
 
             color
                 .subsets_par_iter(&mut block_adapter)
-                .for_each(|mut subset| {
+                .map(|mut subset| {
                     let ws = &mut *self.workspace.get_or_default().borrow_mut();
 
                     let element_index = subset.label();
@@ -618,9 +642,7 @@ impl<T: RealField> VectorParAssembler<T> {
                     ws.vector
                         .resize_vertically_mut(s * element_node_count, T::zero());
                     element_assembler.populate_element_nodes(&mut ws.nodes, element_index);
-                    element_assembler
-                        .assemble_element_vector_into(element_index, (&mut ws.vector).into())
-                        .unwrap();
+                    element_assembler.assemble_element_vector_into(element_index, (&mut ws.vector).into())?;
 
                     for local_node_idx in 0..element_node_count {
                         let mut block = subset.get_mut(local_node_idx);
@@ -629,7 +651,10 @@ impl<T: RealField> VectorParAssembler<T> {
                             *block.index_mut(i) += v_rows[i];
                         }
                     }
-                });
+
+                    Ok(())
+                })
+                .collect::<eyre::Result<()>>()?;
         }
 
         Ok(())
