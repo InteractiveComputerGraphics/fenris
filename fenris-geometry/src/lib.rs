@@ -47,13 +47,6 @@ where
     fn distance(&self, query_geometry: &QueryGeometry) -> T;
 }
 
-pub trait Overlaps<T, QueryGeometry>
-where
-    T: Scalar,
-{
-    fn overlaps_with(&self, query_geometry: &QueryGeometry) -> bool;
-}
-
 pub trait GeometryCollection<'a> {
     type Geometry;
 
@@ -67,18 +60,6 @@ pub trait DistanceQuery<'a, QueryGeometry>: GeometryCollection<'a> {
     //    fn k_nearest(&'a self, query_geometry: &'a QueryGeometry, k: usize) -> Self::KNearestIter;
 
     fn nearest(&'a self, query_geometry: &'a QueryGeometry) -> Option<usize>;
-}
-
-pub trait NeighborhoodQuery<'a, QueryGeometry>: GeometryCollection<'a> {
-    type NeighborsIter: Iterator<Item = usize>;
-
-    fn neighbors_within_distance(&'a self, query_geometry: &'a QueryGeometry) -> Self::NeighborsIter;
-}
-
-pub trait OverlapQuery<'a, QueryGeometry>: GeometryCollection<'a> {
-    type OverlapIter: Iterator<Item = usize>;
-
-    fn overlapping_geometries(&'a self, query_geometry: &'a QueryGeometry) -> Self::OverlapIter;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -123,7 +104,6 @@ where
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
     OVector<T, D>: Copy,
-    // <DefaultAllocator as Allocator<T, D>>::Buffer: Copy,
 {
 }
 
