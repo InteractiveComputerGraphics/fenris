@@ -64,7 +64,7 @@ pub fn solve_and_produce_output<C>(
     quadrature: QuadraturePair3d<f64>,
     error_quadrature: QuadraturePair3d<f64>,
 ) where
-    C: VtkCellConnectivity + ElementConnectivity<f64, GeometryDim = U3, ReferenceDim = U3>,
+    C: VtkCellConnectivity + ElementConnectivity<f64, GeometryDim = U3, ReferenceDim = U3> + Sync,
 {
     crate::convergence_tests::poisson_mms_common::solve_and_produce_output(
         element_name,
