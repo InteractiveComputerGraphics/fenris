@@ -143,7 +143,7 @@ where
 
 /// "Analytic polar decomposition"
 ///
-/// Translated to Rust from https://github.com/InteractiveComputerGraphics/FastCorotatedFEM/blob/351b007b6bb6e8d97f457766e9ecf9b2bced7079/FastCorotFEM.cpp#L413
+/// Translated to Rust from <https://github.com/InteractiveComputerGraphics/FastCorotatedFEM/blob/351b007b6bb6e8d97f457766e9ecf9b2bced7079/FastCorotFEM.cpp#L413>
 ///
 /// ```
 /// use fenris::util::apd;

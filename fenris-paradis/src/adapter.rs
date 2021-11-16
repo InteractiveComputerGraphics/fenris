@@ -14,8 +14,8 @@ use std::marker::PhantomData;
 /// For illustration, see the below example.
 ///
 /// ```rust
-/// use paradis::DisjointSubsets;
-/// use paradis::adapter::BlockAdapter;
+/// use fenris_paradis::DisjointSubsets;
+/// use fenris_paradis::adapter::BlockAdapter;
 /// use rayon::iter::ParallelIterator;
 ///
 /// // 7 blocks of 3

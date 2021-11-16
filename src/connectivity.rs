@@ -636,7 +636,7 @@ where
 /// Connectivity for a 3D tri-quadratic Hex element.
 ///
 /// The node ordering is the same as defined by gmsh, see
-/// [http://gmsh.info/doc/texinfo/gmsh.html#Low-order-elements] for more information.
+/// <http://gmsh.info/doc/texinfo/gmsh.html#Low-order-elements> for more information.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Hex27Connectivity(pub [usize; 27]);
 
@@ -699,7 +699,7 @@ where
 /// Connectivity for a 3D 20-node Hex element.
 ///
 /// The node ordering is the same as defined by gmsh, see
-/// [http://gmsh.info/doc/texinfo/gmsh.html#Low-order-elements] for more information.
+/// <http://gmsh.info/doc/texinfo/gmsh.html#Low-order-elements> for more information.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Hex20Connectivity(pub [usize; 20]);
 
