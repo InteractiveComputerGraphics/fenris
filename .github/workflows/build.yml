@@ -90,14 +90,14 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - name: Build tests
-        run: cargo build --tests --workspace
-      - name: Build tests (release)
-        run: cargo build --tests --workspace --release
+      - name: Build all tests (cargo build --tests --workspace --all-targets)
+        run: cargo build --tests --workspace --all-targets
+      - name: Build tests, release (cargo build --tests --workspace --all-targets --release)
+        run: cargo build --tests --workspace --all-targets --release
       - name: Run tests without convergence tests
-        run: cargo test --workspace -- --skip convergence
-      - name: Run tests without convergence tests (release)
-        run: cargo test --workspace --release -- --skip convergence
+        run: cargo test --workspace --all-targets -- --skip convergence_tests::
+      - name: Run tests without convergence tests, release
+        run: cargo test --workspace --all-targets --release -- --skip convergence_tests::
 
   cargo-test-convergence:
     
@@ -118,9 +118,9 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - name: Build tests
-        run: cargo build --tests --workspace
-      - name: Build tests (release)
-        run: cargo build --tests --workspace --release
-      - name: Run convergence tests (release)
+      - name: Build all tests (cargo build --tests --workspace --all-targets)
+        run: cargo build --tests --workspace --all-targets
+      - name: Build tests, release (cargo build --tests --workspace --all-targets --release)
+        run: cargo build --tests --workspace --all-targets --release
+      - name: Run convergence tests, release
         run: cargo test --workspace --release --test convergence
