@@ -95,9 +95,9 @@ jobs:
       - name: Build tests, release (cargo build --tests --workspace --all-targets --release)
         run: cargo build --tests --workspace --all-targets --release
       - name: Run tests without convergence tests
-        run: cargo test --workspace --all-targets -- --skip convergence_tests::
+        run: cargo test --workspace --all-targets -- --skip "convergence_tests::"
       - name: Run tests without convergence tests, release
-        run: cargo test --workspace --all-targets --release -- --skip convergence_tests::
+        run: cargo test --workspace --all-targets --release -- --skip "convergence_tests::"
 
   cargo-test-convergence:
     
