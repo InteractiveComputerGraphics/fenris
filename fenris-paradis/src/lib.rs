@@ -113,7 +113,7 @@ pub unsafe trait ParallelIndexedAccess<'record>: Sync + Send + Clone {
 /// we never access the same element from two threads.
 ///
 /// ```rust
-/// use paradis::{ParallelIndexedCollection, ParallelIndexedAccess};
+/// use fenris_paradis::{ParallelIndexedCollection, ParallelIndexedAccess};
 /// use crossbeam::scope;
 ///
 /// fn par_double_all_numbers(numbers: &mut [i32]) {

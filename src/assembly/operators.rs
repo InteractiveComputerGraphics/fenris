@@ -183,7 +183,7 @@ where
 /// that represents some energy-like quantity *per unit volume*. Typically the elliptic energy
 /// arises in applications as the total potential energy over the domain
 ///
-/// $$ E[u] := \int_{\Omega} \psi (\nabla u) \dx. $$
+/// <div>$$ E[u] := \int_{\Omega} \psi (\nabla u) \dx. $$</div>
 ///
 /// The elliptic energy is then related to the elliptic operator
 /// $g: \mathbb{R}^{d \times s} \rightarrow \mathbb{R}^{d \times s}$ by the relation
@@ -200,7 +200,7 @@ where
 ///
 /// The simplest example of an elliptic energy is the
 /// [Dirichlet energy](https://en.wikipedia.org/wiki/Dirichlet_energy)
-/// $$ E[u] = \int_{\Omega} \frac{1}{2} \| \nabla u \|^2 \dx $$
+/// <div>$$ E[u] = \int_{\Omega} \frac{1}{2} \| \nabla u \|^2 \dx $$</div>
 /// where in our framework, $ \psi (\nabla u) = \frac{1}{2} \| \nabla u \|^2$ and
 /// $g = \nabla u$, which gives the weak form associated with Laplace's equation.
 ///
