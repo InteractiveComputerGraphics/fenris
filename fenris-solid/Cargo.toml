@@ -13,7 +13,7 @@ description = "Solid mechanics functionality for fenris"
 rustdoc-args = [ "--html-in-header", "assets/doc-header.html"]
 
 [dependencies]
-fenris = { version = "^0.0.12", path = ".." }
+fenris = { version = "^0.0.13", path = ".." }
 serde = "1.0.126"
 numeric_literals = "0.2.0"
 
