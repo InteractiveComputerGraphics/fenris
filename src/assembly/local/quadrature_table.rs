@@ -101,6 +101,10 @@ where
 
         Self { points, weights, data }
     }
+
+    pub fn into_parts(self) -> (NestedVec<OPoint<T, GeometryDim>>, NestedVec<T>, NestedVec<Data>) {
+        (self.points, self.weights, self.data)
+    }
 }
 
 impl<T, GeometryDim, Data> QuadratureTable<T, GeometryDim> for GeneralQuadratureTable<T, GeometryDim, Data>
