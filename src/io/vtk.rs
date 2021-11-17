@@ -17,7 +17,7 @@ use std::convert::TryInto;
 use crate::vtkio::model::{Attributes, ByteOrder, DataArray, Piece, Version, Vtk};
 // TODO: We've currently disabled all vtkio impls, might have to re-enable/re-implement some of them in the future
 //pub use fenris_geometry::vtkio::*;
-use num::ToPrimitive;
+use num::{ToPrimitive, Zero};
 use std::fs::create_dir_all;
 use std::path::Path;
 
@@ -335,7 +335,11 @@ where
     /// # Panics
     /// Panics if the number of attribute entries is not divisible by the number of points,
     /// if there are 0 components per vector or if there are more than 3 components per vector.
-    pub fn with_point_vector_attributes(self, name: impl Into<String>, attributes: &[T]) -> Self {
+    pub fn with_point_vector_attributes<S: Scalar + Zero + ToPrimitive>(
+        self,
+        name: impl Into<String>,
+        attributes: &[S],
+    ) -> Self {
         let num_points = self.mesh.vertices().len();
 
         assert_eq!(
@@ -355,11 +359,11 @@ where
 
         for i in 0..num_points {
             for j in 0..num_components {
-                attribute_vec.push(attributes[num_components * i + j]);
+                attribute_vec.push(attributes[num_components * i + j].clone());
             }
             for _ in num_components..3 {
                 // Pad with zeros for remaining dimensions
-                attribute_vec.push(T::zero());
+                attribute_vec.push(S::zero());
             }
         }
 
@@ -382,7 +386,11 @@ where
     ///
     /// # Panics
     /// Panics if the number of attribute entries is not divisible by the number of points.
-    pub fn with_point_scalar_attributes(self, name: impl Into<String>, attributes: &[T]) -> Self {
+    pub fn with_point_scalar_attributes<S: Scalar + ToPrimitive>(
+        self,
+        name: impl Into<String>,
+        attributes: &[S],
+    ) -> Self {
         let num_points = self.mesh.vertices().len();
         assert_eq!(
             attributes.len() % num_points,
