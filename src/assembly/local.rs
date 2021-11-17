@@ -1,8 +1,8 @@
 use crate::connectivity::Connectivity;
 use crate::mesh::Mesh;
 use crate::nalgebra::allocator::Allocator;
-use crate::nalgebra::DVectorSliceMut;
 use crate::nalgebra::{DMatrixSliceMut, DefaultAllocator, DimName, Scalar};
+use crate::nalgebra::{DVector, DVectorSliceMut};
 
 mod elliptic;
 mod mass;
@@ -11,6 +11,7 @@ mod source;
 
 pub use elliptic::*;
 pub use mass::*;
+use nalgebra::{DMatrix, RealField};
 pub use quadrature_table::*;
 pub use source::*;
 
@@ -75,14 +76,76 @@ where
 
 pub trait ElementMatrixAssembler<T: Scalar>: ElementConnectivityAssembler {
     fn assemble_element_matrix_into(&self, element_index: usize, output: DMatrixSliceMut<T>) -> eyre::Result<()>;
+
+    fn assemble_element_matrix(&self, element_index: usize) -> eyre::Result<DMatrix<T>>
+    where
+        T: RealField,
+    {
+        let ndof = self.solution_dim() * self.element_node_count(element_index);
+        let mut output = DMatrix::zeros(ndof, ndof);
+        self.assemble_element_matrix_into(element_index, DMatrixSliceMut::from(&mut output))?;
+        Ok(output)
+    }
+
+    fn transform_element_matrix<Transformation>(
+        self,
+        transformation: Transformation,
+    ) -> TransformElementMatrix<Self, Transformation>
+    where
+        Self: Sized,
+        Transformation: Fn(DMatrixSliceMut<T>) -> eyre::Result<()>,
+    {
+        TransformElementMatrix {
+            transformed: self,
+            function: transformation,
+        }
+    }
 }
 
 pub trait ElementVectorAssembler<T: Scalar>: ElementConnectivityAssembler {
     fn assemble_element_vector_into(&self, element_index: usize, output: DVectorSliceMut<T>) -> eyre::Result<()>;
+
+    fn assemble_element_vector(&self, element_index: usize) -> eyre::Result<DVector<T>>
+    where
+        T: RealField,
+    {
+        let ndof = self.solution_dim() * self.element_node_count(element_index);
+        let mut output = DVector::zeros(ndof);
+        self.assemble_element_vector_into(element_index, DVectorSliceMut::from(&mut output))?;
+        Ok(output)
+    }
+
+    fn transform_element_vector<Transformation>(
+        self,
+        transformation: Transformation,
+    ) -> TransformElementVector<Self, Transformation>
+    where
+        Self: Sized,
+        Transformation: Fn(DVectorSliceMut<T>) -> eyre::Result<()>,
+    {
+        TransformElementVector {
+            transformed: self,
+            function: transformation,
+        }
+    }
 }
 
 pub trait ElementScalarAssembler<T: Scalar>: ElementConnectivityAssembler {
     fn assemble_element_scalar(&self, element_index: usize) -> eyre::Result<T>;
+
+    fn transform_element_scalar<Transformation>(
+        self,
+        transformation: Transformation,
+    ) -> TransformElementScalar<Self, Transformation>
+    where
+        Self: Sized,
+        Transformation: Fn(T) -> eyre::Result<T>,
+    {
+        TransformElementScalar {
+            transformed: self,
+            function: transformation,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -285,5 +348,176 @@ where
     ) -> eyre::Result<()> {
         let (assembler, element_offset) = self.find_assembler_and_offset_for_element_index(aggregate_element_index);
         assembler.assemble_element_matrix_into(aggregate_element_index - element_offset, output)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TransformElementScalar<Transformed, Transformation> {
+    transformed: Transformed,
+    function: Transformation,
+}
+
+#[derive(Debug, Clone)]
+pub struct TransformElementVector<Transformed, Transformation> {
+    transformed: Transformed,
+    function: Transformation,
+}
+
+#[derive(Debug, Clone)]
+pub struct TransformElementMatrix<Transformed, Transformation> {
+    transformed: Transformed,
+    function: Transformation,
+}
+
+/// Delegate "passthrough" impls to a struct field for generic transformation types
+macro_rules! delegate {
+    (impl<$delegate_type:ident, $additional_type:ident>
+     ElementConnectivityAssembler for $type:ty
+     where delegated to $self:ident.$delegate_var:ident) => {
+        impl<$delegate_type, $additional_type> ElementConnectivityAssembler for $type
+        where
+            $delegate_type: ElementConnectivityAssembler,
+        {
+            fn solution_dim(&$self) -> usize {
+                $self.$delegate_var.solution_dim()
+            }
+
+            fn num_elements(&$self) -> usize {
+                $self.$delegate_var.num_elements()
+            }
+
+            fn num_nodes(&$self) -> usize {
+                $self.$delegate_var.num_nodes()
+            }
+
+            fn element_node_count(&$self, element_index: usize) -> usize {
+                $self.$delegate_var.element_node_count(element_index)
+            }
+
+            fn populate_element_nodes(&$self, output: &mut [usize], element_index: usize) {
+                $self.$delegate_var.populate_element_nodes(output, element_index)
+            }
+        }
+    };
+    (impl<$delegate_type:ident, $additional_type:ident>
+     ElementScalarAssembler<$scalar:ident> for $type:ty
+     where delegated to $self:ident.$delegate_var:ident) => {
+        impl<$scalar, $delegate_type, $additional_type> ElementScalarAssembler<$scalar> for $type
+        where
+            T: Scalar,
+            $delegate_type: ElementScalarAssembler<$scalar>,
+        {
+            fn assemble_element_scalar(&$self, element_index: usize) -> eyre::Result<$scalar> {
+                $self.$delegate_var.assemble_element_scalar(element_index)
+            }
+        }
+    };
+    (impl<$delegate_type:ident, $additional_type:ident>
+     ElementVectorAssembler<$scalar:ident> for $type:ty
+     where delegated to $self:ident.$delegate_var:ident) => {
+        impl<$scalar, $delegate_type, $additional_type> ElementVectorAssembler<$scalar> for $type
+        where
+            T: Scalar,
+            $delegate_type: ElementVectorAssembler<$scalar>,
+        {
+            fn assemble_element_vector_into(
+                &$self,
+                element_index: usize,
+                output: DVectorSliceMut<$scalar>)
+            -> eyre::Result<()> {
+                $self.$delegate_var.assemble_element_vector_into(element_index, output)
+            }
+        }
+    };
+    (impl<$delegate_type:ident, $additional_type:ident>
+     ElementMatrixAssembler<$scalar:ident> for $type:ty
+     where delegated to $self:ident.$delegate_var:ident) => {
+        impl<$scalar, $delegate_type, $additional_type> ElementMatrixAssembler<$scalar> for $type
+        where
+            T: Scalar,
+            $delegate_type: ElementMatrixAssembler<$scalar>,
+        {
+            fn assemble_element_matrix_into(
+                &$self,
+                element_index: usize,
+                output: DMatrixSliceMut<$scalar>)
+            -> eyre::Result<()> {
+                $self.$delegate_var.assemble_element_matrix_into(element_index, output)
+            }
+        }
+    }
+}
+
+delegate!(impl<Transformed, Transformation> ElementConnectivityAssembler
+    for TransformElementScalar<Transformed, Transformation>
+    where delegated to self.transformed);
+
+delegate!(impl<Transformed, Transformation> ElementConnectivityAssembler
+    for TransformElementVector<Transformed, Transformation>
+    where delegated to self.transformed);
+
+delegate!(impl<Transformed, Transformation> ElementConnectivityAssembler
+    for TransformElementMatrix<Transformed, Transformation>
+    where delegated to self.transformed);
+
+delegate!(impl<Transformed, Transformation> ElementScalarAssembler<T>
+    for TransformElementVector<Transformed, Transformation>
+    where delegated to self.transformed);
+
+delegate!(impl<Transformed, Transformation> ElementScalarAssembler<T>
+    for TransformElementMatrix<Transformed, Transformation>
+    where delegated to self.transformed);
+
+delegate!(impl<Transformed, Transformation> ElementVectorAssembler<T>
+    for TransformElementScalar<Transformed, Transformation>
+    where delegated to self.transformed);
+
+delegate!(impl<Transformed, Transformation> ElementVectorAssembler<T>
+    for TransformElementMatrix<Transformed, Transformation>
+    where delegated to self.transformed);
+
+delegate!(impl<Transformed, Transformation> ElementMatrixAssembler<T>
+    for TransformElementScalar<Transformed, Transformation>
+    where delegated to self.transformed);
+
+delegate!(impl<Transformed, Transformation> ElementMatrixAssembler<T>
+    for TransformElementVector<Transformed, Transformation>
+    where delegated to self.transformed);
+
+impl<T, Transformed, Transformer> ElementScalarAssembler<T> for TransformElementScalar<Transformed, Transformer>
+where
+    T: Scalar,
+    Transformed: ElementScalarAssembler<T>,
+    Transformer: Fn(T) -> eyre::Result<T>,
+{
+    fn assemble_element_scalar(&self, element_index: usize) -> eyre::Result<T> {
+        let untransformed = self.transformed.assemble_element_scalar(element_index)?;
+        (self.function)(untransformed)
+    }
+}
+
+impl<T, Transformed, Transformer> ElementVectorAssembler<T> for TransformElementVector<Transformed, Transformer>
+where
+    T: Scalar,
+    Transformed: ElementVectorAssembler<T>,
+    Transformer: Fn(DVectorSliceMut<T>) -> eyre::Result<()>,
+{
+    fn assemble_element_vector_into(&self, element_index: usize, mut output: DVectorSliceMut<T>) -> eyre::Result<()> {
+        self.transformed
+            .assemble_element_vector_into(element_index, DVectorSliceMut::from(&mut output))?;
+        (self.function)(output)
+    }
+}
+
+impl<T, Transformed, Transformer> ElementMatrixAssembler<T> for TransformElementMatrix<Transformed, Transformer>
+where
+    T: Scalar,
+    Transformed: ElementMatrixAssembler<T>,
+    Transformer: Fn(DMatrixSliceMut<T>) -> eyre::Result<()>,
+{
+    fn assemble_element_matrix_into(&self, element_index: usize, mut output: DMatrixSliceMut<T>) -> eyre::Result<()> {
+        self.transformed
+            .assemble_element_matrix_into(element_index, DMatrixSliceMut::from(&mut output))?;
+        (self.function)(output)
     }
 }
