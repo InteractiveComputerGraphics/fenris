@@ -2,7 +2,8 @@ use fenris::allocators::{BiDimAllocator, SmallDimAllocator};
 use fenris::assembly::global::{compute_global_potential, CsrAssembler, VectorAssembler};
 use fenris::assembly::local::{
     assemble_element_mass_matrix, AggregateElementAssembler, ElementConnectivityAssembler,
-    ElementEllipticAssemblerBuilder, UniformQuadratureTable,
+    ElementEllipticAssemblerBuilder, ElementMatrixAssembler, ElementScalarAssembler, ElementVectorAssembler,
+    UniformQuadratureTable,
 };
 use fenris::assembly::operators::LaplaceOperator;
 use fenris::element::{Quad4d2Element, VolumetricFiniteElement};
@@ -291,4 +292,45 @@ fn aggregate_element_assembler_multibody() {
 
     assert!(top_right_block.iter().all(|&x_i| x_i == 0.0));
     assert!(bottom_left_block.iter().all(|&x_i| x_i == 0.0));
+}
+
+#[test]
+fn transform_element_scalar_vector_matrix() {
+    let mesh: QuadMesh2d<f64> = create_unit_square_uniform_quad_mesh_2d(3);
+    let qtable =
+        UniformQuadratureTable::from_quadrature_and_uniform_data(quadrature::tensor::quadrilateral_gauss(2), ());
+    let u = DVector::zeros(mesh.vertices().len());
+    let make_basic_assembler = || {
+        ElementEllipticAssemblerBuilder::new()
+            .with_operator(&LaplaceOperator)
+            .with_finite_element_space(&mesh)
+            .with_quadrature_table(&qtable)
+            .with_u(&u)
+            .build()
+    };
+    let original_assembler = make_basic_assembler();
+
+    #[rustfmt::skip]
+    // We add several layers of transformations to check that we can combine them in arbitrary order
+    let transformed_assembler = make_basic_assembler()
+        .transform_element_scalar(|s| Ok(-2.0 * s))
+        .transform_element_vector(|mut v| { v *= -1.5; Ok(()) })
+        .transform_element_matrix(|mut m| { m *= -3.0; Ok(()) })
+        .transform_element_scalar(|s| Ok(2.0 * s))
+        .transform_element_vector(|mut v| { v *= 2.0; Ok(()) })
+        .transform_element_matrix(|mut m| { m *= 2.0; Ok(()) });
+
+    for i in 0..mesh.connectivity().len() {
+        let original_scalar = original_assembler.assemble_element_scalar(i).unwrap();
+        let transformed_scalar = transformed_assembler.assemble_element_scalar(i).unwrap();
+        assert_scalar_eq!(transformed_scalar, -4.0 * original_scalar);
+
+        let original_vector = original_assembler.assemble_element_vector(i).unwrap();
+        let transformed_vector = transformed_assembler.assemble_element_vector(i).unwrap();
+        assert_matrix_eq!(transformed_vector, -3.0 * original_vector);
+
+        let original_matrix = original_assembler.assemble_element_matrix(i).unwrap();
+        let transformed_matrix = transformed_assembler.assemble_element_matrix(i).unwrap();
+        assert_matrix_eq!(transformed_matrix, -6.0 * original_matrix);
+    }
 }
