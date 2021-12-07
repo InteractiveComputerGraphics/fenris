@@ -176,6 +176,10 @@ where
         let data = vec![(); points.len()];
         Self::from_points_weights_and_data(points, weights, data)
     }
+
+    pub fn from_quadrature(quadrature: QuadraturePair<T, GeometryDim>) -> Self {
+        Self::from_quadrature_and_uniform_data(quadrature, ())
+    }
 }
 
 impl<T, GeometryDim, Data> UniformQuadratureTable<T, GeometryDim, Data>
