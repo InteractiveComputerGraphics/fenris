@@ -483,30 +483,30 @@ where
 //     }
 // }
 
-// impl<T, D, C> Mesh<T, D, C>
-// where
-//     T: Scalar,
-//     D: DimName,
-//     C: Connectivity,
-//     C::FaceConnectivity: ConnectivityMut,
-//     DefaultAllocator: Allocator<T, D>,
-// {
-//     /// Constructs a new mesh from the surface cells of the mesh.
-//     ///
-//     /// The orientation of the faces are preserved.
-//     pub fn extract_surface_mesh(&self) -> Mesh<T, D, C::FaceConnectivity> {
-//         let connectivity = self
-//             .find_boundary_faces()
-//             .into_iter()
-//             .map(|(face, _, _)| face)
-//             .collect();
-//
-//         // TODO: This is rather inefficient
-//         let new_mesh = Mesh::from_vertices_and_connectivity(self.vertices.clone(), connectivity);
-//         let cells_to_keep: Vec<_> = (0..new_mesh.connectivity().len()).collect();
-//         new_mesh.keep_cells(&cells_to_keep)
-//     }
-// }
+impl<T, D, C> Mesh<T, D, C>
+where
+    T: Scalar,
+    D: DimName,
+    C: Connectivity,
+    C::FaceConnectivity: ConnectivityMut,
+    DefaultAllocator: Allocator<T, D>,
+{
+    /// Constructs a new mesh from the surface cells of the mesh.
+    ///
+    /// The orientation of the faces are preserved.
+    pub fn extract_surface_mesh(&self) -> Mesh<T, D, C::FaceConnectivity> {
+        let connectivity = self
+            .find_boundary_faces()
+            .into_iter()
+            .map(|(face, _, _)| face)
+            .collect();
+
+        // TODO: This is rather inefficient
+        let new_mesh = Mesh::from_vertices_and_connectivity(self.vertices.clone(), connectivity);
+        let cells_to_keep: Vec<_> = (0..new_mesh.connectivity().len()).collect();
+        new_mesh.keep_cells(&cells_to_keep)
+    }
+}
 
 impl<'a, T, D, C> GeometryCollection<'a> for Mesh<T, D, C>
 where
