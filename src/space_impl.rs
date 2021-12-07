@@ -12,7 +12,6 @@ where
     T: Scalar,
     D: SmallDim,
     C: CellConnectivity<T, D> + ElementConnectivity<T, GeometryDim = D>,
-    C::ReferenceDim: SmallDim,
     DefaultAllocator: ElementConnectivityAllocator<T, C>,
 {
 }
