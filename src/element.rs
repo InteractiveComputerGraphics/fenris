@@ -176,8 +176,8 @@ where
     DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
     type Element: FiniteElement<T, GeometryDim = Self::GeometryDim, ReferenceDim = Self::ReferenceDim>;
-    type GeometryDim: DimName;
-    type ReferenceDim: DimName;
+    type GeometryDim: SmallDim;
+    type ReferenceDim: SmallDim;
 
     /// Returns the finite element associated with this connectivity.
     ///
