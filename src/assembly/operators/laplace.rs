@@ -1,6 +1,6 @@
 use crate::allocators::{BiDimAllocator, DimAllocator};
 use crate::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
-use crate::nalgebra::{DefaultAllocator, OMatrix, OVector, RealField, Vector1, U1};
+use crate::nalgebra::{DefaultAllocator, OMatrix, OVector, RealField, U1};
 use crate::{SmallDim, Symmetry};
 use numeric_literals::replace_float_literals;
 
@@ -64,7 +64,7 @@ where
         b: &OVector<T, D>,
         _data: &Self::Parameters,
     ) -> OMatrix<T, Self::SolutionDim, Self::SolutionDim> {
-        Vector1::new(a.dot(&b))
+        OVector::<T, U1>::new(a.dot(&b))
     }
 
     fn symmetry(&self) -> Symmetry {

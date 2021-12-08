@@ -13,6 +13,7 @@ pub mod connectivity;
 pub mod element;
 pub mod error;
 pub mod io;
+pub mod integrate;
 pub mod mesh;
 pub mod model;
 pub mod quadrature;

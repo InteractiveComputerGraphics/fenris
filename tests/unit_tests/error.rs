@@ -9,8 +9,7 @@ use fenris::error::{
 use fenris::mesh::procedural::create_unit_box_uniform_hex_mesh_3d;
 use fenris::nalgebra::coordinates::XYZ;
 use fenris::nalgebra::{
-    DMatrix, DVector, DVectorSlice, DimName, Dynamic, MatrixSliceMut, OMatrix, OVector, Point3, Vector1, Vector2, U3,
-    U8,
+    DVector, DVectorSlice, OVector, Point3, Vector1, Vector2, U3,
 };
 use fenris::quadrature;
 use fenris::quadrature::{Quadrature, QuadraturePair3d};
@@ -19,6 +18,7 @@ use matrixcompare::assert_scalar_eq;
 use nalgebra::{Matrix3x2, Vector3};
 use std::ops::Deref;
 use util::flatten_vertically;
+use fenris::integrate::IntegrationWorkspace;
 
 // TODO: Port this to the library proper?
 fn transform_quadrature_to_physical_domain<Element>(
@@ -65,14 +65,13 @@ fn test_element_L2_error_scalar() {
     // Use a quadrature rule with sufficient strength such that it can exactly capture the error
     // (since we compute a squared norm, we need double the polynomial degree)
     let (weights, points) = quadrature::total_order::tetrahedron(10).unwrap();
-    let mut basis_buffer = vec![3.0; 20];
     let L2_error_computed = estimate_element_L2_error(
         &element,
         |x| Vector1::new(u1_scalar(x)),
         DVectorSlice::from(&u_h_element),
         &weights,
         &points,
-        &mut basis_buffer,
+        &mut IntegrationWorkspace::default(),
     );
 
     let L2_error_expected = {
@@ -96,14 +95,13 @@ fn test_element_L2_error_vector() {
     // Use a quadrature rule with sufficient strength such that it can exactly capture the error
     // (since we compute a squared norm, we need double the polynomial degree)
     let (weights, points) = quadrature::total_order::tetrahedron(10).unwrap();
-    let mut basis_buffer = vec![3.0; 20];
     let L2_error_computed = estimate_element_L2_error(
         &element,
         u1_vector,
         DVectorSlice::from(&u_h_element),
         &weights,
         &points,
-        &mut basis_buffer,
+        &mut IntegrationWorkspace::default(),
     );
 
     let L2_error_expected = {
@@ -128,14 +126,13 @@ fn test_element_H1_seminorm_error_scalar() {
     // (since we compute a squared norm, we need double the polynomial degree of the gradient
     // polynomial order)
     let (weights, points) = quadrature::total_order::tetrahedron(8).unwrap();
-    let mut gradient_buffer = DMatrix::repeat(3, 20, 3.0).reshape_generic(U3::name(), Dynamic::new(20));
     let H1_seminorm_computed = estimate_element_H1_seminorm_error(
         &element,
         u1_scalar_grad,
         DVectorSlice::from(&u_h_element),
         &weights,
         &points,
-        MatrixSliceMut::from(&mut gradient_buffer),
+        &mut IntegrationWorkspace::default()
     );
 
     let H1_seminorm_expected = {
@@ -158,14 +155,13 @@ fn test_element_H1_seminorm_error_vector() {
     // Use a quadrature rule with sufficient strength such that it can exactly capture the error
     // (since we compute a squared norm, we need double the polynomial degree)
     let (weights, points) = quadrature::total_order::tetrahedron(10).unwrap();
-    let mut gradient_buffer = DMatrix::repeat(3, 20, 3.0).reshape_generic(U3::name(), Dynamic::new(20));
     let H1_seminorm_computed = estimate_element_H1_seminorm_error(
         &element,
         u1_vector_grad,
         DVectorSlice::from(&u_h_element),
         &weights,
         &points,
-        MatrixSliceMut::from(&mut gradient_buffer),
+        &mut IntegrationWorkspace::default()
     );
 
     let H1_seminorm_expected = {
@@ -218,14 +214,13 @@ fn test_estimate_L2_error_on_mesh() {
                 gather_global_to_local(&u_h, &mut u_h_element, conn.vertex_indices(), 2);
                 let weights = error_quadrature_weights.get(i).unwrap();
                 let points = error_quadrature_points.get(i).unwrap();
-                let mut basis_buffer = [0.0; 8];
                 estimate_element_L2_error_squared(
                     &element,
                     u_vector,
                     DVectorSlice::from(&u_h_element),
                     weights,
                     points,
-                    &mut basis_buffer,
+                    &mut IntegrationWorkspace::default(),
                 )
             })
             .sum::<f64>()
@@ -276,14 +271,13 @@ fn test_estimate_H1_seminorm_error_on_mesh() {
                 gather_global_to_local(&u_h, &mut u_h_element, conn.vertex_indices(), 2);
                 let weights = error_quadrature_weights.get(i).unwrap();
                 let points = error_quadrature_points.get(i).unwrap();
-                let mut gradient_buffer = OMatrix::<_, U3, U8>::zeros();
                 estimate_element_H1_seminorm_error_squared(
                     &element,
                     u_vector_grad,
                     DVectorSlice::from(&u_h_element),
                     weights,
                     points,
-                    MatrixSliceMut::from(&mut gradient_buffer),
+                    &mut IntegrationWorkspace::default()
                 )
             })
             .sum::<f64>()

@@ -10,6 +10,7 @@ use fenris::quadrature::Quadrature;
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
 use nalgebra::{Matrix2, Matrix3, MatrixSliceMut, Point3, Vector1};
 use std::iter::repeat;
+use fenris::integrate::IntegrationWorkspace;
 
 #[test]
 #[allow(non_snake_case)]
@@ -56,6 +57,7 @@ fn squared_norm_agrees_with_element_mass_matrix_quadratic_form_tet20() {
         .collect();
 
     let mut basis_buffer = vec![0.0; 20];
+    let mut workspace = IntegrationWorkspace::default();
 
     // Compute the squared norm of g_h as the L^2 squared error ||0 - g_h||^2
     let g_h_squared_norm = estimate_element_L2_error_squared(
@@ -64,7 +66,7 @@ fn squared_norm_agrees_with_element_mass_matrix_quadratic_form_tet20() {
         DVectorSlice::from(&g_h),
         quadrature.weights(),
         quadrature.points(),
-        &mut basis_buffer,
+        &mut workspace
     );
 
     let mut M = DMatrix::zeros(20, 20);

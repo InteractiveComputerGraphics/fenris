@@ -171,7 +171,7 @@ where
     C: ElementConnectivity<f64, GeometryDim = D, ReferenceDim = D> + Sync,
     D: SmallDim,
     Source: SourceFunction<f64, D, SolutionDim = U1, Parameters = ()> + Sync,
-    // TODO: We should technically only require SmallDimAllocator<_, D>, but Rust gets type
+    // TODO: We should technically only require DimAllocator<_, D>, but Rust gets type
     // inference wrong without this bound...
     DefaultAllocator: TriDimAllocator<f64, U1, D, D>,
     <DefaultAllocator as Allocator<f64, D>>::Buffer: Sync,
@@ -212,7 +212,7 @@ pub fn solve_and_produce_output<C, D, Source>(
     C: VtkCellConnectivity + ElementConnectivity<f64, GeometryDim = D, ReferenceDim = D> + Sync,
     D: SmallDim,
     Source: SourceFunction<f64, D, SolutionDim = U1, Parameters = ()> + Sync,
-    // TODO: We should technically only require SmallDimAllocator<_, D>, but Rust gets type
+    // TODO: We should technically only require DimAllocator<_, D>, but Rust gets type
     // inference wrong without this bound...
     DefaultAllocator: TriDimAllocator<f64, D, D, U1>,
     <DefaultAllocator as Allocator<f64, D>>::Buffer: Sync,

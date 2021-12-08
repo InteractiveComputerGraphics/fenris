@@ -19,6 +19,7 @@ use nalgebra::{
 };
 use proptest::prelude::*;
 use util::assert_approx_matrix_eq;
+use fenris::integrate::IntegrationWorkspace;
 
 #[test]
 fn map_reference_coords_quad2d() {
@@ -273,14 +274,13 @@ fn quad4_bilinear_function_exact_error() {
 
     // TODO: Use lower strength quadrature
     let (weights, points) = quadrature::total_order::quadrilateral(11).unwrap();
-    let mut basis_buffer = vec![0.0; 4];
     let error = estimate_element_L2_error(
         &element,
         |x| Vector1::new(u_exact(x)),
         MatrixSlice::from(&u_weights),
         &weights,
         &points,
-        &mut basis_buffer,
+        &mut IntegrationWorkspace::default()
     );
 
     // Note: The solution here is obtained by symbolic integration. See
@@ -314,14 +314,13 @@ fn hex27_triquadratic_function_exact_error() {
 
     // TODO: Use lower strength quadrature
     let (weights, points) = quadrature::total_order::hexahedron(11).unwrap();
-    let mut basis_buffer = vec![0.0; 27];
     let error = estimate_element_L2_error(
         &element,
         |x| Vector1::new(u_exact(x)),
         MatrixSlice::from(&u_weights),
         &weights,
         &points,
-        &mut basis_buffer,
+        &mut IntegrationWorkspace::default()
     );
 
     // Note: The solution here is obtained by symbolic integration. See
@@ -351,14 +350,13 @@ fn hex20_quadratic_function_exact_error() {
 
     // TODO: Use lower strength quadrature
     let (weights, points) = quadrature::total_order::hexahedron(11).unwrap();
-    let mut basis_buffer = vec![0.0; 20];
     let error = estimate_element_L2_error(
         &element,
         |x| Vector1::new(u_exact(x)),
         DVectorSlice::from(&u_weights),
         &weights,
         &points,
-        &mut basis_buffer,
+        &mut IntegrationWorkspace::default()
     );
 
     // Note: The solution here is obtained by symbolic integration. See
@@ -514,14 +512,13 @@ proptest! {
 
         // TODO: Use lower strength quadrature
         let (weights, points) = quadrature::total_order::triangle(5).unwrap();
-        let mut basis_buffer = vec![0.0; 3];
         let error = estimate_element_L2_error(
             &element,
             |x| Vector1::new(u_exact(x)),
             DVectorSlice::from(&u_weights),
             &weights,
             &points,
-            &mut basis_buffer);
+            &mut IntegrationWorkspace::default());
 
         assert_scalar_eq!(error, 0.0, comp=abs, tol=element.diameter() * 1e-12);
     }
@@ -537,14 +534,13 @@ proptest! {
 
         // TODO: Use lower strength quadrature
         let (weights, points) = quadrature::total_order::triangle(5).unwrap();
-        let mut basis_buffer = vec![0.0; 6];
         let error = estimate_element_L2_error(
             &element,
             |x| Vector1::new(u_exact(x)),
             DVectorSlice::from(&u_weights),
             &weights,
             &points,
-            &mut basis_buffer);
+            &mut IntegrationWorkspace::default());
 
         assert_scalar_eq!(error, 0.0, comp=abs, tol=element.diameter() * 1e-12);
     }
@@ -560,14 +556,13 @@ proptest! {
 
         // TODO: Use lower strength quadrature
         let (weights, points) = quadrature::total_order::triangle(5).unwrap();
-        let mut basis_buffer = vec![0.0; 6];
         let error = estimate_element_L2_error(
             &element,
             |x| Vector1::new(u_exact(x)),
             DVectorSlice::from(&u_weights),
             &weights,
             &points,
-            &mut basis_buffer);
+            &mut IntegrationWorkspace::default());
 
         // TODO: Check tolerance
         assert_scalar_eq!(error, 0.0, comp=abs, tol=element.diameter() * element.diameter() * 1e-12);
@@ -593,14 +588,13 @@ proptest! {
                                                     .collect::<Vec<_>>());
 
         let (weights, points) = quadrature::total_order::quadrilateral(11).unwrap();
-        let mut basis_buffer = vec![0.0; 4];
         let error = estimate_element_L2_error(
             &element,
             |x| Vector1::new(u_exact(x)),
             MatrixSlice::from(&u_weights),
             &weights,
             &points,
-            &mut basis_buffer);
+            &mut IntegrationWorkspace::default());
 
         assert_scalar_eq!(error, 0.0, comp=abs, tol=element.diameter() * 1e-12);
     }
@@ -735,13 +729,12 @@ proptest! {
                                                     .collect::<Vec<_>>());
 
         let (weights, points) = quadrature::total_order::tetrahedron(10).unwrap();
-        let mut basis_buffer = vec![0.0; 4];
         let error = estimate_element_L2_error(
             &element, |x| Vector1::new(u_exact(x)),
             MatrixSlice::from(&u_weights),
             &weights,
             &points,
-            &mut basis_buffer);
+            &mut IntegrationWorkspace::default());
 
         assert_scalar_eq!(error, 0.0, comp=abs, tol=element.diameter() * 1e-12);
     }

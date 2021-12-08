@@ -27,6 +27,7 @@ use crate::assembly::local::{
 use crate::space::{FiniteElementConnectivity, FiniteElementSpace};
 use crate::SmallDim;
 use fenris_sparse::ParallelCsrRowCollection;
+use crate::nalgebra::MatrixSlice;
 
 /// An assembler for CSR matrices.
 #[derive(Debug, Clone)]
@@ -757,7 +758,7 @@ fn add_local_to_global_<'a, T: RealField>(
 ///
 /// TODO: Move to local assembly???
 #[derive(Debug)]
-pub struct QuadratureBuffer<T, D, Data>
+pub struct QuadratureBuffer<T, D, Data=()>
 where
     T: Scalar,
     D: DimName,
@@ -813,6 +814,20 @@ where
         );
     }
 
+    pub fn populate_element_weights_and_points_from_table(
+        &mut self,
+        element_index: usize,
+        table: &(impl ?Sized + QuadratureTable<T, GeometryDim>),
+    ) {
+        let quadrature_size = table.element_quadrature_size(element_index);
+        self.resize(quadrature_size);
+        table.populate_element_quadrature(
+            element_index,
+            &mut self.quad_points,
+            &mut self.quad_weights,
+        );
+    }
+
     pub fn weights(&self) -> &[T] {
         &self.quad_weights
     }
@@ -823,6 +838,10 @@ where
 
     pub fn data(&self) -> &[Data] {
         &self.quad_data
+    }
+
+    pub fn weights_and_points(&self) -> (&[T], &[OPoint<T, GeometryDim>]) {
+        (self.weights(), self.points())
     }
 
     /// Calls a closure for each quadrature point currently in the workspace.
@@ -913,6 +932,10 @@ impl<T: RealField> BasisFunctionBuffer<T> {
 
     pub fn element_basis_values_mut(&mut self) -> &mut [T] {
         &mut self.element_basis_values
+    }
+
+    pub fn element_gradients<D: DimName>(&self) -> MatrixSlice<T, D, Dynamic> {
+        MatrixSlice::from(&self.element_basis_gradients)
     }
 
     pub fn element_gradients_mut<D: DimName>(&mut self) -> MatrixSliceMut<T, D, Dynamic> {
