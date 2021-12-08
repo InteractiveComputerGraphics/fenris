@@ -24,8 +24,11 @@ where
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
+    type Data;
+
     fn weights(&self) -> &[T];
     fn points(&self) -> &[OPoint<T, D>];
+    fn data(&self) -> &[Self::Data];
 
     /// Approximates the integral of the given function using this quadrature rule.
     fn integrate<U, Function>(&self, f: Function) -> U
@@ -63,12 +66,21 @@ where
     B: Deref<Target = [OPoint<T, D>]>,
     DefaultAllocator: Allocator<T, D>,
 {
+    type Data = ();
+
     fn weights(&self) -> &[T] {
         self.0.deref()
     }
 
     fn points(&self) -> &[OPoint<T, D>] {
         self.1.deref()
+    }
+
+    fn data(&self) -> &[()] {
+        // This may look absurd, but since we're just returning a slice to a zero-sized type (the unit type),
+        // the (global) allocator never allocates anything and most likely the whole thing will get completely
+        // optimized out
+        vec![(); self.0.len()].leak()
     }
 }
 
@@ -79,12 +91,18 @@ where
     X: Quadrature<T, D>,
     DefaultAllocator: Allocator<T, D>,
 {
+    type Data = X::Data;
+
     fn weights(&self) -> &[T] {
         X::weights(self)
     }
 
     fn points(&self) -> &[OPoint<T, D>] {
         X::points(self)
+    }
+
+    fn data(&self) -> &[Self::Data] {
+        X::data(self)
     }
 }
 
