@@ -1,5 +1,5 @@
 use eyre::eyre;
-use fenris::allocators::{SmallDimAllocator, TriDimAllocator};
+use fenris::allocators::{DimAllocator, TriDimAllocator};
 use fenris::assembly::global::{
     apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, color_nodes, CsrAssembler, CsrParAssembler,
     VectorAssembler, VectorParAssembler,
@@ -74,7 +74,7 @@ where
     D: SmallDim,
     C: ElementConnectivity<f64, GeometryDim = D, ReferenceDim = D> + Sync,
     Source: SourceFunction<f64, D, SolutionDim = U1, Parameters = ()> + Sync,
-    DefaultAllocator: SmallDimAllocator<f64, D>,
+    DefaultAllocator: DimAllocator<f64, D>,
     <DefaultAllocator as Allocator<f64, D>>::Buffer: Sync,
 {
     let (weights, points) = quadrature;

@@ -19,7 +19,7 @@ use fenris_paradis::coloring::sequential_greedy_coloring;
 use fenris_paradis::DisjointSubsets;
 use nalgebra_sparse::{pattern::SparsityPattern, CsrMatrix};
 
-use crate::allocators::{BiDimAllocator, SmallDimAllocator};
+use crate::allocators::{BiDimAllocator, DimAllocator};
 use crate::assembly::local::{
     ElementConnectivityAssembler, ElementMatrixAssembler, ElementScalarAssembler, ElementVectorAssembler,
     QuadratureTable,
@@ -788,7 +788,7 @@ where
     T: RealField,
     GeometryDim: SmallDim,
     Data: Default + Clone,
-    DefaultAllocator: SmallDimAllocator<T, GeometryDim>,
+    DefaultAllocator: DimAllocator<T, GeometryDim>,
 {
     /// Resizes the internal buffer storages to the given size.
     pub fn resize(&mut self, quadrature_size: usize) {

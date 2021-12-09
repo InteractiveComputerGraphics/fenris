@@ -1,5 +1,5 @@
 //! Solid mechanics functionality for `fenris`.
-use fenris::allocators::SmallDimAllocator;
+use fenris::allocators::DimAllocator;
 use fenris::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
 use fenris::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, OMatrix, OVector, RealField};
 use fenris::{SmallDim, Symmetry};
@@ -14,7 +14,7 @@ pub trait HyperelasticMaterial<T, GeometryDim>
 where
     T: RealField,
     GeometryDim: DimName,
-    DefaultAllocator: SmallDimAllocator<T, GeometryDim>,
+    DefaultAllocator: DimAllocator<T, GeometryDim>,
 {
     type Parameters: Clone + Default + 'static;
 
@@ -145,7 +145,7 @@ pub fn compute_batch_contraction<T, GeometryDim>(
 ) where
     T: RealField,
     GeometryDim: DimName,
-    DefaultAllocator: SmallDimAllocator<T, GeometryDim>,
+    DefaultAllocator: DimAllocator<T, GeometryDim>,
 {
     // Note: This implementation is just an adaptation of the default impl
     // of EllipticContraction::accumulate_contractions_into
@@ -212,7 +212,7 @@ where
     T: RealField,
     GeometryDim: SmallDim,
     Material: HyperelasticMaterial<T, GeometryDim>,
-    DefaultAllocator: SmallDimAllocator<T, GeometryDim>,
+    DefaultAllocator: DimAllocator<T, GeometryDim>,
 {
     type SolutionDim = GeometryDim;
     type Parameters = Material::Parameters;
@@ -223,7 +223,7 @@ where
     T: RealField,
     GeometryDim: SmallDim,
     Material: HyperelasticMaterial<T, GeometryDim>,
-    DefaultAllocator: SmallDimAllocator<T, GeometryDim>,
+    DefaultAllocator: DimAllocator<T, GeometryDim>,
 {
     fn compute_energy(&self, u_grad: &OMatrix<T, GeometryDim, GeometryDim>, parameters: &Self::Parameters) -> T {
         let f = u_grad.transpose() + OMatrix::<T, GeometryDim, GeometryDim>::identity();
@@ -236,7 +236,7 @@ where
     T: RealField,
     GeometryDim: SmallDim,
     Material: HyperelasticMaterial<T, GeometryDim>,
-    DefaultAllocator: SmallDimAllocator<T, GeometryDim>,
+    DefaultAllocator: DimAllocator<T, GeometryDim>,
 {
     fn compute_elliptic_operator(
         &self,
@@ -254,7 +254,7 @@ where
     T: RealField,
     GeometryDim: SmallDim,
     Material: HyperelasticMaterial<T, GeometryDim>,
-    DefaultAllocator: SmallDimAllocator<T, GeometryDim>,
+    DefaultAllocator: DimAllocator<T, GeometryDim>,
 {
     fn contract(
         &self,

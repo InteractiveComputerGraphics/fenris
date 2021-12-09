@@ -1,6 +1,4 @@
-use crate::allocators::{
-    BiDimAllocator, FiniteElementAllocator, ReferenceFiniteElementAllocator, VolumeFiniteElementAllocator,
-};
+use crate::allocators::{BiDimAllocator, DimAllocator};
 use crate::connectivity::Connectivity;
 use crate::nalgebra::MatrixSliceMut;
 use crate::SmallDim;
@@ -28,7 +26,7 @@ pub use triangle::*;
 pub trait ReferenceFiniteElement<T>
 where
     T: Scalar,
-    DefaultAllocator: ReferenceFiniteElementAllocator<T, Self::ReferenceDim>,
+    DefaultAllocator: DimAllocator<T, Self::ReferenceDim>,
 {
     type ReferenceDim: SmallDim;
 
@@ -63,7 +61,7 @@ where
 pub trait FixedNodesReferenceFiniteElement<T>
 where
     T: Scalar,
-    DefaultAllocator: ReferenceFiniteElementAllocator<T, Self::ReferenceDim>
+    DefaultAllocator: DimAllocator<T, Self::ReferenceDim>
         + Allocator<T, U1, Self::NodalDim>
         + Allocator<T, Self::ReferenceDim, Self::NodalDim>,
 {
@@ -146,7 +144,7 @@ impl_reference_finite_element_for_fixed!(Tet20Element<T>);
 pub trait FiniteElement<T>: ReferenceFiniteElement<T>
 where
     T: Scalar,
-    DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
+    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
     type GeometryDim: SmallDim;
 
@@ -173,7 +171,7 @@ where
 pub trait ElementConnectivity<T>: Debug + Connectivity
 where
     T: Scalar,
-    DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
+    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
     type Element: FiniteElement<T, GeometryDim = Self::GeometryDim, ReferenceDim = Self::ReferenceDim>;
     type GeometryDim: SmallDim;
@@ -208,7 +206,7 @@ where
 pub trait VolumetricFiniteElement<T>: FiniteElement<T, ReferenceDim = <Self as FiniteElement<T>>::GeometryDim>
 where
     T: Scalar,
-    DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
+    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
 }
 
@@ -216,14 +214,14 @@ impl<T, E> VolumetricFiniteElement<T> for E
 where
     T: Scalar,
     E: FiniteElement<T, ReferenceDim = <Self as FiniteElement<T>>::GeometryDim>,
-    DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
+    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
 }
 
 pub trait SurfaceFiniteElement<T>: FiniteElement<T>
 where
     T: Scalar,
-    DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
+    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
     /// Compute the normal at the point associated with the provided reference coordinate.
     fn normal(&self, xi: &OPoint<T, Self::ReferenceDim>) -> OVector<T, Self::GeometryDim>;
@@ -308,7 +306,7 @@ where
     T: RealField,
     Element: FiniteElement<T, GeometryDim = GeometryDim, ReferenceDim = GeometryDim>,
     GeometryDim: DimName + DimMin<GeometryDim, Output = GeometryDim>,
-    DefaultAllocator: VolumeFiniteElementAllocator<T, GeometryDim>,
+    DefaultAllocator: DimAllocator<T, GeometryDim>,
 {
     use fenris_optimize::calculus::VectorFunctionBuilder;
     use fenris_optimize::newton::newton;
@@ -398,7 +396,7 @@ where
     T: RealField,
     Element: FiniteElement<T>,
     Element::ReferenceDim: DimName + DimMin<Element::ReferenceDim, Output = Element::ReferenceDim>,
-    DefaultAllocator: FiniteElementAllocator<T, Element::GeometryDim, Element::ReferenceDim>,
+    DefaultAllocator: BiDimAllocator<T, Element::GeometryDim, Element::ReferenceDim>,
 {
     assert!(
         Element::ReferenceDim::dim() <= Element::GeometryDim::dim(),

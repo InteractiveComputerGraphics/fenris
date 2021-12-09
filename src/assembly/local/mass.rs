@@ -1,4 +1,4 @@
-use crate::allocators::SmallDimAllocator;
+use crate::allocators::DimAllocator;
 use crate::assembly::global::{BasisFunctionBuffer, QuadratureBuffer};
 use crate::assembly::local::{ElementConnectivityAssembler, ElementMatrixAssembler, QuadratureTable};
 use crate::element::{ReferenceFiniteElement, VolumetricFiniteElement};
@@ -110,7 +110,7 @@ where
 #[derive(Debug)]
 struct MassAssemblerWorkspace<T: Scalar, D: DimName>
 where
-    DefaultAllocator: SmallDimAllocator<T, D>,
+    DefaultAllocator: DimAllocator<T, D>,
 {
     quadrature_buffer: QuadratureBuffer<T, D, Density<T>>,
     basis_buffer: BasisFunctionBuffer<T>,
@@ -118,7 +118,7 @@ where
 
 impl<T: RealField, D: DimName> Default for MassAssemblerWorkspace<T, D>
 where
-    DefaultAllocator: SmallDimAllocator<T, D>,
+    DefaultAllocator: DimAllocator<T, D>,
 {
     fn default() -> Self {
         Self {
@@ -133,7 +133,7 @@ where
     T: RealField,
     Space: VolumetricFiniteElementSpace<T>,
     QTable: QuadratureTable<T, Space::GeometryDim, Data = Density<T>>,
-    DefaultAllocator: SmallDimAllocator<T, Space::GeometryDim>,
+    DefaultAllocator: DimAllocator<T, Space::GeometryDim>,
 {
     fn assemble_element_matrix_into(&self, element_index: usize, output: DMatrixSliceMut<T>) -> eyre::Result<()> {
         with_thread_local_workspace(&WORKSPACE, |ws: &mut MassAssemblerWorkspace<T, Space::GeometryDim>| {
@@ -201,7 +201,7 @@ where
     T: RealField,
     // We only support volumetric elements atm
     Element: VolumetricFiniteElement<T>,
-    DefaultAllocator: SmallDimAllocator<T, Element::GeometryDim>,
+    DefaultAllocator: DimAllocator<T, Element::GeometryDim>,
 {
     assert_eq!(quadrature_weights.len(), quadrature_points.len());
     assert_eq!(quadrature_points.len(), quadrature_density.len());

@@ -1,4 +1,4 @@
-use crate::allocators::FiniteElementAllocator;
+use crate::allocators::BiDimAllocator;
 use crate::geometry::DistanceQuery;
 use crate::space::GeometricFiniteElementSpace;
 use nalgebra::allocator::Allocator;
@@ -104,7 +104,7 @@ impl<T> FiniteElementInterpolator<T> {
         T: RealField,
         D: DimName + DimMin<D, Output = D>,
         Space: GeometricFiniteElementSpace<'a, T, GeometryDim = D> + DistanceQuery<'a, OPoint<T, D>>,
-        DefaultAllocator: FiniteElementAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
+        DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
     {
         todo!("Reimplement this function or scrap it in favor of a different design?");
         // let mut supported_node_offsets = Vec::new();

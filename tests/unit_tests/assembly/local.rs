@@ -1,4 +1,4 @@
-use fenris::allocators::{BiDimAllocator, SmallDimAllocator};
+use fenris::allocators::{BiDimAllocator, DimAllocator};
 use fenris::assembly::global::{compute_global_potential, CsrAssembler, VectorAssembler};
 use fenris::assembly::local::{
     assemble_element_mass_matrix, AggregateElementAssembler, ElementConnectivityAssembler,
@@ -72,7 +72,7 @@ fn analytic_comparison_of_element_mass_matrix_for_reference_element() {
 fn density<D>(x: &OPoint<f64, D>) -> f64
 where
     D: DimName,
-    DefaultAllocator: SmallDimAllocator<f64, D>,
+    DefaultAllocator: DimAllocator<f64, D>,
 {
     x.coords.norm_squared()
 }
@@ -85,7 +85,7 @@ fn construct_quadrature_rule_for_element<Element>(
 ) -> QuadraturePair<f64, Element::GeometryDim>
 where
     Element: VolumetricFiniteElement<f64>,
-    DefaultAllocator: SmallDimAllocator<f64, Element::GeometryDim>,
+    DefaultAllocator: DimAllocator<f64, Element::GeometryDim>,
 {
     // Construct a quadrature rule for this particular element
     let (weights, points) = reference_rule;
@@ -123,7 +123,7 @@ fn evaluate_density_at_quadrature_points<Element>(
 ) -> Vec<f64>
 where
     Element: VolumetricFiniteElement<f64>,
-    DefaultAllocator: SmallDimAllocator<f64, Element::GeometryDim>,
+    DefaultAllocator: DimAllocator<f64, Element::GeometryDim>,
 {
     points
         .iter()

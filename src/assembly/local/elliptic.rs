@@ -1,4 +1,4 @@
-use crate::allocators::{BiDimAllocator, SmallDimAllocator, TriDimAllocator};
+use crate::allocators::{BiDimAllocator, DimAllocator, TriDimAllocator};
 use crate::assembly::global::{gather_global_to_local, BasisFunctionBuffer, QuadratureBuffer};
 use crate::assembly::local::{
     ElementConnectivityAssembler, ElementMatrixAssembler, ElementScalarAssembler, ElementVectorAssembler,
@@ -162,7 +162,7 @@ where
     Space: VolumetricFiniteElementSpace<T>,
     Op: Operator<T, Space::GeometryDim>,
     QTable: ?Sized,
-    DefaultAllocator: SmallDimAllocator<T, Space::GeometryDim>,
+    DefaultAllocator: DimAllocator<T, Space::GeometryDim>,
 {
     fn solution_dim(&self) -> usize {
         Op::SolutionDim::dim()

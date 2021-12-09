@@ -1,5 +1,5 @@
 use crate::{compute_batch_contraction, HyperelasticMaterial};
-use fenris::allocators::SmallDimAllocator;
+use fenris::allocators::DimAllocator;
 use fenris::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, OMatrix, OVector, RealField};
 use fenris::SmallDim;
 use numeric_literals::replace_float_literals;
@@ -72,7 +72,7 @@ fn infinitesimal_strain_tensor<T, D>(deformation_gradient: &OMatrix<T, D, D>) ->
 where
     T: RealField,
     D: DimName,
-    DefaultAllocator: SmallDimAllocator<T, D>,
+    DefaultAllocator: DimAllocator<T, D>,
 {
     let F = deformation_gradient;
     F.symmetric_part() - OMatrix::<T, D, D>::identity()
@@ -84,7 +84,7 @@ impl<T, D> HyperelasticMaterial<T, D> for LinearElasticMaterial
 where
     T: RealField,
     D: DimName,
-    DefaultAllocator: SmallDimAllocator<T, D>,
+    DefaultAllocator: DimAllocator<T, D>,
 {
     type Parameters = LameParameters<T>;
 
@@ -237,7 +237,7 @@ impl<T, D> HyperelasticMaterial<T, D> for NeoHookeanMaterial
 where
     T: RealField,
     D: SmallDim,
-    DefaultAllocator: SmallDimAllocator<T, D>,
+    DefaultAllocator: DimAllocator<T, D>,
 {
     type Parameters = LameParameters<T>;
 
@@ -375,7 +375,7 @@ fn green_strain_tensor<T, D>(deformation_gradient: &OMatrix<T, D, D>) -> OMatrix
 where
     T: RealField,
     D: DimName,
-    DefaultAllocator: SmallDimAllocator<T, D>,
+    DefaultAllocator: DimAllocator<T, D>,
 {
     let I = &OMatrix::<T, D, D>::identity();
     let F = deformation_gradient;
@@ -388,7 +388,7 @@ impl<T, D> HyperelasticMaterial<T, D> for StVKMaterial
 where
     T: RealField,
     D: DimName,
-    DefaultAllocator: SmallDimAllocator<T, D>,
+    DefaultAllocator: DimAllocator<T, D>,
 {
     type Parameters = LameParameters<T>;
 

@@ -1,4 +1,4 @@
-use crate::allocators::{BiDimAllocator, SmallDimAllocator, TriDimAllocator};
+use crate::allocators::{BiDimAllocator, DimAllocator, TriDimAllocator};
 use crate::assembly::global::{BasisFunctionBuffer, QuadratureBuffer};
 use crate::assembly::local::{ElementConnectivityAssembler, ElementVectorAssembler, QuadratureTable};
 use crate::assembly::operators::Operator;
@@ -138,7 +138,7 @@ struct SourceTermWorkspace<T, D, Data>
 where
     T: Scalar,
     D: SmallDim,
-    DefaultAllocator: SmallDimAllocator<T, D>,
+    DefaultAllocator: DimAllocator<T, D>,
 {
     quadrature_buffer: QuadratureBuffer<T, D, Data>,
     basis_buffer: BasisFunctionBuffer<T>,
@@ -148,7 +148,7 @@ impl<T, D, Data> Default for SourceTermWorkspace<T, D, Data>
 where
     T: RealField,
     D: SmallDim,
-    DefaultAllocator: SmallDimAllocator<T, D>,
+    DefaultAllocator: DimAllocator<T, D>,
 {
     fn default() -> Self {
         Self {

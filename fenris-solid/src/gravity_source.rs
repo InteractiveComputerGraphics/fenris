@@ -1,4 +1,4 @@
-use fenris::allocators::SmallDimAllocator;
+use fenris::allocators::DimAllocator;
 use fenris::assembly::local::{Density, SourceFunction};
 use fenris::assembly::operators::Operator;
 use fenris::nalgebra::{DefaultAllocator, OPoint, OVector, RealField, Scalar};
@@ -24,7 +24,7 @@ pub struct GravitySource<T, D>
 where
     T: Scalar,
     D: SmallDim,
-    DefaultAllocator: SmallDimAllocator<T, D>,
+    DefaultAllocator: DimAllocator<T, D>,
 {
     gravitational_acceleration: OVector<T, D>,
 }
@@ -33,7 +33,7 @@ impl<T, D> GravitySource<T, D>
 where
     T: Scalar,
     D: SmallDim,
-    DefaultAllocator: SmallDimAllocator<T, D>,
+    DefaultAllocator: DimAllocator<T, D>,
 {
     pub fn from_acceleration(gravitational_acceleration: OVector<T, D>) -> Self {
         Self {
@@ -46,7 +46,7 @@ impl<T, D> Operator<T, D> for GravitySource<T, D>
 where
     T: RealField,
     D: SmallDim,
-    DefaultAllocator: SmallDimAllocator<T, D>,
+    DefaultAllocator: DimAllocator<T, D>,
 {
     /// Solution dimension is the same as the spatial dimension.
     type SolutionDim = D;
@@ -58,7 +58,7 @@ impl<T, D> SourceFunction<T, D> for GravitySource<T, D>
 where
     T: RealField,
     D: SmallDim,
-    DefaultAllocator: SmallDimAllocator<T, D>,
+    DefaultAllocator: DimAllocator<T, D>,
 {
     fn evaluate(&self, _coords: &OPoint<T, D>, Density(density): &Self::Parameters) -> OVector<T, Self::SolutionDim> {
         &self.gravitational_acceleration * density.clone()
