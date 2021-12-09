@@ -30,7 +30,7 @@ where
     T: RealField,
     Element: VolumetricFiniteElement<T>,
     SolutionDim: SmallDim,
-    DefaultAllocator: TriDimAllocator<T, Element::GeometryDim, Element::ReferenceDim, SolutionDim>,
+    DefaultAllocator: TriDimAllocator<T, SolutionDim, Element::GeometryDim, Element::ReferenceDim>,
 {
     let n = element.num_nodes();
     assert_eq!(u_h_element.len(), n * SolutionDim::dim());
@@ -71,7 +71,7 @@ where
     T: RealField,
     Element: VolumetricFiniteElement<T>,
     SolutionDim: SmallDim,
-    DefaultAllocator: TriDimAllocator<T, Element::GeometryDim, Element::ReferenceDim, SolutionDim>,
+    DefaultAllocator: TriDimAllocator<T, SolutionDim, Element::GeometryDim, Element::ReferenceDim>,
 {
     let n = element.num_nodes();
     assert_eq!(u_h_element.len(), n * SolutionDim::dim());
@@ -121,7 +121,7 @@ where
     T: RealField,
     Element: VolumetricFiniteElement<T>,
     SolutionDim: SmallDim,
-    DefaultAllocator: TriDimAllocator<T, Element::GeometryDim, Element::ReferenceDim, SolutionDim>,
+    DefaultAllocator: TriDimAllocator<T, SolutionDim, Element::GeometryDim, Element::ReferenceDim>,
 {
     estimate_element_H1_seminorm_error_squared(
         element,
@@ -154,7 +154,7 @@ where
     T: RealField,
     Element: VolumetricFiniteElement<T>,
     SolutionDim: SmallDim,
-    DefaultAllocator: TriDimAllocator<T, Element::GeometryDim, Element::ReferenceDim, SolutionDim>,
+    DefaultAllocator: TriDimAllocator<T, SolutionDim, Element::GeometryDim, Element::ReferenceDim>,
 {
     estimate_element_L2_error_squared(
         element,
@@ -206,7 +206,7 @@ where
     SolutionDim: SmallDim,
     Space: VolumetricFiniteElementSpace<T>,
     QTable: QuadratureTable<T, Space::ReferenceDim>,
-    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>,
+    DefaultAllocator: TriDimAllocator<T, SolutionDim, Space::GeometryDim, Space::ReferenceDim>,
 {
     let u_h = u_h.into();
     let s = SolutionDim::dim();
@@ -253,7 +253,7 @@ where
     SolutionDim: SmallDim,
     Space: VolumetricFiniteElementSpace<T>,
     QTable: QuadratureTable<T, Space::ReferenceDim>,
-    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>,
+    DefaultAllocator: TriDimAllocator<T, SolutionDim, Space::GeometryDim, Space::ReferenceDim>,
 {
     Ok(estimate_L2_error_squared(space, u, u_h, qtable)?.sqrt())
 }
@@ -272,7 +272,7 @@ where
     SolutionDim: SmallDim,
     Space: VolumetricFiniteElementSpace<T>,
     QTable: QuadratureTable<T, Space::ReferenceDim>,
-    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>,
+    DefaultAllocator: TriDimAllocator<T, SolutionDim, Space::GeometryDim, Space::ReferenceDim>,
 {
     let u_h = u_h.into();
     let s = SolutionDim::dim();
@@ -319,7 +319,7 @@ where
     SolutionDim: SmallDim,
     Space: VolumetricFiniteElementSpace<T>,
     QTable: QuadratureTable<T, Space::ReferenceDim>,
-    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>,
+    DefaultAllocator: TriDimAllocator<T, SolutionDim, Space::GeometryDim, Space::ReferenceDim>,
 {
     estimate_H1_seminorm_error_squared(space, u_grad, u_h, qtable).map(|err2| err2.sqrt())
 }

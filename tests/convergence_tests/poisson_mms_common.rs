@@ -173,7 +173,7 @@ where
     Source: SourceFunction<f64, D, SolutionDim = U1, Parameters = ()> + Sync,
     // TODO: We should technically only require SmallDimAllocator<_, D>, but Rust gets type
     // inference wrong without this bound...
-    DefaultAllocator: TriDimAllocator<f64, D, D, U1>,
+    DefaultAllocator: TriDimAllocator<f64, U1, D, D>,
     <DefaultAllocator as Allocator<f64, D>>::Buffer: Sync,
 {
     let (a, b) = assemble_linear_system(&mesh, quadrature, poisson_source_function).unwrap();

@@ -30,7 +30,7 @@ where
     T: RealField,
     SolutionDim: DimName,
     GeometryDim: DimName,
-    DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>,
+    DefaultAllocator: BiDimAllocator<T, SolutionDim, GeometryDim>,
 {
     let phi_grad_ref = phi_grad_ref.into();
     let u = u.into();
@@ -220,7 +220,7 @@ where
     Space: VolumetricFiniteElementSpace<T>,
     Op: EllipticEnergy<T, Space::ReferenceDim>,
     QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters> + ?Sized,
-    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Op::SolutionDim>,
+    DefaultAllocator: TriDimAllocator<T, Op::SolutionDim, Space::GeometryDim, Space::ReferenceDim>,
 {
     fn assemble_element_scalar(&self, element_index: usize) -> eyre::Result<T> {
         let s = self.solution_dim();
@@ -259,7 +259,7 @@ where
     Space: VolumetricFiniteElementSpace<T>,
     Op: EllipticOperator<T, Space::ReferenceDim>,
     QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters> + ?Sized,
-    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Op::SolutionDim>,
+    DefaultAllocator: TriDimAllocator<T, Op::SolutionDim, Space::GeometryDim, Space::ReferenceDim>,
 {
     #[allow(non_snake_case)]
     fn assemble_element_vector_into(&self, element_index: usize, output: DVectorSliceMut<T>) -> eyre::Result<()> {
@@ -301,7 +301,7 @@ where
     Space: VolumetricFiniteElementSpace<T>,
     Op: EllipticContraction<T, Space::ReferenceDim>,
     QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters> + ?Sized,
-    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Op::SolutionDim>,
+    DefaultAllocator: TriDimAllocator<T, Op::SolutionDim, Space::GeometryDim, Space::ReferenceDim>,
 {
     #[allow(non_snake_case)]
     fn assemble_element_matrix_into(&self, element_index: usize, output: DMatrixSliceMut<T>) -> eyre::Result<()> {
@@ -372,7 +372,7 @@ where
     // We only support volumetric elements atm
     Element: VolumetricFiniteElement<T>,
     Contraction: EllipticContraction<T, Element::GeometryDim>,
-    DefaultAllocator: BiDimAllocator<T, Element::GeometryDim, Contraction::SolutionDim>,
+    DefaultAllocator: BiDimAllocator<T, Contraction::SolutionDim, Element::GeometryDim>,
 {
     assert_eq!(quadrature_weights.len(), quadrature_points.len());
     assert_eq!(quadrature_points.len(), quadrature_data.len());
@@ -468,7 +468,7 @@ where
     // We only support volumetric elements atm
     Element: VolumetricFiniteElement<T>,
     Operator: EllipticOperator<T, Element::GeometryDim>,
-    DefaultAllocator: BiDimAllocator<T, Element::GeometryDim, Operator::SolutionDim>,
+    DefaultAllocator: BiDimAllocator<T, Operator::SolutionDim, Element::GeometryDim>,
 {
     assert_eq!(quadrature_weights.len(), quadrature_points.len());
     assert_eq!(quadrature_points.len(), quadrature_data.len());
@@ -562,7 +562,7 @@ where
     // We only support volumetric elements atm
     Element: VolumetricFiniteElement<T>,
     Operator: EllipticEnergy<T, Element::GeometryDim>,
-    DefaultAllocator: BiDimAllocator<T, Element::GeometryDim, Operator::SolutionDim>,
+    DefaultAllocator: BiDimAllocator<T, Operator::SolutionDim, Element::GeometryDim>,
 {
     let s = Operator::SolutionDim::dim();
     let n = element.num_nodes();
