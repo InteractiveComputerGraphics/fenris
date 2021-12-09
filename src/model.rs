@@ -1,9 +1,9 @@
+use crate::allocators::BiDimAllocator;
 use crate::geometry::DistanceQuery;
 use crate::space::GeometricFiniteElementSpace;
 use nalgebra::allocator::Allocator;
 use nalgebra::{DVector, DefaultAllocator, DimMin, DimName, OPoint, OVector, RealField, U1};
 use serde::{Deserialize, Serialize};
-use crate::allocators::BiDimAllocator;
 
 /// Interpolates solution variables onto a fixed set of interpolation points.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

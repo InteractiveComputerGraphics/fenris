@@ -21,7 +21,6 @@ where
 {
 }
 
-
 /// An allocator for a single dimension.
 pub trait DimAllocator<T: Scalar, D: DimName>:
 Allocator<T, D> + Allocator<T, D, D> + Allocator<T, U1, D>

@@ -1,4 +1,4 @@
-use crate::allocators::{BiDimAllocator};
+use crate::allocators::BiDimAllocator;
 use crate::element::{FiniteElement, ReferenceFiniteElement};
 use crate::geometry::GeometryCollection;
 use crate::nalgebra::{Dynamic, MatrixSliceMut, OMatrix};
