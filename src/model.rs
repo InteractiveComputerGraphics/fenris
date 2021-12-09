@@ -1,9 +1,9 @@
-use crate::allocators::FiniteElementAllocator;
 use crate::geometry::DistanceQuery;
 use crate::space::GeometricFiniteElementSpace;
 use nalgebra::allocator::Allocator;
 use nalgebra::{DVector, DefaultAllocator, DimMin, DimName, OPoint, OVector, RealField, U1};
 use serde::{Deserialize, Serialize};
+use crate::allocators::BiDimAllocator;
 
 /// Interpolates solution variables onto a fixed set of interpolation points.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -104,7 +104,7 @@ impl<T> FiniteElementInterpolator<T> {
         T: RealField,
         D: DimName + DimMin<D, Output = D>,
         Space: GeometricFiniteElementSpace<'a, T, GeometryDim = D> + DistanceQuery<'a, OPoint<T, D>>,
-        DefaultAllocator: FiniteElementAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
+        DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
     {
         todo!("Reimplement this function or scrap it in favor of a different design?");
         // let mut supported_node_offsets = Vec::new();

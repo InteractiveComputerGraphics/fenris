@@ -1,4 +1,4 @@
-use crate::allocators::FiniteElementAllocator;
+use crate::allocators::{BiDimAllocator};
 use crate::element::{FiniteElement, ReferenceFiniteElement};
 use crate::geometry::GeometryCollection;
 use crate::nalgebra::{Dynamic, MatrixSliceMut, OMatrix};
@@ -19,7 +19,7 @@ pub trait FiniteElementConnectivity {
 /// The "new" FiniteElementSpace trait. Currently playground for new design
 pub trait FiniteElementSpace<T: Scalar>: FiniteElementConnectivity
 where
-    DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
+    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
     type GeometryDim: SmallDim;
     type ReferenceDim: SmallDim;
@@ -67,7 +67,7 @@ pub trait VolumetricFiniteElementSpace<T>:
     FiniteElementSpace<T, GeometryDim = <Self as FiniteElementSpace<T>>::ReferenceDim>
 where
     T: Scalar,
-    DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
+    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
 }
 
@@ -75,7 +75,7 @@ impl<T, S> VolumetricFiniteElementSpace<T> for S
 where
     T: Scalar,
     S: FiniteElementSpace<T, GeometryDim = <Self as FiniteElementSpace<T>>::ReferenceDim>,
-    DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
+    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
 }
 
@@ -87,7 +87,7 @@ where
 pub trait GeometricFiniteElementSpace<'a, T>: FiniteElementSpace<T> + GeometryCollection<'a>
 where
     T: Scalar,
-    DefaultAllocator: FiniteElementAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
+    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
 }
 
@@ -109,7 +109,7 @@ impl<'a, T, Space> ReferenceFiniteElement<T> for ElementInSpace<'a, Space>
 where
     T: Scalar,
     Space: FiniteElementSpace<T>,
-    DefaultAllocator: FiniteElementAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
+    DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
 {
     type ReferenceDim = Space::ReferenceDim;
 
@@ -136,7 +136,7 @@ impl<'a, T, Space> FiniteElement<T> for ElementInSpace<'a, Space>
 where
     T: Scalar,
     Space: FiniteElementSpace<T>,
-    DefaultAllocator: FiniteElementAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
+    DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
 {
     type GeometryDim = Space::GeometryDim;
 
