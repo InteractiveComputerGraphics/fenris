@@ -1,4 +1,4 @@
-use crate::allocators::{BiDimAllocator, SmallDimAllocator};
+use crate::allocators::{BiDimAllocator, DimAllocator};
 use crate::connectivity::Connectivity;
 use crate::nalgebra::MatrixSliceMut;
 use crate::SmallDim;
@@ -26,7 +26,7 @@ pub use triangle::*;
 pub trait ReferenceFiniteElement<T>
 where
     T: Scalar,
-    DefaultAllocator: SmallDimAllocator<T, Self::ReferenceDim>,
+    DefaultAllocator: DimAllocator<T, Self::ReferenceDim>,
 {
     type ReferenceDim: SmallDim;
 
@@ -61,7 +61,7 @@ where
 pub trait FixedNodesReferenceFiniteElement<T>
 where
     T: Scalar,
-    DefaultAllocator: SmallDimAllocator<T, Self::ReferenceDim>
+    DefaultAllocator: DimAllocator<T, Self::ReferenceDim>
         + Allocator<T, U1, Self::NodalDim>
         + Allocator<T, Self::ReferenceDim, Self::NodalDim>,
 {
@@ -306,7 +306,7 @@ where
     T: RealField,
     Element: FiniteElement<T, GeometryDim = GeometryDim, ReferenceDim = GeometryDim>,
     GeometryDim: DimName + DimMin<GeometryDim, Output = GeometryDim>,
-    DefaultAllocator: SmallDimAllocator<T, GeometryDim>,
+    DefaultAllocator: DimAllocator<T, GeometryDim>,
 {
     use fenris_optimize::calculus::VectorFunctionBuilder;
     use fenris_optimize::newton::newton;

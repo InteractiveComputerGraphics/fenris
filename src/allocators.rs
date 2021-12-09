@@ -22,17 +22,16 @@ where
 {
 }
 
-// TODO: The SmallDimAllocator, BiDimAllocator and TriDimAllocator classes should make
-// many/most of the other allocators redundant, I think?
-// TODO: Rename to `UniDimAllocator` or similar? Or just `DimAllocator`?
-pub trait SmallDimAllocator<T: Scalar, D: DimName>:
+
+/// An allocator for a single dimension.
+pub trait DimAllocator<T: Scalar, D: DimName>:
 Allocator<T, D> + Allocator<T, D, D> + Allocator<T, U1, D>
 // Used for various functionality like decompositions
 + Allocator<usize, D>
 + Allocator<(usize, usize), D>
 {}
 
-impl<T, D> SmallDimAllocator<T, D> for DefaultAllocator
+impl<T, D> DimAllocator<T, D> for DefaultAllocator
 where
     T: Scalar,
     D: DimName,
@@ -41,16 +40,18 @@ where
 {
 }
 
+/// An allocator for two dimensions.
 pub trait BiDimAllocator<T: Scalar, D1: DimName, D2: DimName>:
-    SmallDimAllocator<T, D1> + SmallDimAllocator<T, D2> + Allocator<T, D1, D2> + Allocator<T, D2, D1>
+    DimAllocator<T, D1> + DimAllocator<T, D2> + Allocator<T, D1, D2> + Allocator<T, D2, D1>
 {
 }
 
 impl<T: Scalar, D1: DimName, D2: DimName> BiDimAllocator<T, D1, D2> for DefaultAllocator where
-    DefaultAllocator: SmallDimAllocator<T, D1> + SmallDimAllocator<T, D2> + Allocator<T, D1, D2> + Allocator<T, D2, D1>
+    DefaultAllocator: DimAllocator<T, D1> + DimAllocator<T, D2> + Allocator<T, D1, D2> + Allocator<T, D2, D1>
 {
 }
 
+/// An allocator for three dimensions.
 pub trait TriDimAllocator<T: Scalar, D1: DimName, D2: DimName, D3: DimName>:
     BiDimAllocator<T, D1, D2> + BiDimAllocator<T, D1, D3> + BiDimAllocator<T, D2, D3>
 {

@@ -1,5 +1,5 @@
 //! Functionality for error estimation.
-use crate::allocators::{SmallDimAllocator, TriDimAllocator};
+use crate::allocators::{DimAllocator, TriDimAllocator};
 use crate::assembly::global::{gather_global_to_local, BasisFunctionBuffer, QuadratureBuffer};
 use crate::assembly::local::{compute_volume_u_grad, QuadratureTable};
 use crate::element::{ReferenceFiniteElement, VolumetricFiniteElement};
@@ -175,7 +175,7 @@ fn evaluate_u_h<'a, T, SolutionDim>(
 where
     T: RealField,
     SolutionDim: DimName,
-    DefaultAllocator: SmallDimAllocator<T, SolutionDim>,
+    DefaultAllocator: DimAllocator<T, SolutionDim>,
 {
     let u_h_element = u_h_element.into();
     let phi = phi.into();

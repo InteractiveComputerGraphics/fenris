@@ -1,4 +1,4 @@
-use crate::allocators::{BiDimAllocator, SmallDimAllocator};
+use crate::allocators::{BiDimAllocator, DimAllocator};
 use crate::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
 use crate::nalgebra::{DefaultAllocator, OMatrix, OVector, RealField, Vector1, U1};
 use crate::{SmallDim, Symmetry};
@@ -54,7 +54,7 @@ impl<T, D> EllipticContraction<T, D> for LaplaceOperator
 where
     T: RealField,
     D: SmallDim,
-    DefaultAllocator: SmallDimAllocator<T, D>,
+    DefaultAllocator: DimAllocator<T, D>,
 {
     // TODO: Document
     fn contract(
