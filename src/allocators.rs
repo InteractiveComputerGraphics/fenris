@@ -1,5 +1,4 @@
-//! Helper traits for collecting element allocator trait bounds.
-
+//! Helper traits for allocator trait bounds.
 use crate::element::{ConnectivityGeometryDim, ConnectivityReferenceDim, ElementConnectivity};
 use nalgebra::allocator::Allocator;
 use nalgebra::{DefaultAllocator, DimName, Scalar, U1};
