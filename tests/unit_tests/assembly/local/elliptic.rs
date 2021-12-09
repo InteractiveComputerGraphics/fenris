@@ -612,7 +612,7 @@ fn compute_energy_integral<Element, Energy>(
 where
     Element: VolumetricFiniteElement<f64>,
     Energy: EllipticEnergy<f64, Element::GeometryDim>,
-    DefaultAllocator: BiDimAllocator<f64, Element::GeometryDim, Energy::SolutionDim>,
+    DefaultAllocator: BiDimAllocator<f64, Energy::SolutionDim, Element::GeometryDim>,
 {
     let (weights, points) = quadrature;
 
