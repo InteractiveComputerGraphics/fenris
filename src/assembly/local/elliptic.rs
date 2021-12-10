@@ -5,6 +5,7 @@ use crate::assembly::local::{
     QuadratureTable,
 };
 use crate::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
+use crate::define_thread_local_workspace;
 use crate::element::VolumetricFiniteElement;
 use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{
@@ -13,11 +14,10 @@ use crate::nalgebra::{
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
 use crate::util::{clone_upper_to_lower, reshape_to_slice};
-use crate::workspace::{with_thread_local_workspace, Workspace};
+use crate::workspace::with_thread_local_workspace;
 use crate::Symmetry;
 use eyre::eyre;
 use itertools::izip;
-use std::cell::RefCell;
 
 // TODO: Move this to the right spot and don't make it pub(crate)
 #[allow(non_snake_case)]
@@ -212,7 +212,7 @@ where
     }
 }
 
-thread_local! { static WORKSPACE: RefCell<Workspace> = RefCell::new(Workspace::default());  }
+define_thread_local_workspace!(WORKSPACE);
 
 impl<'a, T, Space, Op, QTable> ElementScalarAssembler<T> for ElementEllipticAssembler<'a, T, Space, Op, QTable>
 where

@@ -23,10 +23,10 @@ where
 
 /// An allocator for a single dimension.
 pub trait DimAllocator<T: Scalar, D: DimName>:
-Allocator<T, D> + Allocator<T, D, D> + Allocator<T, U1, D>
-// Used for various functionality like decompositions
-+ Allocator<usize, D>
-+ Allocator<(usize, usize), D>
+    Allocator<T, D> + Allocator<T, D, D> + Allocator<T, U1, D>
+    // Used for various functionality like decompositions
+    + Allocator<usize, D>
+    + Allocator<(usize, usize), D>
 {}
 
 impl<T, D> DimAllocator<T, D> for DefaultAllocator
@@ -57,5 +57,23 @@ pub trait TriDimAllocator<T: Scalar, D1: DimName, D2: DimName, D3: DimName>:
 
 impl<T: Scalar, D1: DimName, D2: DimName, D3: DimName> TriDimAllocator<T, D1, D2, D3> for DefaultAllocator where
     DefaultAllocator: BiDimAllocator<T, D1, D2> + BiDimAllocator<T, D1, D3> + BiDimAllocator<T, D2, D3>
+{
+}
+
+pub trait QuadDimAllocator<T: Scalar, D1: DimName, D2: DimName, D3: DimName, D4: DimName>:
+    TriDimAllocator<T, D1, D2, D3>
+    + TriDimAllocator<T, D1, D2, D4>
+    + TriDimAllocator<T, D1, D3, D4>
+    + TriDimAllocator<T, D2, D3, D4>
+{
+}
+
+impl<T: Scalar, D1: DimName, D2: DimName, D3: DimName, D4: DimName> QuadDimAllocator<T, D1, D2, D3, D4>
+    for DefaultAllocator
+where
+    DefaultAllocator: TriDimAllocator<T, D1, D2, D3>
+        + TriDimAllocator<T, D1, D2, D4>
+        + TriDimAllocator<T, D1, D3, D4>
+        + TriDimAllocator<T, D2, D3, D4>,
 {
 }

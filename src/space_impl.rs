@@ -7,15 +7,6 @@ use crate::space::{FiniteElementConnectivity, FiniteElementSpace, GeometricFinit
 use crate::SmallDim;
 use nalgebra::{DefaultAllocator, DimName, OPoint, Scalar};
 
-impl<'a, T, D, C> GeometricFiniteElementSpace<'a, T> for Mesh<T, D, C>
-where
-    T: Scalar,
-    D: SmallDim,
-    C: CellConnectivity<T, D> + ElementConnectivity<T, GeometryDim = D>,
-    DefaultAllocator: ElementConnectivityAllocator<T, C>,
-{
-}
-
 impl<T, D, C> FiniteElementConnectivity for Mesh<T, D, C>
 where
     T: Scalar,
@@ -52,6 +43,15 @@ where
         );
         nodes.copy_from_slice(&indices);
     }
+}
+
+impl<'a, T, D, C> GeometricFiniteElementSpace<'a, T> for Mesh<T, D, C>
+where
+    T: Scalar,
+    D: SmallDim,
+    C: CellConnectivity<T, D> + ElementConnectivity<T, GeometryDim = D>,
+    DefaultAllocator: ElementConnectivityAllocator<T, C>,
+{
 }
 
 impl<T, D, C> FiniteElementSpace<T> for Mesh<T, D, C>

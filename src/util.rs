@@ -1,6 +1,4 @@
-use crate::assembly::global::CsrParAssembler;
-use crate::connectivity::Connectivity;
-use crate::mesh::Mesh;
+use itertools::izip;
 use itertools::Itertools;
 use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{DimEq, ShapeConstraint};
@@ -22,6 +20,13 @@ use std::path::Path;
 
 pub use fenris_nested_vec::*;
 
+use crate::allocators::{BiDimAllocator, DimAllocator};
+use crate::assembly::global::CsrParAssembler;
+use crate::connectivity::Connectivity;
+use crate::mesh::Mesh;
+use crate::nalgebra::Dynamic;
+use crate::SmallDim;
+
 /// Clones the upper triangle entries into the lower triangle entries.
 ///
 /// The primary use case for this is to construct a full symmetric matrix from a symmetric
@@ -41,7 +46,6 @@ where
 }
 
 /// Given a matrix, returns a matrix slice reshaped to the requested shape.
-// TODO: With nalgebra 0.27 we can remove the strides on matrix slice
 // TODO: Implement ReshapeableStorage for slices in `nalgebra`
 pub(crate) fn reshape_to_slice<T, R, C, S, R2, C2>(
     matrix: &Matrix<T, R, C, S>,
@@ -608,8 +612,9 @@ pub mod proptest {
 
     #[cfg(test)]
     mod tests {
-        use super::DMatrixStrategy;
         use proptest::prelude::*;
+
+        use super::DMatrixStrategy;
 
         proptest! {
             #[test]
@@ -625,4 +630,140 @@ pub mod proptest {
             }
         }
     }
+}
+
+/// Computes the interpolation $u_h$ given basis function values and interpolation weights.
+///
+/// More precisely, computes
+/// <div>$$
+/// u_h = \sum_I u_I \, N_I \quad \in \mathbb{R}^s
+/// $$</div>
+/// given interpolation weights $u_I \in \mathbb{R}^s$ and nodal basis function values $N_I \in \mathbb{R}$.
+/// The interpolation weights and basis function values are stored in the block vectors
+/// <div>$$
+/// \dvec u = \begin{pmatrix}
+///  u_1 \\
+///  u_2 \\
+///  \vdots \\
+/// \end{pmatrix}
+/// \qquad
+/// \dvec N = \begin{pmatrix}
+///  N_1 \\
+///  N_2 \\
+///  \vdots \\
+/// \end{pmatrix}.
+/// $$</div>
+///
+/// # Panics
+///
+/// Panics if `u` does not have `SolutionDim` entries for every entry in `basis`.
+///
+/// TODO: This is not directly tested at the moment
+// TODO: Move elsewhere
+pub fn compute_interpolation<'a, T, SolutionDim>(
+    u: impl Into<DVectorSlice<'a, T>>,
+    basis: impl Into<DVectorSlice<'a, T>>,
+) -> OVector<T, SolutionDim>
+where
+    T: RealField,
+    SolutionDim: SmallDim,
+    DefaultAllocator: DimAllocator<T, SolutionDim>,
+{
+    compute_interpolation_(u.into(), basis.into())
+}
+
+fn compute_interpolation_<T, SolutionDim>(u: DVectorSlice<T>, basis: DVectorSlice<T>) -> OVector<T, SolutionDim>
+where
+    T: RealField,
+    SolutionDim: SmallDim,
+    DefaultAllocator: DimAllocator<T, SolutionDim>,
+{
+    let s = SolutionDim::dim();
+    let n = basis.len();
+    assert_eq!(u.len(), s * n);
+    assert_eq!(s, SolutionDim::dim());
+
+    // Reshape u as the matrix
+    //  [u1 u2 .. un ]
+    // for vectors u1, u2, ... associated with each basis function value
+    let u = reshape_to_slice(&u, (SolutionDim::name(), Dynamic::new(n)));
+    u * basis
+}
+
+/// Computes the gradient $\nabla u_h$ of the interpolation $u_h$ given basis function gradients
+/// and interpolation weights.
+///
+/// More precisely, computes
+/// <div>$$
+/// \nabla u_h = \sum_I \nabla N_I \otimes u_I \quad \in \mathbb{R}^{d \times s}
+/// $$</div>
+/// given interpolation weights $u_I \in \mathbb{R}^s$ and nodal basis gradients $\nabla N_I \in \mathbb{R}^d$.
+/// The interpolation weights and basis gradients are stored in the block vectors
+/// <div>$$
+/// \dvec u = \begin{pmatrix}
+///  u_1 \\
+///  u_2 \\
+///  \vdots \\
+/// \end{pmatrix}
+/// \qquad
+/// \dvec G = \begin{pmatrix}
+///  \nabla N_1 \\
+///  \nabla N_2 \\
+///  \vdots \\
+/// \end{pmatrix}.
+/// $$</div>
+///
+/// This function can be used to compute either coordinates with respect to physical coordinates or reference
+/// coordinates, depending on what is provided as basis gradients.
+///
+/// # Panics
+///
+/// Panics if the dimensions of `u` and/or the basis gradients are inconsistent.
+///
+/// TODO: This is not directly tested at the moment
+pub fn compute_interpolation_gradient<'a, T, SolutionDim, GeometryDim>(
+    u: impl Into<DVectorSlice<'a, T>>,
+    basis_gradients: impl Into<DVectorSlice<'a, T>>,
+) -> OMatrix<T, GeometryDim, SolutionDim>
+where
+    T: RealField,
+    SolutionDim: SmallDim,
+    GeometryDim: SmallDim,
+    DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>,
+{
+    compute_interpolation_gradient_(u.into(), basis_gradients.into())
+}
+
+fn compute_interpolation_gradient_<T, SolutionDim, GeometryDim>(
+    u: DVectorSlice<T>,
+    basis_gradients: DVectorSlice<T>,
+) -> OMatrix<T, GeometryDim, SolutionDim>
+where
+    T: RealField,
+    SolutionDim: SmallDim,
+    GeometryDim: SmallDim,
+    DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>,
+{
+    let d = GeometryDim::dim();
+    let s = SolutionDim::dim();
+    let n = basis_gradients.len() / d;
+    assert_eq!(basis_gradients.len(), d * n);
+    assert_eq!(u.len(), s * n);
+
+    // Reshape u as the matrix
+    //  [u1 u2 .. un ]
+    // for vectors u1, u2, ... associated with each basis function value
+    let u = reshape_to_slice(&u, (SolutionDim::name(), Dynamic::new(n)));
+
+    // Reshape gradients g as the matrix
+    //  [g1 g2 ... gn]
+    let g = reshape_to_slice(&basis_gradients, (GeometryDim::name(), Dynamic::new(n)));
+
+    let mut u_grad = OMatrix::<T, GeometryDim, SolutionDim>::zeros();
+    for (u_i, g_i) in izip!(u.column_iter(), g.column_iter()) {
+        // Outer product addition
+        //  u_grad += g_I * u_I^T
+        u_grad.ger(T::one(), &g_i, &u_i, T::one());
+    }
+    u_grad
 }

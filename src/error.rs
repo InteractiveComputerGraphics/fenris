@@ -1,14 +1,17 @@
 //! Functionality for error estimation.
-use crate::allocators::{DimAllocator, TriDimAllocator};
-use crate::assembly::global::{gather_global_to_local, BasisFunctionBuffer, QuadratureBuffer};
-use crate::assembly::local::{compute_volume_u_grad, QuadratureTable};
-use crate::element::{ReferenceFiniteElement, VolumetricFiniteElement};
-use crate::nalgebra::{DVector, DVectorSlice, MatrixSlice, MatrixSliceMut, MatrixSliceMutMN};
-use crate::nalgebra::{DefaultAllocator, DimName, Dynamic, OPoint, OVector, RealField};
-use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
+use crate::allocators::{BiDimAllocator, TriDimAllocator};
+use crate::assembly::global::compute_global_potential;
+use crate::assembly::local::QuadratureTable;
+use crate::element::VolumetricFiniteElement;
+use crate::integrate::{
+    integrate_over_element, integrate_over_volume_element, ElementIntegralAssemblerBuilder, Integrand,
+    IntegrationWorkspace, VolumeFunction,
+};
+use crate::nalgebra::DVectorSlice;
+use crate::nalgebra::{DefaultAllocator, OPoint, OVector, RealField};
+use crate::space::VolumetricFiniteElementSpace;
 use crate::SmallDim;
-use itertools::izip;
-use nalgebra::OMatrix;
+use nalgebra::{OMatrix, Vector1, U1};
 
 /// Estimate the squared $L^2$ error $\norm{u_h - u}^2_{L^2}$ on the given element with the given basis
 /// weights and quadrature points.
@@ -24,7 +27,7 @@ pub fn estimate_element_L2_error_squared<T, Element, SolutionDim>(
     u_h_element: DVectorSlice<T>,
     quadrature_weights: &[T],
     quadrature_points: &[OPoint<T, Element::ReferenceDim>],
-    basis_buffer: &mut [T],
+    workspace: &mut IntegrationWorkspace<T>,
 ) -> T
 where
     T: RealField,
@@ -34,21 +37,16 @@ where
 {
     let n = element.num_nodes();
     assert_eq!(u_h_element.len(), n * SolutionDim::dim());
-    assert_eq!(basis_buffer.len(), n);
-    let phi = basis_buffer;
+    let result_as_vector = integrate_over_element(
+        make_L2_error_squared_integrand(u),
+        element,
+        (quadrature_weights, quadrature_points),
+        u_h_element,
+        workspace,
+    );
 
-    let mut result = T::zero();
-    for (w, xi) in izip!(quadrature_weights, quadrature_points) {
-        let x = element.map_reference_coords(xi);
-        let j = element.reference_jacobian(xi);
-        element.populate_basis(phi, xi);
-
-        let u_h: OVector<T, SolutionDim> = evaluate_u_h(&u_h_element, DVectorSlice::from_slice(phi, phi.len()));
-        let u_at_x = u(&x);
-        let error = u_h - u_at_x;
-        result += *w * error.norm_squared() * j.determinant().abs();
-    }
-    result
+    // Result is a 1-vector, we want to return a scalar
+    result_as_vector[0]
 }
 
 /// Estimate the squared $H^1$ *seminorm* error $\seminorm{u_h - u}^2_{H^1}$ on the given element with the given basis
@@ -65,7 +63,7 @@ pub fn estimate_element_H1_seminorm_error_squared<T, Element, SolutionDim>(
     u_h_element: DVectorSlice<T>,
     quadrature_weights: &[T],
     quadrature_points: &[OPoint<T, Element::ReferenceDim>],
-    basis_gradients_buffer: MatrixSliceMutMN<T, Element::ReferenceDim, Dynamic>,
+    workspace: &mut IntegrationWorkspace<T>,
 ) -> T
 where
     T: RealField,
@@ -75,30 +73,17 @@ where
 {
     let n = element.num_nodes();
     assert_eq!(u_h_element.len(), n * SolutionDim::dim());
-    assert_eq!(basis_gradients_buffer.ncols(), n);
-    let mut phi_grad_ref = basis_gradients_buffer;
+    let result_as_vector: Vector1<T> = integrate_over_volume_element(
+        make_H1_seminorm_error_squared_integrand(u_grad),
+        element,
+        (quadrature_weights, quadrature_points),
+        u_h_element,
+        workspace,
+    )
+    .expect("TODO: Handle the case where this might fail (due to e.g. singular Jacobian)");
 
-    // TODO: Rewrite compute_volume_u_grad so that it just takes a DVectorSlice
-    let u_h_element = MatrixSlice::from_slice_generic(u_h_element.as_slice(), SolutionDim::name(), Dynamic::new(n));
-
-    let mut result = T::zero();
-    for (w, xi) in izip!(quadrature_weights, quadrature_points) {
-        let x = element.map_reference_coords(xi);
-        let j = element.reference_jacobian(xi);
-        let j_det_abs = j.determinant().abs();
-        let j_inv_t = j
-            .try_inverse()
-            .expect("Jacobian must be invertible. TODO: How to handle this?")
-            .transpose();
-        element.populate_basis_gradients(MatrixSliceMut::from(&mut phi_grad_ref), xi);
-
-        let u_h_grad: OMatrix<T, Element::ReferenceDim, SolutionDim> =
-            compute_volume_u_grad(&j_inv_t, &phi_grad_ref, &u_h_element);
-        let u_grad_at_x = u_grad(&x);
-        let error = u_h_grad - u_grad_at_x;
-        result += *w * error.norm_squared() * j_det_abs;
-    }
-    result
+    // Result is a 1-vector, we want to return a scalar
+    result_as_vector[0]
 }
 
 /// Estimate the $H^1$ *seminorm* error $\seminorm{u_h - u}_{H^1}$ on the given element with the given basis
@@ -115,7 +100,7 @@ pub fn estimate_element_H1_seminorm_error<T, Element, SolutionDim>(
     u_h_element: DVectorSlice<T>,
     quadrature_weights: &[T],
     quadrature_points: &[OPoint<T, Element::ReferenceDim>],
-    basis_gradients_buffer: MatrixSliceMutMN<T, Element::ReferenceDim, Dynamic>,
+    workspace: &mut IntegrationWorkspace<T>,
 ) -> T
 where
     T: RealField,
@@ -129,7 +114,7 @@ where
         u_h_element,
         quadrature_weights,
         quadrature_points,
-        basis_gradients_buffer,
+        workspace,
     )
     .sqrt()
 }
@@ -148,7 +133,7 @@ pub fn estimate_element_L2_error<T, Element, SolutionDim>(
     u_h_element: DVectorSlice<T>,
     quadrature_weights: &[T],
     quadrature_points: &[OPoint<T, Element::ReferenceDim>],
-    basis_buffer: &mut [T],
+    workspace: &mut IntegrationWorkspace<T>,
 ) -> T
 where
     T: RealField,
@@ -162,34 +147,47 @@ where
         u_h_element,
         quadrature_weights,
         quadrature_points,
-        basis_buffer,
+        workspace,
     )
     .sqrt()
 }
 
-// TODO: We could make this more generally available, maybe even expose as public API?
-fn evaluate_u_h<'a, T, SolutionDim>(
-    u_h_element: impl Into<DVectorSlice<'a, T>>,
-    phi: impl Into<DVectorSlice<'a, T>>,
-) -> OVector<T, SolutionDim>
+#[allow(non_snake_case)]
+fn make_L2_error_squared_integrand<'a, T, SolutionDim, GeometryDim>(
+    u: impl 'a + Fn(&OPoint<T, GeometryDim>) -> OVector<T, SolutionDim>,
+) -> Integrand<SolutionDim, impl 'a + Fn(&OPoint<T, GeometryDim>, &OVector<T, SolutionDim>) -> Vector1<T>>
 where
     T: RealField,
-    SolutionDim: DimName,
-    DefaultAllocator: DimAllocator<T, SolutionDim>,
+    SolutionDim: SmallDim,
+    GeometryDim: SmallDim,
+    DefaultAllocator: BiDimAllocator<T, SolutionDim, GeometryDim>,
 {
-    let u_h_element = u_h_element.into();
-    let phi = phi.into();
-    let s = SolutionDim::dim();
-    let n = phi.len();
-    assert_eq!(
-        u_h_element.len(),
-        s * n,
-        "u_h_element must have length SolutionDim * phi.len()"
-    );
+    let function = move |x: &OPoint<T, GeometryDim>, u_h: &OVector<T, SolutionDim>| {
+        let u_at_x = u(&x);
+        let error = u_h - u_at_x;
+        Vector1::new(error.norm_squared())
+    };
+    Integrand::new_with_solution_dim::<SolutionDim>().with_function(function)
+}
 
-    // TODO: Use reshape_generic once ReshapeableStorage is implemented for slices
-    let u_h_element = MatrixSlice::from_slice_generic(u_h_element.as_slice(), SolutionDim::name(), Dynamic::new(n));
-    u_h_element * phi
+#[allow(non_snake_case)]
+fn make_H1_seminorm_error_squared_integrand<'a, T, SolutionDim, GeometryDim>(
+    u_grad: impl 'a + Fn(&OPoint<T, GeometryDim>) -> OMatrix<T, GeometryDim, SolutionDim>,
+) -> impl VolumeFunction<T, GeometryDim, SolutionDim = SolutionDim, OutputDim = U1>
+where
+    T: RealField,
+    SolutionDim: SmallDim,
+    GeometryDim: SmallDim,
+    DefaultAllocator: BiDimAllocator<T, SolutionDim, GeometryDim>,
+{
+    let function = move |x: &OPoint<T, GeometryDim>,
+                         _u_h: &OVector<T, SolutionDim>,
+                         u_h_grad: &OMatrix<T, GeometryDim, SolutionDim>| {
+        let u_grad_at_x = u_grad(&x);
+        let error = u_h_grad - u_grad_at_x;
+        Vector1::new(error.norm_squared())
+    };
+    Integrand::new_with_solution_dim::<SolutionDim>().with_volume_function(function)
 }
 
 /// Estimate the squared $L^2$ error $\norm{u_h - u}^2_{L^2}$ on the given finite element space
@@ -208,35 +206,14 @@ where
     QTable: QuadratureTable<T, Space::ReferenceDim>,
     DefaultAllocator: TriDimAllocator<T, SolutionDim, Space::GeometryDim, Space::ReferenceDim>,
 {
-    let u_h = u_h.into();
-    let s = SolutionDim::dim();
-    let mut quadrature_buffer = QuadratureBuffer::default();
-    let mut basis_buffer = BasisFunctionBuffer::default();
-    let mut u_element = DVector::zeros(0);
+    let assembler = ElementIntegralAssemblerBuilder::new()
+        .with_space(space)
+        .with_quadrature_table(qtable)
+        .with_interpolation_weights(u_h.into())
+        .with_integrand(make_L2_error_squared_integrand(u))
+        .build_integrator();
 
-    let mut result = T::zero();
-    for i in 0..space.num_elements() {
-        quadrature_buffer.populate_element_quadrature_from_table(i, qtable);
-
-        let element = ElementInSpace::from_space_and_element_index(space, i);
-        let n = element.num_nodes();
-        basis_buffer.resize(n, Space::ReferenceDim::dim());
-        basis_buffer.populate_element_nodes_from_space(i, space);
-        u_element.resize_vertically_mut(s * n, T::zero());
-        gather_global_to_local(&u_h, &mut u_element, basis_buffer.element_nodes(), s);
-
-        let element_l2_squared = estimate_element_L2_error_squared(
-            &element,
-            &u,
-            DVectorSlice::from(&u_element),
-            quadrature_buffer.weights(),
-            quadrature_buffer.points(),
-            &mut basis_buffer.element_basis_values_mut(),
-        );
-        result += element_l2_squared;
-    }
-
-    Ok(result)
+    compute_global_potential(&assembler)
 }
 
 /// Estimate the $L^2$ error $\norm{u_h - u}_{L^2}$ on the given finite element space
@@ -274,35 +251,14 @@ where
     QTable: QuadratureTable<T, Space::ReferenceDim>,
     DefaultAllocator: TriDimAllocator<T, SolutionDim, Space::GeometryDim, Space::ReferenceDim>,
 {
-    let u_h = u_h.into();
-    let s = SolutionDim::dim();
-    let mut quadrature_buffer = QuadratureBuffer::default();
-    let mut basis_buffer = BasisFunctionBuffer::default();
-    let mut u_element = DVector::zeros(0);
+    let assembler = ElementIntegralAssemblerBuilder::new()
+        .with_space(space)
+        .with_quadrature_table(qtable)
+        .with_interpolation_weights(u_h.into())
+        .with_integrand(make_H1_seminorm_error_squared_integrand(u_grad))
+        .build_volume_integrator();
 
-    let mut result = T::zero();
-    for i in 0..space.num_elements() {
-        quadrature_buffer.populate_element_quadrature_from_table(i, qtable);
-
-        let element = ElementInSpace::from_space_and_element_index(space, i);
-        let n = element.num_nodes();
-        basis_buffer.resize(n, Space::ReferenceDim::dim());
-        basis_buffer.populate_element_nodes_from_space(i, space);
-        u_element.resize_vertically_mut(s * n, T::zero());
-        gather_global_to_local(&u_h, &mut u_element, basis_buffer.element_nodes(), s);
-
-        let element_H1_seminorm_squared = estimate_element_H1_seminorm_error_squared(
-            &element,
-            &u_grad,
-            DVectorSlice::from(&u_element),
-            quadrature_buffer.weights(),
-            quadrature_buffer.points(),
-            basis_buffer.element_gradients_mut(),
-        );
-        result += element_H1_seminorm_squared;
-    }
-
-    Ok(result)
+    compute_global_potential(&assembler)
 }
 
 /// Estimate the squared $H^1$ *seminorm* error $\|u_h - u \|^2_{H^1}$ on the given finite element space
