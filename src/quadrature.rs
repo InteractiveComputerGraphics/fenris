@@ -1,7 +1,7 @@
 use std::ops::{Add, AddAssign, Deref, Mul};
 
 use nalgebra::allocator::Allocator;
-use nalgebra::{DefaultAllocator, DimName, OPoint, Scalar, U2, U3};
+use nalgebra::{DefaultAllocator, DimName, OPoint, Point1, Scalar, U2, U3};
 use num::Zero;
 
 /// Errors returned by quadrature methods.
@@ -9,12 +9,14 @@ use num::Zero;
 /// TODO: How to prevent collapse?
 pub use fenris_quadrature::Error as QuadratureError;
 
-use crate::nalgebra::{convert, Point2, Point3, RealField};
+use crate::nalgebra::{convert, Point2, Point3, RealField, U1};
 
 pub mod tensor;
 pub mod total_order;
+pub mod univariate;
 
 pub type QuadraturePair<T, D> = (Vec<T>, Vec<OPoint<T, D>>);
+pub type QuadraturePair1d<T> = QuadraturePair<T, U1>;
 pub type QuadraturePair2d<T> = QuadraturePair<T, U2>;
 pub type QuadraturePair3d<T> = QuadraturePair<T, U3>;
 
@@ -104,6 +106,16 @@ where
     fn data(&self) -> &[Self::Data] {
         X::data(self)
     }
+}
+
+fn convert_quadrature_rule_from_1d_f64<T>(quadrature: fenris_quadrature::Rule<1>) -> QuadraturePair1d<T>
+where
+    T: RealField,
+{
+    let (weights, points) = quadrature;
+    let weights = weights.into_iter().map(convert).collect();
+    let points = points.into_iter().map(Point1::from).map(convert).collect();
+    (weights, points)
 }
 
 fn convert_quadrature_rule_from_2d_f64<T>(quadrature: fenris_quadrature::Rule<2>) -> QuadraturePair2d<T>
