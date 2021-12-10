@@ -370,22 +370,55 @@ where
         }
     }
 
-    pub fn build_integrator(self) -> ElementIntegralAssembler<'a, T, F, Space, QTable> {
-        ElementIntegralAssembler {
+    pub fn build_integrator(self) -> ElementIntegralAssembler<'a, T, F, Space, QTable>
+    where
+        Space: FiniteElementSpace<T>,
+        F: Function<T, Space::GeometryDim>,
+        DefaultAllocator: TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim>
+            + DimAllocator<T, F::OutputDim>
+    {
+        // We take all the trait bounds here so that we can do some sanity checking.
+        // This makes it much easier for the user to debug where something went wrong,
+        // such as mismatch between interpolation length vector size and number of nodes in space etc.
+        let assembler = ElementIntegralAssembler {
             space: self.space.expect("Must provide space"),
             u: self.u.expect("Must provide interpolation weights"),
             integrand: self.integrand.expect("Must provide integrand"),
             qtable: self.qtable.expect("Must provide quadrature table"),
-        }
+        };
+
+        let ndof = assembler.space.num_nodes() * F::SolutionDim::dim();
+        assert_eq!(assembler.u.len(), ndof,
+            "Size of interpolation weight vector does not match expected number of DOFs ( {} x {} )",
+            F::SolutionDim::dim(),
+            assembler.space.num_nodes()
+        );
+
+        assembler
     }
 
-    pub fn build_volume_integrator(self) -> ElementIntegralVolumeAssembler<'a, T, F, Space, QTable> {
-        ElementIntegralVolumeAssembler {
+    pub fn build_volume_integrator(self) -> ElementIntegralVolumeAssembler<'a, T, F, Space, QTable>
+    where
+        Space: VolumetricFiniteElementSpace<T>,
+        F: VolumeFunction<T, Space::ReferenceDim>,
+        DefaultAllocator: TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim>
+            + DimAllocator<T, F::OutputDim>
+    {
+        let assembler = ElementIntegralVolumeAssembler {
             space: self.space.expect("Must provide space"),
             u: self.u.expect("Must provide interpolation weights"),
             integrand: self.integrand.expect("Must provide integrand"),
             qtable: self.qtable.expect("Must provide quadrature table"),
-        }
+        };
+
+        let ndof = assembler.space.num_nodes() * F::SolutionDim::dim();
+        assert_eq!(assembler.u.len(), ndof,
+                   "Size of interpolation weight vector does not match expected number of DOFs ( {} x {} )",
+                   F::SolutionDim::dim(),
+                   assembler.space.num_nodes()
+        );
+
+        assembler
     }
 }
 
