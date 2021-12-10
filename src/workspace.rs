@@ -61,9 +61,12 @@ impl Workspace {
 ///
 /// ```rust
 /// # use std::cell::RefCell;
-/// # use fenris::workspace::{with_thread_local_workspace, Workspace};
-/// thread_local! { static WORKSPACE: RefCell<Workspace> = RefCell::new(Workspace::default()); }
+/// use fenris::workspace::{Workspace, with_thread_local_workspace};
+/// use fenris::define_thread_local_workspace;
 ///
+/// define_thread_local_workspace!(WORKSPACE);
+///
+/// // Workspace must implement Default
 /// #[derive(Default)]
 /// struct MyWorkspace {
 ///     buffer: Vec<usize>
@@ -122,5 +125,5 @@ macro_rules! define_thread_local_workspace {
             static $variable_name: std::cell::RefCell<$crate::workspace::Workspace>
                 = std::cell::RefCell::new($crate::workspace::Workspace::default());
         }
-    }
+    };
 }
