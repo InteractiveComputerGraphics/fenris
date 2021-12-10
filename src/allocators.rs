@@ -34,7 +34,7 @@ where
     T: Scalar,
     D: DimName,
     DefaultAllocator:
-        Allocator<T, D> + Allocator<T, D, D> + Allocator<T, U1, D> + Allocator<usize, D> + Allocator<(usize, usize), D>
+        Allocator<T, D> + Allocator<T, D, D> + Allocator<T, U1, D> + Allocator<usize, D> + Allocator<(usize, usize), D>,
 {
 }
 
@@ -69,11 +69,11 @@ pub trait QuadDimAllocator<T: Scalar, D1: DimName, D2: DimName, D3: DimName, D4:
 }
 
 impl<T: Scalar, D1: DimName, D2: DimName, D3: DimName, D4: DimName> QuadDimAllocator<T, D1, D2, D3, D4>
-for DefaultAllocator
+    for DefaultAllocator
 where
     DefaultAllocator: TriDimAllocator<T, D1, D2, D3>
         + TriDimAllocator<T, D1, D2, D4>
         + TriDimAllocator<T, D1, D3, D4>
-        + TriDimAllocator<T, D2, D3, D4>
+        + TriDimAllocator<T, D2, D3, D4>,
 {
 }

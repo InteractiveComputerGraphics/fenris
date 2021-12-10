@@ -1,22 +1,22 @@
+use itertools::izip;
+use itertools::Itertools;
+use nalgebra::allocator::Allocator;
+use nalgebra::constraint::{DimEq, ShapeConstraint};
+use nalgebra::storage::{ContiguousStorage, Storage, StorageMut};
+use nalgebra::{
+    DMatrixSlice, DVector, DVectorSlice, DefaultAllocator, Dim, DimDiff, DimMin, DimMul, DimName, DimProd, DimSub,
+    Matrix, Matrix3, MatrixSlice, MatrixSliceMut, OMatrix, OVector, Quaternion, RealField, Scalar, SliceStorage,
+    SliceStorageMut, SquareMatrix, UnitQuaternion, Vector, Vector3, U1,
+};
+use nalgebra_sparse::{CooMatrix, CsrMatrix};
+use num::Zero;
+use numeric_literals::replace_float_literals;
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt::LowerExp;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
-use itertools::Itertools;
-use itertools::izip;
-use nalgebra::{
-    DefaultAllocator, Dim, DimDiff, DimMin, DimMul, DimName, DimProd, DimSub, DMatrixSlice, DVector, DVectorSlice,
-    Matrix, Matrix3, MatrixSlice, MatrixSliceMut, OMatrix, OVector, Quaternion, RealField, Scalar, SliceStorage,
-    SliceStorageMut, SquareMatrix, U1, UnitQuaternion, Vector, Vector3,
-};
-use nalgebra::allocator::Allocator;
-use nalgebra::constraint::{DimEq, ShapeConstraint};
-use nalgebra::storage::{ContiguousStorage, Storage, StorageMut};
-use nalgebra_sparse::{CooMatrix, CsrMatrix};
-use num::Zero;
-use numeric_literals::replace_float_literals;
 
 pub use fenris_nested_vec::*;
 
@@ -660,22 +660,23 @@ pub mod proptest {
 ///
 /// TODO: This is not directly tested at the moment
 // TODO: Move elsewhere
-pub fn compute_interpolation<'a, T, SolutionDim>(u: impl Into<DVectorSlice<'a, T>>, basis: impl Into<DVectorSlice<'a, T>>)
-    -> OVector<T, SolutionDim>
+pub fn compute_interpolation<'a, T, SolutionDim>(
+    u: impl Into<DVectorSlice<'a, T>>,
+    basis: impl Into<DVectorSlice<'a, T>>,
+) -> OVector<T, SolutionDim>
 where
     T: RealField,
     SolutionDim: SmallDim,
-    DefaultAllocator: DimAllocator<T, SolutionDim>
+    DefaultAllocator: DimAllocator<T, SolutionDim>,
 {
     compute_interpolation_(u.into(), basis.into())
 }
 
-fn compute_interpolation_<T, SolutionDim>(u: DVectorSlice<T>, basis: DVectorSlice<T>)
-                                          -> OVector<T, SolutionDim>
+fn compute_interpolation_<T, SolutionDim>(u: DVectorSlice<T>, basis: DVectorSlice<T>) -> OVector<T, SolutionDim>
 where
     T: RealField,
     SolutionDim: SmallDim,
-    DefaultAllocator: DimAllocator<T, SolutionDim>
+    DefaultAllocator: DimAllocator<T, SolutionDim>,
 {
     let s = SolutionDim::dim();
     let n = basis.len();
@@ -722,24 +723,26 @@ where
 /// TODO: This is not directly tested at the moment
 pub fn compute_interpolation_gradient<'a, T, SolutionDim, GeometryDim>(
     u: impl Into<DVectorSlice<'a, T>>,
-    basis_gradients: impl Into<DVectorSlice<'a, T>>)
-    -> OMatrix<T, GeometryDim, SolutionDim>
+    basis_gradients: impl Into<DVectorSlice<'a, T>>,
+) -> OMatrix<T, GeometryDim, SolutionDim>
 where
     T: RealField,
     SolutionDim: SmallDim,
     GeometryDim: SmallDim,
-    DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>
+    DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>,
 {
     compute_interpolation_gradient_(u.into(), basis_gradients.into())
 }
 
-fn compute_interpolation_gradient_<T, SolutionDim, GeometryDim>(u: DVectorSlice<T>, basis_gradients: DVectorSlice<T>)
-                                                                -> OMatrix<T, GeometryDim, SolutionDim>
+fn compute_interpolation_gradient_<T, SolutionDim, GeometryDim>(
+    u: DVectorSlice<T>,
+    basis_gradients: DVectorSlice<T>,
+) -> OMatrix<T, GeometryDim, SolutionDim>
 where
     T: RealField,
     SolutionDim: SmallDim,
     GeometryDim: SmallDim,
-    DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>
+    DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>,
 {
     let d = GeometryDim::dim();
     let s = SolutionDim::dim();

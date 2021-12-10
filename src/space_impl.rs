@@ -46,11 +46,11 @@ where
 }
 
 impl<'a, T, D, C> GeometricFiniteElementSpace<'a, T> for Mesh<T, D, C>
-    where
-        T: Scalar,
-        D: SmallDim,
-        C: CellConnectivity<T, D> + ElementConnectivity<T, GeometryDim = D>,
-        DefaultAllocator: ElementConnectivityAllocator<T, C>,
+where
+    T: Scalar,
+    D: SmallDim,
+    C: CellConnectivity<T, D> + ElementConnectivity<T, GeometryDim = D>,
+    DefaultAllocator: ElementConnectivityAllocator<T, C>,
 {
 }
 

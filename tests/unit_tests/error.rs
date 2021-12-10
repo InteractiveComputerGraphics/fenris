@@ -6,11 +6,10 @@ use fenris::error::{
     estimate_H1_seminorm_error, estimate_L2_error, estimate_element_H1_seminorm_error,
     estimate_element_H1_seminorm_error_squared, estimate_element_L2_error, estimate_element_L2_error_squared,
 };
+use fenris::integrate::IntegrationWorkspace;
 use fenris::mesh::procedural::create_unit_box_uniform_hex_mesh_3d;
 use fenris::nalgebra::coordinates::XYZ;
-use fenris::nalgebra::{
-    DVector, DVectorSlice, OVector, Point3, Vector1, Vector2, U3,
-};
+use fenris::nalgebra::{DVector, DVectorSlice, OVector, Point3, Vector1, Vector2, U3};
 use fenris::quadrature;
 use fenris::quadrature::{Quadrature, QuadraturePair3d};
 use fenris::util::NestedVec;
@@ -18,7 +17,6 @@ use matrixcompare::assert_scalar_eq;
 use nalgebra::{Matrix3x2, Vector3};
 use std::ops::Deref;
 use util::flatten_vertically;
-use fenris::integrate::IntegrationWorkspace;
 
 // TODO: Port this to the library proper?
 fn transform_quadrature_to_physical_domain<Element>(
@@ -132,7 +130,7 @@ fn test_element_H1_seminorm_error_scalar() {
         DVectorSlice::from(&u_h_element),
         &weights,
         &points,
-        &mut IntegrationWorkspace::default()
+        &mut IntegrationWorkspace::default(),
     );
 
     let H1_seminorm_expected = {
@@ -161,7 +159,7 @@ fn test_element_H1_seminorm_error_vector() {
         DVectorSlice::from(&u_h_element),
         &weights,
         &points,
-        &mut IntegrationWorkspace::default()
+        &mut IntegrationWorkspace::default(),
     );
 
     let H1_seminorm_expected = {
@@ -277,7 +275,7 @@ fn test_estimate_H1_seminorm_error_on_mesh() {
                     DVectorSlice::from(&u_h_element),
                     weights,
                     points,
-                    &mut IntegrationWorkspace::default()
+                    &mut IntegrationWorkspace::default(),
                 )
             })
             .sum::<f64>()

@@ -8,6 +8,7 @@ use fenris::geometry::proptest_strategies::{
     clockwise_triangle2d_strategy_f64, nondegenerate_convex_quad2d_strategy_f64,
 };
 use fenris::geometry::{LineSegment2d, Quad2d, Triangle2d};
+use fenris::integrate::IntegrationWorkspace;
 use fenris::nalgebra::DVector;
 use fenris::quadrature;
 use fenris::util::proptest::point2_f64_strategy;
@@ -19,7 +20,6 @@ use nalgebra::{
 };
 use proptest::prelude::*;
 use util::assert_approx_matrix_eq;
-use fenris::integrate::IntegrationWorkspace;
 
 #[test]
 fn map_reference_coords_quad2d() {
@@ -280,7 +280,7 @@ fn quad4_bilinear_function_exact_error() {
         MatrixSlice::from(&u_weights),
         &weights,
         &points,
-        &mut IntegrationWorkspace::default()
+        &mut IntegrationWorkspace::default(),
     );
 
     // Note: The solution here is obtained by symbolic integration. See
@@ -320,7 +320,7 @@ fn hex27_triquadratic_function_exact_error() {
         MatrixSlice::from(&u_weights),
         &weights,
         &points,
-        &mut IntegrationWorkspace::default()
+        &mut IntegrationWorkspace::default(),
     );
 
     // Note: The solution here is obtained by symbolic integration. See
@@ -356,7 +356,7 @@ fn hex20_quadratic_function_exact_error() {
         DVectorSlice::from(&u_weights),
         &weights,
         &points,
-        &mut IntegrationWorkspace::default()
+        &mut IntegrationWorkspace::default(),
     );
 
     // Note: The solution here is obtained by symbolic integration. See

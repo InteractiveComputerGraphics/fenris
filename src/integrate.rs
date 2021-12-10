@@ -1,18 +1,18 @@
 //! Tools for integrating functions on finite element spaces.
-use nalgebra::{DVectorSlice, Dynamic, OVector, RealField};
-use crate::allocators::{BiDimAllocator, TriDimAllocator, DimAllocator};
-use crate::assembly::global::{BasisFunctionBuffer, QuadratureBuffer, gather_global_to_local};
-use crate::element::{FiniteElement, VolumetricFiniteElement};
-use crate::nalgebra::{DefaultAllocator, DimName, OMatrix, OPoint, Scalar, U1, DVector};
-use crate::quadrature::{Quadrature};
-use crate::SmallDim;
-use crate::util::{reshape_to_slice, try_transmute_ref};
+use crate::allocators::{BiDimAllocator, DimAllocator, TriDimAllocator};
+use crate::assembly::global::{gather_global_to_local, BasisFunctionBuffer, QuadratureBuffer};
 use crate::assembly::local::{ElementConnectivityAssembler, ElementScalarAssembler, QuadratureTable};
-use crate::space::{FiniteElementSpace, ElementInSpace, VolumetricFiniteElementSpace};
-use std::marker::PhantomData;
-use crate::workspace::{with_thread_local_workspace};
 use crate::define_thread_local_workspace;
+use crate::element::{FiniteElement, VolumetricFiniteElement};
+use crate::nalgebra::{DVector, DefaultAllocator, DimName, OMatrix, OPoint, Scalar, U1};
+use crate::quadrature::Quadrature;
+use crate::space::{ElementInSpace, FiniteElementSpace, VolumetricFiniteElementSpace};
+use crate::util::{reshape_to_slice, try_transmute_ref};
+use crate::workspace::with_thread_local_workspace;
+use crate::SmallDim;
 use eyre::eyre;
+use nalgebra::{DVectorSlice, Dynamic, OVector, RealField};
+use std::marker::PhantomData;
 
 /// Computes the Riemannian volume form for the given dimensions.
 ///
@@ -25,8 +25,8 @@ where
     DefaultAllocator: BiDimAllocator<T, GeometryDim, ReferenceDim>,
 {
     if GeometryDim::is::<ReferenceDim>() {
-        let jacobian: &OMatrix<T, GeometryDim, GeometryDim> = try_transmute_ref(jacobian)
-            .expect("This cannot fail since we know that GeometryDim == ReferenceDim");
+        let jacobian: &OMatrix<T, GeometryDim, GeometryDim> =
+            try_transmute_ref(jacobian).expect("This cannot fail since we know that GeometryDim == ReferenceDim");
         jacobian.determinant().abs()
     } else {
         // TODO: Specialize other dimension combinations
@@ -43,18 +43,13 @@ pub trait Function<T, GeometryDim>
 where
     T: Scalar,
     GeometryDim: SmallDim,
-    DefaultAllocator: DimAllocator<T, Self::SolutionDim>
-        + DimAllocator<T, Self::OutputDim>
-        + DimAllocator<T, GeometryDim>
+    DefaultAllocator:
+        DimAllocator<T, Self::SolutionDim> + DimAllocator<T, Self::OutputDim> + DimAllocator<T, GeometryDim>,
 {
     type OutputDim: SmallDim;
     type SolutionDim: SmallDim;
 
-    fn evaluate(
-        &self,
-        x: &OPoint<T, GeometryDim>,
-        u: &OVector<T, Self::SolutionDim>,
-    ) -> OVector<T, Self::OutputDim>;
+    fn evaluate(&self, x: &OPoint<T, GeometryDim>, u: &OVector<T, Self::SolutionDim>) -> OVector<T, Self::OutputDim>;
 }
 
 impl<'a, T, GeometryDim, F> Function<T, GeometryDim> for &'a F
@@ -62,9 +57,7 @@ where
     T: Scalar,
     GeometryDim: SmallDim,
     F: Function<T, GeometryDim>,
-    DefaultAllocator: DimAllocator<T, F::SolutionDim>
-    + DimAllocator<T, F::OutputDim>
-    + DimAllocator<T, GeometryDim>
+    DefaultAllocator: DimAllocator<T, F::SolutionDim> + DimAllocator<T, F::OutputDim> + DimAllocator<T, GeometryDim>,
 {
     type OutputDim = F::OutputDim;
     type SolutionDim = F::SolutionDim;
@@ -84,7 +77,7 @@ impl Integrand {
     pub fn new_with_solution_dim<SolutionDim>() -> Integrand<SolutionDim> {
         Integrand {
             marker: Default::default(),
-            function: ()
+            function: (),
         }
     }
 }
@@ -93,14 +86,14 @@ impl<SolutionDim> Integrand<SolutionDim, ()> {
     pub fn with_function<F>(self, f: F) -> Integrand<SolutionDim, F> {
         Integrand {
             marker: Default::default(),
-            function: f
+            function: f,
         }
     }
 
     pub fn with_volume_function<F>(self, f: F) -> Integrand<SolutionDim, VolumeIntegrand<F>> {
         Integrand {
             marker: Default::default(),
-            function: VolumeIntegrand(f)
+            function: VolumeIntegrand(f),
         }
     }
 }
@@ -112,9 +105,7 @@ where
     OutputDim: SmallDim,
     SolutionDim: SmallDim,
     GeometryDim: SmallDim,
-    DefaultAllocator: DimAllocator<T, OutputDim>
-        + DimAllocator<T, SolutionDim>
-        + DimAllocator<T, GeometryDim>
+    DefaultAllocator: DimAllocator<T, OutputDim> + DimAllocator<T, SolutionDim> + DimAllocator<T, GeometryDim>,
 {
     type OutputDim = OutputDim;
     type SolutionDim = SolutionDim;
@@ -133,8 +124,7 @@ pub trait VolumeFunction<T, GeometryDim>
 where
     T: Scalar,
     GeometryDim: SmallDim,
-    DefaultAllocator: DimAllocator<T, Self::OutputDim>
-        + BiDimAllocator<T, Self::SolutionDim, GeometryDim>
+    DefaultAllocator: DimAllocator<T, Self::OutputDim> + BiDimAllocator<T, Self::SolutionDim, GeometryDim>,
 {
     type OutputDim: SmallDim;
     type SolutionDim: SmallDim;
@@ -148,37 +138,47 @@ where
 }
 
 impl<'a, T, GeometryDim, F> VolumeFunction<T, GeometryDim> for &'a F
-    where
-        T: Scalar,
-        GeometryDim: SmallDim,
-        F: VolumeFunction<T, GeometryDim>,
-        DefaultAllocator: BiDimAllocator<T, F::SolutionDim, GeometryDim> + DimAllocator<T, F::OutputDim>
+where
+    T: Scalar,
+    GeometryDim: SmallDim,
+    F: VolumeFunction<T, GeometryDim>,
+    DefaultAllocator: BiDimAllocator<T, F::SolutionDim, GeometryDim> + DimAllocator<T, F::OutputDim>,
 {
     type OutputDim = F::OutputDim;
     type SolutionDim = F::SolutionDim;
 
-    fn evaluate(&self, x: &OPoint<T, GeometryDim>, u: &OVector<T, Self::SolutionDim>, u_grad: &OMatrix<T, GeometryDim, Self::SolutionDim>) -> OVector<T, Self::OutputDim> {
+    fn evaluate(
+        &self,
+        x: &OPoint<T, GeometryDim>,
+        u: &OVector<T, Self::SolutionDim>,
+        u_grad: &OMatrix<T, GeometryDim, Self::SolutionDim>,
+    ) -> OVector<T, Self::OutputDim> {
         F::evaluate(self, x, u, u_grad)
     }
 }
 
-impl<F, T, OutputDim, SolutionDim, GeometryDim> VolumeFunction<T, GeometryDim> for Integrand<SolutionDim, VolumeIntegrand<F>>
+impl<F, T, OutputDim, SolutionDim, GeometryDim> VolumeFunction<T, GeometryDim>
+    for Integrand<SolutionDim, VolumeIntegrand<F>>
 where
-    F: Fn(&OPoint<T, GeometryDim>, &OVector<T, SolutionDim>, &OMatrix<T, GeometryDim, SolutionDim>) -> OVector<T, OutputDim>,
+    F: Fn(
+        &OPoint<T, GeometryDim>,
+        &OVector<T, SolutionDim>,
+        &OMatrix<T, GeometryDim, SolutionDim>,
+    ) -> OVector<T, OutputDim>,
     T: Scalar,
     OutputDim: SmallDim,
     SolutionDim: SmallDim,
     GeometryDim: SmallDim,
-    DefaultAllocator: DimAllocator<T, OutputDim>
-        + BiDimAllocator<T, SolutionDim, GeometryDim>
+    DefaultAllocator: DimAllocator<T, OutputDim> + BiDimAllocator<T, SolutionDim, GeometryDim>,
 {
     type OutputDim = OutputDim;
     type SolutionDim = SolutionDim;
 
-    fn evaluate(&self,
-                x: &OPoint<T, GeometryDim>,
-                u: &OVector<T, SolutionDim>,
-                u_grad: &OMatrix<T, GeometryDim, SolutionDim>
+    fn evaluate(
+        &self,
+        x: &OPoint<T, GeometryDim>,
+        u: &OVector<T, SolutionDim>,
+        u_grad: &OMatrix<T, GeometryDim, SolutionDim>,
     ) -> OVector<T, OutputDim> {
         (self.function.0)(x, u, u_grad)
     }
@@ -191,7 +191,7 @@ pub struct IntegrationWorkspace<T: Scalar> {
 impl<T: RealField> Default for IntegrationWorkspace<T> {
     fn default() -> Self {
         Self {
-            basis_buffer: BasisFunctionBuffer::default()
+            basis_buffer: BasisFunctionBuffer::default(),
         }
     }
 }
@@ -214,7 +214,7 @@ where
         // This is a separate bound because we generally don't need to mix the output dimension
         // with the other dimensions, so this way the bounds necessary for downstream consumers
         // are somewhat relaxed (the output dimension is often *fixed*, so maybe no bounds at all are necessary)
-        + DimAllocator<T, F::OutputDim>
+        + DimAllocator<T, F::OutputDim>,
 {
     let interpolation_weights = interpolation_weights.into();
 
@@ -226,8 +226,10 @@ where
     let mut result = OVector::<T, F::OutputDim>::zeros();
     for (w, p_ref) in weights.iter().zip(points) {
         element.populate_basis(basis_buffer.element_basis_values_mut(), p_ref);
-        let u_h = crate::util::compute_interpolation(interpolation_weights,
-                                                     DVectorSlice::from_slice(basis_buffer.element_basis_values(), n));
+        let u_h = crate::util::compute_interpolation(
+            interpolation_weights,
+            DVectorSlice::from_slice(basis_buffer.element_basis_values(), n),
+        );
         let x = element.map_reference_coords(p_ref);
         let jacobian = element.reference_jacobian(p_ref);
         let f = integrand.evaluate(&x, &u_h);
@@ -241,7 +243,7 @@ where
 
 #[derive(Debug)]
 pub enum IntegrationFailure {
-    SingularJacobian
+    SingularJacobian,
 }
 
 /// Integrates the given volume function on the given element with the provided quadrature and interpolation weights.
@@ -256,8 +258,8 @@ where
     T: RealField,
     F: VolumeFunction<T, Element::GeometryDim>,
     Element: VolumetricFiniteElement<T>,
-    DefaultAllocator: TriDimAllocator<T, F::SolutionDim, Element::GeometryDim, Element::ReferenceDim>
-        + DimAllocator<T, F::OutputDim>
+    DefaultAllocator:
+        TriDimAllocator<T, F::SolutionDim, Element::GeometryDim, Element::ReferenceDim> + DimAllocator<T, F::OutputDim>,
 {
     let interpolation_weights = interpolation_weights.into();
     let n = element.num_nodes();
@@ -269,14 +271,17 @@ where
     for (w, p_ref) in quadrature.weights().iter().zip(quadrature.points()) {
         let x = element.map_reference_coords(p_ref);
         let jacobian = element.reference_jacobian(p_ref);
-        let jacobian_inv_t = jacobian.transpose()
+        let jacobian_inv_t = jacobian
+            .transpose()
             .try_inverse()
             .ok_or_else(|| IntegrationFailure::SingularJacobian)?;
 
         // First we compute u_h
         element.populate_basis(basis_buffer.element_basis_values_mut(), p_ref);
-        let u_h = crate::util::compute_interpolation(interpolation_weights,
-                                                     DVectorSlice::from_slice(basis_buffer.element_basis_values(), n));
+        let u_h = crate::util::compute_interpolation(
+            interpolation_weights,
+            DVectorSlice::from_slice(basis_buffer.element_basis_values(), n),
+        );
 
         // Then we compute u_h_grad. To do so we first compute the gradient with respect to *reference element coords*,
         // then we transform this to physical coordinates by the inverse transposed Jacobian
@@ -336,31 +341,32 @@ where
             space: None,
             u: None,
             integrand: None,
-            qtable: None
+            qtable: None,
         }
     }
 
     pub fn with_space(self, space: &'a Space) -> Self {
         Self {
-            space: Some(space), .. self
+            space: Some(space),
+            ..self
         }
     }
 
     pub fn with_quadrature_table(self, qtable: &'a QTable) -> Self {
         Self {
-            qtable: Some(qtable), .. self
+            qtable: Some(qtable),
+            ..self
         }
     }
 
     pub fn with_interpolation_weights(self, u: DVectorSlice<'a, T>) -> Self {
-        Self {
-            u: Some(u), .. self
-        }
+        Self { u: Some(u), ..self }
     }
 
     pub fn with_integrand(self, integrand: F) -> Self {
         Self {
-            integrand: Some(integrand), .. self
+            integrand: Some(integrand),
+            ..self
         }
     }
 
@@ -369,7 +375,7 @@ where
             space: self.space.expect("Must provide space"),
             u: self.u.expect("Must provide interpolation weights"),
             integrand: self.integrand.expect("Must provide integrand"),
-            qtable: self.qtable.expect("Must provide quadrature table")
+            qtable: self.qtable.expect("Must provide quadrature table"),
         }
     }
 
@@ -378,7 +384,7 @@ where
             space: self.space.expect("Must provide space"),
             u: self.u.expect("Must provide interpolation weights"),
             integrand: self.integrand.expect("Must provide integrand"),
-            qtable: self.qtable.expect("Must provide quadrature table")
+            qtable: self.qtable.expect("Must provide quadrature table"),
         }
     }
 }
@@ -388,8 +394,8 @@ where
     T: Scalar,
     Space: FiniteElementSpace<T>,
     F: Function<T, Space::GeometryDim>,
-    DefaultAllocator: TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim>
-        + DimAllocator<T, F::OutputDim>
+    DefaultAllocator:
+        TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
 {
     fn solution_dim(&self) -> usize {
         F::SolutionDim::dim()
@@ -418,7 +424,7 @@ struct ElementIntegralAssemblerWorkspace<T, D>
 where
     T: Scalar,
     D: DimName,
-    DefaultAllocator: DimAllocator<T, D>
+    DefaultAllocator: DimAllocator<T, D>,
 {
     integration_workspace: IntegrationWorkspace<T>,
     quadrature_buffer: QuadratureBuffer<T, D>,
@@ -430,14 +436,14 @@ impl<T, D> Default for ElementIntegralAssemblerWorkspace<T, D>
 where
     T: RealField,
     D: DimName,
-    DefaultAllocator: DimAllocator<T, D>
+    DefaultAllocator: DimAllocator<T, D>,
 {
     fn default() -> Self {
         Self {
             integration_workspace: Default::default(),
             quadrature_buffer: Default::default(),
             local_interpolation_weights: DVector::zeros(0),
-            nodes: Default::default()
+            nodes: Default::default(),
         }
     }
 }
@@ -448,8 +454,8 @@ where
     F: Function<T, Space::GeometryDim>,
     Space: FiniteElementSpace<T>,
     QTable: QuadratureTable<T, Space::ReferenceDim>,
-    DefaultAllocator: TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim>
-        + DimAllocator<T, F::OutputDim>
+    DefaultAllocator:
+        TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
 {
     fn assemble_element_scalar(&self, element_index: usize) -> eyre::Result<T> {
         let n = self.element_node_count(element_index);
@@ -458,8 +464,12 @@ where
         let integral = with_thread_local_workspace(
             &WORKSPACE,
             |workspace: &mut ElementIntegralAssemblerWorkspace<T, Space::ReferenceDim>| {
-                workspace.quadrature_buffer.populate_element_weights_and_points_from_table(element_index, self.qtable);
-                workspace.local_interpolation_weights.resize_vertically_mut(element_ndof, T::zero());
+                workspace
+                    .quadrature_buffer
+                    .populate_element_weights_and_points_from_table(element_index, self.qtable);
+                workspace
+                    .local_interpolation_weights
+                    .resize_vertically_mut(element_ndof, T::zero());
                 workspace.nodes.resize(n, usize::MAX);
                 self.populate_element_nodes(&mut workspace.nodes, element_index);
                 let u_local = &mut workspace.local_interpolation_weights;
@@ -471,9 +481,10 @@ where
                     &element,
                     quadrature,
                     u_local,
-                    &mut workspace.integration_workspace
+                    &mut workspace.integration_workspace,
                 )
-        });
+            },
+        );
         Ok(integral[0])
     }
 }
@@ -486,8 +497,8 @@ where
     // a volumetric finite element space... But unsure if it may cause downstream issues
     F: VolumeFunction<T, Space::ReferenceDim>,
     Space: VolumetricFiniteElementSpace<T>,
-    DefaultAllocator: TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim>
-        + DimAllocator<T, F::OutputDim>
+    DefaultAllocator:
+        TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
 {
     fn solution_dim(&self) -> usize {
         F::SolutionDim::dim()
@@ -517,8 +528,8 @@ where
     F: VolumeFunction<T, Space::ReferenceDim>,
     Space: VolumetricFiniteElementSpace<T>,
     QTable: QuadratureTable<T, Space::ReferenceDim>,
-    DefaultAllocator: TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim>
-    + DimAllocator<T, F::OutputDim>
+    DefaultAllocator:
+        TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
 {
     fn assemble_element_scalar(&self, element_index: usize) -> eyre::Result<T> {
         let n = self.element_node_count(element_index);
@@ -527,8 +538,12 @@ where
         let integral = with_thread_local_workspace(
             &WORKSPACE,
             |workspace: &mut ElementIntegralAssemblerWorkspace<T, Space::ReferenceDim>| {
-                workspace.quadrature_buffer.populate_element_weights_and_points_from_table(element_index, self.qtable);
-                workspace.local_interpolation_weights.resize_vertically_mut(element_ndof, T::zero());
+                workspace
+                    .quadrature_buffer
+                    .populate_element_weights_and_points_from_table(element_index, self.qtable);
+                workspace
+                    .local_interpolation_weights
+                    .resize_vertically_mut(element_ndof, T::zero());
                 workspace.nodes.resize(n, usize::MAX);
                 self.populate_element_nodes(&mut workspace.nodes, element_index);
                 let u_local = &mut workspace.local_interpolation_weights;
@@ -540,15 +555,18 @@ where
                     &element,
                     quadrature,
                     u_local,
-                    &mut workspace.integration_workspace
+                    &mut workspace.integration_workspace,
                 )
-            })
-            .map_err(|err| match err {
-                // TODO: Handle this better? Alternatively we could make the integral "work"
-                // since a singular Jacobian also means that the volume form is 0,
-                // so the integral vanishes in some sense
-                IntegrationFailure::SingularJacobian => { eyre!("Failed to compute integral due to singular Jacobian") }
-            })?;
+            },
+        )
+        .map_err(|err| match err {
+            // TODO: Handle this better? Alternatively we could make the integral "work"
+            // since a singular Jacobian also means that the volume form is 0,
+            // so the integral vanishes in some sense
+            IntegrationFailure::SingularJacobian => {
+                eyre!("Failed to compute integral due to singular Jacobian")
+            }
+        })?;
         Ok(integral[0])
     }
 }

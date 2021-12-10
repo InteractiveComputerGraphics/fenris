@@ -1,15 +1,17 @@
 //! Functionality for error estimation.
 use crate::allocators::{BiDimAllocator, TriDimAllocator};
-use crate::assembly::global::{compute_global_potential};
-use crate::assembly::local::{QuadratureTable};
-use crate::element::{VolumetricFiniteElement};
+use crate::assembly::global::compute_global_potential;
+use crate::assembly::local::QuadratureTable;
+use crate::element::VolumetricFiniteElement;
+use crate::integrate::{
+    integrate_over_element, integrate_over_volume_element, ElementIntegralAssemblerBuilder, Integrand,
+    IntegrationWorkspace, VolumeFunction,
+};
 use crate::nalgebra::DVectorSlice;
 use crate::nalgebra::{DefaultAllocator, OPoint, OVector, RealField};
-use crate::space::{VolumetricFiniteElementSpace};
+use crate::space::VolumetricFiniteElementSpace;
 use crate::SmallDim;
 use nalgebra::{OMatrix, Vector1, U1};
-use crate::integrate::{integrate_over_element, IntegrationWorkspace, Integrand,
-                       ElementIntegralAssemblerBuilder, integrate_over_volume_element, VolumeFunction};
 
 /// Estimate the squared $L^2$ error $\norm{u_h - u}^2_{L^2}$ on the given element with the given basis
 /// weights and quadrature points.
@@ -40,7 +42,7 @@ where
         element,
         (quadrature_weights, quadrature_points),
         u_h_element,
-        workspace
+        workspace,
     );
 
     // Result is a 1-vector, we want to return a scalar
@@ -67,7 +69,7 @@ where
     T: RealField,
     Element: VolumetricFiniteElement<T>,
     SolutionDim: SmallDim,
-    DefaultAllocator: TriDimAllocator<T, SolutionDim, Element::GeometryDim, Element::ReferenceDim>
+    DefaultAllocator: TriDimAllocator<T, SolutionDim, Element::GeometryDim, Element::ReferenceDim>,
 {
     let n = element.num_nodes();
     assert_eq!(u_h_element.len(), n * SolutionDim::dim());
@@ -76,8 +78,9 @@ where
         element,
         (quadrature_weights, quadrature_points),
         u_h_element,
-        workspace
-    ).expect("TODO: Handle the case where this might fail (due to e.g. singular Jacobian)");
+        workspace,
+    )
+    .expect("TODO: Handle the case where this might fail (due to e.g. singular Jacobian)");
 
     // Result is a 1-vector, we want to return a scalar
     result_as_vector[0]
@@ -111,7 +114,7 @@ where
         u_h_element,
         quadrature_weights,
         quadrature_points,
-        workspace
+        workspace,
     )
     .sqrt()
 }
@@ -130,7 +133,7 @@ pub fn estimate_element_L2_error<T, Element, SolutionDim>(
     u_h_element: DVectorSlice<T>,
     quadrature_weights: &[T],
     quadrature_points: &[OPoint<T, Element::ReferenceDim>],
-    workspace: &mut IntegrationWorkspace<T>
+    workspace: &mut IntegrationWorkspace<T>,
 ) -> T
 where
     T: RealField,
@@ -144,51 +147,47 @@ where
         u_h_element,
         quadrature_weights,
         quadrature_points,
-        workspace
+        workspace,
     )
     .sqrt()
 }
 
 #[allow(non_snake_case)]
 fn make_L2_error_squared_integrand<'a, T, SolutionDim, GeometryDim>(
-    u: impl 'a + Fn(&OPoint<T, GeometryDim>) -> OVector<T, SolutionDim>
+    u: impl 'a + Fn(&OPoint<T, GeometryDim>) -> OVector<T, SolutionDim>,
 ) -> Integrand<SolutionDim, impl 'a + Fn(&OPoint<T, GeometryDim>, &OVector<T, SolutionDim>) -> Vector1<T>>
 where
     T: RealField,
     SolutionDim: SmallDim,
     GeometryDim: SmallDim,
-    DefaultAllocator: BiDimAllocator<T, SolutionDim, GeometryDim>
+    DefaultAllocator: BiDimAllocator<T, SolutionDim, GeometryDim>,
 {
     let function = move |x: &OPoint<T, GeometryDim>, u_h: &OVector<T, SolutionDim>| {
         let u_at_x = u(&x);
         let error = u_h - u_at_x;
         Vector1::new(error.norm_squared())
     };
-    Integrand::new_with_solution_dim::<SolutionDim>()
-        .with_function(function)
+    Integrand::new_with_solution_dim::<SolutionDim>().with_function(function)
 }
 
 #[allow(non_snake_case)]
 fn make_H1_seminorm_error_squared_integrand<'a, T, SolutionDim, GeometryDim>(
-    u_grad: impl 'a + Fn(&OPoint<T, GeometryDim>) -> OMatrix<T, GeometryDim, SolutionDim>
-) -> impl VolumeFunction<T, GeometryDim, SolutionDim=SolutionDim, OutputDim=U1>
+    u_grad: impl 'a + Fn(&OPoint<T, GeometryDim>) -> OMatrix<T, GeometryDim, SolutionDim>,
+) -> impl VolumeFunction<T, GeometryDim, SolutionDim = SolutionDim, OutputDim = U1>
 where
     T: RealField,
     SolutionDim: SmallDim,
     GeometryDim: SmallDim,
-    DefaultAllocator: BiDimAllocator<T, SolutionDim, GeometryDim>
+    DefaultAllocator: BiDimAllocator<T, SolutionDim, GeometryDim>,
 {
-    let function = move |
-        x: &OPoint<T, GeometryDim>,
-        _u_h: &OVector<T, SolutionDim>,
-        u_h_grad: &OMatrix<T, GeometryDim, SolutionDim>
-    | {
+    let function = move |x: &OPoint<T, GeometryDim>,
+                         _u_h: &OVector<T, SolutionDim>,
+                         u_h_grad: &OMatrix<T, GeometryDim, SolutionDim>| {
         let u_grad_at_x = u_grad(&x);
         let error = u_h_grad - u_grad_at_x;
         Vector1::new(error.norm_squared())
     };
-    Integrand::new_with_solution_dim::<SolutionDim>()
-        .with_volume_function(function)
+    Integrand::new_with_solution_dim::<SolutionDim>().with_volume_function(function)
 }
 
 /// Estimate the squared $L^2$ error $\norm{u_h - u}^2_{L^2}$ on the given finite element space

@@ -2,6 +2,7 @@ use fenris::assembly::global::CsrAssembler;
 use fenris::assembly::local::{assemble_element_mass_matrix, Density, ElementMassAssembler, GeneralQuadratureTable};
 use fenris::element::{ElementConnectivity, FiniteElement, Tet20Element, Tet4Element};
 use fenris::error::{estimate_L2_error_squared, estimate_element_L2_error_squared};
+use fenris::integrate::IntegrationWorkspace;
 use fenris::mesh::procedural::create_unit_box_uniform_tet_mesh_3d;
 use fenris::mesh::Tet10Mesh;
 use fenris::nalgebra::{DMatrix, DVector, DVectorSlice};
@@ -10,7 +11,6 @@ use fenris::quadrature::Quadrature;
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
 use nalgebra::{Matrix2, Matrix3, MatrixSliceMut, Point3, Vector1};
 use std::iter::repeat;
-use fenris::integrate::IntegrationWorkspace;
 
 #[test]
 #[allow(non_snake_case)]
@@ -66,7 +66,7 @@ fn squared_norm_agrees_with_element_mass_matrix_quadratic_form_tet20() {
         DVectorSlice::from(&g_h),
         quadrature.weights(),
         quadrature.points(),
-        &mut workspace
+        &mut workspace,
     );
 
     let mut M = DMatrix::zeros(20, 20);

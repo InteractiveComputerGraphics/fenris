@@ -5,6 +5,7 @@ use crate::assembly::local::{
     QuadratureTable,
 };
 use crate::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
+use crate::define_thread_local_workspace;
 use crate::element::VolumetricFiniteElement;
 use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{
@@ -13,9 +14,8 @@ use crate::nalgebra::{
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
 use crate::util::{clone_upper_to_lower, reshape_to_slice};
-use crate::workspace::{with_thread_local_workspace};
+use crate::workspace::with_thread_local_workspace;
 use crate::Symmetry;
-use crate::define_thread_local_workspace;
 use eyre::eyre;
 use itertools::izip;
 

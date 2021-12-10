@@ -24,10 +24,10 @@ use crate::assembly::local::{
     ElementConnectivityAssembler, ElementMatrixAssembler, ElementScalarAssembler, ElementVectorAssembler,
     QuadratureTable,
 };
+use crate::nalgebra::MatrixSlice;
 use crate::space::{FiniteElementConnectivity, FiniteElementSpace};
 use crate::SmallDim;
 use fenris_sparse::ParallelCsrRowCollection;
-use crate::nalgebra::MatrixSlice;
 
 /// An assembler for CSR matrices.
 #[derive(Debug, Clone)]
@@ -758,7 +758,7 @@ fn add_local_to_global_<'a, T: RealField>(
 ///
 /// TODO: Move to local assembly???
 #[derive(Debug)]
-pub struct QuadratureBuffer<T, D, Data=()>
+pub struct QuadratureBuffer<T, D, Data = ()>
 where
     T: Scalar,
     D: DimName,
@@ -821,11 +821,7 @@ where
     ) {
         let quadrature_size = table.element_quadrature_size(element_index);
         self.resize(quadrature_size);
-        table.populate_element_quadrature(
-            element_index,
-            &mut self.quad_points,
-            &mut self.quad_weights,
-        );
+        table.populate_element_quadrature(element_index, &mut self.quad_points, &mut self.quad_weights);
     }
 
     pub fn weights(&self) -> &[T] {
