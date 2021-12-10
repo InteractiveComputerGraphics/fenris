@@ -90,3 +90,37 @@ pub fn with_thread_local_workspace<W: 'static + Default, T>(
         f(workspace)
     })
 }
+
+/// Helper macro for easily defining thread-local workspaces.
+///
+/// # Example
+/// ```
+/// use fenris::define_thread_local_workspace;
+/// use fenris::workspace::with_thread_local_workspace;
+///
+/// define_thread_local_workspace!(WORKSPACE);
+///
+/// // Workspace must implement Default
+/// #[derive(Default)]
+/// struct MyWorkspace {
+///     buffer: Vec<usize>
+/// }
+///
+/// fn foo() {
+///     with_thread_local_workspace(&WORKSPACE, |workspace: &mut MyWorkspace| {
+///         workspace.buffer.clear();
+///         workspace.buffer.copy_from_slice(&[1, 2, 3]);
+///         // Perform some computations that need intermediate storage
+///     })
+/// }
+/// ```
+///
+#[macro_export]
+macro_rules! define_thread_local_workspace {
+    ($variable_name:ident) => {
+        thread_local! {
+            static $variable_name: std::cell::RefCell<$crate::workspace::Workspace>
+                = std::cell::RefCell::new($crate::workspace::Workspace::default());
+        }
+    }
+}
