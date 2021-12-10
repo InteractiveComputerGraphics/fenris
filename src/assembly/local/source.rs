@@ -8,10 +8,10 @@ use crate::nalgebra::{
     Scalar, U1,
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
-use crate::workspace::{with_thread_local_workspace, Workspace};
+use crate::workspace::with_thread_local_workspace;
 use crate::SmallDim;
+use crate::define_thread_local_workspace;
 use itertools::izip;
-use std::cell::RefCell;
 use std::marker::PhantomData;
 
 pub trait SourceFunction<T, GeometryDim>: Operator<T, GeometryDim>
@@ -132,7 +132,7 @@ where
     }
 }
 
-thread_local! { static SOURCE_WORKSPACE: RefCell<Workspace> = RefCell::new(Workspace::default()) }
+define_thread_local_workspace!(SOURCE_WORKSPACE);
 
 struct SourceTermWorkspace<T, D, Data>
 where
