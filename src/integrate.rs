@@ -1,6 +1,7 @@
 //! Tools for integrating functions on finite element spaces.
 use crate::allocators::{BiDimAllocator, DimAllocator, TriDimAllocator};
-use crate::assembly::global::{gather_global_to_local, BasisFunctionBuffer, QuadratureBuffer};
+use crate::assembly::global::{gather_global_to_local};
+use crate::assembly::buffers::{BasisFunctionBuffer, QuadratureBuffer};
 use crate::assembly::local::{ElementConnectivityAssembler, ElementScalarAssembler, QuadratureTable};
 use crate::define_thread_local_workspace;
 use crate::element::{FiniteElement, VolumetricFiniteElement};
