@@ -29,7 +29,9 @@ where
     T: Scalar,
 {
     fn from(segment: LineSegment2d<T>) -> Self {
-        Self { vertices: [segment.from().clone(), segment.to().clone()] }
+        Self {
+            vertices: [segment.from().clone(), segment.to().clone()],
+        }
     }
 }
 
