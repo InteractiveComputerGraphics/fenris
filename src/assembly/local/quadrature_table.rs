@@ -111,7 +111,7 @@ where
     }
 }
 
-pub struct GeneralQuadratureParts<T, GeometryDim, Data> 
+pub struct GeneralQuadratureParts<T, GeometryDim, Data>
 where
     T: Scalar,
     GeometryDim: DimName,
