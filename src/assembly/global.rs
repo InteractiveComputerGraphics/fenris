@@ -661,8 +661,16 @@ impl<T: RealField> VectorParAssembler<T> {
     }
 }
 
-/// Computes the value of a global scalar potential as a sum of element-wise scalars.
+#[deprecated = "Use assemble_scalar instead"]
 pub fn compute_global_potential<T>(element_assembler: &(impl ElementScalarAssembler<T> + ?Sized)) -> eyre::Result<T>
+where
+    T: RealField,
+{
+    assemble_scalar(element_assembler)
+}
+
+/// Computes the value of a global scalar potential as a sum of element-wise scalars.
+pub fn assemble_scalar<T>(element_assembler: &(impl ElementScalarAssembler<T> + ?Sized)) -> eyre::Result<T>
 where
     T: RealField,
 {
@@ -678,7 +686,18 @@ where
 }
 
 /// Computes the value of a global scalar potential as a sum of element-wise scalars in parallel.
+#[deprecated = "Use par_assemble_scalar instead"]
 pub fn par_compute_global_potential<T>(
+    element_assembler: &(impl ElementScalarAssembler<T> + ?Sized + Sync),
+) -> eyre::Result<T>
+where
+    T: RealField,
+{
+    par_assemble_scalar(element_assembler)
+}
+
+/// Computes the value of a global scalar potential as a sum of element-wise scalars in parallel.
+pub fn par_assemble_scalar<T>(
     element_assembler: &(impl ElementScalarAssembler<T> + ?Sized + Sync),
 ) -> eyre::Result<T>
 where

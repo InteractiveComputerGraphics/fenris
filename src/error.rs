@@ -1,6 +1,6 @@
 //! Functionality for error estimation.
 use crate::allocators::{BiDimAllocator, TriDimAllocator};
-use crate::assembly::global::compute_global_potential;
+use crate::assembly::global::assemble_scalar;
 use crate::assembly::local::QuadratureTable;
 use crate::element::VolumetricFiniteElement;
 use crate::integrate::{
@@ -213,7 +213,7 @@ where
         .with_integrand(make_L2_error_squared_integrand(u))
         .build_integrator();
 
-    compute_global_potential(&assembler)
+    assemble_scalar(&assembler)
 }
 
 /// Estimate the $L^2$ error $\norm{u_h - u}_{L^2}$ on the given finite element space
@@ -258,7 +258,7 @@ where
         .with_integrand(make_H1_seminorm_error_squared_integrand(u_grad))
         .build_volume_integrator();
 
-    compute_global_potential(&assembler)
+    assemble_scalar(&assembler)
 }
 
 /// Estimate the squared $H^1$ *seminorm* error $\|u_h - u \|^2_{H^1}$ on the given finite element space

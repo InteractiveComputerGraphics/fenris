@@ -1,5 +1,5 @@
 use fenris::allocators::{BiDimAllocator, DimAllocator};
-use fenris::assembly::global::{compute_global_potential, CsrAssembler, VectorAssembler};
+use fenris::assembly::global::{assemble_scalar, CsrAssembler, VectorAssembler};
 use fenris::assembly::local::{
     assemble_element_mass_matrix, AggregateElementAssembler, ElementConnectivityAssembler,
     ElementEllipticAssemblerBuilder, ElementMatrixAssembler, ElementScalarAssembler, ElementVectorAssembler,
@@ -201,8 +201,8 @@ fn aggregate_element_assembler_repeated_assembler() {
     let aggregate = AggregateElementAssembler::from_assemblers(&assemblers);
 
     // Scalar
-    let aggregate_scalar = compute_global_potential(&aggregate).unwrap();
-    let expected_scalar = 2.0 * compute_global_potential(&assembler).unwrap();
+    let aggregate_scalar = assemble_scalar(&aggregate).unwrap();
+    let expected_scalar = 2.0 * assemble_scalar(&assembler).unwrap();
     assert_scalar_eq!(aggregate_scalar, expected_scalar, comp = float);
 
     // Vector
@@ -256,9 +256,9 @@ fn aggregate_element_assembler_multibody() {
     let aggregate = AggregateElementAssembler::from_assemblers(&assemblers);
 
     // Scalar
-    let aggregate_scalar = compute_global_potential(&aggregate).unwrap();
+    let aggregate_scalar = assemble_scalar(&aggregate).unwrap();
     let expected_scalar =
-        compute_global_potential(&assembler1).unwrap() + compute_global_potential(&assembler2).unwrap();
+        assemble_scalar(&assembler1).unwrap() + assemble_scalar(&assembler2).unwrap();
     assert_scalar_eq!(aggregate_scalar, expected_scalar, comp = float);
 
     // Vector

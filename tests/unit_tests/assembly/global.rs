@@ -6,8 +6,8 @@ use proptest::prelude::*;
 
 use eyre::eyre;
 use fenris::assembly::global::{
-    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_matrix, compute_global_potential,
-    gather_global_to_local, par_compute_global_potential, CsrAssembler, CsrParAssembler,
+    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_matrix, assemble_scalar,
+    gather_global_to_local, par_assemble_scalar, CsrAssembler, CsrParAssembler,
 };
 use fenris::assembly::local::{ElementConnectivityAssembler, ElementScalarAssembler};
 use fenris::nalgebra::{DMatrix, DVector, U2};
@@ -288,14 +288,14 @@ impl ElementScalarAssembler<f64> for MockScalarElementAssembler {
 }
 
 #[test]
-fn test_compute_global_potential() {
-    let global_potential = compute_global_potential(&MockScalarElementAssembler).unwrap();
+fn test_assemble_scalar() {
+    let global_potential = assemble_scalar(&MockScalarElementAssembler).unwrap();
     assert_scalar_eq!(global_potential, 9.0, comp = float);
 }
 
 #[test]
-fn test_par_compute_global_potential() {
-    let par_global_potential = par_compute_global_potential(&MockScalarElementAssembler).unwrap();
+fn test_par_assemble_scalar() {
+    let par_global_potential = par_assemble_scalar(&MockScalarElementAssembler).unwrap();
     assert_scalar_eq!(par_global_potential, 9.0, comp = float);
 }
 
