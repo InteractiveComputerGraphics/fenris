@@ -1,24 +1,23 @@
-use std::cell::RefCell;
-use std::collections::BTreeSet;
-use std::ops::AddAssign;
-use nalgebra::base::storage::Storage;
-use nalgebra::{
-    DMatrix, DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DimName, Dynamic, Matrix,
-    RealField, Scalar, U1,
+use crate::assembly::local::{
+    ElementConnectivityAssembler, ElementMatrixAssembler, ElementScalarAssembler, ElementVectorAssembler,
 };
-use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
-use rayon::slice::ParallelSliceMut;
-use thread_local::ThreadLocal;
+use crate::space::FiniteElementConnectivity;
 use fenris_nested_vec::NestedVec;
 use fenris_paradis::adapter::BlockAdapter;
 use fenris_paradis::coloring::sequential_greedy_coloring;
 use fenris_paradis::DisjointSubsets;
-use nalgebra_sparse::{pattern::SparsityPattern, CsrMatrix};
-use crate::assembly::local::{
-    ElementConnectivityAssembler, ElementMatrixAssembler, ElementScalarAssembler, ElementVectorAssembler,
-};
-use crate::space::{FiniteElementConnectivity};
 use fenris_sparse::ParallelCsrRowCollection;
+use nalgebra::base::storage::Storage;
+use nalgebra::{
+    DMatrix, DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DimName, Dynamic, Matrix, RealField, Scalar, U1,
+};
+use nalgebra_sparse::{pattern::SparsityPattern, CsrMatrix};
+use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+use rayon::slice::ParallelSliceMut;
+use std::cell::RefCell;
+use std::collections::BTreeSet;
+use std::ops::AddAssign;
+use thread_local::ThreadLocal;
 
 /// An assembler for CSR matrices.
 #[derive(Debug, Clone)]
@@ -688,9 +687,7 @@ where
 }
 
 /// Computes the value of a global scalar potential as a sum of element-wise scalars in parallel.
-pub fn par_assemble_scalar<T>(
-    element_assembler: &(impl ElementScalarAssembler<T> + ?Sized + Sync),
-) -> eyre::Result<T>
+pub fn par_assemble_scalar<T>(element_assembler: &(impl ElementScalarAssembler<T> + ?Sized + Sync)) -> eyre::Result<T>
 where
     T: RealField,
 {

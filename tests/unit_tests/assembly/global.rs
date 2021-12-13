@@ -6,8 +6,8 @@ use proptest::prelude::*;
 
 use eyre::eyre;
 use fenris::assembly::global::{
-    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_matrix, assemble_scalar,
-    gather_global_to_local, par_assemble_scalar, CsrAssembler, CsrParAssembler,
+    apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_matrix, assemble_scalar, gather_global_to_local,
+    par_assemble_scalar, CsrAssembler, CsrParAssembler,
 };
 use fenris::assembly::local::{ElementConnectivityAssembler, ElementScalarAssembler};
 use fenris::nalgebra::{DMatrix, DVector, U2};

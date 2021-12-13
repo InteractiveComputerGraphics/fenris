@@ -1,10 +1,12 @@
-use crate::nalgebra::{Scalar, DMatrix, RealField, DefaultAllocator, OPoint, DimName, Dynamic, MatrixSlice, MatrixSliceMut};
-use crate::space::FiniteElementSpace;
 use crate::allocators::{BiDimAllocator, DimAllocator};
-use itertools::izip;
-use crate::nalgebra::allocator::Allocator;
-use crate::SmallDim;
 use crate::assembly::local::QuadratureTable;
+use crate::nalgebra::allocator::Allocator;
+use crate::nalgebra::{
+    DMatrix, DefaultAllocator, DimName, Dynamic, MatrixSlice, MatrixSliceMut, OPoint, RealField, Scalar,
+};
+use crate::space::FiniteElementSpace;
+use crate::SmallDim;
+use itertools::izip;
 
 #[derive(Debug)]
 pub struct BasisFunctionBuffer<T: Scalar> {
@@ -32,9 +34,9 @@ impl<T: RealField> BasisFunctionBuffer<T> {
     }
 
     pub fn populate_element_nodes_from_space<Space>(&mut self, element_index: usize, space: &Space)
-        where
-            Space: FiniteElementSpace<T>,
-            DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
+    where
+        Space: FiniteElementSpace<T>,
+        DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
     {
         space.populate_element_nodes(&mut self.element_nodes, element_index);
     }
@@ -92,10 +94,10 @@ impl<T: RealField> BasisFunctionBuffer<T> {
 /// A buffer for storing intermediate quadrature data.
 #[derive(Debug)]
 pub struct QuadratureBuffer<T, D, Data = ()>
-    where
-        T: Scalar,
-        D: DimName,
-        DefaultAllocator: Allocator<T, D>,
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>,
 {
     quad_weights: Vec<T>,
     quad_points: Vec<OPoint<T, D>>,
@@ -103,10 +105,10 @@ pub struct QuadratureBuffer<T, D, Data = ()>
 }
 
 impl<T, D, Data> Default for QuadratureBuffer<T, D, Data>
-    where
-        T: Scalar,
-        D: DimName,
-        DefaultAllocator: Allocator<T, D>,
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>,
 {
     fn default() -> Self {
         Self {
@@ -118,11 +120,11 @@ impl<T, D, Data> Default for QuadratureBuffer<T, D, Data>
 }
 
 impl<T, GeometryDim, Data> QuadratureBuffer<T, GeometryDim, Data>
-    where
-        T: RealField,
-        GeometryDim: SmallDim,
-        Data: Default + Clone,
-        DefaultAllocator: DimAllocator<T, GeometryDim>,
+where
+    T: RealField,
+    GeometryDim: SmallDim,
+    Data: Default + Clone,
+    DefaultAllocator: DimAllocator<T, GeometryDim>,
 {
     /// Resizes the internal buffer storages to the given size.
     pub fn resize(&mut self, quadrature_size: usize) {
@@ -175,8 +177,8 @@ impl<T, GeometryDim, Data> QuadratureBuffer<T, GeometryDim, Data>
 
     /// Calls a closure for each quadrature point currently in the workspace.
     pub fn for_each_quadrature_point<F>(&self, mut f: F) -> eyre::Result<()>
-        where
-            F: FnMut(T, &OPoint<T, GeometryDim>, &Data) -> eyre::Result<()>,
+    where
+        F: FnMut(T, &OPoint<T, GeometryDim>, &Data) -> eyre::Result<()>,
     {
         assert_eq!(self.quad_weights.len(), self.quad_points.len());
         assert_eq!(self.quad_weights.len(), self.quad_data.len());

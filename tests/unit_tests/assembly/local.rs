@@ -257,8 +257,7 @@ fn aggregate_element_assembler_multibody() {
 
     // Scalar
     let aggregate_scalar = assemble_scalar(&aggregate).unwrap();
-    let expected_scalar =
-        assemble_scalar(&assembler1).unwrap() + assemble_scalar(&assembler2).unwrap();
+    let expected_scalar = assemble_scalar(&assembler1).unwrap() + assemble_scalar(&assembler2).unwrap();
     assert_scalar_eq!(aggregate_scalar, expected_scalar, comp = float);
 
     // Vector
