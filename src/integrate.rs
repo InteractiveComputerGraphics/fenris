@@ -359,8 +359,8 @@ where
         }
     }
 
-    pub fn with_interpolation_weights(self, u: DVectorSlice<'a, T>) -> Self {
-        Self { u: Some(u), ..self }
+    pub fn with_interpolation_weights(self, u: impl Into<DVectorSlice<'a, T>>) -> Self {
+        Self { u: Some(u.into()), ..self }
     }
 
     pub fn with_integrand(self, integrand: F) -> Self {
