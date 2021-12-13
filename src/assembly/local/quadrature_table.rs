@@ -102,9 +102,24 @@ where
         Self { points, weights, data }
     }
 
-    pub fn into_parts(self) -> (NestedVec<OPoint<T, GeometryDim>>, NestedVec<T>, NestedVec<Data>) {
-        (self.points, self.weights, self.data)
+    pub fn into_parts(self) -> GeneralQuadratureParts<T, GeometryDim, Data> {
+        GeneralQuadratureParts {
+            points: self.points,
+            weights: self.weights,
+            data: self.data,
+        }
     }
+}
+
+pub struct GeneralQuadratureParts<T, GeometryDim, Data> 
+where
+    T: Scalar,
+    GeometryDim: DimName,
+    DefaultAllocator: Allocator<T, GeometryDim>,
+{
+    pub points: NestedVec<OPoint<T, GeometryDim>>,
+    pub weights: NestedVec<T>,
+    pub data: NestedVec<Data>,
 }
 
 impl<T, GeometryDim, Data> QuadratureTable<T, GeometryDim> for GeneralQuadratureTable<T, GeometryDim, Data>
