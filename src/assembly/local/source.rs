@@ -1,5 +1,5 @@
 use crate::allocators::{BiDimAllocator, DimAllocator, TriDimAllocator};
-use crate::assembly::global::{BasisFunctionBuffer, QuadratureBuffer};
+use crate::assembly::buffers::{BasisFunctionBuffer, QuadratureBuffer};
 use crate::assembly::local::{ElementConnectivityAssembler, ElementVectorAssembler, QuadratureTable};
 use crate::assembly::operators::Operator;
 use crate::define_thread_local_workspace;

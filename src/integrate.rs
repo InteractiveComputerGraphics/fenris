@@ -1,6 +1,7 @@
 //! Tools for integrating functions on finite element spaces.
 use crate::allocators::{BiDimAllocator, DimAllocator, TriDimAllocator};
-use crate::assembly::global::{gather_global_to_local, BasisFunctionBuffer, QuadratureBuffer};
+use crate::assembly::buffers::{BasisFunctionBuffer, QuadratureBuffer};
+use crate::assembly::global::gather_global_to_local;
 use crate::assembly::local::{ElementConnectivityAssembler, ElementScalarAssembler, QuadratureTable};
 use crate::define_thread_local_workspace;
 use crate::element::{FiniteElement, VolumetricFiniteElement};
@@ -359,8 +360,11 @@ where
         }
     }
 
-    pub fn with_interpolation_weights(self, u: DVectorSlice<'a, T>) -> Self {
-        Self { u: Some(u), ..self }
+    pub fn with_interpolation_weights(self, u: impl Into<DVectorSlice<'a, T>>) -> Self {
+        Self {
+            u: Some(u.into()),
+            ..self
+        }
     }
 
     pub fn with_integrand(self, integrand: F) -> Self {
@@ -374,8 +378,8 @@ where
     where
         Space: FiniteElementSpace<T>,
         F: Function<T, Space::GeometryDim>,
-        DefaultAllocator: TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim>
-            + DimAllocator<T, F::OutputDim>
+        DefaultAllocator:
+            TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
     {
         // We take all the trait bounds here so that we can do some sanity checking.
         // This makes it much easier for the user to debug where something went wrong,
@@ -388,7 +392,9 @@ where
         };
 
         let ndof = assembler.space.num_nodes() * F::SolutionDim::dim();
-        assert_eq!(assembler.u.len(), ndof,
+        assert_eq!(
+            assembler.u.len(),
+            ndof,
             "Size of interpolation weight vector does not match expected number of DOFs ( {} x {} )",
             F::SolutionDim::dim(),
             assembler.space.num_nodes()
@@ -401,8 +407,8 @@ where
     where
         Space: VolumetricFiniteElementSpace<T>,
         F: VolumeFunction<T, Space::ReferenceDim>,
-        DefaultAllocator: TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim>
-            + DimAllocator<T, F::OutputDim>
+        DefaultAllocator:
+            TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
     {
         let assembler = ElementIntegralVolumeAssembler {
             space: self.space.expect("Must provide space"),
@@ -412,10 +418,12 @@ where
         };
 
         let ndof = assembler.space.num_nodes() * F::SolutionDim::dim();
-        assert_eq!(assembler.u.len(), ndof,
-                   "Size of interpolation weight vector does not match expected number of DOFs ( {} x {} )",
-                   F::SolutionDim::dim(),
-                   assembler.space.num_nodes()
+        assert_eq!(
+            assembler.u.len(),
+            ndof,
+            "Size of interpolation weight vector does not match expected number of DOFs ( {} x {} )",
+            F::SolutionDim::dim(),
+            assembler.space.num_nodes()
         );
 
         assembler
