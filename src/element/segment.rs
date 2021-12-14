@@ -11,7 +11,17 @@ pub struct Segment2d2Element<T>
 where
     T: Scalar,
 {
-    segment: LineSegment2d<T>,
+    vertices: [Point2<T>; 2],
+}
+
+impl<T: Scalar> Segment2d2Element<T> {
+    pub fn vertices(&self) -> &[Point2<T>; 2] {
+        &self.vertices
+    }
+
+    pub fn to_line_segment(&self) -> LineSegment2d<T> {
+        self.into()
+    }
 }
 
 impl<T> From<LineSegment2d<T>> for Segment2d2Element<T>
@@ -19,7 +29,15 @@ where
     T: Scalar,
 {
     fn from(segment: LineSegment2d<T>) -> Self {
-        Self { segment }
+        Self {
+            vertices: [segment.from().clone(), segment.to().clone()],
+        }
+    }
+}
+
+impl<'a, T: Scalar> From<&'a Segment2d2Element<T>> for LineSegment2d<T> {
+    fn from(element: &'a Segment2d2Element<T>) -> Self {
+        LineSegment2d::new(element.vertices()[0].clone(), element.vertices()[1].clone())
     }
 }
 
@@ -56,22 +74,24 @@ where
     #[allow(non_snake_case)]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
     fn reference_jacobian(&self, _xi: &Point1<T>) -> Vector2<T> {
-        let a = &self.segment.from().coords;
-        let b = &self.segment.to().coords;
+        let a = &self.vertices[0].coords;
+        let b = &self.vertices[1].coords;
         (b - a) / 2.0
     }
 
     #[allow(non_snake_case)]
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
     fn map_reference_coords(&self, xi: &Point1<T>) -> Point2<T> {
-        let a = &self.segment.from().coords;
-        let b = &self.segment.to().coords;
+        let a = &self.vertices[0].coords;
+        let b = &self.vertices[1].coords;
         let phi = self.evaluate_basis(xi);
         OPoint::from(a * phi[0] + b * phi[1])
     }
 
     fn diameter(&self) -> T {
-        self.segment.length()
+        let s: &Segment2d2Element<T> = self;
+        let line_segment: LineSegment2d<T> = s.into();
+        line_segment.length()
     }
 }
 
@@ -80,7 +100,7 @@ where
     T: RealField,
 {
     fn normal(&self, _xi: &Point1<T>) -> Vector2<T> {
-        self.segment.normal_dir().normalize()
+        self.to_line_segment().normal_dir().normalize()
     }
 }
 
