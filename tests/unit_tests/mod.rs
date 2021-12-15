@@ -5,3 +5,4 @@ mod error;
 mod fe_mesh;
 mod mesh;
 mod reorder;
+mod quadrature;

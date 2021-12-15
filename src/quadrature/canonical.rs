@@ -1,7 +1,7 @@
 use crate::element::Tet4Element;
 use nalgebra::RealField;
 use crate::quadrature::QuadraturePair;
-use crate::quadrature::{univariate, tensor, total_order};
+use crate::quadrature::{tensor, total_order};
 use crate::element::*;
 use crate::mesh::Mesh;
 use crate::nalgebra::{Scalar, DefaultAllocator, DimName};
@@ -64,16 +64,10 @@ macro_rules! impl_canonical_stiffness_for_element {
     }
 }
 
-// Segment elements
-impl_canonical_mass_for_element!(Segment2d2Element<T>, univariate::gauss(2));
-impl_canonical_stiffness_for_element!(Segment2d2Element<T>, univariate::gauss(1));
-
 // Triangular elements
 impl_canonical_mass_for_element!(Tri3d2Element<T>, total_order::triangle(2).unwrap());
-impl_canonical_mass_for_element!(Tri3d3Element<T>, total_order::triangle(2).unwrap());
 impl_canonical_mass_for_element!(Tri6d2Element<T>, total_order::triangle(4).unwrap());
 impl_canonical_stiffness_for_element!(Tri3d2Element<T>, total_order::triangle(1).unwrap());
-impl_canonical_stiffness_for_element!(Tri3d3Element<T>, total_order::triangle(1).unwrap());
 impl_canonical_stiffness_for_element!(Tri6d2Element<T>, total_order::triangle(2).unwrap());
 
 // Quadrilateral elements
