@@ -15,6 +15,9 @@ pub mod tensor;
 pub mod total_order;
 pub mod univariate;
 
+mod canonical;
+pub use canonical::*;
+
 pub type QuadraturePair<T, D> = (Vec<T>, Vec<OPoint<T, D>>);
 pub type QuadraturePair1d<T> = QuadraturePair<T, U1>;
 pub type QuadraturePair2d<T> = QuadraturePair<T, U2>;
