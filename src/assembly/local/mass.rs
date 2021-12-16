@@ -203,7 +203,15 @@ where
     Element: VolumetricFiniteElement<T>,
     DefaultAllocator: DimAllocator<T, Element::GeometryDim>,
 {
-    assemble_element_mass_matrix_(output.into(), element, quadrature_weights, quadrature_points, quadrature_density, solution_dim, basis_values_buffer)
+    assemble_element_mass_matrix_(
+        output.into(),
+        element,
+        quadrature_weights,
+        quadrature_points,
+        quadrature_density,
+        solution_dim,
+        basis_values_buffer,
+    )
 }
 
 #[allow(non_snake_case)]

@@ -1,12 +1,12 @@
+use crate::allocators::BiDimAllocator;
+use crate::assembly::local::UniformQuadratureTable;
 use crate::element::Tet4Element;
-use nalgebra::RealField;
-use crate::quadrature::QuadraturePair;
-use crate::quadrature::{tensor, total_order};
 use crate::element::*;
 use crate::mesh::Mesh;
-use crate::nalgebra::{Scalar, DefaultAllocator, DimName};
-use crate::allocators::{BiDimAllocator};
-use crate::assembly::local::UniformQuadratureTable;
+use crate::nalgebra::{DefaultAllocator, DimName, Scalar};
+use crate::quadrature::QuadraturePair;
+use crate::quadrature::{tensor, total_order};
+use nalgebra::RealField;
 
 /// A canonical quadrature for integrating the mass matrix terms.
 ///
@@ -38,7 +38,7 @@ macro_rules! impl_canonical_mass_for_element {
     ($element:ty, $quadrature:expr) => {
         impl<T> CanonicalMassQuadrature for $element
         where
-            T: RealField
+            T: RealField,
         {
             type Quadrature = QuadraturePair<T, <$element as ReferenceFiniteElement<T>>::ReferenceDim>;
 
@@ -46,14 +46,14 @@ macro_rules! impl_canonical_mass_for_element {
                 $quadrature
             }
         }
-    }
+    };
 }
 
 macro_rules! impl_canonical_stiffness_for_element {
     ($element:ty, $quadrature:expr) => {
         impl<T> CanonicalStiffnessQuadrature for $element
         where
-            T: RealField
+            T: RealField,
         {
             type Quadrature = QuadraturePair<T, <$element as ReferenceFiniteElement<T>>::ReferenceDim>;
 
@@ -61,7 +61,7 @@ macro_rules! impl_canonical_stiffness_for_element {
                 $quadrature
             }
         }
-    }
+    };
 }
 
 // Triangular elements
@@ -96,9 +96,9 @@ impl<T, D, C> CanonicalMassQuadrature for Mesh<T, D, C>
 where
     T: Scalar,
     D: DimName,
-    C: ElementConnectivity<T, GeometryDim=D>,
-    C::Element: CanonicalMassQuadrature<Quadrature=QuadraturePair<T, C::ReferenceDim>>,
-    DefaultAllocator: BiDimAllocator<T, C::GeometryDim, C::ReferenceDim>
+    C: ElementConnectivity<T, GeometryDim = D>,
+    C::Element: CanonicalMassQuadrature<Quadrature = QuadraturePair<T, C::ReferenceDim>>,
+    DefaultAllocator: BiDimAllocator<T, C::GeometryDim, C::ReferenceDim>,
 {
     type Quadrature = UniformQuadratureTable<T, C::ReferenceDim>;
 
@@ -108,12 +108,12 @@ where
 }
 
 impl<T, D, C> CanonicalStiffnessQuadrature for Mesh<T, D, C>
-    where
-        T: Scalar,
-        D: DimName,
-        C: ElementConnectivity<T, GeometryDim=D>,
-        C::Element: CanonicalStiffnessQuadrature<Quadrature=QuadraturePair<T, C::ReferenceDim>>,
-        DefaultAllocator: BiDimAllocator<T, C::GeometryDim, C::ReferenceDim>
+where
+    T: Scalar,
+    D: DimName,
+    C: ElementConnectivity<T, GeometryDim = D>,
+    C::Element: CanonicalStiffnessQuadrature<Quadrature = QuadraturePair<T, C::ReferenceDim>>,
+    DefaultAllocator: BiDimAllocator<T, C::GeometryDim, C::ReferenceDim>,
 {
     type Quadrature = UniformQuadratureTable<T, C::ReferenceDim>;
 
