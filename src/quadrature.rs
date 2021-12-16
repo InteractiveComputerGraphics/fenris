@@ -49,12 +49,29 @@ where
     }
 }
 
-/// Helper trait for 2D quadratures.
+/// Trait alias for 1D quadrature rules.
+pub trait Quadrature1d<T>: Quadrature<T, U1>
+where
+    T: Scalar,
+{}
+
+/// Trait alias for 2D quadrature rules.
 pub trait Quadrature2d<T>: Quadrature<T, U2>
 where
     T: Scalar,
-{
-}
+{}
+
+/// Trait alias for 3D quadrature rules.
+pub trait Quadrature3d<T>: Quadrature<T, U3>
+where
+    T: Scalar
+{}
+
+impl<T, X> Quadrature1d<T> for X
+where
+    T: Scalar,
+    X: Quadrature<T, U1>
+{}
 
 impl<T, X> Quadrature2d<T> for X
 where
@@ -62,6 +79,12 @@ where
     X: Quadrature<T, U2>,
 {
 }
+
+impl<T, X> Quadrature3d<T> for X
+where
+    T: Scalar,
+    X: Quadrature<T, U3>
+{}
 
 impl<T, D, A, B> Quadrature<T, D> for (A, B)
 where
