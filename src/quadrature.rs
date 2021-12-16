@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Deref, Mul};
+use std::ops::{Add, AddAssign, Mul};
 
 use nalgebra::allocator::Allocator;
 use nalgebra::{DefaultAllocator, DimName, OPoint, Point1, Scalar, U2, U3};
@@ -67,25 +67,25 @@ impl<T, D, A, B> Quadrature<T, D> for (A, B)
 where
     T: Scalar,
     D: DimName,
-    A: Deref<Target = [T]>,
-    B: Deref<Target = [OPoint<T, D>]>,
+    A: AsRef<[T]>,
+    B: AsRef<[OPoint<T, D>]>,
     DefaultAllocator: Allocator<T, D>,
 {
     type Data = ();
 
     fn weights(&self) -> &[T] {
-        self.0.deref()
+        self.0.as_ref()
     }
 
     fn points(&self) -> &[OPoint<T, D>] {
-        self.1.deref()
+        self.1.as_ref()
     }
 
     fn data(&self) -> &[()] {
         // This may look absurd, but since we're just returning a slice to a zero-sized type (the unit type),
         // the (global) allocator never allocates anything and most likely the whole thing will get completely
         // optimized out
-        vec![(); self.0.len()].leak()
+        vec![(); self.weights().len()].leak()
     }
 }
 
