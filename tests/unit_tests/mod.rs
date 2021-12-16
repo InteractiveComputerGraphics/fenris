@@ -4,4 +4,5 @@ mod element;
 mod error;
 mod fe_mesh;
 mod mesh;
+mod quadrature;
 mod reorder;

@@ -1,9 +1,8 @@
-use numeric_literals::replace_float_literals;
-
 use crate::connectivity::Segment2d2Connectivity;
 use crate::element::{ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement, SurfaceFiniteElement};
 use crate::geometry::LineSegment2d;
 use crate::nalgebra::{OMatrix, OPoint, Point1, Point2, RealField, Scalar, Vector2, U1, U2};
+use numeric_literals::replace_float_literals;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 /// A surface element embedded in two dimensions.
@@ -15,6 +14,10 @@ where
 }
 
 impl<T: Scalar> Segment2d2Element<T> {
+    pub fn from_vertices(vertices: [Point2<T>; 2]) -> Self {
+        Self { vertices }
+    }
+
     pub fn vertices(&self) -> &[Point2<T>; 2] {
         &self.vertices
     }

@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Deref, Mul};
+use std::ops::{Add, AddAssign, Mul};
 
 use nalgebra::allocator::Allocator;
 use nalgebra::{DefaultAllocator, DimName, OPoint, Point1, Scalar, U2, U3};
@@ -14,6 +14,9 @@ use crate::nalgebra::{convert, Point2, Point3, RealField, U1};
 pub mod tensor;
 pub mod total_order;
 pub mod univariate;
+
+mod canonical;
+pub use canonical::*;
 
 pub type QuadraturePair<T, D> = (Vec<T>, Vec<OPoint<T, D>>);
 pub type QuadraturePair1d<T> = QuadraturePair<T, U1>;
@@ -46,10 +49,31 @@ where
     }
 }
 
-/// Helper trait for 2D quadratures.
+/// Trait alias for 1D quadrature rules.
+pub trait Quadrature1d<T>: Quadrature<T, U1>
+where
+    T: Scalar,
+{
+}
+
+/// Trait alias for 2D quadrature rules.
 pub trait Quadrature2d<T>: Quadrature<T, U2>
 where
     T: Scalar,
+{
+}
+
+/// Trait alias for 3D quadrature rules.
+pub trait Quadrature3d<T>: Quadrature<T, U3>
+where
+    T: Scalar,
+{
+}
+
+impl<T, X> Quadrature1d<T> for X
+where
+    T: Scalar,
+    X: Quadrature<T, U1>,
 {
 }
 
@@ -60,29 +84,36 @@ where
 {
 }
 
+impl<T, X> Quadrature3d<T> for X
+where
+    T: Scalar,
+    X: Quadrature<T, U3>,
+{
+}
+
 impl<T, D, A, B> Quadrature<T, D> for (A, B)
 where
     T: Scalar,
     D: DimName,
-    A: Deref<Target = [T]>,
-    B: Deref<Target = [OPoint<T, D>]>,
+    A: AsRef<[T]>,
+    B: AsRef<[OPoint<T, D>]>,
     DefaultAllocator: Allocator<T, D>,
 {
     type Data = ();
 
     fn weights(&self) -> &[T] {
-        self.0.deref()
+        self.0.as_ref()
     }
 
     fn points(&self) -> &[OPoint<T, D>] {
-        self.1.deref()
+        self.1.as_ref()
     }
 
     fn data(&self) -> &[()] {
         // This may look absurd, but since we're just returning a slice to a zero-sized type (the unit type),
         // the (global) allocator never allocates anything and most likely the whole thing will get completely
         // optimized out
-        vec![(); self.0.len()].leak()
+        vec![(); self.weights().len()].leak()
     }
 }
 

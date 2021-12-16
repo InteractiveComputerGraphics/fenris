@@ -222,6 +222,10 @@ where
         let data = vec![data; weights.len()];
         Self::from_points_weights_and_data(points, weights, data)
     }
+
+    pub fn with_uniform_data<Data2: Clone>(self, data: Data2) -> UniformQuadratureTable<T, GeometryDim, Data2> {
+        UniformQuadratureTable::from_quadrature_and_uniform_data((self.weights, self.points), data)
+    }
 }
 
 impl<T, GeometryDim, Data> QuadratureTable<T, GeometryDim> for UniformQuadratureTable<T, GeometryDim, Data>

@@ -46,6 +46,7 @@ nalgebra = { version = "0.28", features = [ "serde-serialize", "compare" ] }
 proptest = "1.0"
 matrixcompare = "0.3"
 util = { path = "util" }
+paste = "1.0.6"
 
 # For outputting e.g. convergence test results for later analysis
 serde_json = "1.0.64"
