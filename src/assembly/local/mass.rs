@@ -188,7 +188,26 @@ where
 /// Panics if the number of elements in the basis value buffer is not equal to the number of nodes
 /// in the element.
 #[allow(non_snake_case)]
-pub fn assemble_element_mass_matrix<T, Element>(
+pub fn assemble_element_mass_matrix<'a, T, Element>(
+    output: impl Into<DMatrixSliceMut<'a, T>>,
+    element: &Element,
+    quadrature_weights: &[T],
+    quadrature_points: &[OPoint<T, Element::ReferenceDim>],
+    quadrature_density: &[T],
+    solution_dim: usize,
+    basis_values_buffer: &mut [T],
+) -> eyre::Result<()>
+where
+    T: RealField,
+    // We only support volumetric elements atm
+    Element: VolumetricFiniteElement<T>,
+    DefaultAllocator: DimAllocator<T, Element::GeometryDim>,
+{
+    assemble_element_mass_matrix_(output.into(), element, quadrature_weights, quadrature_points, quadrature_density, solution_dim, basis_values_buffer)
+}
+
+#[allow(non_snake_case)]
+fn assemble_element_mass_matrix_<T, Element>(
     mut output: DMatrixSliceMut<T>,
     element: &Element,
     quadrature_weights: &[T],
