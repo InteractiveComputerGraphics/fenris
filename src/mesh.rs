@@ -243,6 +243,12 @@ where
         self.transform_vertices(|p| *p += translation);
     }
 
+    /// Consumes the mesh and returns it translated by the given translation vector.
+    pub fn translated(mut self, translation: &OVector<T, D>) -> Self {
+        self.translate(&translation);
+        self
+    }
+
     /// Transform all vertices of the mesh by the given transformation function.
     pub fn transform_vertices<F>(&mut self, mut transformation: F)
     where
