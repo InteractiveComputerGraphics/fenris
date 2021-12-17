@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Mul};
+use std::ops::{Add, AddAssign, Deref, Mul};
 
 use nalgebra::allocator::Allocator;
 use nalgebra::{DefaultAllocator, DimName, OPoint, Point1, Scalar, U2, U3};
@@ -46,6 +46,14 @@ where
             integral += f(p) * w.clone();
         }
         integral
+    }
+
+    fn to_parts(&self) -> QuadratureParts<&[T], &[OPoint<T, D>], &[Self::Data]> {
+        QuadratureParts {
+            weights: self.weights(),
+            points: self.points(),
+            data: self.data(),
+        }
     }
 }
 
@@ -136,6 +144,77 @@ where
 
     fn data(&self) -> &[Self::Data] {
         X::data(self)
+    }
+}
+
+/// Marker to indicate that a quadrature rule stored in [`QuadratureParts`] has no associated data.
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
+pub struct NoData;
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
+pub struct QuadratureParts<WeightsArray, PointsArray, DataArray> {
+    pub weights: WeightsArray,
+    pub points: PointsArray,
+    pub data: DataArray,
+}
+
+impl<WeightsArray, PointsArray, DataArray> QuadratureParts<WeightsArray, PointsArray, DataArray> {
+    pub fn with_data<DataArray2>(self, data: DataArray2) -> QuadratureParts<WeightsArray, PointsArray, DataArray2> {
+        QuadratureParts {
+            weights: self.weights,
+            points: self.points,
+            data,
+        }
+    }
+}
+
+impl<T, D, WeightsArray, PointsArray, DataArray, Data> Quadrature<T, D>
+    for QuadratureParts<WeightsArray, PointsArray, DataArray>
+where
+    T: Scalar,
+    D: DimName,
+    WeightsArray: AsRef<[T]>,
+    PointsArray: AsRef<[OPoint<T, D>]>,
+    DataArray: Deref<Target = [Data]>,
+    DefaultAllocator: Allocator<T, D>,
+{
+    type Data = Data;
+
+    fn weights(&self) -> &[T] {
+        self.weights.as_ref()
+    }
+
+    fn points(&self) -> &[OPoint<T, D>] {
+        self.points.as_ref()
+    }
+
+    fn data(&self) -> &[Self::Data] {
+        self.data.deref()
+    }
+}
+
+impl<T, D, WeightsArray, PointsArray> Quadrature<T, D> for QuadratureParts<WeightsArray, PointsArray, NoData>
+where
+    T: Scalar,
+    D: DimName,
+    WeightsArray: AsRef<[T]>,
+    PointsArray: AsRef<[OPoint<T, D>]>,
+    DefaultAllocator: Allocator<T, D>,
+{
+    type Data = ();
+
+    fn weights(&self) -> &[T] {
+        self.weights.as_ref()
+    }
+
+    fn points(&self) -> &[OPoint<T, D>] {
+        self.points.as_ref()
+    }
+
+    fn data(&self) -> &[()] {
+        // This is a "sound" way of constructing a unit type slice of arbitrary size.
+        // Since it's zero-sized, it won't actually allocate any memory and the leak is elided
+        vec![(); self.weights().len()].leak()
     }
 }
 

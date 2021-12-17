@@ -4,6 +4,7 @@ use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{
     DMatrix, DefaultAllocator, DimName, Dynamic, MatrixSlice, MatrixSliceMut, OPoint, RealField, Scalar,
 };
+use crate::quadrature::Quadrature;
 use crate::space::FiniteElementSpace;
 use crate::SmallDim;
 use itertools::izip;
@@ -102,6 +103,27 @@ where
     quad_weights: Vec<T>,
     quad_points: Vec<OPoint<T, D>>,
     quad_data: Vec<Data>,
+}
+
+impl<T, D, Data> Quadrature<T, D> for QuadratureBuffer<T, D, Data>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>,
+{
+    type Data = Data;
+
+    fn weights(&self) -> &[T] {
+        &self.quad_weights
+    }
+
+    fn points(&self) -> &[OPoint<T, D>] {
+        &self.quad_points
+    }
+
+    fn data(&self) -> &[Self::Data] {
+        &self.quad_data
+    }
 }
 
 impl<T, D, Data> Default for QuadratureBuffer<T, D, Data>
