@@ -316,7 +316,23 @@ pub struct Tri3d3Element<T>
 where
     T: Scalar,
 {
-    triangle: Triangle3d<T>,
+    vertices: [Point3<T>; 3],
+}
+
+impl<T: Scalar> Tri3d3Element<T> {
+    pub fn from_vertices(vertices: [Point3<T>; 3]) -> Self {
+        Self { vertices }
+    }
+
+    pub fn vertices(&self) -> &[Point3<T>; 3] {
+        &self.vertices
+    }
+}
+
+impl<'a, T: Scalar> From<&'a Tri3d3Element<T>> for Triangle3d<T> {
+    fn from(element: &'a Tri3d3Element<T>) -> Self {
+        Triangle(element.vertices.clone())
+    }
 }
 
 impl<T> From<Triangle3d<T>> for Tri3d3Element<T>
@@ -324,7 +340,7 @@ where
     T: Scalar,
 {
     fn from(triangle: Triangle3d<T>) -> Self {
-        Self { triangle }
+        Self::from_vertices(triangle.0)
     }
 }
 
@@ -367,7 +383,7 @@ where
 
     #[allow(non_snake_case)]
     fn reference_jacobian(&self, xi: &Point2<T>) -> Matrix3x2<T> {
-        let X: Matrix3<T> = Matrix3::from_fn(|i, j| self.triangle.0[j][i]);
+        let X: Matrix3<T> = Matrix3::from_fn(|i, j| self.vertices[j][i]);
         let G = self.gradients(xi);
         X * G.transpose()
     }
@@ -375,15 +391,14 @@ where
     #[allow(non_snake_case)]
     fn map_reference_coords(&self, xi: &Point2<T>) -> Point3<T> {
         // TODO: Store this X matrix directly in Self...?
-        let X: Matrix3<T> = Matrix3::from_fn(|i, j| self.triangle.0[j][i]);
+        let X: Matrix3<T> = Matrix3::from_fn(|i, j| self.vertices[j][i]);
         let N = self.evaluate_basis(xi);
         OPoint::from(&X * &N.transpose())
     }
 
     // TODO: Write tests for diameter
     fn diameter(&self) -> T {
-        self.triangle
-            .0
+        self.vertices
             .iter()
             .tuple_combinations()
             .map(|(x, y)| distance(x, y))
@@ -396,7 +411,7 @@ where
     T: RealField,
 {
     fn normal(&self, _xi: &Point2<T>) -> Vector3<T> {
-        self.triangle.normal()
+        Triangle3d::from(self).normal()
     }
 }
 
