@@ -132,7 +132,6 @@ where
 /// Allows conversion from `mshio::Node`s to `OPoint`s which are used as vertices in `fenris`.
 pub trait TryVertexFromMshNode<T, D, F>
 where
-    Self: Sized,
     T: RealField,
     D: DimName,
     F: mshio::MshFloatT,
@@ -179,7 +178,6 @@ where
     Self: Sized,
 {
     fn msh_element_type() -> mshio::ElementType;
-
     fn try_connectivity_from_msh_element(element: &mshio::Element<u64>) -> eyre::Result<Self>;
 }
 
