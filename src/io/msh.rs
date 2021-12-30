@@ -49,7 +49,7 @@ where
         .any(|block| element_block_matches_connectivity::<C, _>(block))
     {
         return Err(eyre!(
-            "MSH file does not contain an element block of the requested type ({:?} of dim {})",
+            "MSH file does not contain an element block of the requested type (type {:?} of with reference/entity dim {})",
             C::msh_element_type(),
             C::reference_dim()
         ));
@@ -204,11 +204,15 @@ macro_rules! impl_msh_connectivity {
 
             fn reference_dim() -> usize {
                 use crate::element::ElementConnectivity;
-                <$connectivity as ElementConnectivity::<f64>>::ReferenceDim::dim()
+                <$connectivity as ElementConnectivity<f64>>::ReferenceDim::dim()
             }
 
             fn try_connectivity_from_msh_element(element: &mshio::Element<u64>) -> eyre::Result<Self> {
-                assert_eq!(element.nodes.len(), $num_nodes, "number of msh element nodes have to match with connectivity");
+                assert_eq!(
+                    element.nodes.len(),
+                    $num_nodes,
+                    "number of msh element nodes have to match with connectivity"
+                );
                 let mut nodes = [0; $num_nodes];
                 for i in 0..$num_nodes {
                     nodes[i] = element.nodes[i] as usize - 1;
