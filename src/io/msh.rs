@@ -3,7 +3,7 @@ use crate::mesh::Mesh;
 use eyre::{eyre, Context};
 use log::warn;
 use nalgebra::allocator::Allocator;
-use nalgebra::{DefaultAllocator, DimName, OPoint, Point2, Point3, RealField, U2, U3};
+use nalgebra::{DefaultAllocator, DimName, OPoint, RealField};
 use std::path::Path;
 
 /// Loads a [`Mesh`] from a Gmsh MSH file at the given path.
@@ -12,7 +12,6 @@ where
     T: RealField,
     D: DimName,
     C: MshConnectivity,
-    OPoint<T, D>: TryVertexFromMshNode<T, D, f64>,
     DefaultAllocator: Allocator<T, D>,
 {
     let msh_bytes = std::fs::read(file_path).wrap_err("failed to read file")?;
@@ -25,7 +24,6 @@ where
     T: RealField,
     D: DimName,
     C: MshConnectivity,
-    OPoint<T, D>: TryVertexFromMshNode<T, D, f64>,
     DefaultAllocator: Allocator<T, D>,
 {
     let mut msh_file = mshio::parse_msh_bytes(bytes).map_err(|e| eyre!("failed to parse msh file: {}", e))?;
@@ -79,7 +77,6 @@ where
     D: DimName,
     F: mshio::MshFloatT,
     I: mshio::MshIntT,
-    OPoint<T, D>: TryVertexFromMshNode<T, D, F>,
     DefaultAllocator: Allocator<T, D>,
 {
     // Ensure that node tags are consecutive
@@ -103,7 +100,7 @@ where
 
     // Convert MSH vertices to points
     for node in &node_block.nodes {
-        vertices.push(OPoint::try_vertex_from_msh_node(node)?);
+        vertices.push(point_from_msh_node(node)?);
     }
 
     Ok(vertices)
@@ -154,17 +151,6 @@ where
             == C::reference_dim()
 }
 
-/// Allows conversion from `mshio::Node`s to `OPoint`s which are used as vertices in `fenris`.
-pub trait TryVertexFromMshNode<T, D, F>
-where
-    T: RealField,
-    D: DimName,
-    F: mshio::MshFloatT,
-    DefaultAllocator: Allocator<T, D>,
-{
-    fn try_vertex_from_msh_node(node: &mshio::Node<F>) -> eyre::Result<OPoint<T, D>>;
-}
-
 macro_rules! f_to_t {
     ($component:expr) => {
         T::from_f64(
@@ -176,25 +162,24 @@ macro_rules! f_to_t {
     };
 }
 
-impl<T, F> TryVertexFromMshNode<T, U2, F> for Point2<T>
+fn point_from_msh_node<T, D, F>(node: &mshio::Node<F>) -> eyre::Result<OPoint<T, D>>
 where
     T: RealField,
+    D: DimName,
     F: mshio::MshFloatT,
+    DefaultAllocator: Allocator<T, D>,
 {
-    fn try_vertex_from_msh_node(node: &mshio::Node<F>) -> eyre::Result<Self> {
-        // TODO: Ensure that node.z is zero?
-        Ok(Self::new(f_to_t!(node.x), f_to_t!(node.y)))
+    // TODO: Ensure that components i < D are zero?
+    let mut point = OPoint::origin();
+    point[0] = f_to_t!(node.x);
+    if D::dim() > 1 {
+        point[1] = f_to_t!(node.y);
     }
-}
+    if D::dim() > 2 {
+        point[2] = f_to_t!(node.z);
+    }
 
-impl<T, F> TryVertexFromMshNode<T, U3, F> for Point3<T>
-where
-    T: RealField,
-    F: mshio::MshFloatT,
-{
-    fn try_vertex_from_msh_node(node: &mshio::Node<F>) -> eyre::Result<Self> {
-        Ok(Self::new(f_to_t!(node.x), f_to_t!(node.y), f_to_t!(node.z)))
-    }
+    Ok(point)
 }
 
 /// Allows conversion from `mshio::Element`s to connectivity types used in `fenris`.
@@ -267,7 +252,7 @@ impl MshConnectivity for Tet4Connectivity {
 
 #[cfg(test)]
 mod msh_tests {
-    use crate::connectivity::{Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity};
+    use crate::connectivity::{Tet4Connectivity, Tri3d2Connectivity};
     use crate::io::msh::load_msh_from_file;
     use nalgebra::{U2, U3};
 
