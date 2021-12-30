@@ -11,7 +11,7 @@ pub fn load_msh_from_file<T, D, C, P: AsRef<Path>>(file_path: P) -> eyre::Result
 where
     T: RealField,
     D: DimName,
-    C: TryConnectivityFromMshElement,
+    C: MshConnectivity,
     OPoint<T, D>: TryVertexFromMshNode<T, D, f64>,
     DefaultAllocator: Allocator<T, D>,
 {
@@ -24,7 +24,7 @@ pub fn load_msh_from_bytes<T, D, C>(bytes: &[u8]) -> eyre::Result<Mesh<T, D, C>>
 where
     T: RealField,
     D: DimName,
-    C: TryConnectivityFromMshElement,
+    C: MshConnectivity,
     OPoint<T, D>: TryVertexFromMshNode<T, D, f64>,
     DefaultAllocator: Allocator<T, D>,
 {
@@ -44,11 +44,26 @@ where
     let mut vertices = Vec::new();
     let mut connectivity = Vec::new();
 
+    // Ensure that at least one element block matches the target mesh connectivity
+    if !msh_elements
+        .element_blocks
+        .iter()
+        .any(|block| element_block_matches_connectivity::<C, _>(block))
+    {
+        return Err(eyre!(
+            "MSH file does not contain an element block of the requested type ({:?} of dim {})",
+            C::msh_element_type(),
+            C::reference_dim()
+        ));
+    }
+
+    // Collect all mesh vertices
     for node_block in &msh_nodes.node_blocks {
         let block_vertices = vertices_from_node_block(node_block)?;
         vertices.extend(block_vertices);
     }
 
+    // Collect all connectivity matching the target connectivity
     for element_block in &msh_elements.element_blocks {
         let block_connectivity = connectivity_from_element_block(element_block)?;
         connectivity.extend(block_connectivity);
@@ -97,7 +112,7 @@ where
 /// Tries to convert a `mshio::ElementBlock` to a `Vec<Connectivity>`.
 fn connectivity_from_element_block<C, I>(element_block: &mshio::ElementBlock<u64, I>) -> eyre::Result<Vec<C>>
 where
-    C: TryConnectivityFromMshElement,
+    C: MshConnectivity,
     I: mshio::MshIntT,
 {
     // Ensure that element tags are consecutive
@@ -105,28 +120,38 @@ where
         return Err(eyre!("element block tags are not consecutive in msh file"));
     }
 
-    let requested_msh_element_type = C::msh_element_type();
-    if element_block.element_type != requested_msh_element_type {
-        warn!(
-            "Detected connectivity in the MSH file that does not match the requested connectivity. It will be ignored."
-        );
+    if !element_block_matches_connectivity::<C, _>(element_block) {
+        // Just ignore blocks that don't match the requested connectivity
         return Ok(Vec::new());
-        //return Err(eyre!("connectivity in the MSH file does not match the requested connectivity."));
     } else {
         let mut connectivity = Vec::with_capacity(element_block.elements.len());
-        let requested_nodes = requested_msh_element_type
+        let requested_nodes = C::msh_element_type()
             .nodes()
             .map_err(|_| eyre!("unimplemented element type requested"))?;
 
         for element in &element_block.elements {
             if element.nodes.len() < requested_nodes {
-                return Err(eyre!("Not enough nodes to initialize connectivity."));
+                return Err(eyre!("not enough nodes to initialize connectivity"));
             }
             connectivity.push(C::try_connectivity_from_msh_element(element)?);
         }
 
         return Ok(connectivity);
     }
+}
+
+/// Returns whether the given element block contains elements corresponding to the specified connectivity.
+fn element_block_matches_connectivity<C, I>(element_block: &mshio::ElementBlock<u64, I>) -> bool
+where
+    C: MshConnectivity,
+    I: mshio::MshIntT,
+{
+    element_block.element_type == C::msh_element_type()
+        && element_block
+            .entity_dim
+            .to_usize()
+            .expect("failed to convert element block dimension to usize")
+            == C::reference_dim()
 }
 
 /// Allows conversion from `mshio::Node`s to `OPoint`s which are used as vertices in `fenris`.
@@ -173,17 +198,25 @@ where
 }
 
 /// Allows conversion from `mshio::Element`s to connectivity types used in `fenris`.
-pub trait TryConnectivityFromMshElement
+pub trait MshConnectivity
 where
     Self: Sized,
 {
+    /// Returns the MSH element type corresponding to this connectivity.
     fn msh_element_type() -> mshio::ElementType;
+    /// Returns the reference dimension of this connectivity (corresponds to MSH entity dimension).
+    fn reference_dim() -> usize;
+    /// Tries to construct the element connectivity from the given MSH element.
     fn try_connectivity_from_msh_element(element: &mshio::Element<u64>) -> eyre::Result<Self>;
 }
 
-impl TryConnectivityFromMshElement for Tri3d2Connectivity {
+impl MshConnectivity for Tri3d2Connectivity {
     fn msh_element_type() -> mshio::ElementType {
         mshio::ElementType::Tri3
+    }
+
+    fn reference_dim() -> usize {
+        2
     }
 
     fn try_connectivity_from_msh_element(element: &mshio::Element<u64>) -> eyre::Result<Self> {
@@ -195,9 +228,13 @@ impl TryConnectivityFromMshElement for Tri3d2Connectivity {
     }
 }
 
-impl TryConnectivityFromMshElement for Tri3d3Connectivity {
+impl MshConnectivity for Tri3d3Connectivity {
     fn msh_element_type() -> mshio::ElementType {
         mshio::ElementType::Tri3
+    }
+
+    fn reference_dim() -> usize {
+        3
     }
 
     fn try_connectivity_from_msh_element(element: &mshio::Element<u64>) -> eyre::Result<Self> {
@@ -209,9 +246,13 @@ impl TryConnectivityFromMshElement for Tri3d3Connectivity {
     }
 }
 
-impl TryConnectivityFromMshElement for Tet4Connectivity {
+impl MshConnectivity for Tet4Connectivity {
     fn msh_element_type() -> mshio::ElementType {
         mshio::ElementType::Tet4
+    }
+
+    fn reference_dim() -> usize {
+        3
     }
 
     fn try_connectivity_from_msh_element(element: &mshio::Element<u64>) -> eyre::Result<Self> {
@@ -226,16 +267,25 @@ impl TryConnectivityFromMshElement for Tet4Connectivity {
 
 #[cfg(test)]
 mod msh_tests {
-    use crate::connectivity::Tet4Connectivity;
+    use crate::connectivity::{Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity};
     use crate::io::msh::load_msh_from_file;
-    use nalgebra::U3;
+    use nalgebra::{U2, U3};
 
     #[test]
-    fn load_msh_sphere() -> eyre::Result<()> {
+    fn load_msh_sphere_tet4() -> eyre::Result<()> {
         let mesh = load_msh_from_file::<f64, U3, Tet4Connectivity, _>("assets/meshes/sphere_593.msh")?;
 
         assert_eq!(mesh.vertices().len(), 183);
         assert_eq!(mesh.connectivity().len(), 593);
+        Ok(())
+    }
+
+    #[test]
+    fn load_msh_rect_tri3d2() -> eyre::Result<()> {
+        let mesh = load_msh_from_file::<f64, U2, Tri3d2Connectivity, _>("assets/meshes/rectangle_110.msh")?;
+
+        assert_eq!(mesh.vertices().len(), 70);
+        assert_eq!(mesh.connectivity().len(), 110);
         Ok(())
     }
 }
