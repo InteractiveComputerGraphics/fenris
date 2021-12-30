@@ -195,60 +195,33 @@ where
     fn try_connectivity_from_msh_element(element: &mshio::Element<u64>) -> eyre::Result<Self>;
 }
 
-impl MshConnectivity for Tri3d2Connectivity {
-    fn msh_element_type() -> mshio::ElementType {
-        mshio::ElementType::Tri3
-    }
+macro_rules! impl_msh_connectivity {
+    ($connectivity:ident, $msh_type:ident, num_nodes = $num_nodes:literal) => {
+        impl MshConnectivity for $connectivity {
+            fn msh_element_type() -> mshio::ElementType {
+                mshio::ElementType::$msh_type
+            }
 
-    fn reference_dim() -> usize {
-        2
-    }
+            fn reference_dim() -> usize {
+                use crate::element::ElementConnectivity;
+                <$connectivity as ElementConnectivity::<f64>>::ReferenceDim::dim()
+            }
 
-    fn try_connectivity_from_msh_element(element: &mshio::Element<u64>) -> eyre::Result<Self> {
-        Ok(Self([
-            element.nodes[0] as usize - 1,
-            element.nodes[1] as usize - 1,
-            element.nodes[2] as usize - 1,
-        ]))
-    }
+            fn try_connectivity_from_msh_element(element: &mshio::Element<u64>) -> eyre::Result<Self> {
+                assert_eq!(element.nodes.len(), $num_nodes, "number of msh element nodes have to match with connectivity");
+                let mut nodes = [0; $num_nodes];
+                for i in 0..$num_nodes {
+                    nodes[i] = element.nodes[i] as usize - 1;
+                }
+                Ok(Self(nodes))
+            }
+        }
+    };
 }
 
-impl MshConnectivity for Tri3d3Connectivity {
-    fn msh_element_type() -> mshio::ElementType {
-        mshio::ElementType::Tri3
-    }
-
-    fn reference_dim() -> usize {
-        3
-    }
-
-    fn try_connectivity_from_msh_element(element: &mshio::Element<u64>) -> eyre::Result<Self> {
-        Ok(Self([
-            element.nodes[0] as usize - 1,
-            element.nodes[1] as usize - 1,
-            element.nodes[2] as usize - 1,
-        ]))
-    }
-}
-
-impl MshConnectivity for Tet4Connectivity {
-    fn msh_element_type() -> mshio::ElementType {
-        mshio::ElementType::Tet4
-    }
-
-    fn reference_dim() -> usize {
-        3
-    }
-
-    fn try_connectivity_from_msh_element(element: &mshio::Element<u64>) -> eyre::Result<Self> {
-        Ok(Self([
-            element.nodes[0] as usize - 1,
-            element.nodes[1] as usize - 1,
-            element.nodes[2] as usize - 1,
-            element.nodes[3] as usize - 1,
-        ]))
-    }
-}
+impl_msh_connectivity!(Tri3d2Connectivity, Tri3, num_nodes = 3);
+impl_msh_connectivity!(Tri3d3Connectivity, Tri3, num_nodes = 3);
+impl_msh_connectivity!(Tet4Connectivity, Tet4, num_nodes = 4);
 
 #[cfg(test)]
 mod msh_tests {
