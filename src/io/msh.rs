@@ -1,9 +1,9 @@
 use crate::connectivity::{Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity};
 use crate::mesh::Mesh;
 use eyre::{eyre, Context};
-use log::warn;
 use nalgebra::allocator::Allocator;
 use nalgebra::{DefaultAllocator, DimName, OPoint, RealField};
+use num::ToPrimitive;
 use std::path::Path;
 
 /// Loads a [`Mesh`] from a Gmsh MSH file at the given path.
@@ -61,6 +61,19 @@ where
         vertices.extend(block_vertices);
     }
 
+    if vertices.len()
+        != msh_nodes
+            .num_nodes
+            .to_usize()
+            .expect("failed to convert num_nodes to usize")
+    {
+        return Err(eyre!(
+            "only {} vertices were read but msh file claims to contain {} nodes",
+            vertices.len(),
+            msh_nodes.num_nodes
+        ));
+    }
+
     // Collect all connectivity matching the target connectivity
     for element_block in &msh_elements.element_blocks {
         let block_connectivity = connectivity_from_element_block(element_block)?;
@@ -81,20 +94,29 @@ where
 {
     // Ensure that node tags are consecutive
     if node_block.node_tags.is_some() {
-        return Err(eyre!("node block tags are not consecutive in msh file"));
+        return Err(eyre!(
+            "node block tags are not consecutive in msh file (sparse tags are not supported)"
+        ));
     }
 
-    // Check dimension of node block vertices
+    // Note: The MSH `node_block`'s `entity_dim` does not seem to correspond to the geometrical
+    //  dimension of the points. Rather it seems to correspond to the dimension of the "physical"
+    //  object represented by the node block.
+    //  When creating primitives in Gmsh for example, the nodes of a triangulation of a sphere are
+    //  divided into node_blocks representing its equator, surface and volume and all of them are
+    //  referenced by the volumetric elements.
+    //  In addition, all node blocks have to be read in order for the global `node_tag` indexing to
+    //  be consistent work.
+    /*
     if node_block
         .entity_dim
         .to_usize()
         .ok_or_else(|| eyre!("error converting node block entity dimension to usize"))?
         != D::dim()
     {
-        // TODO: When can this happen?
-        warn!("Node block entity does not have the right dimension for this mesh. Will be read as if they were of the same dimension.");
-        //return Err(eyre!("node block entity does not have the right dimension for this mesh"));
+        return Err(eyre!("node block entity does not have the right dimension for this mesh"));
     }
+    */
 
     let mut vertices = Vec::with_capacity(node_block.nodes.len());
 
@@ -114,7 +136,9 @@ where
 {
     // Ensure that element tags are consecutive
     if element_block.element_tags.is_some() {
-        return Err(eyre!("element block tags are not consecutive in msh file"));
+        return Err(eyre!(
+            "element block tags are not consecutive in msh file (sparse tags are not supported)"
+        ));
     }
 
     if !element_block_matches_connectivity::<C, _>(element_block) {
@@ -229,7 +253,7 @@ impl_msh_connectivity!(Tet4Connectivity, Tet4, num_nodes = 4);
 
 #[cfg(test)]
 mod msh_tests {
-    use crate::connectivity::{Tet4Connectivity, Tri3d2Connectivity};
+    use crate::connectivity::{Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity};
     use crate::io::msh::load_msh_from_file;
     use nalgebra::{U2, U3};
 
@@ -245,6 +269,16 @@ mod msh_tests {
     #[test]
     fn load_msh_rect_tri3d2() -> eyre::Result<()> {
         let mesh = load_msh_from_file::<f64, U2, Tri3d2Connectivity, _>("assets/meshes/rectangle_110.msh")?;
+
+        assert_eq!(mesh.vertices().len(), 70);
+        assert_eq!(mesh.connectivity().len(), 110);
+        Ok(())
+    }
+
+    #[test]
+    fn load_msh_rect_tri3d3() -> eyre::Result<()> {
+        // Loading a 2D triangle mesh to a 3D triangle mesh should work
+        let mesh = load_msh_from_file::<f64, U3, Tri3d3Connectivity, _>("assets/meshes/rectangle_110.msh")?;
 
         assert_eq!(mesh.vertices().len(), 70);
         assert_eq!(mesh.connectivity().len(), 110);
