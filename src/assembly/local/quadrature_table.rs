@@ -1,5 +1,5 @@
 use crate::nalgebra::allocator::Allocator;
-use crate::nalgebra::{DefaultAllocator, DimName, OPoint, Scalar, U1};
+use crate::nalgebra::{DefaultAllocator, DimName, OPoint, Scalar};
 use crate::quadrature::QuadraturePair;
 use crate::util::NestedVec;
 use crate::SmallDim;
@@ -11,7 +11,7 @@ pub trait QuadratureTable<T, GeometryDim>
 where
     T: Scalar,
     GeometryDim: SmallDim,
-    DefaultAllocator: Allocator<T, GeometryDim, U1>,
+    DefaultAllocator: Allocator<T, GeometryDim>,
 {
     type Data: Default + Clone;
 
