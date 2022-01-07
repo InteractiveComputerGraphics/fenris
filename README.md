@@ -46,7 +46,7 @@ and less time on dealing with auxiliary issues largely caused by language defici
   Users choose the level at which they need to work at. 
 - Facilitates generic programming: write code once and have it work across a number of different elements,
   dimensions and operators.
-- Convent I/O, currently in the form of export to VTK/VTU for visualization in ParaView.
+- Convenient I/O, currently in the form of export to VTK/VTU for visualization in ParaView.
 
 ### Non-goals
 
