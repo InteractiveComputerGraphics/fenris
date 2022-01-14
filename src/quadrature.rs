@@ -4,6 +4,7 @@ use nalgebra::allocator::Allocator;
 use nalgebra::{DefaultAllocator, DimName, OPoint, Point1, Scalar, U2, U3};
 use num::Zero;
 
+pub use canonical::*;
 /// Errors returned by quadrature methods.
 ///
 /// TODO: How to prevent collapse?
@@ -11,18 +12,19 @@ pub use fenris_quadrature::Error as QuadratureError;
 
 use crate::nalgebra::{convert, Point2, Point3, RealField, U1};
 
+pub mod subdivide;
 pub mod tensor;
 pub mod total_order;
 pub mod univariate;
 
 mod canonical;
-pub use canonical::*;
 
 pub type QuadraturePair<T, D> = (Vec<T>, Vec<OPoint<T, D>>);
 pub type QuadraturePair1d<T> = QuadraturePair<T, U1>;
 pub type QuadraturePair2d<T> = QuadraturePair<T, U2>;
 pub type QuadraturePair3d<T> = QuadraturePair<T, U3>;
 
+/// A quadrature rule consisting of weights, points and data.
 pub trait Quadrature<T, D>
 where
     T: Scalar,
