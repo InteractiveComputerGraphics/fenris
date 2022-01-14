@@ -1,3 +1,4 @@
+//! Quadrature rules for 1D domains.
 use crate::nalgebra::RealField;
 use crate::quadrature::{convert_quadrature_rule_from_1d_f64, QuadraturePair1d};
 use fenris_quadrature::univariate;
