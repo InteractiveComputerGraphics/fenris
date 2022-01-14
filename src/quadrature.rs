@@ -24,6 +24,7 @@ pub type QuadraturePair1d<T> = QuadraturePair<T, U1>;
 pub type QuadraturePair2d<T> = QuadraturePair<T, U2>;
 pub type QuadraturePair3d<T> = QuadraturePair<T, U3>;
 
+/// A quadrature rule consisting of weights, points and data.
 pub trait Quadrature<T, D>
 where
     T: Scalar,
