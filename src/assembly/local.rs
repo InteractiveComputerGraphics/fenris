@@ -39,7 +39,7 @@ pub trait ElementConnectivityAssembler {
         Self: Sized,
     {
         MapElementNodes {
-            mapped: self,
+            assembler: self,
             function: f,
             num_nodes: new_num_nodes,
         }
@@ -96,7 +96,7 @@ pub trait ElementMatrixAssembler<T: Scalar>: ElementConnectivityAssembler {
         Transformation: Fn(DMatrixSliceMut<T>) -> eyre::Result<()>,
     {
         TransformElementMatrix {
-            transformed: self,
+            assembler: self,
             function: transformation,
         }
     }
@@ -124,7 +124,7 @@ pub trait ElementVectorAssembler<T: Scalar>: ElementConnectivityAssembler {
         Transformation: Fn(DVectorSliceMut<T>) -> eyre::Result<()>,
     {
         TransformElementVector {
-            transformed: self,
+            assembler: self,
             function: transformation,
         }
     }
@@ -142,80 +142,9 @@ pub trait ElementScalarAssembler<T: Scalar>: ElementConnectivityAssembler {
         Transformation: Fn(T) -> eyre::Result<T>,
     {
         TransformElementScalar {
-            transformed: self,
+            assembler: self,
             function: transformation,
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct MapElementNodes<Mapped, F> {
-    mapped: Mapped,
-    function: F,
-    num_nodes: usize,
-}
-
-impl<Assembler, F> ElementConnectivityAssembler for MapElementNodes<Assembler, F>
-where
-    Assembler: ElementConnectivityAssembler,
-    F: Fn(usize) -> usize,
-{
-    fn solution_dim(&self) -> usize {
-        self.mapped.solution_dim()
-    }
-
-    fn num_elements(&self) -> usize {
-        self.mapped.num_elements()
-    }
-
-    fn num_nodes(&self) -> usize {
-        self.num_nodes
-    }
-
-    fn element_node_count(&self, element_index: usize) -> usize {
-        self.mapped.element_node_count(element_index)
-    }
-
-    fn populate_element_nodes(&self, output: &mut [usize], element_index: usize) {
-        self.mapped.populate_element_nodes(output, element_index);
-        for idx in output {
-            *idx = (self.function)(*idx);
-        }
-    }
-}
-
-impl<T, Assembler, F> ElementScalarAssembler<T> for MapElementNodes<Assembler, F>
-where
-    T: Scalar,
-    Assembler: ElementScalarAssembler<T>,
-    F: Fn(usize) -> usize,
-{
-    fn assemble_element_scalar(&self, element_index: usize) -> eyre::Result<T> {
-        self.mapped.assemble_element_scalar(element_index)
-    }
-}
-
-impl<T, Assembler, F> ElementVectorAssembler<T> for MapElementNodes<Assembler, F>
-where
-    T: Scalar,
-    Assembler: ElementVectorAssembler<T>,
-    F: Fn(usize) -> usize,
-{
-    fn assemble_element_vector_into(&self, element_index: usize, output: DVectorSliceMut<T>) -> eyre::Result<()> {
-        self.mapped
-            .assemble_element_vector_into(element_index, output)
-    }
-}
-
-impl<T, Assembler, F> ElementMatrixAssembler<T> for MapElementNodes<Assembler, F>
-where
-    T: Scalar,
-    Assembler: ElementMatrixAssembler<T>,
-    F: Fn(usize) -> usize,
-{
-    fn assemble_element_matrix_into(&self, element_index: usize, output: DMatrixSliceMut<T>) -> eyre::Result<()> {
-        self.mapped
-            .assemble_element_matrix_into(element_index, output)
     }
 }
 
@@ -352,31 +281,69 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub struct TransformElementScalar<Transformed, Transformation> {
-    transformed: Transformed,
+pub struct TransformElementScalar<Assembler, Transformation> {
+    assembler: Assembler,
     function: Transformation,
 }
 
 #[derive(Debug, Clone)]
-pub struct TransformElementVector<Transformed, Transformation> {
-    transformed: Transformed,
+pub struct TransformElementVector<Assembler, Transformation> {
+    assembler: Assembler,
     function: Transformation,
 }
 
 #[derive(Debug, Clone)]
-pub struct TransformElementMatrix<Transformed, Transformation> {
-    transformed: Transformed,
+pub struct TransformElementMatrix<Assembler, Transformation> {
+    assembler: Assembler,
     function: Transformation,
+}
+
+#[derive(Debug, Clone)]
+pub struct MapElementNodes<Assembler, F> {
+    assembler: Assembler,
+    function: F,
+    num_nodes: usize,
+}
+
+impl<Assembler, F> ElementConnectivityAssembler for MapElementNodes<Assembler, F>
+where
+    Assembler: ElementConnectivityAssembler,
+    F: Fn(usize) -> usize,
+{
+    fn solution_dim(&self) -> usize {
+        self.assembler.solution_dim()
+    }
+
+    fn num_elements(&self) -> usize {
+        self.assembler.num_elements()
+    }
+
+    fn num_nodes(&self) -> usize {
+        self.num_nodes
+    }
+
+    fn element_node_count(&self, element_index: usize) -> usize {
+        self.assembler.element_node_count(element_index)
+    }
+
+    fn populate_element_nodes(&self, output: &mut [usize], element_index: usize) {
+        self.assembler.populate_element_nodes(output, element_index);
+        for idx in output {
+            *idx = (self.function)(*idx);
+        }
+    }
 }
 
 /// Delegate "passthrough" impls to a struct field for generic transformation types
 macro_rules! delegate {
     (impl<$delegate_type:ident, $additional_type:ident>
      ElementConnectivityAssembler for $type:ty
-     where delegated to $self:ident.$delegate_var:ident) => {
+     => $self:ident.$delegate_var:ident
+     where $($bounds:tt)*) => {
         impl<$delegate_type, $additional_type> ElementConnectivityAssembler for $type
         where
             $delegate_type: ElementConnectivityAssembler,
+            $($bounds)*
         {
             fn solution_dim(&$self) -> usize {
                 $self.$delegate_var.solution_dim()
@@ -401,11 +368,13 @@ macro_rules! delegate {
     };
     (impl<$delegate_type:ident, $additional_type:ident>
      ElementScalarAssembler<$scalar:ident> for $type:ty
-     where delegated to $self:ident.$delegate_var:ident) => {
+     => $self:ident.$delegate_var:ident
+     where $($bounds:tt)*) => {
         impl<$scalar, $delegate_type, $additional_type> ElementScalarAssembler<$scalar> for $type
         where
             T: Scalar,
             $delegate_type: ElementScalarAssembler<$scalar>,
+            $($bounds)*
         {
             fn assemble_element_scalar(&$self, element_index: usize) -> eyre::Result<$scalar> {
                 $self.$delegate_var.assemble_element_scalar(element_index)
@@ -414,11 +383,13 @@ macro_rules! delegate {
     };
     (impl<$delegate_type:ident, $additional_type:ident>
      ElementVectorAssembler<$scalar:ident> for $type:ty
-     where delegated to $self:ident.$delegate_var:ident) => {
+     => $self:ident.$delegate_var:ident
+     where $($bounds:tt)*) => {
         impl<$scalar, $delegate_type, $additional_type> ElementVectorAssembler<$scalar> for $type
         where
             T: Scalar,
             $delegate_type: ElementVectorAssembler<$scalar>,
+            $($bounds)*
         {
             fn assemble_element_vector_into(
                 &$self,
@@ -431,11 +402,13 @@ macro_rules! delegate {
     };
     (impl<$delegate_type:ident, $additional_type:ident>
      ElementMatrixAssembler<$scalar:ident> for $type:ty
-     where delegated to $self:ident.$delegate_var:ident) => {
+     => $self:ident.$delegate_var:ident
+     where $($bounds:tt)*) => {
         impl<$scalar, $delegate_type, $additional_type> ElementMatrixAssembler<$scalar> for $type
         where
             T: Scalar,
             $delegate_type: ElementMatrixAssembler<$scalar>,
+            $($bounds)*
         {
             fn assemble_element_matrix_into(
                 &$self,
@@ -445,44 +418,66 @@ macro_rules! delegate {
                 $self.$delegate_var.assemble_element_matrix_into(element_index, output)
             }
         }
-    }
+    };
+    // This branch allows us to use all of the preceding matchers without having a trailing `where` in the macro call
+    (impl<$delegate_type:ident, $additional_type:ident>
+     $trait_name:ident$(<$scalar:ident>)? for $type:ty
+     => $self:ident.$delegate_var:ident) => {
+        delegate!(impl<$delegate_type, $additional_type> $trait_name $(<$scalar>)? for $type
+                  => $self.$delegate_var where);
+    };
 }
 
-delegate!(impl<Transformed, Transformation> ElementConnectivityAssembler
-    for TransformElementScalar<Transformed, Transformation>
-    where delegated to self.transformed);
+delegate!(impl<Assembler, Transformation> ElementConnectivityAssembler
+    for TransformElementScalar<Assembler, Transformation>
+    => self.assembler);
 
-delegate!(impl<Transformed, Transformation> ElementConnectivityAssembler
-    for TransformElementVector<Transformed, Transformation>
-    where delegated to self.transformed);
+delegate!(impl<Assembler, Transformation> ElementConnectivityAssembler
+    for TransformElementVector<Assembler, Transformation>
+    => self.assembler);
 
-delegate!(impl<Transformed, Transformation> ElementConnectivityAssembler
-    for TransformElementMatrix<Transformed, Transformation>
-    where delegated to self.transformed);
+delegate!(impl<Assembler, Transformation> ElementConnectivityAssembler
+    for TransformElementMatrix<Assembler, Transformation>
+    => self.assembler);
 
-delegate!(impl<Transformed, Transformation> ElementScalarAssembler<T>
-    for TransformElementVector<Transformed, Transformation>
-    where delegated to self.transformed);
+delegate!(impl<Assembler, Transformation> ElementScalarAssembler<T>
+    for TransformElementVector<Assembler, Transformation>
+    => self.assembler);
 
-delegate!(impl<Transformed, Transformation> ElementScalarAssembler<T>
-    for TransformElementMatrix<Transformed, Transformation>
-    where delegated to self.transformed);
+delegate!(impl<Assembler, Transformation> ElementScalarAssembler<T>
+    for TransformElementMatrix<Assembler, Transformation>
+    => self.assembler);
 
-delegate!(impl<Transformed, Transformation> ElementVectorAssembler<T>
-    for TransformElementScalar<Transformed, Transformation>
-    where delegated to self.transformed);
+delegate!(impl<Assembler, F> ElementScalarAssembler<T>
+    for MapElementNodes<Assembler, F>
+    => self.assembler
+    where F: Fn(usize) -> usize);
 
-delegate!(impl<Transformed, Transformation> ElementVectorAssembler<T>
-    for TransformElementMatrix<Transformed, Transformation>
-    where delegated to self.transformed);
+delegate!(impl<Assembler, Transformation> ElementVectorAssembler<T>
+    for TransformElementMatrix<Assembler, Transformation>
+    => self.assembler);
 
-delegate!(impl<Transformed, Transformation> ElementMatrixAssembler<T>
-    for TransformElementScalar<Transformed, Transformation>
-    where delegated to self.transformed);
+delegate!(impl<Assembler, Transformation> ElementVectorAssembler<T>
+    for TransformElementScalar<Assembler, Transformation>
+    => self.assembler);
 
-delegate!(impl<Transformed, Transformation> ElementMatrixAssembler<T>
-    for TransformElementVector<Transformed, Transformation>
-    where delegated to self.transformed);
+delegate!(impl<Assembler, F> ElementVectorAssembler<T>
+    for MapElementNodes<Assembler, F>
+    => self.assembler
+    where F: Fn(usize) -> usize);
+
+delegate!(impl<Assembler, Transformation> ElementMatrixAssembler<T>
+    for TransformElementScalar<Assembler, Transformation>
+    => self.assembler);
+
+delegate!(impl<Assembler, Transformation> ElementMatrixAssembler<T>
+    for TransformElementVector<Assembler, Transformation>
+    => self.assembler);
+
+delegate!(impl<Assembler, F> ElementMatrixAssembler<T>
+    for MapElementNodes<Assembler, F>
+    => self.assembler
+    where F: Fn(usize) -> usize);
 
 impl<T, Transformed, Transformer> ElementScalarAssembler<T> for TransformElementScalar<Transformed, Transformer>
 where
@@ -491,7 +486,7 @@ where
     Transformer: Fn(T) -> eyre::Result<T>,
 {
     fn assemble_element_scalar(&self, element_index: usize) -> eyre::Result<T> {
-        let untransformed = self.transformed.assemble_element_scalar(element_index)?;
+        let untransformed = self.assembler.assemble_element_scalar(element_index)?;
         (self.function)(untransformed)
     }
 }
@@ -503,7 +498,7 @@ where
     Transformer: Fn(DVectorSliceMut<T>) -> eyre::Result<()>,
 {
     fn assemble_element_vector_into(&self, element_index: usize, mut output: DVectorSliceMut<T>) -> eyre::Result<()> {
-        self.transformed
+        self.assembler
             .assemble_element_vector_into(element_index, DVectorSliceMut::from(&mut output))?;
         (self.function)(output)
     }
@@ -516,7 +511,7 @@ where
     Transformer: Fn(DMatrixSliceMut<T>) -> eyre::Result<()>,
 {
     fn assemble_element_matrix_into(&self, element_index: usize, mut output: DMatrixSliceMut<T>) -> eyre::Result<()> {
-        self.transformed
+        self.assembler
             .assemble_element_matrix_into(element_index, DMatrixSliceMut::from(&mut output))?;
         (self.function)(output)
     }
