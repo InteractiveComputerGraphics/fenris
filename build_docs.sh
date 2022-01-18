@@ -7,6 +7,7 @@
 # From: https://stackoverflow.com/a/246128
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 HEADER_PATH="$SCRIPT_DIR/assets/doc-header.html"
+BEFORE_CONTENT_PATH="$SCRIPT_DIR/assets/doc-before-content.html"
 
 # Note: command line arguments are forwarded to the final invocation
-RUSTDOCFLAGS="--html-in-header $HEADER_PATH" cargo doc $@
+RUSTDOCFLAGS="--html-in-header $HEADER_PATH --html-before-content $BEFORE_CONTENT_PATH" cargo doc $@
