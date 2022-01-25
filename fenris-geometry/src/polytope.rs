@@ -328,6 +328,7 @@ impl<T> HalfPlane<T>
 where
     T: RealField,
 {
+    /// Construct a half plane from a point on its surface and an *outward-facing* normal vector.
     pub fn from_point_and_normal(point: Point2<T>, normal: Unit<Vector2<T>>) -> Self {
         Self { point, normal }
     }
@@ -350,6 +351,9 @@ where
         &self.point
     }
 
+    /// Returns the outwards-facing normal vector for the plane.
+    ///
+    /// This vector is normalized.
     pub fn normal(&self) -> &Vector2<T> {
         &self.normal
     }
