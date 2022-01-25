@@ -33,7 +33,7 @@ where
 {
     fn from(segment: LineSegment2d<T>) -> Self {
         Self {
-            vertices: [segment.from().clone(), segment.to().clone()],
+            vertices: [segment.start().clone(), segment.end().clone()],
         }
     }
 }

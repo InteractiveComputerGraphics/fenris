@@ -30,8 +30,8 @@ pub struct LineSegment2d<T>
 where
     T: Scalar,
 {
-    from: Point2<T>,
-    to: Point2<T>,
+    start: Point2<T>,
+    end: Point2<T>,
 }
 
 impl<T> LineSegment2d<T>
@@ -39,21 +39,21 @@ where
     T: Scalar,
 {
     pub fn new(from: Point2<T>, to: Point2<T>) -> Self {
-        Self { from, to }
+        Self { start: from, end: to }
     }
 
-    pub fn from(&self) -> &Point2<T> {
-        &self.from
+    pub fn start(&self) -> &Point2<T> {
+        &self.start
     }
 
-    pub fn to(&self) -> &Point2<T> {
-        &self.to
+    pub fn end(&self) -> &Point2<T> {
+        &self.end
     }
 
     pub fn reverse(&self) -> Self {
         LineSegment2d {
-            from: self.to.clone(),
-            to: self.from.clone(),
+            start: self.end.clone(),
+            end: self.start.clone(),
         }
     }
 }
@@ -63,15 +63,15 @@ where
     T: RealField,
 {
     pub fn to_line(&self) -> Line2d<T> {
-        let dir = &self.to - &self.from;
-        Line2d::from_point_and_dir(self.from.clone(), dir)
+        let dir = &self.end - &self.start;
+        Line2d::from_point_and_dir(self.start.clone(), dir)
     }
 
     /// Returns a vector tangent to the line segment.
     ///
     /// Note that the vector is **not** normalized.
     pub fn tangent_dir(&self) -> Vector2<T> {
-        self.to().coords - self.from().coords
+        self.end().coords - self.start().coords
     }
 
     /// Returns a vector normal to the line segment, in the direction consistent with a
@@ -88,7 +88,7 @@ where
     }
 
     pub fn midpoint(&self) -> Point2<T> {
-        Point2::from((self.from.coords + self.to.coords) / (T::one() + T::one()))
+        Point2::from((self.start.coords + self.end.coords) / (T::one() + T::one()))
     }
 
     pub fn intersect_line_parametric(&self, line: &Line2d<T>) -> Option<T> {
@@ -111,7 +111,7 @@ where
     }
 
     pub fn point_from_parameter(&self, t: T) -> Point2<T> {
-        Point2::from(self.from().coords + (self.to() - self.from()) * t)
+        Point2::from(self.start().coords + (self.end() - self.start()) * t)
     }
 
     /// Computes the intersection of two line segments (if any), but returns the result as a parameter.
@@ -127,11 +127,11 @@ where
         //  [ d1  -d2 ] t = a2 - a1,
         // where t = [t1, t2].
 
-        let d1 = &self.to - &self.from;
-        let d2 = &other.to - &other.from;
+        let d1 = &self.end - &self.start;
+        let d2 = &other.end - &other.start;
 
-        let line1 = Line2d::from_point_and_dir(self.from.clone(), d1);
-        let line2 = Line2d::from_point_and_dir(other.from.clone(), d2);
+        let line1 = Line2d::from_point_and_dir(self.start.clone(), d1);
+        let line2 = Line2d::from_point_and_dir(other.start.clone(), d2);
 
         line1
             .intersect_line_parametric(&line2)
@@ -156,8 +156,8 @@ where
         let mut min = None;
         let mut max = None;
 
-        let contains_start = other.contains_point(self.from());
-        let contains_end = other.contains_point(self.to());
+        let contains_start = other.contains_point(self.start());
+        let contains_end = other.contains_point(self.end());
         let contained_in_poly = contains_start && contains_end;
 
         if contains_start {
@@ -190,8 +190,8 @@ where
         // we construct the resulting line segment
         min.and_then(|min| max.and_then(|max| Some((min, max))))
             .map(|(t_min, t_max)| {
-                let a = self.from();
-                let b = self.to();
+                let a = self.start();
+                let b = self.end();
                 let d = b - a;
                 debug_assert!(t_min <= t_max);
                 LineSegment2d::new(a + d * t_min, a + d * t_max)
@@ -204,7 +204,7 @@ where
     T: Scalar,
 {
     fn from(segment: LineSegment2d<T>) -> Self {
-        ConvexPolygon::from_vertices(vec![segment.from, segment.to])
+        ConvexPolygon::from_vertices(vec![segment.start, segment.end])
     }
 }
 
@@ -448,7 +448,7 @@ where
             let segment = LineSegment2d::new(self.vertices[0], self.vertices[1]);
             segment
                 .intersect_polygon(other)
-                .map(|segment| ConvexPolygon::from_vertices(vec![*segment.from(), *segment.to()]))
+                .map(|segment| ConvexPolygon::from_vertices(vec![*segment.start(), *segment.end()]))
                 .unwrap_or_else(|| ConvexPolygon::from_vertices(Vec::new()))
         } else if other.is_line_segment() {
             other.intersect_polygon(self)

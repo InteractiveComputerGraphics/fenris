@@ -108,7 +108,7 @@ where
 
         let mut closest_edges = [0, 0];
         let mut smallest_squared_dists = [T::max_value(), T::max_value()];
-        let endpoints = [*segment.from(), *segment.to()];
+        let endpoints = [*segment.start(), *segment.end()];
 
         let mut intersects = false;
 
@@ -161,8 +161,8 @@ where
         let two_times_signed_area = (0..self.num_edges())
             .map(|edge_idx| self.get_edge(edge_idx).unwrap())
             .map(|segment| {
-                let a = segment.from();
-                let b = segment.to();
+                let a = segment.start();
+                let b = segment.end();
                 (b.y - a.y) * (b.x + a.x)
             })
             .fold(T::zero(), |sum, contrib| sum + contrib);

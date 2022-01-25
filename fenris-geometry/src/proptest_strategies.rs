@@ -129,8 +129,8 @@ pub fn nondegenerate_triangle2d_strategy_f64() -> impl Strategy<Value = Triangle
     let t1_gen = prop_oneof![-3.0..3.0, -10.0..10.0];
     let t2_gen = prop_oneof![0.5..3.0, 1e-6..10.0];
     (segment, t1_gen, t2_gen).prop_map(|(segment, t1, t2)| {
-        let a = segment.from();
-        let b = segment.to();
+        let a = segment.start();
+        let b = segment.end();
         let ab = b - a;
         let n = Vector2::new(-ab.y, ab.x);
         let c = Point2::from(a + t1 * ab + t2 * n);
