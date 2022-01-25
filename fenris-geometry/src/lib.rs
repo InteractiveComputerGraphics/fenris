@@ -21,8 +21,8 @@ pub mod sdf;
 #[cfg(feature = "vtkio")]
 pub mod vtkio;
 
-#[cfg(feature = "proptest")]
-pub mod proptest_strategies;
+#[cfg(feature = "proptest-support")]
+pub mod proptest;
 
 pub trait BoundedGeometry<T>
 where

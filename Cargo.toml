@@ -17,7 +17,8 @@ rustdoc-args = [ "--html-in-header", "assets/doc-header.html",
                  "--html-before-content", "assets/doc-before-content.html"]
 
 [features]
-default = [ "proptest" ]
+default = [ ]
+proptest-support = [ "proptest", "fenris-geometry/proptest-support", "nalgebra/proptest-support" ]
 
 [dependencies]
 nalgebra = { version = "0.28", features = [ "serde-serialize" ] }
@@ -43,6 +44,7 @@ fenris-optimize = { version="0.0.1", path = "fenris-optimize" }
 fenris-quadrature = { version="0.0.2", path = "fenris-quadrature" }
 
 [dev-dependencies]
+fenris = { path = ".", features = [ "proptest-support" ]}
 nalgebra = { version = "0.28", features = [ "serde-serialize", "compare" ] }
 proptest = "1.0"
 matrixcompare = "0.3"

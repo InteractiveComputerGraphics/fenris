@@ -4,7 +4,7 @@ use fenris::element::{
     Tet20Element, Tet4Element, Tri3d2Element, Tri6d2Element,
 };
 use fenris::error::estimate_element_L2_error;
-use fenris::geometry::proptest_strategies::{
+use fenris::geometry::proptest::{
     clockwise_triangle2d_strategy_f64, nondegenerate_convex_quad2d_strategy_f64,
 };
 use fenris::geometry::{LineSegment2d, Quad2d, Triangle2d};

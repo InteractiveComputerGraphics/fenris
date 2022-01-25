@@ -1,5 +1,5 @@
 use crate::element::Tet4Element;
-use crate::geometry::proptest_strategies::Triangle3dParams;
+use crate::geometry::proptest::Triangle3dParams;
 use crate::geometry::Orientation::Counterclockwise;
 use crate::mesh::procedural::create_rectangular_uniform_quad_mesh_2d;
 use crate::mesh::QuadMesh2d;
@@ -86,7 +86,7 @@ pub fn rectangular_uniform_mesh_strategy(unit_length: f64, max_cells: usize) -> 
 #[cfg(test)]
 mod tests {
     use super::rectangular_uniform_mesh_cell_distribution_strategy;
-    use crate::geometry::proptest_strategies::{
+    use crate::geometry::proptest::{
         convex_quad2d_strategy_f64, nondegenerate_convex_quad2d_strategy_f64, nondegenerate_triangle2d_strategy_f64,
     };
     use crate::geometry::Orientation;
