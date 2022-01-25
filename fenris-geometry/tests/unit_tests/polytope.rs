@@ -1,8 +1,8 @@
 use fenris_geometry::{ConvexPolygon, HalfPlane, Line2d, LineSegment2d, Triangle};
 
-use nalgebra::{Point2, Unit, Vector2};
+use nalgebra::{point, Point2, Unit, Vector2, vector};
 
-use matrixcompare::assert_scalar_eq;
+use matrixcompare::{assert_scalar_eq, assert_matrix_eq};
 
 use util::assert_approx_matrix_eq;
 
@@ -218,6 +218,21 @@ fn line_segment_intersect_segment_parametric() {
     let segment1 = LineSegment2d::new(Point2::new(2.0, 3.0), Point2::new(3.0, 0.0));
     let segment2 = LineSegment2d::new(Point2::new(3.0, 1.0), Point2::new(3.0, 4.0));
     assert_eq!(segment1.intersect_segment_parametric(&segment2), None);
+}
+
+#[test]
+fn line_segment_intersect_half_plane() {
+    let segment = LineSegment2d::new(point![1.0, 2.0], point![2.0, 1.0]);
+    let half_plane = {
+        let half_plane_point = point![1.0, 1.0];
+        let segment = LineSegment2d::new(half_plane_point, point![4.0, 3.0]);
+        let normal = Unit::new_normalize(segment.normal_dir());
+        HalfPlane::from_point_and_normal(half_plane_point, normal)
+    };
+
+    let intersection = segment.intersect_half_plane(&half_plane).unwrap();
+    assert_eq!(intersection.end(), segment.end());
+    assert_matrix_eq!(intersection.start().coords, vector![1.6, 1.4], comp=float);
 }
 
 #[test]

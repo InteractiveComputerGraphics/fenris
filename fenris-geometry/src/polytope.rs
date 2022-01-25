@@ -1,6 +1,7 @@
 use crate::{GeneralPolygon, Triangle, Triangle2d};
 use itertools::Itertools;
 use nalgebra::{clamp, Matrix2, Point2, RealField, Scalar, Unit, Vector2};
+use numeric_literals::replace_float_literals;
 
 /// Type used to indicate conversion failure in the presence of concavity.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -114,6 +115,12 @@ where
         Point2::from(self.start().coords + (self.end() - self.start()) * t)
     }
 
+    pub fn segment_from_parameters(&self, t_begin: &T, t_end: &T) -> Self {
+        let begin = self.point_from_parameter(t_begin.clone());
+        let end = self.point_from_parameter(t_end.clone());
+        Self::new(begin, end)
+    }
+
     /// Computes the intersection of two line segments (if any), but returns the result as a parameter.
     ///
     /// Let all points on this line segment be defined by the relation x = a + t * (b - a)
@@ -150,6 +157,40 @@ where
                     Some(t1)
                 }
             })
+    }
+
+    #[replace_float_literals(T::from_f64(literal).unwrap())]
+    pub fn intersect_half_plane(&self, half_plane: &HalfPlane<T>) -> Option<Self> {
+        let contains_start = half_plane.contains_point(self.start());
+        let contains_end = half_plane.contains_point(self.end());
+
+        match (contains_start, contains_end) {
+            (true, true) => Some(self.clone()),
+            (false, false) => None,
+            (true, false) | (false, true) => {
+                let t_intersect = self.intersect_line_parametric(&half_plane.surface())
+                    // Technically the intersection should be in the interval [0, 1] already,
+                    // but numerical errors may lead to values that are slightly outside, or, in the case of
+                    // very nearly parallel lines, far outside.
+                    .map(|t| clamp(t, 0.0, 1.0));
+
+                let (t_start, t_end);
+                if contains_start {
+                    // The only case when the intersection returns None is when the half-plane line and the
+                    // line segment are parallel, which we *technically* have excluded already.
+                    // But due to floating-point imprecision we might still find ourselves in this situation.
+                    // In this case the result may be more or less arbitrary, so we pick a reasonable default
+                    // to fall back on
+                    t_start = 0.0;
+                    t_end = t_intersect.unwrap_or(1.0);
+                } else {
+                    t_start = t_intersect.unwrap_or(0.0);
+                    t_end = 1.0;
+                }
+
+                Some(self.segment_from_parameters(&t_start, &t_end))
+            },
+        }
     }
 
     pub fn intersect_polygon(&self, other: &ConvexPolygon<T>) -> Option<LineSegment2d<T>> {
@@ -231,6 +272,11 @@ impl<T> Line2d<T>
 where
     T: RealField,
 {
+    pub fn from_point_through_point(point: Point2<T>, through: &Point2<T>) -> Self {
+        let dir = through - &point;
+        Self::from_point_and_dir(point, dir)
+    }
+
     /// Computes the projection of the given point onto the line, representing the point
     /// in parametric form.
     pub fn project_point_parametric(&self, point: &Point2<T>) -> T {
