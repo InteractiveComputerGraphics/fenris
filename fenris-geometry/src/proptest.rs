@@ -2,11 +2,20 @@
 use crate::{LineSegment2d, Orientation, Quad2d, Triangle, Triangle2d, Triangle3d};
 
 use crate::Orientation::Counterclockwise;
-use nalgebra::{Point2, Point3, Vector2};
+use nalgebra::{DimName, Point2, Point3, U2, U3, Vector2, Vector3};
+use nalgebra::proptest::vector;
 use proptest::prelude::*;
 
+pub fn vector2() -> impl Strategy<Value = Vector2<f64>> {
+    vector(-10.0 .. 10.0, U2::name())
+}
+
+pub fn vector3() -> impl Strategy<Value = Vector3<f64>> {
+    vector(-10.0 .. 10.0, U3::name())
+}
+
 // TODO: This is just copied from fenris to prevent unneeded coupling for the time being
-fn point2() -> impl Strategy<Value = Point2<f64>> {
+pub fn point2() -> impl Strategy<Value = Point2<f64>> {
     // Pick a reasonably small range to pick coordinates from,
     // otherwise we can easily get floating point numbers that are
     // so ridiculously large as to break anything we might want to do with them
@@ -15,7 +24,7 @@ fn point2() -> impl Strategy<Value = Point2<f64>> {
 }
 
 // TODO: This is just copied from fenris to prevent unneeded coupling for the time being
-fn point3() -> impl Strategy<Value = Point3<f64>> {
+pub fn point3() -> impl Strategy<Value = Point3<f64>> {
     // Pick a reasonably small range to pick coordinates from,
     // otherwise we can easily get floating point numbers that are
     // so ridiculously large as to break anything we might want to do with them
