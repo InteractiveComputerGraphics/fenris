@@ -272,6 +272,11 @@ impl<T> Line2d<T>
 where
     T: RealField,
 {
+    /// A normalized vector tangent to the line.
+    pub fn tangent(&self) -> Vector2<T> {
+        self.dir.normalize()
+    }
+
     pub fn from_point_through_point(point: Point2<T>, through: &Point2<T>) -> Self {
         let dir = through - &point;
         Self::from_point_and_dir(point, dir)
