@@ -194,49 +194,11 @@ where
     }
 
     pub fn intersect_polygon(&self, other: &ConvexPolygon<T>) -> Option<LineSegment2d<T>> {
-        let mut min = None;
-        let mut max = None;
-
-        let contains_start = other.contains_point(self.start());
-        let contains_end = other.contains_point(self.end());
-        let contained_in_poly = contains_start && contains_end;
-
-        if contains_start {
-            min = Some(T::zero());
+        let mut result = self.clone();
+        for half_plane in other.half_planes() {
+            result = result.intersect_half_plane(&half_plane)?;
         }
-        if contains_end {
-            max = Some(T::one());
-        }
-
-        if !contained_in_poly {
-            for edge in other.edges() {
-                let edge_segment = LineSegment2d::new(*edge.0, *edge.1);
-
-                if let Some(t) = self.intersect_segment_parametric(&edge_segment) {
-                    if t < *min.get_or_insert(t) {
-                        min = Some(t);
-                    }
-
-                    if t > *max.get_or_insert(t) {
-                        max = Some(t)
-                    }
-                }
-            }
-        }
-
-        // TODO: I think this *can* actually occur if the polygon is e.g. a point
-        assert!(min.is_none() == max.is_none());
-
-        // Once we have t_min and t_max (or we don't and we return None),
-        // we construct the resulting line segment
-        min.and_then(|min| max.and_then(|max| Some((min, max))))
-            .map(|(t_min, t_max)| {
-                let a = self.start();
-                let b = self.end();
-                let d = b - a;
-                debug_assert!(t_min <= t_max);
-                LineSegment2d::new(a + d * t_min, a + d * t_max)
-            })
+        Some(result)
     }
 }
 
