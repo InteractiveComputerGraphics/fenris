@@ -1,8 +1,8 @@
 use fenris_geometry::{ConvexPolygon, HalfPlane, Line2d, LineSegment2d, Triangle};
-
 use nalgebra::{point, Point2, Unit, Vector2, vector};
-
-use matrixcompare::{assert_scalar_eq, assert_matrix_eq};
+use matrixcompare::{assert_scalar_eq, assert_matrix_eq, prop_assert_matrix_eq};
+use proptest::prelude::*;
+use fenris_geometry::proptest::{half_plane};
 
 use util::assert_approx_matrix_eq;
 
@@ -257,4 +257,64 @@ fn line_segment_intersect_polygon() {
     // defines its shape
     assert_approx_matrix_eq!(result.midpoint(), expected_intersection.midpoint(), abstol = 1e-12);
     assert_scalar_eq!(result.length(), expected_intersection.length(), comp = abs, tol = 1e-12);
+}
+
+#[derive(Debug, Clone)]
+struct LineSegment2dHalfPlaneIntersection {
+    pub intersection_point: Point2<f64>,
+    pub half_plane: HalfPlane<f64>,
+    pub input_segment: LineSegment2d<f64>,
+    pub output_segment: LineSegment2d<f64>,
+}
+
+proptest! {
+    #[test]
+    fn line_segment_2d_half_plane_intersection(problem in intersecting_line_segment_2d_and_half_plane()) {
+        let intersection = problem.input_segment.intersect_half_plane(&problem.half_plane)
+            .expect("The intersection is by design non-empty");
+        prop_assert_matrix_eq!(
+            intersection.start().coords,
+            problem.output_segment.start().coords, comp = abs, tol = 1e-9);
+        prop_assert_matrix_eq!(
+            intersection.end().coords,
+            problem.output_segment.end().coords, comp = abs, tol = 1e-9);
+    }
+}
+
+/// A strategy for generating half planes and line segments whose intersection is a subset of the input line segment.
+fn intersecting_line_segment_2d_and_half_plane() -> impl Strategy<Value=LineSegment2dHalfPlaneIntersection> {
+    // Given a half plane represented by a point x0 on its surface and an outward-facing normal n,
+    // we let t be a vector tangent to the plane, and define an intersection point as
+    //  x_i = x_0 + t_i * t
+    // for any scalar t_i.
+    //
+    // Next, we pick a point *inside* the half-plane as
+    //  x1 = x_0 + t1 * t + n1 * n
+    // where t1 is a scalar and n1 < 0 ensures that the point is on the "inside" of the half-plane.
+    //
+    // Finally, we pick a scalar alpha >= 0 and define
+    //  x2 = x_i + alpha * (x_i - x1)
+    // so that x2 is a point *outside* the halfplane
+    //
+    // Let now L be the line segment pointing from x1 to x2. Then the intersection of L with the half plane is given
+    // by the line segment pointing from x1 to x_i.
+    let scalar = -10.0 .. 10.0;
+    let negative_scalar = -1.0 .. -1e-3;
+    let non_negative_scalar = 0.0 .. 10.0;
+    // TODO: Randomly "shuffle" start and end points to prevent bias
+    (half_plane(), scalar.clone(), scalar.clone(), negative_scalar, non_negative_scalar)
+        .prop_map(|(half_plane, t_i, t1, n1, alpha)| {
+            let x0 = half_plane.point();
+            let n = half_plane.normal();
+            let ref t = half_plane.surface().tangent();
+            let ref x_i = half_plane.point() + t_i * t;
+            let x1 = x0 + t1 * t + n1 * n;
+            let x2 = x_i + alpha * (x_i - x1);
+            LineSegment2dHalfPlaneIntersection {
+                intersection_point: half_plane.point() + t_i * t,
+                input_segment: LineSegment2d::new(x1, x2),
+                output_segment: LineSegment2d::new(x1, *x_i),
+                half_plane,
+            }
+        })
 }
