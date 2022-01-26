@@ -344,10 +344,10 @@ where
     T: RealField,
 {
     pub fn contains_point(&self, point: &Point2<T>) -> bool {
-        self.surface_distance_to_point(point) >= T::zero()
+        self.signed_distance_to_point(point) <= T::zero()
     }
 
-    pub fn surface_distance_to_point(&self, point: &Point2<T>) -> T {
+    pub fn signed_distance_to_point(&self, point: &Point2<T>) -> T {
         let d = point - &self.point;
         self.normal.dot(&d)
     }
@@ -430,10 +430,8 @@ where
         self.edges().filter_map(|(v1, v2)| {
             if v1 != v2 {
                 let edge_dir = v2 - v1;
-                let negative_edge_normal = Vector2::new(-edge_dir.y, edge_dir.x);
-                let normalized_negative_edge_normal = Unit::try_new(negative_edge_normal, T::zero())
-                    .expect("v1 != v2, so vector can be safely normalized");
-                Some(HalfPlane::from_point_and_normal(*v1, normalized_negative_edge_normal))
+                let edge_normal = Vector2::new(edge_dir.y, -edge_dir.x);
+                Some(HalfPlane::from_point_and_normal(*v1, Unit::new_normalize(edge_normal)))
             } else {
                 None
             }

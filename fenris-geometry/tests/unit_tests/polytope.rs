@@ -9,13 +9,13 @@ use util::assert_approx_matrix_eq;
 #[test]
 fn half_plane_surface_distance_and_contains_point() {
     let x0 = Point2::new(1.0, -1.0);
-    let n = Unit::new_normalize(Vector2::new(-1.0, 1.0));
+    let n = Unit::new_normalize(Vector2::new(1.0, -1.0));
     let half_plane = HalfPlane::from_point_and_normal(x0, n);
 
     {
         let x = Point2::new(-1.0, 1.0);
-        let dist = half_plane.surface_distance_to_point(&x);
-        let expected = 2.828427124746;
+        let dist = half_plane.signed_distance_to_point(&x);
+        let expected = -2.828427124746;
         let diff: f64 = dist - expected;
 
         assert!(diff.abs() < 1e-6);
@@ -24,8 +24,8 @@ fn half_plane_surface_distance_and_contains_point() {
 
     {
         let x = Point2::new(2.0, 1.0);
-        let dist = half_plane.surface_distance_to_point(&x);
-        let expected = 0.7071067811865;
+        let dist = half_plane.signed_distance_to_point(&x);
+        let expected = -0.7071067811865;
         let diff: f64 = dist - expected;
 
         assert!(diff.abs() < 1e-6);
@@ -46,7 +46,7 @@ fn empty_polygon_intersect_halfplane() {
 #[test]
 fn point_polygon_intersect_halfplane() {
     let x0 = Point2::new(1.0, -1.0);
-    let n = Unit::new_normalize(Vector2::new(-1.0, 1.0));
+    let n = Unit::new_normalize(Vector2::new(1.0, -1.0));
     let half_plane = HalfPlane::from_point_and_normal(x0, n);
 
     // Point inside of half plane
@@ -69,7 +69,7 @@ fn point_polygon_intersect_halfplane() {
 #[test]
 fn line_polygon_intersect_halfplane() {
     let x0 = Point2::new(1.0, -1.0);
-    let n = Unit::new_normalize(Vector2::new(-1.0, 1.0));
+    let n = Unit::new_normalize(Vector2::new(1.0, -1.0));
     let half_plane = HalfPlane::from_point_and_normal(x0, n);
 
     // Line represented as polygon intersecting the surface of the halfplane
@@ -104,7 +104,7 @@ fn triangle_polygon_intersect_halfplane() {
     ]);
 
     let halfplane =
-        HalfPlane::from_point_and_normal(Point2::new(2.0, 2.0), Unit::new_normalize(Vector2::new(-4.0, 3.0)));
+        HalfPlane::from_point_and_normal(Point2::new(2.0, 2.0), Unit::new_normalize(Vector2::new(4.0, -3.0)));
 
     let intersection = triangle.intersect_halfplane(&halfplane);
 
@@ -226,13 +226,14 @@ fn line_segment_intersect_half_plane() {
     let half_plane = {
         let half_plane_point = point![1.0, 1.0];
         let segment = LineSegment2d::new(half_plane_point, point![4.0, 3.0]);
-        let normal = Unit::new_normalize(segment.normal_dir());
+        let normal = Unit::new_normalize(-segment.normal_dir());
         HalfPlane::from_point_and_normal(half_plane_point, normal)
     };
 
     let intersection = segment.intersect_half_plane(&half_plane).unwrap();
     assert_eq!(intersection.end(), segment.end());
     assert_matrix_eq!(intersection.start().coords, vector![1.6, 1.4], comp=float);
+    todo!("Fix the normal dir etc. here maybe consider rewriting test")
 }
 
 #[test]
@@ -257,6 +258,10 @@ fn line_segment_intersect_polygon() {
     // defines its shape
     assert_approx_matrix_eq!(result.midpoint(), expected_intersection.midpoint(), abstol = 1e-12);
     assert_scalar_eq!(result.length(), expected_intersection.length(), comp = abs, tol = 1e-12);
+
+    // TODO: Above statement is silly: would need to check that lines are parallel as well
+    // Anyway, we should use the new combinatorial comparison utilities for this
+    todo!("Fix this");
 }
 
 #[derive(Debug, Clone)]
