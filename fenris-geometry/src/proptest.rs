@@ -1,8 +1,7 @@
 // use crate::procedural::create_rectangular_uniform_quad_mesh_2d;
-use crate::{LineSegment2d, Orientation, Quad2d, Triangle, Triangle2d, Triangle3d};
-
+use crate::{HalfPlane, LineSegment2d, Orientation, Quad2d, Triangle, Triangle2d, Triangle3d};
 use crate::Orientation::Counterclockwise;
-use nalgebra::{DimName, Point2, Point3, U2, U3, Vector2, Vector3};
+use nalgebra::{DimName, Point2, Point3, U2, U3, Unit, Vector2, Vector3};
 use nalgebra::proptest::vector;
 use proptest::prelude::*;
 
@@ -30,6 +29,13 @@ pub fn point3() -> impl Strategy<Value = Point3<f64>> {
     // so ridiculously large as to break anything we might want to do with them
     let range = -10.0..10.0;
     [range.clone(), range.clone(), range.clone()].prop_map(|[x, y, z]| Point3::new(x, y, z))
+}
+
+pub fn half_plane() -> impl Strategy<Value = HalfPlane<f64>> {
+    let normal_strategy = vector2()
+        .prop_filter_map("Vector close to zero, cannot reliably normalize", |v| Unit::try_new(v, 1e-9));
+    (point2(), normal_strategy)
+        .prop_map(|(x0, n)| HalfPlane::from_point_and_normal(x0, n))
 }
 
 #[derive(Debug, Clone)]
