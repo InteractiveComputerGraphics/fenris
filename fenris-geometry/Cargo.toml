@@ -7,6 +7,9 @@ repository = "https://github.com/InteractiveComputerGraphics/fenris"
 description = "Geometry functionality for fenris"
 edition = "2021"
 
+[features]
+proptest-support = [ "proptest", "nalgebra/proptest-support" ]
+
 [dependencies]
 itertools = "0.9"
 nalgebra = "0.28"
@@ -16,5 +19,7 @@ fenris-nested-vec = { version = "0.0.1", path="../fenris-nested-vec" }
 proptest = { version="1.0", optional = true }
 
 [dev-dependencies]
-matrixcompare = "0.3"
+fenris-geometry = { path = ".", features = [ "proptest-support" ] }
+nalgebra = { version = "0.28", features = [ "compare" ]}
+matrixcompare = { version="0.3", features = ["proptest-support"] }
 util = { path="../util" }

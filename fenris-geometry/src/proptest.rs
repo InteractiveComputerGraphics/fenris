@@ -1,12 +1,20 @@
 // use crate::procedural::create_rectangular_uniform_quad_mesh_2d;
-use crate::{LineSegment2d, Orientation, Quad2d, Triangle, Triangle2d, Triangle3d};
-
 use crate::Orientation::Counterclockwise;
-use nalgebra::{Point2, Point3, Vector2};
+use crate::{HalfPlane, LineSegment2d, Orientation, Quad2d, Triangle, Triangle2d, Triangle3d};
+use nalgebra::proptest::vector;
+use nalgebra::{DimName, Point2, Point3, Unit, Vector2, Vector3, U2, U3};
 use proptest::prelude::*;
 
+pub fn vector2() -> impl Strategy<Value = Vector2<f64>> {
+    vector(-10.0..10.0, U2::name())
+}
+
+pub fn vector3() -> impl Strategy<Value = Vector3<f64>> {
+    vector(-10.0..10.0, U3::name())
+}
+
 // TODO: This is just copied from fenris to prevent unneeded coupling for the time being
-fn point2() -> impl Strategy<Value = Point2<f64>> {
+pub fn point2() -> impl Strategy<Value = Point2<f64>> {
     // Pick a reasonably small range to pick coordinates from,
     // otherwise we can easily get floating point numbers that are
     // so ridiculously large as to break anything we might want to do with them
@@ -15,12 +23,19 @@ fn point2() -> impl Strategy<Value = Point2<f64>> {
 }
 
 // TODO: This is just copied from fenris to prevent unneeded coupling for the time being
-fn point3() -> impl Strategy<Value = Point3<f64>> {
+pub fn point3() -> impl Strategy<Value = Point3<f64>> {
     // Pick a reasonably small range to pick coordinates from,
     // otherwise we can easily get floating point numbers that are
     // so ridiculously large as to break anything we might want to do with them
     let range = -10.0..10.0;
     [range.clone(), range.clone(), range.clone()].prop_map(|[x, y, z]| Point3::new(x, y, z))
+}
+
+pub fn half_plane() -> impl Strategy<Value = HalfPlane<f64>> {
+    let normal_strategy = vector2().prop_filter_map("Vector close to zero, cannot reliably normalize", |v| {
+        Unit::try_new(v, 1e-9)
+    });
+    (point2(), normal_strategy).prop_map(|(x0, n)| HalfPlane::from_point_and_normal(x0, n))
 }
 
 #[derive(Debug, Clone)]
@@ -129,8 +144,8 @@ pub fn nondegenerate_triangle2d_strategy_f64() -> impl Strategy<Value = Triangle
     let t1_gen = prop_oneof![-3.0..3.0, -10.0..10.0];
     let t2_gen = prop_oneof![0.5..3.0, 1e-6..10.0];
     (segment, t1_gen, t2_gen).prop_map(|(segment, t1, t2)| {
-        let a = segment.from();
-        let b = segment.to();
+        let a = segment.start();
+        let b = segment.end();
         let ab = b - a;
         let n = Vector2::new(-ab.y, ab.x);
         let c = Point2::from(a + t1 * ab + t2 * n);
