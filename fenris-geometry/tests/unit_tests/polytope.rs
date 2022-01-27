@@ -272,7 +272,21 @@ proptest! {
         let intersection = problem.input_segment.intersect_half_plane(&problem.half_plane)
             .expect("The intersection is by design non-empty");
         prop_assert_line_segments_approx_equal!(intersection, problem.output_segment, abstol=1e-9);
+    }
 
+    #[test]
+    fn line_segment_2d_contained_in_half_plane_intersection(
+        (segment, half_plane) in line_segment_2d_contained_in_half_plane())
+    {
+        let intersection = segment.intersect_half_plane(&half_plane).unwrap();
+        prop_assert_line_segments_approx_equal!(intersection, segment, abstol=1e-9);
+    }
+
+    #[test]
+    fn disjoint_line_segment_2d_and_half_plane_intersection(
+        (segment, half_plane) in disjoint_line_segment_2d_and_half_plane())
+    {
+        prop_assert!(segment.intersect_half_plane(&half_plane).is_none());
     }
 }
 
@@ -317,5 +331,39 @@ fn intersecting_line_segment_2d_and_half_plane() -> impl Strategy<Value=LineSegm
                 output_segment,
                 half_plane,
             }
+        })
+}
+
+/// A strategy for generating line segments and half planes whose intersection is empty.
+fn disjoint_line_segment_2d_and_half_plane() -> impl Strategy<Value=(LineSegment2d<f64>, HalfPlane<f64>)> {
+    line_segment_2d_and_half_plane(-10.0 .. 10.0, 1e-3 .. 10.0)
+}
+
+/// A strategy for generating line segments and half planes where the line segment is entirely contained
+/// in the half plane.
+fn line_segment_2d_contained_in_half_plane() -> impl Strategy<Value=(LineSegment2d<f64>, HalfPlane<f64>)> {
+    line_segment_2d_and_half_plane(-10.0 .. 10.0, -10.0 .. -1e-3)
+}
+
+fn line_segment_2d_and_half_plane(
+    tangent_coord: impl Strategy<Value=f64> + Clone,
+    normal_coord: impl Strategy<Value=f64> + Clone)
+-> impl Strategy<Value=(LineSegment2d<f64>, HalfPlane<f64>)>
+{
+    // Given a half plane defined by a point x0 and normal n, we let t be a unit vector tangent to the plane.
+    // Then we can express points in space by the relation
+    //  x = x0 + alpha * t + beta * n
+    // Hence, by choosing the sign of beta, we can decide on whether points should be inside/outside the half-plane.
+    let alpha = tangent_coord;
+    let beta = normal_coord;
+    (half_plane(), alpha.clone(), beta.clone(), alpha.clone(), beta.clone())
+        .prop_map(|(half_plane, alpha1, beta1, alpha2, beta2)| {
+            let x0 = half_plane.point();
+            let n = half_plane.normal();
+            let t = half_plane.surface().tangent();
+            let x1 = x0 + alpha1 * t + beta1 * n;
+            let x2 = x0 + alpha2 * t + beta2 * n;
+            let segment = LineSegment2d::new(x1, x2);
+            (segment, half_plane)
         })
 }
