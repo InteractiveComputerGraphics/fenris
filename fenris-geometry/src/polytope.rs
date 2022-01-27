@@ -168,7 +168,8 @@ where
             (true, true) => Some(self.clone()),
             (false, false) => None,
             (true, false) | (false, true) => {
-                let t_intersect = self.intersect_line_parametric(&half_plane.surface())
+                let t_intersect = self
+                    .intersect_line_parametric(&half_plane.surface())
                     // Technically the intersection should be in the interval [0, 1] already,
                     // but numerical errors may lead to values that are slightly outside, or, in the case of
                     // very nearly parallel lines, far outside.
@@ -189,7 +190,7 @@ where
                 }
 
                 Some(self.segment_from_parameters(&t_start, &t_end))
-            },
+            }
         }
     }
 

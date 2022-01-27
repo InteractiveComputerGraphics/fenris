@@ -4,72 +4,62 @@ mod polygon;
 mod polymesh;
 mod polytope;
 
-use nalgebra::{point, Point2};
-use proptest::prelude::*;
-use proptest::collection::{hash_set, vec};
 use fenris_geometry::LineSegment2d;
+use nalgebra::{point, Point2};
+use proptest::collection::{hash_set, vec};
+use proptest::prelude::*;
 use util::assert_panics;
 
 // Base macro for line segment assertions
 #[doc(hidden)]
 macro_rules! assert_line_segments_approx_equal_base {
-    ($msg_handler:expr, $segment1:expr, $segment2:expr, abstol = $tol:expr) => {
-        {
-            use $crate::unit_tests::slices_are_equal_shift_invariant;
-            use matrixcompare::comparators::AbsoluteElementwiseComparator;
-            use matrixcompare::compare_matrices;
+    ($msg_handler:expr, $segment1:expr, $segment2:expr, abstol = $tol:expr) => {{
+        use matrixcompare::comparators::AbsoluteElementwiseComparator;
+        use matrixcompare::compare_matrices;
+        use $crate::unit_tests::slices_are_equal_shift_invariant;
 
-            let tol = $tol.clone();
-            // Type check: Makes for an easier error message than failing specific methods
-            let (segment1, segment2): (&LineSegment2d<_>, &LineSegment2d<_>) = (&$segment1, &$segment2);
-            let vertices1 = [segment1.start().clone(), segment1.end().clone()];
-            let vertices2 = [segment2.start().clone(), segment2.end().clone()];
-            let comparator = AbsoluteElementwiseComparator { tol };
-            let comparator = |a: &Point2<f64>, b: &Point2<f64>| compare_matrices(&a.coords, &b.coords, &comparator)
-                .is_ok();
-            let vertices_are_shift_invariant_equal = slices_are_equal_shift_invariant(
-                &vertices1, &vertices2, comparator);
-            if !vertices_are_shift_invariant_equal {
-                let msg = format!(
-"Line segments are not (approximately) equal to absolute tolerance {tol}.
+        let tol = $tol.clone();
+        // Type check: Makes for an easier error message than failing specific methods
+        let (segment1, segment2): (&LineSegment2d<_>, &LineSegment2d<_>) = (&$segment1, &$segment2);
+        let vertices1 = [segment1.start().clone(), segment1.end().clone()];
+        let vertices2 = [segment2.start().clone(), segment2.end().clone()];
+        let comparator = AbsoluteElementwiseComparator { tol };
+        let comparator = |a: &Point2<f64>, b: &Point2<f64>| compare_matrices(&a.coords, &b.coords, &comparator).is_ok();
+        let vertices_are_shift_invariant_equal = slices_are_equal_shift_invariant(&vertices1, &vertices2, comparator);
+        if !vertices_are_shift_invariant_equal {
+            let msg = format!(
+                "Line segments are not (approximately) equal to absolute tolerance {tol}.
 Segment1: {:?}
-Segment2: {:?}", segment1, segment2);
+Segment2: {:?}",
+                segment1, segment2
+            );
 
-                return $msg_handler(msg);
-            }
+            return $msg_handler(msg);
         }
-    }
+    }};
 }
 
 macro_rules! assert_line_segments_approx_equal {
-    ($segment1:expr, $segment2:expr, abstol = $tol:expr) => {
-        {
-            let msg_handler = |msg| panic!("{}", msg);
-            $crate::unit_tests::assert_line_segments_approx_equal_base!(msg_handler, $segment1, $segment2, abstol=$tol);
-        }
-    }
+    ($segment1:expr, $segment2:expr, abstol = $tol:expr) => {{
+        let msg_handler = |msg| panic!("{}", msg);
+        $crate::unit_tests::assert_line_segments_approx_equal_base!(msg_handler, $segment1, $segment2, abstol = $tol);
+    }};
 }
 
 macro_rules! prop_assert_line_segments_approx_equal {
-    ($segment1:expr, $segment2:expr, abstol = $tol:expr) => {
-        {
-            let msg_handler = |msg| {
-                // Add filename and line numbers to message (since we don't panic, it's useful
-                // to have this information in the output).
-                let amended_message = format!("Proptest assertion failure at {}:{}. {}",
-                    file!(),
-                    line!(),
-                    msg);
-                return ::core::result::Result::Err(
-                    ::proptest::test_runner::TestCaseError::fail(amended_message));
-            };
-            $crate::unit_tests::assert_line_segments_approx_equal_base!(msg_handler, $segment1, $segment2, abstol=$tol);
-        }
-    }
+    ($segment1:expr, $segment2:expr, abstol = $tol:expr) => {{
+        let msg_handler = |msg| {
+            // Add filename and line numbers to message (since we don't panic, it's useful
+            // to have this information in the output).
+            let amended_message = format!("Proptest assertion failure at {}:{}. {}", file!(), line!(), msg);
+            return ::core::result::Result::Err(::proptest::test_runner::TestCaseError::fail(amended_message));
+        };
+        $crate::unit_tests::assert_line_segments_approx_equal_base!(msg_handler, $segment1, $segment2, abstol = $tol);
+    }};
 }
 
-pub(crate) use assert_line_segments_approx_equal_base;
 pub(crate) use assert_line_segments_approx_equal;
+pub(crate) use assert_line_segments_approx_equal_base;
 pub(crate) use prop_assert_line_segments_approx_equal;
 
 #[test]
@@ -82,8 +72,8 @@ fn test_line_segment_assert() {
     let segment2 = LineSegment2d::new(b, a);
     let segment3 = LineSegment2d::new(a, c);
 
-    assert_line_segments_approx_equal!(segment1, segment2, abstol=tol);
-    assert_line_segments_approx_equal!(segment2, segment1, abstol=tol);
+    assert_line_segments_approx_equal!(segment1, segment2, abstol = tol);
+    assert_line_segments_approx_equal!(segment2, segment1, abstol = tol);
 
     assert_panics! { assert_line_segments_approx_equal!(segment1, segment3, abstol=tol) };
     assert_panics! { assert_line_segments_approx_equal!(segment2, segment3, abstol=tol) };
@@ -93,11 +83,7 @@ fn test_line_segment_assert() {
 ///
 /// If `X` and `Y` are the two arrays, then the two arrays are shift-invariant equal if X can be shifted/rotated
 /// by some constant `n` such that `Shift(X) == Y`.
-fn slices_are_equal_shift_invariant<T, C: Fn(&T, &T) -> bool>(
-    x: &[T],
-    y: &[T],
-    comparator: C)
--> bool {
+fn slices_are_equal_shift_invariant<T, C: Fn(&T, &T) -> bool>(x: &[T], y: &[T], comparator: C) -> bool {
     let n = x.len();
     if y.len() != n {
         return false;
@@ -106,7 +92,7 @@ fn slices_are_equal_shift_invariant<T, C: Fn(&T, &T) -> bool>(
         return true;
     }
 
-    for i_start in 0 .. n {
+    for i_start in 0..n {
         let mut all_equal = true;
 
         for (j, y_j) in y.iter().enumerate() {

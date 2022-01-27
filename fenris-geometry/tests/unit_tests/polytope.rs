@@ -1,9 +1,9 @@
-use fenris_geometry::{ConvexPolygon, HalfPlane, Line2d, LineSegment2d, Triangle};
-use nalgebra::{point, Point2, Unit, Vector2, vector};
-use proptest::prelude::*;
-use fenris_geometry::proptest::{half_plane};
-use util::assert_approx_matrix_eq;
 use crate::unit_tests::{assert_line_segments_approx_equal, prop_assert_line_segments_approx_equal};
+use fenris_geometry::proptest::half_plane;
+use fenris_geometry::{ConvexPolygon, HalfPlane, Line2d, LineSegment2d, Triangle};
+use nalgebra::{point, vector, Point2, Unit, Vector2};
+use proptest::prelude::*;
+use util::assert_approx_matrix_eq;
 
 #[test]
 fn half_plane_surface_distance_and_contains_point() {
@@ -233,7 +233,7 @@ fn line_segment_intersect_half_plane() {
 
     let intersection = segment.intersect_half_plane(&half_plane).unwrap();
     let expected = LineSegment2d::new(b, intersection_point);
-    assert_line_segments_approx_equal!(intersection, expected, abstol=1e-14);
+    assert_line_segments_approx_equal!(intersection, expected, abstol = 1e-14);
 }
 
 #[test]
@@ -253,7 +253,7 @@ fn line_segment_intersect_polygon() {
         .intersect_polygon(&polygon)
         .expect("Intersection is not empty");
     let expected_intersection = LineSegment2d::new(Point2::new(2.0, 3.0), Point2::new(8.0 / 3.0, 1.0));
-    assert_line_segments_approx_equal!(result, expected_intersection, abstol=1e-12);
+    assert_line_segments_approx_equal!(result, expected_intersection, abstol = 1e-12);
 }
 
 #[derive(Debug, Clone)]
@@ -291,7 +291,7 @@ proptest! {
 }
 
 /// A strategy for generating half planes and line segments whose intersection is a subset of the input line segment.
-fn intersecting_line_segment_2d_and_half_plane() -> impl Strategy<Value=LineSegment2dHalfPlaneIntersection> {
+fn intersecting_line_segment_2d_and_half_plane() -> impl Strategy<Value = LineSegment2dHalfPlaneIntersection> {
     // Given a half plane represented by a point x0 on its surface and an outward-facing normal n,
     // we let t be a vector tangent to the plane, and define an intersection point as
     //  x_i = x_0 + t_i * t
@@ -307,10 +307,17 @@ fn intersecting_line_segment_2d_and_half_plane() -> impl Strategy<Value=LineSegm
     //
     // Let now L be the line segment pointing from x1 to x2. Then the intersection of L with the half plane is given
     // by the line segment pointing from x1 to x_i.
-    let scalar = -10.0 .. 10.0;
-    let negative_scalar = -1.0 .. -1e-3;
-    let non_negative_scalar = 0.0 .. 10.0;
-    (half_plane(), scalar.clone(), scalar.clone(), negative_scalar, non_negative_scalar, proptest::bool::ANY)
+    let scalar = -10.0..10.0;
+    let negative_scalar = -1.0..-1e-3;
+    let non_negative_scalar = 0.0..10.0;
+    (
+        half_plane(),
+        scalar.clone(),
+        scalar.clone(),
+        negative_scalar,
+        non_negative_scalar,
+        proptest::bool::ANY,
+    )
         .prop_map(|(half_plane, t_i, t1, n1, alpha, should_flip)| {
             let x0 = half_plane.point();
             let n = half_plane.normal();
@@ -335,29 +342,28 @@ fn intersecting_line_segment_2d_and_half_plane() -> impl Strategy<Value=LineSegm
 }
 
 /// A strategy for generating line segments and half planes whose intersection is empty.
-fn disjoint_line_segment_2d_and_half_plane() -> impl Strategy<Value=(LineSegment2d<f64>, HalfPlane<f64>)> {
-    line_segment_2d_and_half_plane(-10.0 .. 10.0, 1e-3 .. 10.0)
+fn disjoint_line_segment_2d_and_half_plane() -> impl Strategy<Value = (LineSegment2d<f64>, HalfPlane<f64>)> {
+    line_segment_2d_and_half_plane(-10.0..10.0, 1e-3..10.0)
 }
 
 /// A strategy for generating line segments and half planes where the line segment is entirely contained
 /// in the half plane.
-fn line_segment_2d_contained_in_half_plane() -> impl Strategy<Value=(LineSegment2d<f64>, HalfPlane<f64>)> {
-    line_segment_2d_and_half_plane(-10.0 .. 10.0, -10.0 .. -1e-3)
+fn line_segment_2d_contained_in_half_plane() -> impl Strategy<Value = (LineSegment2d<f64>, HalfPlane<f64>)> {
+    line_segment_2d_and_half_plane(-10.0..10.0, -10.0..-1e-3)
 }
 
 fn line_segment_2d_and_half_plane(
-    tangent_coord: impl Strategy<Value=f64> + Clone,
-    normal_coord: impl Strategy<Value=f64> + Clone)
--> impl Strategy<Value=(LineSegment2d<f64>, HalfPlane<f64>)>
-{
+    tangent_coord: impl Strategy<Value = f64> + Clone,
+    normal_coord: impl Strategy<Value = f64> + Clone,
+) -> impl Strategy<Value = (LineSegment2d<f64>, HalfPlane<f64>)> {
     // Given a half plane defined by a point x0 and normal n, we let t be a unit vector tangent to the plane.
     // Then we can express points in space by the relation
     //  x = x0 + alpha * t + beta * n
     // Hence, by choosing the sign of beta, we can decide on whether points should be inside/outside the half-plane.
     let alpha = tangent_coord;
     let beta = normal_coord;
-    (half_plane(), alpha.clone(), beta.clone(), alpha.clone(), beta.clone())
-        .prop_map(|(half_plane, alpha1, beta1, alpha2, beta2)| {
+    (half_plane(), alpha.clone(), beta.clone(), alpha.clone(), beta.clone()).prop_map(
+        |(half_plane, alpha1, beta1, alpha2, beta2)| {
             let x0 = half_plane.point();
             let n = half_plane.normal();
             let t = half_plane.surface().tangent();
@@ -365,5 +371,6 @@ fn line_segment_2d_and_half_plane(
             let x2 = x0 + alpha2 * t + beta2 * n;
             let segment = LineSegment2d::new(x1, x2);
             (segment, half_plane)
-        })
+        },
+    )
 }

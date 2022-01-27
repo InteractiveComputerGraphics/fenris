@@ -1,16 +1,16 @@
 // use crate::procedural::create_rectangular_uniform_quad_mesh_2d;
-use crate::{HalfPlane, LineSegment2d, Orientation, Quad2d, Triangle, Triangle2d, Triangle3d};
 use crate::Orientation::Counterclockwise;
-use nalgebra::{DimName, Point2, Point3, U2, U3, Unit, Vector2, Vector3};
+use crate::{HalfPlane, LineSegment2d, Orientation, Quad2d, Triangle, Triangle2d, Triangle3d};
 use nalgebra::proptest::vector;
+use nalgebra::{DimName, Point2, Point3, Unit, Vector2, Vector3, U2, U3};
 use proptest::prelude::*;
 
 pub fn vector2() -> impl Strategy<Value = Vector2<f64>> {
-    vector(-10.0 .. 10.0, U2::name())
+    vector(-10.0..10.0, U2::name())
 }
 
 pub fn vector3() -> impl Strategy<Value = Vector3<f64>> {
-    vector(-10.0 .. 10.0, U3::name())
+    vector(-10.0..10.0, U3::name())
 }
 
 // TODO: This is just copied from fenris to prevent unneeded coupling for the time being
@@ -32,10 +32,10 @@ pub fn point3() -> impl Strategy<Value = Point3<f64>> {
 }
 
 pub fn half_plane() -> impl Strategy<Value = HalfPlane<f64>> {
-    let normal_strategy = vector2()
-        .prop_filter_map("Vector close to zero, cannot reliably normalize", |v| Unit::try_new(v, 1e-9));
-    (point2(), normal_strategy)
-        .prop_map(|(x0, n)| HalfPlane::from_point_and_normal(x0, n))
+    let normal_strategy = vector2().prop_filter_map("Vector close to zero, cannot reliably normalize", |v| {
+        Unit::try_new(v, 1e-9)
+    });
+    (point2(), normal_strategy).prop_map(|(x0, n)| HalfPlane::from_point_and_normal(x0, n))
 }
 
 #[derive(Debug, Clone)]
