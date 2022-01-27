@@ -1,10 +1,9 @@
 use fenris_geometry::{ConvexPolygon, HalfPlane, Line2d, LineSegment2d, Triangle};
 use nalgebra::{point, Point2, Unit, Vector2, vector};
-use matrixcompare::{assert_scalar_eq, assert_matrix_eq, prop_assert_matrix_eq};
 use proptest::prelude::*;
 use fenris_geometry::proptest::{half_plane};
-
 use util::assert_approx_matrix_eq;
+use crate::unit_tests::{assert_line_segments_approx_equal, prop_assert_line_segments_approx_equal};
 
 #[test]
 fn half_plane_surface_distance_and_contains_point() {
@@ -222,18 +221,19 @@ fn line_segment_intersect_segment_parametric() {
 
 #[test]
 fn line_segment_intersect_half_plane() {
-    let segment = LineSegment2d::new(point![1.0, 2.0], point![2.0, 1.0]);
+    let a = point![1.0, 2.0];
+    let b = point![2.0, 1.0];
+    let intersection_point = point![1.6, 1.4];
+    let segment = LineSegment2d::new(a, b);
     let half_plane = {
         let half_plane_point = point![1.0, 1.0];
-        let segment = LineSegment2d::new(half_plane_point, point![4.0, 3.0]);
-        let normal = Unit::new_normalize(-segment.normal_dir());
+        let normal = Unit::new_normalize(vector![-0.8, 1.2]);
         HalfPlane::from_point_and_normal(half_plane_point, normal)
     };
 
     let intersection = segment.intersect_half_plane(&half_plane).unwrap();
-    assert_eq!(intersection.end(), segment.end());
-    assert_matrix_eq!(intersection.start().coords, vector![1.6, 1.4], comp=float);
-    todo!("Fix the normal dir etc. here maybe consider rewriting test")
+    let expected = LineSegment2d::new(b, intersection_point);
+    assert_line_segments_approx_equal!(intersection, expected, abstol=1e-14);
 }
 
 #[test]
@@ -253,19 +253,13 @@ fn line_segment_intersect_polygon() {
         .intersect_polygon(&polygon)
         .expect("Intersection is not empty");
     let expected_intersection = LineSegment2d::new(Point2::new(2.0, 3.0), Point2::new(8.0 / 3.0, 1.0));
-
-    // The line segment may be defined in two ways, but its midpoint and length uniquely
-    // defines its shape
-    assert_approx_matrix_eq!(result.midpoint(), expected_intersection.midpoint(), abstol = 1e-12);
-    assert_scalar_eq!(result.length(), expected_intersection.length(), comp = abs, tol = 1e-12);
-
-    // TODO: Above statement is silly: would need to check that lines are parallel as well
-    // Anyway, we should use the new combinatorial comparison utilities for this
-    todo!("Fix this");
+    assert_line_segments_approx_equal!(result, expected_intersection, abstol=1e-12);
 }
 
 #[derive(Debug, Clone)]
 struct LineSegment2dHalfPlaneIntersection {
+    // The intersection point may not be needed for a particular test, but it's still useful information when debugging
+    #[allow(dead_code)]
     pub intersection_point: Point2<f64>,
     pub half_plane: HalfPlane<f64>,
     pub input_segment: LineSegment2d<f64>,
@@ -277,12 +271,8 @@ proptest! {
     fn line_segment_2d_half_plane_intersection(problem in intersecting_line_segment_2d_and_half_plane()) {
         let intersection = problem.input_segment.intersect_half_plane(&problem.half_plane)
             .expect("The intersection is by design non-empty");
-        prop_assert_matrix_eq!(
-            intersection.start().coords,
-            problem.output_segment.start().coords, comp = abs, tol = 1e-9);
-        prop_assert_matrix_eq!(
-            intersection.end().coords,
-            problem.output_segment.end().coords, comp = abs, tol = 1e-9);
+        prop_assert_line_segments_approx_equal!(intersection, problem.output_segment, abstol=1e-9);
+
     }
 }
 
