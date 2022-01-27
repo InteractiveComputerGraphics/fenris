@@ -296,19 +296,25 @@ fn intersecting_line_segment_2d_and_half_plane() -> impl Strategy<Value=LineSegm
     let scalar = -10.0 .. 10.0;
     let negative_scalar = -1.0 .. -1e-3;
     let non_negative_scalar = 0.0 .. 10.0;
-    // TODO: Randomly "shuffle" start and end points to prevent bias
-    (half_plane(), scalar.clone(), scalar.clone(), negative_scalar, non_negative_scalar)
-        .prop_map(|(half_plane, t_i, t1, n1, alpha)| {
+    (half_plane(), scalar.clone(), scalar.clone(), negative_scalar, non_negative_scalar, proptest::bool::ANY)
+        .prop_map(|(half_plane, t_i, t1, n1, alpha, should_flip)| {
             let x0 = half_plane.point();
             let n = half_plane.normal();
             let ref t = half_plane.surface().tangent();
             let ref x_i = half_plane.point() + t_i * t;
             let x1 = x0 + t1 * t + n1 * n;
             let x2 = x_i + alpha * (x_i - x1);
+            // Randomly flip the order of vertices in the output in order to avoid bias in representation
+            let output_segment = if should_flip {
+                LineSegment2d::new(*x_i, x1)
+            } else {
+                LineSegment2d::new(x1, *x_i)
+            };
+
             LineSegment2dHalfPlaneIntersection {
                 intersection_point: half_plane.point() + t_i * t,
                 input_segment: LineSegment2d::new(x1, x2),
-                output_segment: LineSegment2d::new(x1, *x_i),
+                output_segment,
                 half_plane,
             }
         })
