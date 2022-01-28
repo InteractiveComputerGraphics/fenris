@@ -1,15 +1,14 @@
+use itertools::Itertools;
+use nalgebra::allocator::Allocator;
+use nalgebra::{DefaultAllocator, DimName, OPoint, Point3, RealField, Scalar, Vector3, U3};
+use numeric_literals::replace_float_literals;
+use serde::{Deserialize, Serialize};
 use std::cmp::{max, min};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
 use std::hash::Hash;
-
-use itertools::Itertools;
-use nalgebra::allocator::Allocator;
-use nalgebra::{DefaultAllocator, DimName, OPoint, Point3, RealField, Scalar, Vector3, U3};
-use numeric_literals::replace_float_literals;
-use serde::{Deserialize, Serialize};
 
 // use crate::connectivity::Connectivity;
 use crate::{compute_polyhedron_volume_from_faces, ConvexPolygon3d, ConvexPolyhedron, HalfSpace, LineSegment3d};
