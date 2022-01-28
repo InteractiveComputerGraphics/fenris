@@ -3,9 +3,10 @@ mod geometry;
 mod polygon;
 mod polymesh;
 mod polytope;
+mod primitives;
 
 use fenris_geometry::LineSegment2d;
-use nalgebra::{point, Point2};
+use nalgebra::point;
 use proptest::collection::{hash_set, vec};
 use proptest::prelude::*;
 use util::assert_panics;
@@ -16,6 +17,7 @@ macro_rules! assert_line_segments_approx_equal_base {
     ($msg_handler:expr, $segment1:expr, $segment2:expr, abstol = $tol:expr) => {{
         use matrixcompare::comparators::AbsoluteElementwiseComparator;
         use matrixcompare::compare_matrices;
+        use nalgebra::Point2;
         use $crate::unit_tests::slices_are_equal_shift_invariant;
 
         let tol = $tol.clone();
