@@ -1,3 +1,4 @@
+mod ball;
 mod half_space;
 mod hexahedron;
 mod line;
@@ -5,6 +6,7 @@ mod plane;
 mod quad;
 mod tetrahedron;
 mod triangle;
+pub use ball::*;
 pub use half_space::*;
 pub use hexahedron::*;
 pub use line::*;

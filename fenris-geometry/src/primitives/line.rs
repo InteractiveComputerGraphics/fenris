@@ -1,4 +1,4 @@
-use crate::{ConvexPolygon, HalfPlane, Plane3d};
+use crate::{ConvexPolygon, Disk, HalfPlane, Plane3d};
 use nalgebra::{clamp, Matrix2, RealField, Vector2};
 use nalgebra::{Point2, Point3, Scalar};
 use numeric_literals::replace_float_literals;
@@ -157,6 +157,14 @@ where
             .map(|(t1, _)| t1)
     }
 
+    #[replace_float_literals(T::from_f64(literal).unwrap())]
+    pub fn intersect_disk(&self, disk: &Disk<T>) -> Option<Self> {
+        let [t1, t2] = self.to_line().intersect_disk_parametric(disk)?;
+        let t1 = clamp(t1, 0.0, 1.0);
+        let t2 = clamp(t2, 0.0, 1.0);
+        Some(self.segment_from_parameters(&t1, &t2))
+    }
+
     /// Compute the closest point on the segment to the given point, represented in
     /// the parametric form x = a + t * (b - a).
     pub fn closest_point_parametric(&self, point: &Point2<T>) -> T {
@@ -279,6 +287,14 @@ where
         // TODO: Make dir Unit?
         Self { point, dir }
     }
+
+    pub fn point(&self) -> &Point2<T> {
+        &self.point
+    }
+
+    pub fn dir(&self) -> &Vector2<T> {
+        &self.dir
+    }
 }
 
 impl<T> Line2d<T>
@@ -339,5 +355,40 @@ where
             .map(|inv| inv * rhs)
             // Inverse returns vector, split it up into its components
             .map(|t| (t.x, t.y))
+    }
+
+    pub fn intersect_disk(&self, disk: &Disk<T>) -> Option<LineSegment2d<T>> {
+        let [t1, t2] = self.intersect_disk_parametric(disk)?;
+        let p1 = self.point_from_parameter(t1);
+        let p2 = self.point_from_parameter(t2);
+        Some(LineSegment2d::new(p1, p2))
+    }
+
+    #[replace_float_literals(T::from_f64(literal).unwrap())]
+    pub fn intersect_disk_parametric(&self, disk: &Disk<T>) -> Option<[T; 2]> {
+        let a = self.point();
+        let d = self.dir();
+        let r = disk.radius();
+        let a0 = a - disk.center();
+
+        // The solutions are given by the solutions to the quadratic equation
+        // alpha * t^2 + beta * t + gamma = 0
+        let alpha = d.dot(&d);
+        let beta = 2.0 * d.dot(&a0);
+        let gamma = a0.dot(&a0) - r * r;
+
+        let discriminant = beta * beta - 4.0 * alpha * gamma;
+        if discriminant >= 0.0 {
+            // Non-negative discriminant means that we have two (possible identical) real solutions that correspond
+            // to intersection points
+            let disc_sqrt = discriminant.sqrt();
+            let t1 = (-beta - disc_sqrt) / (2.0 * alpha);
+            let t2 = (-beta + disc_sqrt) / (2.0 * alpha);
+            debug_assert!(t1 <= t2);
+            Some([t1, t2])
+        } else {
+            // No real solutions, so no intersection
+            None
+        }
     }
 }
