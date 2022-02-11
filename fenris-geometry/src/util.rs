@@ -29,10 +29,10 @@ pub fn slices_are_equal_shift_invariant<T, C: Fn(&T, &T) -> bool>(x: &[T], y: &[
 #[macro_export]
 macro_rules! assert_line_segments_approx_equal_base {
     ($msg_handler:expr, $segment1:expr, $segment2:expr, abstol = $tol:expr) => {{
+        use fenris_geometry::util::slices_are_equal_shift_invariant;
         use matrixcompare::comparators::AbsoluteElementwiseComparator;
         use matrixcompare::compare_matrices;
         use nalgebra::Point2;
-        use fenris_geometry::util::slices_are_equal_shift_invariant;
 
         let tol = $tol.clone();
         // Type check: Makes for an easier error message than failing specific methods
