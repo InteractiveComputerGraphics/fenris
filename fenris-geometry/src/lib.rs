@@ -17,6 +17,7 @@ pub use primitives::*;
 
 pub mod polymesh;
 pub mod sdf;
+pub mod util;
 
 #[cfg(feature = "vtkio")]
 pub mod vtkio;

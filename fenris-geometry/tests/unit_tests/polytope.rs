@@ -1,5 +1,5 @@
-use crate::unit_tests::{assert_line_segments_approx_equal, prop_assert_line_segments_approx_equal};
 use fenris_geometry::proptest::half_plane;
+use fenris_geometry::{assert_line_segments_approx_equal, prop_assert_line_segments_approx_equal};
 use fenris_geometry::{ConvexPolygon, HalfPlane, Line2d, LineSegment2d, Triangle};
 use nalgebra::{point, vector, Point2, Unit, Vector2};
 use proptest::prelude::*;

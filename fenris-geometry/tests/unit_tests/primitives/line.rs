@@ -1,4 +1,4 @@
-use crate::unit_tests::assert_line_segments_approx_equal;
+use fenris_geometry::assert_line_segments_approx_equal;
 use fenris_geometry::{Disk, LineSegment2d};
 use nalgebra::point;
 
