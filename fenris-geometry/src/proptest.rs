@@ -200,3 +200,16 @@ pub fn parallelogram_strategy_f64() -> impl Strategy<Value = Quad2d<f64>> {
         Quad2d([*a, *b, c, *d])
     })
 }
+
+#[macro_export]
+macro_rules! prop_assert_line_segments_approx_equal {
+    ($segment1:expr, $segment2:expr, abstol = $tol:expr) => {{
+        let msg_handler = |msg| {
+            // Add filename and line numbers to message (since we don't panic, it's useful
+            // to have this information in the output).
+            let amended_message = format!("Proptest assertion failure at {}:{}. {}", file!(), line!(), msg);
+            return ::core::result::Result::Err(::proptest::test_runner::TestCaseError::fail(amended_message));
+        };
+        $crate::assert_line_segments_approx_equal_base!(msg_handler, $segment1, $segment2, abstol = $tol);
+    }};
+}
