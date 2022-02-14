@@ -132,6 +132,7 @@ impl_reference_finite_element_for_fixed!(Tri3d2Element<T>);
 impl_reference_finite_element_for_fixed!(Tri6d2Element<T>);
 impl_reference_finite_element_for_fixed!(Quad4d2Element<T>);
 impl_reference_finite_element_for_fixed!(Quad9d2Element<T>);
+impl_reference_finite_element_for_fixed!(Segment2d1Element<T>);
 impl_reference_finite_element_for_fixed!(Segment2d2Element<T>);
 impl_reference_finite_element_for_fixed!(Tet4Element<T>);
 impl_reference_finite_element_for_fixed!(Hex8Element<T>);

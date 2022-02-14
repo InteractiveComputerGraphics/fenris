@@ -101,6 +101,31 @@ impl Deref for Quad9d2Connectivity {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Segment2d1Connectivity(pub [usize; 2]);
+
+impl Connectivity for Segment2d1Connectivity {
+    type FaceConnectivity = ();
+
+    fn num_faces(&self) -> usize {
+        0
+    }
+
+    fn get_face_connectivity(&self, _index: usize) -> Option<Self::FaceConnectivity> {
+        None
+    }
+
+    fn vertex_indices(&self) -> &[usize] {
+        &self.0
+    }
+}
+
+impl ConnectivityMut for Segment2d1Connectivity {
+    fn vertex_indices_mut(&mut self) -> &mut [usize] {
+        &mut self.0
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Segment2d2Connectivity(pub [usize; 2]);
 
 impl Connectivity for Segment2d2Connectivity {
