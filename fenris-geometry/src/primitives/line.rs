@@ -226,13 +226,18 @@ where
             })
     }
 
+    /// Compute the intersection between the line segment and a half-plane.
+    ///
+    /// Returns `None` if the segment and the half-plane do not intersect, otherwise
+    /// returns `Some([t1, t2])` with `t1 <= t2`, and `t1` and `t2` correspond to the start and end parameters
+    /// relative to the current line segment.
     #[replace_float_literals(T::from_f64(literal).unwrap())]
-    pub fn intersect_half_plane(&self, half_plane: &HalfPlane<T>) -> Option<Self> {
+    pub fn intersect_half_plane_parametric(&self, half_plane: &HalfPlane<T>) -> Option<[T; 2]> {
         let contains_start = half_plane.contains_point(self.start());
         let contains_end = half_plane.contains_point(self.end());
 
         match (contains_start, contains_end) {
-            (true, true) => Some(self.clone()),
+            (true, true) => Some([0.0, 1.0]),
             (false, false) => None,
             (true, false) | (false, true) => {
                 let t_intersect = self
@@ -256,9 +261,16 @@ where
                     t_end = 1.0;
                 }
 
-                Some(self.segment_from_parameters(&t_start, &t_end))
+                debug_assert!(t_start <= t_end);
+                Some([t_start, t_end])
             }
         }
+    }
+
+    #[replace_float_literals(T::from_f64(literal).unwrap())]
+    pub fn intersect_half_plane(&self, half_plane: &HalfPlane<T>) -> Option<Self> {
+        self.intersect_half_plane_parametric(half_plane)
+            .map(|[t1, t2]| self.segment_from_parameters(&t1, &t2))
     }
 
     pub fn intersect_polygon(&self, other: &ConvexPolygon<T>) -> Option<LineSegment2d<T>> {
