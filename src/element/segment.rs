@@ -1,15 +1,15 @@
-use nalgebra::{point, Vector1};
 use crate::connectivity::{Segment2d1Connectivity, Segment2d2Connectivity};
 use crate::element::{ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement, SurfaceFiniteElement};
 use crate::geometry::LineSegment2d;
 use crate::nalgebra::{OMatrix, OPoint, Point1, Point2, RealField, Scalar, Vector2, U1, U2};
+use nalgebra::{point, Vector1};
 use numeric_literals::replace_float_literals;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 /// A segment in one dimension.
 pub struct Segment2d1Element<T>
-    where
-        T: Scalar,
+where
+    T: Scalar,
 {
     vertices: [Point1<T>; 2],
 }
@@ -81,8 +81,8 @@ fn segment2_gradients<T: RealField>() -> OMatrix<T, U1, U2> {
 }
 
 impl<T> FixedNodesReferenceFiniteElement<T> for Segment2d1Element<T>
-    where
-        T: RealField,
+where
+    T: RealField,
 {
     type NodalDim = U2;
     type ReferenceDim = U1;
@@ -198,8 +198,8 @@ where
 }
 
 impl<T> ElementConnectivity<T> for Segment2d1Connectivity
-    where
-        T: RealField,
+where
+    T: RealField,
 {
     type Element = Segment2d1Element<T>;
     type GeometryDim = U1;
