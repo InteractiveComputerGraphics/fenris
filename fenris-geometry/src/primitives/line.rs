@@ -158,11 +158,17 @@ where
     }
 
     #[replace_float_literals(T::from_f64(literal).unwrap())]
-    pub fn intersect_disk(&self, disk: &Disk<T>) -> Option<Self> {
+    pub fn intersect_disk_parametric(&self, disk: &Disk<T>) -> Option<[T; 2]> {
         let [t1, t2] = self.to_line().intersect_disk_parametric(disk)?;
         let t1 = clamp(t1, 0.0, 1.0);
         let t2 = clamp(t2, 0.0, 1.0);
-        Some(self.segment_from_parameters(&t1, &t2))
+        Some([t1, t2])
+    }
+
+    #[replace_float_literals(T::from_f64(literal).unwrap())]
+    pub fn intersect_disk(&self, disk: &Disk<T>) -> Option<Self> {
+        self.intersect_disk_parametric(disk)
+            .map(|[t1, t2]| self.segment_from_parameters(&t1, &t2))
     }
 
     /// Compute the closest point on the segment to the given point, represented in
