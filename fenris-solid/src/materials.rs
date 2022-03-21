@@ -268,7 +268,8 @@ where
         let J = F.determinant();
 
         if J <= T::zero() {
-            todo!("How to address non-positive J? (J = {})", J);
+            // TODO: How to address this? Might have to address in the API itself?
+            OMatrix::<T, D, D>::repeat(T::from_f64(f64::NAN).unwrap())
         } else {
             let logJ = J.ln();
             let F_inv = F
@@ -292,7 +293,8 @@ where
         let J = F.determinant();
 
         if J <= T::zero() {
-            todo!("How to address non-positive J? (J = {})", J);
+            // TODO: How to address this? Might have to address in the API itself?
+            OMatrix::<T, D, D>::repeat(T::from_f64(f64::NAN).unwrap())
         } else {
             let logJ = J.ln();
             let F_inv = F
