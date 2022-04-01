@@ -1,7 +1,9 @@
 //! Quadrature rules for the one-dimensional domain `[-1, 1]`.
-
 use crate::Rule;
 use std::f64::consts::PI;
+
+#[path = "codegen/gauss_lobatto_rules.rs"]
+mod gauss_lobatto_rules;
 
 /// Recurrence relation for Legendre polynomials.
 ///
@@ -113,6 +115,22 @@ pub fn gauss(num_points: usize) -> Rule<1> {
     assert_eq!(points.len(), n, "Internal error: incorrect number of points produced");
 
     (weights, points)
+}
+
+/// Gauss-Lobatto rules for the interval `[-1, 1]`.
+///
+/// The rules are currently obtained from tabulated data produced by [quadpy](https://github.com/sigma-py/quadpy.git).
+///
+/// Returns `None` if `n < 2` or a rule with that size is not available.
+#[doc = include_str!("codegen/gauss_lobatto_rules_doc_stub.md")]
+pub fn try_gauss_lobatto(n: usize) -> Option<Rule<1>> {
+    gauss_lobatto_rules::try_gauss_lobatto(n).map(|(weights, mut points)| {
+        // We manually set the endpoints, because the rules given by quadpy tend to contain some
+        // rounding errors
+        *points.first_mut().unwrap() = [-1.0];
+        *points.last_mut().unwrap() = [1.0];
+        (weights, points)
+    })
 }
 
 #[cfg(test)]
