@@ -24,6 +24,8 @@ pub type QuadraturePair1d<T> = QuadraturePair<T, U1>;
 pub type QuadraturePair2d<T> = QuadraturePair<T, U2>;
 pub type QuadraturePair3d<T> = QuadraturePair<T, U3>;
 
+pub type BorrowedQuadratureParts<'a, T, D, Data> = QuadratureParts<&'a [T], &'a [OPoint<T, D>], &'a [Data]>;
+
 /// A quadrature rule consisting of weights, points and data.
 pub trait Quadrature<T, D>
 where
@@ -50,7 +52,7 @@ where
         integral
     }
 
-    fn to_parts(&self) -> QuadratureParts<&[T], &[OPoint<T, D>], &[Self::Data]> {
+    fn to_parts(&self) -> BorrowedQuadratureParts<T, D, Self::Data> {
         QuadratureParts {
             weights: self.weights(),
             points: self.points(),
