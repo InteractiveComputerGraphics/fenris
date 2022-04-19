@@ -1,6 +1,8 @@
+use fenris::nalgebra::Point2;
 use fenris::quadrature::subdivide::subdivide_univariate;
 use fenris::quadrature::univariate::gauss;
-use fenris::quadrature::Quadrature;
+use fenris::quadrature::{subdivide::subdivide_triangle, total_order, Quadrature};
+use itertools::izip;
 use matrixcompare::assert_scalar_eq;
 
 #[test]
@@ -48,6 +50,71 @@ fn subdivided_gauss_rules_have_periodic_weights() {
             for i in 0..reference_size {
                 for s in 0..num_subdivs {
                     assert_scalar_eq!(rule.weights()[i], rule.weights()[s * reference_size + i], comp = float);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn subdivide_triangle_error() {
+    // Here we estimate error and check manually that they make sense, then compare
+    // errors against expected errors (as determined by previous run)
+    let cos = |x: f64| x.cos();
+    let sin = |x: f64| x.sin();
+    let exp = |x: f64| x.exp();
+    let f = |x, y| cos(x) * sin(y * x) + exp(x + y);
+    let f = |p: &Point2<f64>| f(p.x, p.y);
+
+    let base_quadrature = total_order::triangle::<f64>(5).unwrap();
+    let integral_reference = subdivide_triangle(&base_quadrature, 20).integrate(f);
+
+    let errors: Vec<f64> = (1..=10)
+        .map(|subdivs| subdivide_triangle(&base_quadrature, subdivs))
+        .map(|quadrature| quadrature.integrate(f))
+        .map(|integral| (integral - integral_reference).abs())
+        .collect();
+    let expected_errors = vec![
+        0.00032406989918110085,
+        2.2805424527705398e-5,
+        2.069177391428312e-6,
+        3.679345033091863e-7,
+        9.622548069465608e-8,
+        3.2158293583606223e-8,
+        1.2724713949197053e-8,
+        5.693470583878479e-9,
+        2.7950108894003733e-9,
+        1.4738197329222658e-9,
+    ];
+
+    assert_eq!(errors.len(), expected_errors.len());
+    for (error, expected) in izip!(errors, expected_errors) {
+        assert!((error - expected).abs() / expected.abs() <= 1e-5);
+    }
+}
+
+#[test]
+fn subdivide_triangle_has_same_polynomial_strength_as_base() {
+    let create_monomial = |i: usize, j: usize| move |p: &Point2<f64>| p.x.powi(i as i32) * p.y.powi(j as i32);
+    for subdivs in 1..=10 {
+        for strength in 1..=10 {
+            let base_quadrature = total_order::triangle(strength).unwrap();
+            let subdivided_quadrature = subdivide_triangle(&base_quadrature, subdivs);
+            let num_subtriangles = subdivs * subdivs;
+            let expected_num_points = num_subtriangles * base_quadrature.points().len();
+            assert_eq!(subdivided_quadrature.points().len(), expected_num_points);
+            assert_eq!(
+                subdivided_quadrature.points().len(),
+                subdivided_quadrature.weights().len()
+            );
+            for i in 0..=strength {
+                for j in 0..=strength {
+                    if i + j <= strength {
+                        let monomial = create_monomial(i, j);
+                        let base_integral = base_quadrature.integrate(monomial);
+                        let subdivided_integral = subdivided_quadrature.integrate(monomial);
+                        assert_scalar_eq!(subdivided_integral, base_integral, comp = abs, tol = 1e-12);
+                    }
                 }
             }
         }
