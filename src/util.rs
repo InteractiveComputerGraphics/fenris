@@ -660,9 +660,9 @@ pub mod proptest {
 ///
 /// TODO: This is not directly tested at the moment
 // TODO: Move elsewhere
-pub fn compute_interpolation<'a, T, SolutionDim>(
+pub fn compute_interpolation<'a, 'b, T, SolutionDim>(
     u: impl Into<DVectorSlice<'a, T>>,
-    basis: impl Into<DVectorSlice<'a, T>>,
+    basis: impl Into<DVectorSlice<'b, T>>,
 ) -> OVector<T, SolutionDim>
 where
     T: RealField,
