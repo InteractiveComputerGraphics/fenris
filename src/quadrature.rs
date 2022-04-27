@@ -1,8 +1,9 @@
-use std::ops::{Add, AddAssign, Deref, Mul};
-
 use nalgebra::allocator::Allocator;
 use nalgebra::{DefaultAllocator, DimName, OPoint, Point1, Scalar, U2, U3};
 use num::Zero;
+use std::iter::FusedIterator;
+use std::ops::{Add, AddAssign, Deref, Mul};
+use std::slice;
 
 pub use canonical::*;
 /// Errors returned by quadrature methods.
@@ -25,6 +26,7 @@ pub type QuadraturePair2d<T> = QuadraturePair<T, U2>;
 pub type QuadraturePair3d<T> = QuadraturePair<T, U3>;
 
 pub type BorrowedQuadratureParts<'a, T, D, Data> = QuadratureParts<&'a [T], &'a [OPoint<T, D>], &'a [Data]>;
+pub type OwnedQuadratureParts<T, D, Data> = QuadratureParts<Vec<T>, Vec<OPoint<T, D>>, Vec<Data>>;
 
 /// A quadrature rule consisting of weights, points and data.
 pub trait Quadrature<T, D>
@@ -59,6 +61,51 @@ where
             data: self.data(),
         }
     }
+
+    fn iter(&self) -> QuadratureIter<T, D, Self::Data> {
+        QuadratureIter {
+            weights_iter: self.weights().iter(),
+            points_iter: self.points().iter(),
+            data_iter: self.data().iter(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct QuadratureIter<'a, T, D, Data>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>,
+{
+    weights_iter: slice::Iter<'a, T>,
+    points_iter: slice::Iter<'a, OPoint<T, D>>,
+    data_iter: slice::Iter<'a, Data>,
+}
+
+impl<'a, T, D, Data> Iterator for QuadratureIter<'a, T, D, Data>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>,
+{
+    type Item = (&'a T, &'a OPoint<T, D>, &'a Data);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        Some((
+            self.weights_iter.next()?,
+            self.points_iter.next()?,
+            self.data_iter.next()?,
+        ))
+    }
+}
+
+impl<'a, T, D, Data> FusedIterator for QuadratureIter<'a, T, D, Data>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>,
+{
 }
 
 /// Trait alias for 1D quadrature rules.
@@ -219,6 +266,22 @@ where
         // This is a "sound" way of constructing a unit type slice of arbitrary size.
         // Since it's zero-sized, it won't actually allocate any memory and the leak is elided
         vec![(); self.weights().len()].leak()
+    }
+}
+
+impl<T, D> From<QuadraturePair<T, D>> for OwnedQuadratureParts<T, D, ()>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>,
+{
+    fn from((weights, points): QuadraturePair<T, D>) -> Self {
+        let len = weights.len();
+        Self {
+            weights,
+            points,
+            data: vec![(); len],
+        }
     }
 }
 
