@@ -3,8 +3,8 @@ use crate::{
     OrientationTestResult, SignedDistance, SignedDistanceResult,
 };
 use nalgebra::allocator::Allocator;
-use nalgebra::RealField;
 use nalgebra::{DefaultAllocator, DimName, OPoint, OVector, Point2, Point3, Scalar, Vector3, U2, U3};
+use nalgebra::{Matrix3, RealField};
 use numeric_literals::replace_float_literals;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -254,4 +254,37 @@ impl<'a, T: RealField> ConvexPolygon3d<'a, T> for Triangle3d<T> {
     fn get_vertex(&self, index: usize) -> Option<OPoint<T, U3>> {
         self.0.get(index).copied()
     }
+}
+
+impl<T: RealField> Triangle3d<T> {
+    /// Compute the solid angle to the given point.
+    #[replace_float_literals(T::from_f64(literal).unwrap())]
+    pub fn compute_solid_angle(&self, p: &Point3<T>) -> T {
+        // Based on equation (6) in Jacobson et al.,
+        // "Robust Inside-Outside Segmentation using Generalized Winding Numbers"
+        let [a, b, c] = dbg!(self.0.clone().map(|v_i| v_i - p));
+        let abc_matrix = Matrix3::from_columns(&[a.clone(), b.clone(), c.clone()]);
+
+        let anorm = a.norm();
+        let bnorm = b.norm();
+        let cnorm = c.norm();
+
+        let denominator = anorm * bnorm * cnorm + a.dot(&b) * cnorm + b.dot(&c) * anorm + c.dot(&a) * bnorm;
+        let tan_omega_half = abc_matrix.determinant() / denominator;
+        2.0 * tan_omega_half.atan()
+    }
+}
+
+#[replace_float_literals(T::from_f64(literal).unwrap())]
+pub fn compute_winding_number_for_triangles_3d<T, I>(triangles: I, point: &Point3<T>) -> T
+where
+    T: RealField,
+    I: IntoIterator<Item = Triangle3d<T>>,
+{
+    let angle_sum = triangles
+        .into_iter()
+        .map(|triangle| triangle.compute_solid_angle(point))
+        .reduce(|acc, angle| acc + angle)
+        .unwrap_or(T::zero());
+    angle_sum / (4.0 * T::pi())
 }
