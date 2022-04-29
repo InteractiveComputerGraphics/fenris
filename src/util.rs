@@ -5,8 +5,8 @@ use nalgebra::constraint::{DimEq, ShapeConstraint};
 use nalgebra::storage::{ContiguousStorage, Storage, StorageMut};
 use nalgebra::{
     DMatrixSlice, DVector, DVectorSlice, DefaultAllocator, Dim, DimDiff, DimMin, DimMul, DimName, DimProd, DimSub,
-    Matrix, Matrix3, MatrixSlice, MatrixSliceMut, OMatrix, OVector, Quaternion, RealField, Scalar, SliceStorage,
-    SliceStorageMut, SquareMatrix, UnitQuaternion, Vector, Vector3, U1,
+    Matrix, Matrix3, MatrixSlice, MatrixSliceMut, OMatrix, OPoint, OVector, Quaternion, RealField, Scalar,
+    SliceStorage, SliceStorageMut, SquareMatrix, UnitQuaternion, Vector, Vector3, U1,
 };
 use nalgebra_sparse::{CooMatrix, CsrMatrix};
 use num::Zero;
@@ -766,4 +766,51 @@ where
         u_grad.ger(T::one(), &g_i, &u_i, T::one());
     }
     u_grad
+}
+
+/// Evaluate a function at a set of points and concatenate the results into a single global
+/// vector.
+///
+/// Specifically, given $N$ points and the map $f : \mathbb{R}^d \rightarrow \mathbb{R}^s$,
+/// returns the vector
+///
+/// <div>
+/// $$
+/// \begin{pmatrix}
+/// f(x_1) \\
+/// f(x_2) \\
+/// \vdots \\
+/// f(x_N)
+/// \end{pmatrix}.
+/// $$
+/// </div>
+///
+/// # Example
+/// ```rust
+/// use fenris::util::global_vector_from_point_fn;
+/// use nalgebra::{point, Point2, vector};
+/// use matrixcompare::assert_matrix_eq;
+///
+/// let x1 = point![0.0, 0.0];
+/// let x2 = point![1.0, 0.0];
+/// let f = |p: &Point2<f64>| vector![2.0 * p.y, 3.0 * p.x];
+/// let u = global_vector_from_point_fn(&[x1, x2], f);
+///
+/// assert_matrix_eq!(u.fixed_rows::<2>(0), f(&x1));
+/// assert_matrix_eq!(u.fixed_rows::<2>(2), f(&x2));
+/// assert_eq!(u.len(), 4);
+/// ```
+pub fn global_vector_from_point_fn<T, D, S, F>(points: &[OPoint<T, D>], mut f: F) -> DVector<T>
+where
+    T: Scalar,
+    D: SmallDim,
+    S: SmallDim,
+    F: FnMut(&OPoint<T, D>) -> OVector<T, S>,
+    DefaultAllocator: DimAllocator<T, D> + DimAllocator<T, S>,
+{
+    let mut result = Vec::with_capacity(points.len() * S::dim());
+    for point in points {
+        result.extend_from_slice(f(point).as_slice());
+    }
+    DVector::from_vec(result)
 }
