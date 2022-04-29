@@ -182,10 +182,29 @@ where
         OPoint::from((self.max() + self.min()) / T::from_f64(2.0).unwrap())
     }
 
+    /// Uniformly scales each axis by the given scale amount, with respect to the center of
+    /// the box.
+    ///
+    /// ```rust
+    /// # use fenris_geometry::AxisAlignedBoundingBox;
+    /// use nalgebra::vector;
+    /// use matrixcompare::assert_matrix_eq;
+    ///
+    /// let aabb = AxisAlignedBoundingBox::new(vector![0.0, 0.0], vector![1.0, 1.0]);
+    /// let scaled = aabb.uniformly_scale(0.5);
+    ///
+    /// assert_matrix_eq!(scaled.min(), vector![0.25, 0.25], comp = float);
+    /// assert_matrix_eq!(scaled.max(), vector![0.75, 0.75], comp = float);
+    /// ```
+    #[replace_float_literals(T::from_f64(literal).unwrap())]
     pub fn uniformly_scale(&self, scale: T) -> Self {
+        assert!(scale >= T::zero());
+        let s = scale;
+        let (a, b) = (&self.min, &self.max);
+        let ref c = self.center().coords;
         Self {
-            min: &self.min * scale,
-            max: &self.max * scale,
+            min: c + (a - c) * s,
+            max: c + (b - c) * s,
         }
     }
 
