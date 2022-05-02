@@ -4,8 +4,8 @@ use vtkio::model::{Attribute, CellType, Cells, DataSet, UnstructuredGridPiece, V
 
 use crate::connectivity::{
     Connectivity, Hex20Connectivity, Hex27Connectivity, Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity,
-    Segment2d2Connectivity, Tet10Connectivity, Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity,
-    Tri6d2Connectivity,
+    Segment2d2Connectivity, Segment2d3Connectivity, Tet10Connectivity, Tet4Connectivity, Tri3d2Connectivity,
+    Tri3d3Connectivity, Tri6d2Connectivity,
 };
 
 use nalgebra::allocator::Allocator;
@@ -39,6 +39,12 @@ pub trait VtkCellConnectivity: Connectivity {
 }
 
 impl VtkCellConnectivity for Segment2d2Connectivity {
+    fn cell_type(&self) -> CellType {
+        CellType::Line
+    }
+}
+
+impl VtkCellConnectivity for Segment2d3Connectivity {
     fn cell_type(&self) -> CellType {
         CellType::Line
     }
