@@ -1,5 +1,5 @@
 use fenris::mesh::procedural::create_unit_box_uniform_tet_mesh_3d;
-use fenris_geometry::{compute_winding_number_for_triangles_3d, Triangle, Triangle3d};
+use fenris_geometry::{compute_winding_number_for_triangles_3d, Triangle};
 use matrixcompare::assert_scalar_eq;
 use nalgebra::point;
 
