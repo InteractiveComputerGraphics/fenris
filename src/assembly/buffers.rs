@@ -1,4 +1,5 @@
 use crate::allocators::{BiDimAllocator, DimAllocator};
+use crate::assembly::global::gather_global_to_local;
 use crate::assembly::local::QuadratureTable;
 use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{
@@ -6,8 +7,10 @@ use crate::nalgebra::{
 };
 use crate::quadrature::Quadrature;
 use crate::space::FiniteElementSpace;
+use crate::util::compute_interpolation;
 use crate::SmallDim;
 use itertools::izip;
+use nalgebra::{DVector, DVectorSlice, OMatrix, OVector};
 
 #[derive(Debug)]
 pub struct BasisFunctionBuffer<T: Scalar> {
@@ -209,5 +212,106 @@ where
             f(w, xi, data)?;
         }
         Ok(())
+    }
+}
+
+/// Helper to manage buffers when interpolating FE quantities.
+///
+/// TODO: Docs
+#[derive(Debug)]
+pub struct InterpolationBuffer<T: Scalar> {
+    basis_buffer: BasisFunctionBuffer<T>,
+    u_local: DVector<T>,
+}
+
+impl<T: RealField> Default for InterpolationBuffer<T> {
+    fn default() -> Self {
+        Self {
+            basis_buffer: Default::default(),
+            u_local: DVector::zeros(0),
+        }
+    }
+}
+
+pub struct InterpolationElementBuffer<'a, T: Scalar, Space>
+where
+    Space: FiniteElementSpace<T>,
+    DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
+{
+    basis_buffer: &'a mut BasisFunctionBuffer<T>,
+    u_local: DVectorSlice<'a, T>,
+    space: &'a Space,
+    reference_point: OPoint<T, Space::ReferenceDim>,
+    element_index: usize,
+}
+
+impl<T: RealField> InterpolationBuffer<T> {
+    pub fn prepare_element_in_space<'a, Space>(
+        &'a mut self,
+        element_index: usize,
+        space: &'a Space,
+        u_global: impl Into<DVectorSlice<'a, T>>,
+        solution_dim: usize,
+    ) -> InterpolationElementBuffer<'a, T, Space>
+    where
+        Space: FiniteElementSpace<T>,
+        DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
+    {
+        let node_count = space.element_node_count(element_index);
+        self.basis_buffer
+            .resize(node_count, Space::ReferenceDim::dim());
+        self.basis_buffer
+            .populate_element_nodes_from_space(element_index, space);
+        self.u_local
+            .resize_vertically_mut(solution_dim * node_count, T::zero());
+        gather_global_to_local(
+            DVectorSlice::from(u_global.into()),
+            &mut self.u_local,
+            self.basis_buffer.element_nodes(),
+            solution_dim,
+        );
+
+        InterpolationElementBuffer {
+            basis_buffer: &mut self.basis_buffer,
+            u_local: DVectorSlice::from(&self.u_local),
+            space,
+            reference_point: OPoint::origin(),
+            element_index,
+        }
+    }
+}
+
+impl<'a, T, Space> InterpolationElementBuffer<'a, T, Space>
+where
+    T: RealField,
+    Space: FiniteElementSpace<T>,
+    DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
+{
+    pub fn update_reference_point(&mut self, reference_point: &OPoint<T, Space::ReferenceDim>) {
+        self.basis_buffer
+            .populate_element_basis_values_from_space(self.element_index, self.space, reference_point);
+        self.reference_point = reference_point.clone();
+    }
+
+    pub fn map_reference_coords(&self) -> OPoint<T, Space::GeometryDim> {
+        self.space
+            .map_element_reference_coords(self.element_index, &self.reference_point)
+    }
+
+    pub fn element_reference_jacobian(&self) -> OMatrix<T, Space::GeometryDim, Space::ReferenceDim> {
+        self.space
+            .element_reference_jacobian(self.element_index, &self.reference_point)
+    }
+
+    pub fn interpolate<S>(&self) -> OVector<T, S>
+    where
+        S: SmallDim,
+        DefaultAllocator: DimAllocator<T, S>,
+    {
+        compute_interpolation(self.u_local, self.basis_buffer.element_basis_values())
+    }
+
+    pub fn basis_values(&self) -> &[T] {
+        self.basis_buffer.element_basis_values()
     }
 }
