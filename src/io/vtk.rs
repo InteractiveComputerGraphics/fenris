@@ -4,8 +4,8 @@ use vtkio::model::{Attribute, CellType, Cells, DataSet, UnstructuredGridPiece, V
 
 use crate::connectivity::{
     Connectivity, Hex20Connectivity, Hex27Connectivity, Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity,
-    Segment2d2Connectivity, Tet10Connectivity, Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity,
-    Tri6d2Connectivity,
+    Segment2d2Connectivity, Segment2d3Connectivity, Tet10Connectivity, Tet4Connectivity, Tri3d2Connectivity,
+    Tri3d3Connectivity, Tri6d2Connectivity,
 };
 
 use nalgebra::allocator::Allocator;
@@ -39,6 +39,12 @@ pub trait VtkCellConnectivity: Connectivity {
 }
 
 impl VtkCellConnectivity for Segment2d2Connectivity {
+    fn cell_type(&self) -> CellType {
+        CellType::Line
+    }
+}
+
+impl VtkCellConnectivity for Segment2d3Connectivity {
     fn cell_type(&self) -> CellType {
         CellType::Line
     }
@@ -333,23 +339,22 @@ where
     /// two-dimensional.
     ///
     /// # Panics
-    /// Panics if the number of attribute entries is not divisible by the number of points,
-    /// if there are 0 components per vector or if there are more than 3 components per vector.
+    /// Panics if the number of entries in the attribute vector is not equal to the
+    /// product of the vertex count in the mesh and the number of components,
+    ///
+    /// Panics if there are more than 3 components per vector.
     pub fn with_point_vector_attributes<S: Scalar + Zero + ToPrimitive>(
         self,
         name: impl Into<String>,
+        num_components: usize,
         attributes: &[S],
     ) -> Self {
         let num_points = self.mesh.vertices().len();
-
         assert_eq!(
-            attributes.len() % num_points,
-            0,
-            "Number of attribute elements must be a multiple of point count"
+            attributes.len(),
+            num_components * num_points,
+            "Number of attribute entries incompatible with mesh and number of components."
         );
-
-        let num_components = attributes.len() / num_points;
-        assert!(num_components > 0, "Each vector must have at least 1 component.");
         assert!(num_components <= 3, "Each vector must not have more than 3 components.");
 
         let mut attribute_vec = Vec::new();
@@ -385,20 +390,20 @@ where
     /// 2 scalars per point.
     ///
     /// # Panics
-    /// Panics if the number of attribute entries is not divisible by the number of points.
+    /// Panics if the number of entries in the attribute vector is not equal to the
+    /// product of the vertex count in the mesh and the number of components.
     pub fn with_point_scalar_attributes<S: Scalar + ToPrimitive>(
         self,
         name: impl Into<String>,
+        num_components: usize,
         attributes: &[S],
     ) -> Self {
         let num_points = self.mesh.vertices().len();
         assert_eq!(
-            attributes.len() % num_points,
-            0,
-            "Number of attributes must be a multiple of point count"
+            attributes.len(),
+            num_components * num_points,
+            "Number of attribute entries incompatible with mesh and number of components."
         );
-
-        let num_components = attributes.len() / num_points;
 
         let mut attribs = self.attributes;
         let num_comp = num_components
