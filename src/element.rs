@@ -388,6 +388,9 @@ where
 ///
 /// The method panics if `ReferenceDim` is greater than `GeometryDim`.
 ///
+/// TODO: This method is totally misleading as is, because it does not take into account
+/// the geometry of the reference element in reference coordinates, so it will happily
+/// return points outside of the reference geometry.
 #[allow(non_snake_case)]
 pub fn project_physical_coordinates<T, Element>(
     element: &Element,
