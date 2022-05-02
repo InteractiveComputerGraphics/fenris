@@ -249,7 +249,7 @@ pub fn solve_and_produce_output<C, D, Source>(
 
         FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
             .with_title(format!("Poisson {}D FEM {} Res {}", D::dim(), element_name, resolution))
-            .with_point_scalar_attributes("u_h", result.u_h.as_slice())
+            .with_point_scalar_attributes("u_h", 1, result.u_h.as_slice())
             .try_export(base_path.join(format!(
                 "poisson{}d_mms_approx_{}_res_{}.vtu",
                 d, element_name_file_component, resolution
@@ -264,7 +264,7 @@ pub fn solve_and_produce_output<C, D, Source>(
                 "Poisson {}D FEM {} Exact solution Res {}",
                 d, element_name, resolution
             ))
-            .with_point_scalar_attributes("u_exact", &u_exact_vector)
+            .with_point_scalar_attributes("u_exact", 1, &u_exact_vector)
             .try_export(base_path.join(format!(
                 "poisson{}d_mms_exact_{}_res_{}.vtu",
                 d, element_name_file_component, resolution

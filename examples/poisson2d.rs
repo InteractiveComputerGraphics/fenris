@@ -25,7 +25,7 @@ fn main() -> eyre::Result<()> {
 
     FiniteElementMeshDataSetBuilder::from_mesh(&mesh)
         .with_title("Poisson 2D")
-        .with_point_scalar_attributes("u", u.as_slice())
+        .with_point_scalar_attributes("u", 1, u.as_slice())
         .try_export("poisson2d.vtu")?;
 
     Ok(())
