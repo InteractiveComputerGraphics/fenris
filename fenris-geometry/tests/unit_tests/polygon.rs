@@ -1,4 +1,4 @@
-use fenris_geometry::{GeneralPolygon, LineSegment2d, Orientation, Polygon};
+use fenris_geometry::{GeneralPolygon, LineSegment2d, Polygon};
 use matrixcompare::assert_scalar_eq;
 use nalgebra::{Point2, Vector2};
 
@@ -159,39 +159,4 @@ fn polygon_closest_edge() {
             abstol = 1e-12
         );
     }
-}
-
-#[test]
-fn polygon_orient() {
-    // This is a simple, but fairly non-convex polygon oriented counter-clockwise
-    let vertices = vec![
-        Point2::new(-5.0, -2.0),
-        Point2::new(-3.0, -3.0),
-        Point2::new(-1.0, 0.0),
-        Point2::new(-3.0, -1.0),
-        Point2::new(-5.0, 1.0),
-        Point2::new(-3.0, 1.0),
-        Point2::new(-6.0, 3.0),
-    ];
-    let mut polygon = GeneralPolygon::from_vertices(vertices.clone());
-
-    // Check that area is still the same as a sanity check that we don't accidentally
-    // completely break the polygon somehow
-    let area = polygon.area();
-
-    assert_eq!(polygon.orientation(), Orientation::Counterclockwise);
-
-    polygon.orient(Orientation::Counterclockwise);
-    assert_eq!(polygon.orientation(), Orientation::Counterclockwise);
-
-    polygon.orient(Orientation::Clockwise);
-    assert_eq!(polygon.orientation(), Orientation::Clockwise);
-    assert_scalar_eq!(polygon.area(), area, comp = abs, tol = 1e-14);
-    // We guarantee that the first vertex is the same
-    assert_eq!(polygon.vertices()[0], vertices[0]);
-
-    // Changing the orientation back again should completely restore the original polygon
-    polygon.orient(Orientation::Counterclockwise);
-    assert_eq!(polygon.orientation(), Orientation::Counterclockwise);
-    assert_eq!(polygon.vertices(), vertices.as_slice());
 }

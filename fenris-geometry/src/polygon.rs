@@ -223,22 +223,6 @@ where
     }
 }
 
-impl<T> GeneralPolygon<T>
-where
-    T: RealField,
-{
-    /// Corrects the orientation of the polygon.
-    ///
-    /// The first vertex is guaranteed to be the same before and after the orientation
-    /// change.
-    pub fn orient(&mut self, desired_orientation: Orientation) {
-        if desired_orientation != self.orientation() {
-            self.vertices.reverse();
-            self.vertices.rotate_right(1);
-        }
-    }
-}
-
 impl<T> Polygon<T> for GeneralPolygon<T>
 where
     T: RealField,
