@@ -1,21 +1,26 @@
-use crate::{AxisAlignedBoundingBox2d, BoundedGeometry, Distance, LineSegment2d, Orientation};
+use crate::{AxisAlignedBoundingBox, BoundedGeometry, Distance, LineSegment2d, Orientation};
 use itertools::{izip, Itertools};
-use nalgebra::{Point2, RealField, Scalar, Vector2, U2};
+use nalgebra::{Point2, RealField, Scalar, Vector2, U2, DimName, DefaultAllocator, OPoint, U3};
 use serde::{Deserialize, Serialize};
 use std::iter::once;
+use nalgebra::allocator::Allocator;
 
 use numeric_literals::replace_float_literals;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(bound(serialize = "Point2<T>: Serialize"))]
-#[serde(bound(deserialize = "Point2<T>: Deserialize<'de>"))]
-pub struct GeneralPolygon<T>
+#[serde(bound(serialize = "OPoint<T, D>: Serialize"))]
+#[serde(bound(deserialize = "OPoint<T, D>: Deserialize<'de>"))]
+pub struct GeneralPolygon<T, D>
 where
     T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>
 {
-    vertices: Vec<Point2<T>>,
-    // TODO: Also use acceleration structure for fast queries?
+    vertices: Vec<OPoint<T, D>>,
 }
+
+pub type GeneralPolygon2d<T> = GeneralPolygon<T, U2>;
+pub type GeneralPolygon3d<T> = GeneralPolygon<T, U3>;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct ClosestEdge<T>
@@ -28,7 +33,7 @@ where
     pub edge_index: usize,
 }
 
-pub trait Polygon<T>
+pub trait Polygon2d<T>
 where
     T: RealField,
 {
@@ -184,21 +189,23 @@ where
     }
 }
 
-impl<T> GeneralPolygon<T>
+impl<T, D> GeneralPolygon<T, D>
 where
     T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>
 {
-    pub fn from_vertices(vertices: Vec<Point2<T>>) -> Self {
+    pub fn from_vertices(vertices: Vec<OPoint<T, D>>) -> Self {
         Self { vertices }
     }
 
-    pub fn vertices(&self) -> &[Point2<T>] {
+    pub fn vertices(&self) -> &[OPoint<T, D>] {
         &self.vertices
     }
 
     pub fn transform_vertices<F>(&mut self, mut transform: F)
-    where
-        F: FnMut(&mut [Point2<T>]),
+        where
+            F: FnMut(&mut [OPoint<T, D>]),
     {
         transform(&mut self.vertices)
 
@@ -212,7 +219,13 @@ where
     pub fn num_edges(&self) -> usize {
         self.vertices.len()
     }
+}
 
+
+impl<T> GeneralPolygon2d<T>
+where
+    T: Scalar,
+{
     /// An iterator over edges as line segments
     pub fn edge_iter<'a>(&'a self) -> impl 'a + Iterator<Item = LineSegment2d<T>> {
         self.vertices
@@ -223,7 +236,7 @@ where
     }
 }
 
-impl<T> Polygon<T> for GeneralPolygon<T>
+impl<T> Polygon2d<T> for GeneralPolygon2d<T>
 where
     T: RealField,
 {
@@ -268,18 +281,20 @@ where
     }
 }
 
-impl<T> BoundedGeometry<T> for GeneralPolygon<T>
+impl<T, D> BoundedGeometry<T> for GeneralPolygon<T, D>
 where
     T: RealField,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>
 {
-    type Dimension = U2;
+    type Dimension = D;
 
-    fn bounding_box(&self) -> AxisAlignedBoundingBox2d<T> {
-        AxisAlignedBoundingBox2d::from_points(self.vertices()).expect("Vertex collection must be non-empty")
+    fn bounding_box(&self) -> AxisAlignedBoundingBox<T, D> {
+        AxisAlignedBoundingBox::from_points(self.vertices()).expect("Vertex collection must be non-empty")
     }
 }
 
-impl<T> Distance<T, Point2<T>> for GeneralPolygon<T>
+impl<T> Distance<T, Point2<T>> for GeneralPolygon2d<T>
 where
     T: RealField,
 {
