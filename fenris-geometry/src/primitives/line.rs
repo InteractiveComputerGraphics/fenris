@@ -260,6 +260,14 @@ where
     }
 }
 
+impl<T: RealField> LineSegment3d<T> {
+    pub fn intersect_plane_parametric(&self, plane: &Plane<T>) -> Option<T> {
+        self.to_line()
+            .intersect_plane_parametric(plane)
+            .filter(|t| t >= &T::zero() && t <= &T::one())
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Line<T, D>
 where
@@ -401,5 +409,23 @@ where
             // No real solutions, so no intersection
             None
         }
+    }
+}
+
+impl<T> Line3d<T>
+where
+    T: RealField,
+{
+    pub fn intersect_plane_parametric(&self, plane: &Plane<T>) -> Option<T> {
+        let n = plane.normal();
+        let d = self.dir();
+        let b = self.point() - plane.point();
+        let d_dot_n = d.dot(&n);
+        // TODO: This will actually *never* return a non-empty intersection in the case
+        // that the line is entirely contained in the plane. However, this is so extremely
+        // unlikely to be the case in the presence of floating-point arithmetic, that we
+        // consider it never to be the case
+        (d_dot_n != T::zero())
+            .then(|| - b.dot(&n) / d_dot_n)
     }
 }

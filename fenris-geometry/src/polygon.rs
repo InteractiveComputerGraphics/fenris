@@ -1,6 +1,6 @@
-use crate::{AxisAlignedBoundingBox, BoundedGeometry, Distance, HalfSpace, LineSegment2d, Orientation};
+use crate::{AxisAlignedBoundingBox, BoundedGeometry, Distance, HalfSpace, LineSegment2d, LineSegment3d, Orientation};
 use itertools::{izip, Itertools};
-use nalgebra::{Point2, RealField, Scalar, Vector2, U2, DimName, DefaultAllocator, OPoint, U3};
+use nalgebra::{Point2, RealField, Scalar, Vector2, U2, DimName, DefaultAllocator, OPoint, U3, clamp};
 use serde::{Deserialize, Serialize};
 use std::iter::once;
 use nalgebra::allocator::Allocator;
@@ -221,13 +221,11 @@ where
     }
 }
 
-impl<T, D> GeneralPolygon<T, D>
+impl<T> GeneralPolygon3d<T>
 where
-    T: RealField,
-    D: DimName,
-    DefaultAllocator: Allocator<T, D>
+    T: RealField
 {
-    pub fn intersect_half_space(&mut self, half_space: &HalfSpace<T, D>) {
+    pub fn intersect_half_space(&mut self, half_space: &HalfSpace<T>) {
         // TODO: Do this without allocating a new vector!
         // For example, we can push new vertices to the end of the current vector
         // and finally overwrite the original vertices and resize the vector
@@ -235,6 +233,7 @@ where
         let mut new_vertices = Vec::new();
 
         let n = self.vertices().len();
+        let plane = half_space.plane();
 
         for (a, b) in self.vertices().iter().cycle().take(n + 1).tuple_windows() {
             let a_contained = half_space.contains_point(a);
@@ -245,8 +244,25 @@ where
             }
 
             if a_contained != b_contained {
+                let segment = LineSegment3d::from_end_points(a.clone(), b.clone());
                 // The half space intersects the line segment between a and b,
                 // so must add the intersection point
+
+                // We're exceedingly unlikely to run into the case where there is no
+                // intersection, since we've already established that there *should*
+                // be an intersection on this edge. This can only happen due to a
+                // floating-point imprecision problem.
+                // To help prevent problems of a topological nature, we compute the
+                // intersection parameter for a *line* (not segment) and clamp the result
+                // to the [0, 1] interval in order to always produce some kind of vertex
+                // That way, even though its placement may be inaccurate, we at least
+                // are doing the topologically-speaking right thing with respect to
+                // the fact that either a or b is contained in the half-space
+                let t = segment.to_line()
+                    .intersect_plane_parametric(&plane)
+                    .map(|t| clamp(t, T::zero(), T::one()))
+                    .unwrap_or(T::zero());
+                new_vertices.push(segment.point_from_parameter(t));
             }
         }
 
