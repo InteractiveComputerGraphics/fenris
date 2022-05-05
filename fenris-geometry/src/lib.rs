@@ -271,6 +271,17 @@ pub enum OrientationTestResult {
     Negative,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct PolygonClosestPoint<T, D>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>
+{
+    pub closest_point: OPoint<T, D>,
+    pub distance: T
+}
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct PolygonPointProjection3d<T: Scalar> {
     /// The projection of the point onto the polygon.
@@ -290,13 +301,22 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
     fn num_vertices(&self) -> usize;
     fn get_vertex(&self, index: usize) -> Option<Point3<T>>;
 
+    fn compute_plane(&self) -> Option<Plane3d<T>>
+    where
+        T: RealField
+    {
+        let normal = self.compute_normal();
+        let point = self.get_vertex(0)?;
+        Some(Plane3d::from_point_and_normal(point, Unit::new_normalize(normal)))
+    }
+
     fn compute_half_space(&self) -> Option<HalfSpace<T>>
     where
         T: RealField,
     {
-        let normal = self.compute_face_normal();
+        let normal = self.compute_normal();
         let point = self.get_vertex(0)?;
-        Some(HalfSpace::from_point_and_normal(point, Unit::new_unchecked(normal)))
+        Some(HalfSpace::from_point_and_normal(point, Unit::new_unchecked(-normal)))
     }
 
     /// Computes a vector normal to the polygon (oriented outwards w.r.t. a counter-clockwise
@@ -325,7 +345,8 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
         area_vector
     }
 
-    fn compute_face_normal(&self) -> Vector3<T>
+    /// Computes an outwards-facing normalized vector perpendicular to the polygon.
+    fn compute_normal(&self) -> Vector3<T>
     where
         T: RealField,
     {
@@ -342,16 +363,16 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
         self.compute_area_vector().normalize()
     }
 
-    fn project_point(&self, point: &Point3<T>) -> PolygonPointProjection3d<T>
+    fn closest_point(&self, point: &Point3<T>) -> PolygonClosestPoint<T, U3>
     where
-        T: RealField,
+        T: RealField
     {
         assert!(self.num_vertices() >= 3, "Polygon must have at least 3 vertices.");
 
         // First, "extrude" the polygon by extruding each edge perpendicular to the
         // face. Then check if the point is contained in this extruded prism
         // by checking it against all half-spaces defined by the extruded edges.
-        let n = self.compute_face_normal();
+        let n = self.compute_normal();
 
         let mut inside = true;
 
@@ -378,12 +399,11 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
 
             // Pick any point in the polygon plane
             let x0 = self.get_vertex(0).unwrap();
+            // TODO: Use methods on Plane
             let signed_plane_distance = n.dot(&(point - x0));
-            let projected_point = point - &n * signed_plane_distance;
-            PolygonPointProjection3d {
-                projected_point,
-                signed_plane_distance,
-                // the projected point is equal to the projection onto the plane
+            let closest_point = point - &n * signed_plane_distance;
+            PolygonClosestPoint {
+                closest_point,
                 distance: signed_plane_distance.abs(),
             }
         } else {
@@ -406,10 +426,8 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
                 }
             }
 
-            let signed_plane_distance = n.dot(&(point - &closest_point));
-            PolygonPointProjection3d {
-                projected_point: closest_point,
-                signed_plane_distance,
+            PolygonClosestPoint {
+                closest_point,
                 distance: closest_dist2.sqrt(),
             }
         }
@@ -435,17 +453,20 @@ pub trait ConvexPolyhedron<'a, T: Scalar>: Debug {
 
         for i in 0..self.num_faces() {
             let face = self.get_face(i).unwrap();
-            let projection = face.project_point(point);
+            let closest_point_result = face.closest_point(point);
 
-            if projection.distance < closest_dist {
-                closest_dist = projection.distance;
+            if closest_point_result.distance < closest_dist {
+                closest_dist = closest_point_result.distance;
                 closest_face_index = i;
-                closest_point = projection.projected_point;
+                closest_point = closest_point_result.closest_point;
             }
 
-            // If the point is outside any of the half-spaces defined by the faces,
+            let n = face.compute_normal();
+            let x0 = closest_point_result.closest_point;
+            // If the point is outside any of the half-spaces defined by the negative face normals,
             // the point must be outside the polyhedron
-            if projection.signed_plane_distance < T::zero() {
+            let half_space = HalfSpace::from_point_and_normal(x0, Unit::new_unchecked(-n));
+            if !half_space.contains_point(&point) {
                 inside = false;
             }
         }
@@ -482,10 +503,11 @@ pub trait ConvexPolyhedron<'a, T: Scalar>: Debug {
         // faces contain the point
         for i in 0..self.num_faces() {
             let face = self.get_face(i).unwrap();
-            let half_space = face
-                .compute_half_space()
-                .expect("TODO: What to do if we cannot compute half space?");
-
+            let n = face.compute_normal();
+            let x0 = face.get_vertex(0)
+                .expect("TODO: How to handle empty polygon?");
+            // Half-space normal must point opposite of the face normal
+            let half_space = HalfSpace::from_point_and_normal(x0, Unit::new_unchecked(-n));
             if !half_space.contains_point(point) {
                 return false;
             }

@@ -2,6 +2,16 @@ use crate::{Line2d, Plane3d};
 use nalgebra::{DefaultAllocator, DimName, OPoint, OVector, RealField, Scalar, U2, U3, Unit, Vector2};
 use nalgebra::allocator::Allocator;
 
+/// A $D$-dimensional half space.
+///
+/// A half space is defined by a point $\vec x$ and a normalized unit vector (normal) $\vec n$.
+/// The points belonging to the half space is then given by the points $\vec y$ that satisfy
+///
+/// <div>
+/// $$
+///   (\vec y - \vec x) \cdot \vec n \leq 0.
+/// $$
+/// </div>
 #[derive(Debug, Clone, PartialEq)]
 pub struct HalfSpace<T: Scalar, D: DimName = U3>
 where
@@ -50,6 +60,10 @@ where
 {
     pub fn plane(&self) -> Plane3d<T> {
         Plane3d::from_point_and_normal(self.point, self.normal)
+    }
+
+    pub fn from_plane(plane: &Plane3d<T>) -> Self {
+        Self::from_point_and_normal(plane.point().clone(), plane.normal().clone())
     }
 }
 

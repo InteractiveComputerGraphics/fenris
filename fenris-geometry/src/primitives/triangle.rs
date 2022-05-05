@@ -242,7 +242,7 @@ where
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     fn distance(&self, point: &OPoint<T, U3>) -> T {
-        self.project_point(point).distance
+        self.closest_point(point).distance
     }
 }
 

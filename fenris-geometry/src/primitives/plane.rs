@@ -21,4 +21,11 @@ where
     pub fn from_point_and_normal(point: Point3<T>, normal: Unit<Vector3<T>>) -> Self {
         Self { point, normal }
     }
+
+    pub fn flipped(&self) -> Self {
+        Self {
+            point: self.point.clone(),
+            normal: Unit::new_unchecked(-self.normal.into_inner())
+        }
+    }
 }

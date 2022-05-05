@@ -564,7 +564,8 @@ where
         let mut mesh = self.clone();
         for i in 0..polyhedron.num_faces() {
             let face = polyhedron.get_face(i).unwrap();
-            if let Some(half_space) = face.compute_half_space() {
+            if let Some(plane) = face.compute_plane() {
+                let half_space = HalfSpace::from_plane(&plane.flipped());
                 mesh = mesh.intersect_half_space(&half_space);
             }
         }
