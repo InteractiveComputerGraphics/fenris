@@ -5,56 +5,14 @@ use numeric_literals::replace_float_literals;
 use std::fmt::Debug;
 use nalgebra::allocator::Allocator;
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct LineSegment3d<T: Scalar> {
-    end_points: [Point3<T>; 2],
-}
-
-impl<T: Scalar> LineSegment3d<T> {
-    pub fn from_end_points(end_points: [Point3<T>; 2]) -> Self {
-        Self { end_points }
-    }
-}
+pub type LineSegment3d<T> = LineSegment<T, U3>;
 
 impl<T: RealField> LineSegment3d<T> {
-    pub fn project_point_parametric(&self, point: &Point3<T>) -> T {
-        let a = self.end_points[0].coords;
-        let b = self.end_points[1].coords;
-        let d = &b - &a;
-        let d2 = d.magnitude_squared();
-        if d2 == T::zero() {
-            // If the endpoints are the same, the segment collapses to a single point,
-            // in which case e.g. t == 0 gives the correct solution.
-            T::zero()
-        } else {
-            let x = point.coords;
-            let t = (x - &a).dot(&d) / d2;
-            t
-        }
-    }
-
-    pub fn project_point(&self, point: &Point3<T>) -> Point3<T> {
-        let t = self.project_point_parametric(point);
-        if t <= T::zero() {
-            self.end_points[0]
-        } else if t >= T::one() {
-            self.end_points[1]
-        } else {
-            self.point_from_parameter(t)
-        }
-    }
-
-    pub fn point_from_parameter(&self, t: T) -> Point3<T> {
-        let a = self.end_points[0];
-        let b = self.end_points[1];
-        Point3::from(a.coords * (T::one() - t) + &b.coords * t)
-    }
-
     #[allow(non_snake_case)]
     pub fn closest_point_to_plane_parametric(&self, plane: &Plane3d<T>) -> T {
         let n = plane.normal();
         let x0 = plane.point();
-        let [a, b] = &self.end_points;
+        let [a, b] = [self.start(), self.end()];
         let d = &b.coords - &a.coords;
         let y = &x0.coords - &a.coords;
 
@@ -108,25 +66,64 @@ where
     pub fn from_end_points(start: OPoint<T, D>, end: OPoint<T, D>) -> Self {
         Self { start, end }
     }
-}
 
-impl<T> LineSegment2d<T>
-where
-    T: Scalar,
-{
-    pub fn start(&self) -> &Point2<T> {
+    pub fn start(&self) -> &OPoint<T, D> {
         &self.start
     }
 
-    pub fn end(&self) -> &Point2<T> {
+    pub fn end(&self) -> &OPoint<T, D> {
         &self.end
     }
 
     pub fn reverse(&self) -> Self {
-        LineSegment2d {
+        Self {
             start: self.end.clone(),
             end: self.start.clone(),
         }
+    }
+}
+
+impl<T, D> LineSegment<T, D>
+where
+    T: RealField,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>
+{
+    pub fn to_line(&self) -> Line<T, D> {
+        let dir = &self.end - &self.start;
+        Line::from_point_and_dir(self.start.clone(), dir)
+    }
+
+    /// Returns the vector tangent to the line, pointing from start to end.
+    ///
+    /// Note that the vector is **not** normalized.
+    pub fn tangent_dir(&self) -> OVector<T, D> {
+        &self.end().coords - &self.start().coords
+    }
+
+    pub fn length(&self) -> T {
+        self.tangent_dir().norm()
+    }
+
+    pub fn midpoint(&self) -> OPoint<T, D> {
+        OPoint::from((&self.start().coords + &self.end().coords) / (T::one() + T::one()))
+    }
+
+    /// Compute the closest point on the segment to the given point, represented in
+    /// the parametric form x = a + t * (b - a).
+    pub fn closest_point_parametric(&self, point: &OPoint<T, D>) -> T {
+        let t = self.to_line().project_point_parametric(point);
+        clamp(t, T::zero(), T::one())
+    }
+
+    /// Computes the closest point on the line to the given point.
+    pub fn closest_point(&self, point: &OPoint<T, D>) -> OPoint<T, D> {
+        let t = self.closest_point_parametric(point);
+        self.point_from_parameter(t)
+    }
+
+    pub fn point_from_parameter(&self, t: T) -> OPoint<T, D> {
+        OPoint::from(&self.start().coords + self.tangent_dir() * t)
     }
 }
 
@@ -134,18 +131,6 @@ impl<T> LineSegment2d<T>
 where
     T: RealField,
 {
-    pub fn to_line(&self) -> Line2d<T> {
-        let dir = &self.end - &self.start;
-        Line2d::from_point_and_dir(self.start.clone(), dir)
-    }
-
-    /// Returns a vector tangent to the line segment.
-    ///
-    /// Note that the vector is **not** normalized.
-    pub fn tangent_dir(&self) -> Vector2<T> {
-        self.end().coords - self.start().coords
-    }
-
     /// Returns a vector normal to the line segment, in the direction consistent with a
     /// counter-clockwise winding order when the edge is part of a polygon.
     ///
@@ -153,14 +138,6 @@ where
     pub fn normal_dir(&self) -> Vector2<T> {
         let tangent = self.tangent_dir();
         Vector2::new(tangent.y, -tangent.x)
-    }
-
-    pub fn length(&self) -> T {
-        self.tangent_dir().norm()
-    }
-
-    pub fn midpoint(&self) -> Point2<T> {
-        Point2::from((self.start.coords + self.end.coords) / (T::one() + T::one()))
     }
 
     pub fn intersect_line_parametric(&self, line: &Line2d<T>) -> Option<T> {
@@ -181,23 +158,6 @@ where
     pub fn intersect_disk(&self, disk: &Disk<T>) -> Option<Self> {
         self.intersect_disk_parametric(disk)
             .map(|[t1, t2]| self.segment_from_parameters(&t1, &t2))
-    }
-
-    /// Compute the closest point on the segment to the given point, represented in
-    /// the parametric form x = a + t * (b - a).
-    pub fn closest_point_parametric(&self, point: &Point2<T>) -> T {
-        let t = self.to_line().project_point_parametric(point);
-        clamp(t, T::zero(), T::one())
-    }
-
-    /// Computes the closest point on the line to the given point.
-    pub fn closest_point(&self, point: &Point2<T>) -> Point2<T> {
-        let t = self.closest_point_parametric(point);
-        self.point_from_parameter(t)
-    }
-
-    pub fn point_from_parameter(&self, t: T) -> Point2<T> {
-        Point2::from(self.start().coords + (self.end() - self.start()) * t)
     }
 
     pub fn segment_from_parameters(&self, t_begin: &T, t_end: &T) -> Self {
@@ -354,7 +314,14 @@ where
     /// in parametric form.
     pub fn project_point_parametric(&self, point: &OPoint<T, D>) -> T {
         let d2 = self.dir.magnitude_squared();
-        (point - &self.point).dot(&self.dir) / d2
+        if d2 == T::zero() {
+            // TODO: Is this the correct way to handle it? If the line degenerate to a point
+            // it's no longer even a line! (It is a line *segment* though ...)
+            // Line degenerates to a point, just return 0 as it will give *a* correct solution
+            T::zero()
+        } else {
+            (point - &self.point).dot(&self.dir) / d2
+        }
     }
 
     /// Computes the projection of the given point onto the line.

@@ -396,8 +396,8 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
             for i in 0..self.num_vertices() {
                 let v1 = self.get_vertex(i).unwrap();
                 let v2 = self.get_vertex((i + 1) % self.num_vertices()).unwrap();
-                let segment = LineSegment3d::from_end_points([v1, v2]);
-                let projected = segment.project_point(point);
+                let segment = LineSegment3d::from_end_points(v1, v2);
+                let projected = segment.closest_point(point);
                 let dist2 = distance_squared(&projected, point);
 
                 if dist2 < closest_dist2 {

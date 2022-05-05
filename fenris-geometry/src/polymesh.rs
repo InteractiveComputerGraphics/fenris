@@ -712,7 +712,7 @@ where
             } else {
                 let v_a = self.vertices[a];
                 let v_b = self.vertices[b];
-                let segment = LineSegment3d::from_end_points([v_a, v_b]);
+                let segment = LineSegment3d::from_end_points(v_a, v_b);
                 segment.closest_point_to_plane(&half_space.plane())
             };
             final_vertices[*new_vertex_idx] = vertex_coords;
