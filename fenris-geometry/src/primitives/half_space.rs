@@ -1,4 +1,4 @@
-use crate::{Line2d, Plane3d};
+use crate::{Line2d, Plane};
 use nalgebra::{DefaultAllocator, DimName, OPoint, OVector, RealField, Scalar, U2, U3, Unit, Vector2};
 use nalgebra::allocator::Allocator;
 
@@ -58,11 +58,11 @@ impl<T> HalfSpace<T>
 where
     T: RealField
 {
-    pub fn plane(&self) -> Plane3d<T> {
-        Plane3d::from_point_and_normal(self.point, self.normal)
+    pub fn plane(&self) -> Plane<T> {
+        Plane::from_point_and_normal(self.point, self.normal)
     }
 
-    pub fn from_plane(plane: &Plane3d<T>) -> Self {
+    pub fn from_plane(plane: &Plane<T>) -> Self {
         Self::from_point_and_normal(plane.point().clone(), plane.normal().clone())
     }
 }

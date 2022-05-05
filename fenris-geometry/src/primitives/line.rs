@@ -1,4 +1,4 @@
-use crate::{ConvexPolygon, Disk, HalfPlane, Plane3d};
+use crate::{ConvexPolygon, Disk, HalfPlane, Plane};
 use nalgebra::{clamp, DefaultAllocator, DimName, Matrix2, OPoint, OVector, RealField, U2, U3, Vector2};
 use nalgebra::{Point2, Point3, Scalar};
 use numeric_literals::replace_float_literals;
@@ -9,7 +9,7 @@ pub type LineSegment3d<T> = LineSegment<T, U3>;
 
 impl<T: RealField> LineSegment3d<T> {
     #[allow(non_snake_case)]
-    pub fn closest_point_to_plane_parametric(&self, plane: &Plane3d<T>) -> T {
+    pub fn closest_point_to_plane_parametric(&self, plane: &Plane<T>) -> T {
         let n = plane.normal();
         let x0 = plane.point();
         let [a, b] = [self.start(), self.end()];
@@ -38,7 +38,7 @@ impl<T: RealField> LineSegment3d<T> {
         t
     }
 
-    pub fn closest_point_to_plane(&self, plane: &Plane3d<T>) -> Point3<T> {
+    pub fn closest_point_to_plane(&self, plane: &Plane<T>) -> Point3<T> {
         let t = self.closest_point_to_plane_parametric(plane);
         self.point_from_parameter(t)
     }

@@ -1,12 +1,12 @@
 use nalgebra::{Point3, RealField, Scalar, Unit, Vector3};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Plane3d<T: Scalar> {
+pub struct Plane<T: Scalar> {
     point: Point3<T>,
     normal: Unit<Vector3<T>>,
 }
 
-impl<T> Plane3d<T>
+impl<T> Plane<T>
 where
     T: RealField,
 {

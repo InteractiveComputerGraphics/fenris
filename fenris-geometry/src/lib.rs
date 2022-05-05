@@ -301,13 +301,13 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
     fn num_vertices(&self) -> usize;
     fn get_vertex(&self, index: usize) -> Option<Point3<T>>;
 
-    fn compute_plane(&self) -> Option<Plane3d<T>>
+    fn compute_plane(&self) -> Option<Plane<T>>
     where
         T: RealField
     {
         let normal = self.compute_normal();
         let point = self.get_vertex(0)?;
-        Some(Plane3d::from_point_and_normal(point, Unit::new_normalize(normal)))
+        Some(Plane::from_point_and_normal(point, Unit::new_normalize(normal)))
     }
 
     fn compute_half_space(&self) -> Option<HalfSpace<T>>
