@@ -384,7 +384,10 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
             let e = &v2.coords - &v1.coords;
 
             // Half space normal points towards the interior of the polygon
-            let half_space_normal = Unit::new_normalize(-e.cross(&n));
+            // TODO: This currently assumes a normal direction where the polygon is
+            // *clockwise* oriented, which is weird. Things are a little
+            // inconsistent right now, gotta fix
+            let half_space_normal = Unit::new_normalize(e.cross(&n));
             let half_space = HalfSpace::from_point_and_normal(v1, half_space_normal);
 
             if !half_space.contains_point(point) {
