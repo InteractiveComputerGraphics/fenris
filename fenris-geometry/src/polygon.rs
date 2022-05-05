@@ -221,6 +221,40 @@ where
     }
 }
 
+impl<T, D> GeneralPolygon<T, D>
+where
+    T: RealField,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>
+{
+    pub fn intersect_half_space(&mut self, half_space: &HalfSpace<T, D>) {
+        // TODO: Do this without allocating a new vector!
+        // For example, we can push new vertices to the end of the current vector
+        // and finally overwrite the original vertices and resize the vector
+
+        let mut new_vertices = Vec::new();
+
+        let n = self.vertices().len();
+
+        for (a, b) in self.vertices().iter().cycle().take(n + 1).tuple_windows() {
+            let a_contained = half_space.contains_point(a);
+            let b_contained = half_space.contains_point(b);
+
+            if a_contained {
+                new_vertices.push(a.clone());
+            }
+
+            if a_contained != b_contained {
+                // The half space intersects the line segment between a and b,
+                // so must add the intersection point
+            }
+        }
+
+        self.vertices.clear();
+        self.vertices.extend_from_slice(&new_vertices);
+    }
+}
+
 
 impl<T> GeneralPolygon2d<T>
 where
