@@ -1,4 +1,4 @@
-use crate::{AxisAlignedBoundingBox, BoundedGeometry, Distance, LineSegment2d, Orientation};
+use crate::{AxisAlignedBoundingBox, BoundedGeometry, Distance, HalfSpace, LineSegment2d, Orientation};
 use itertools::{izip, Itertools};
 use nalgebra::{Point2, RealField, Scalar, Vector2, U2, DimName, DefaultAllocator, OPoint, U3};
 use serde::{Deserialize, Serialize};
@@ -232,7 +232,7 @@ where
             .iter()
             .chain(once(self.vertices.first().unwrap()))
             .tuple_windows()
-            .map(|(a, b)| LineSegment2d::new(a.clone(), b.clone()))
+            .map(|(a, b)| LineSegment2d::from_end_points(a.clone(), b.clone()))
     }
 }
 
@@ -251,7 +251,7 @@ where
     fn get_edge(&self, index: usize) -> Option<LineSegment2d<T>> {
         let a = self.vertices.get(index)?;
         let b = self.vertices.get((index + 1) % self.num_vertices())?;
-        Some(LineSegment2d::new(*a, *b))
+        Some(LineSegment2d::from_end_points(*a, *b))
     }
 
     #[replace_float_literals(T::from_f64(literal).unwrap())]

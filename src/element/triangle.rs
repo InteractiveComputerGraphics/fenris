@@ -152,7 +152,7 @@ where
 {
     // TODO: Test this
     fn from(tri3: &'a Tri3d2Element<T>) -> Self {
-        let midpoint = |a: &Point2<_>, b: &Point2<_>| LineSegment2d::new(a.clone(), b.clone()).midpoint();
+        let midpoint = |a: &Point2<_>, b: &Point2<_>| LineSegment2d::from_end_points(a.clone(), b.clone()).midpoint();
 
         let tri3_v = &tri3.vertices;
         let mut vertices = [Point2::origin(); 6];

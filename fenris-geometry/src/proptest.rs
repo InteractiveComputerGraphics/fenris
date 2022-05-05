@@ -133,7 +133,7 @@ pub fn nondegenerate_line_segment2d_strategy_f64() -> impl Strategy<Value = Line
     (point2(), gen.clone(), gen).prop_map(|(a, x, y)| {
         let d = Vector2::new(x, y);
         let b = a + d;
-        LineSegment2d::new(a, b)
+        LineSegment2d::from_end_points(a, b)
     })
 }
 

@@ -56,6 +56,15 @@ where
     T: Scalar,
 {
     fn from(segment: LineSegment2d<T>) -> Self {
+        Self::from(&segment)
+    }
+}
+
+impl<'a, T> From<&'a LineSegment2d<T>> for Segment2d2Element<T>
+    where
+        T: Scalar,
+{
+    fn from(segment: &'a LineSegment2d<T>) -> Self {
         Self {
             vertices: [segment.start().clone(), segment.end().clone()],
         }
@@ -64,7 +73,7 @@ where
 
 impl<'a, T: Scalar> From<&'a Segment2d2Element<T>> for LineSegment2d<T> {
     fn from(element: &'a Segment2d2Element<T>) -> Self {
-        LineSegment2d::new(element.vertices()[0].clone(), element.vertices()[1].clone())
+        LineSegment2d::from_end_points(element.vertices()[0].clone(), element.vertices()[1].clone())
     }
 }
 
@@ -192,7 +201,7 @@ where
     fn element(&self, vertices: &[Point2<T>]) -> Option<Self::Element> {
         let a = vertices[self.0[0]].clone();
         let b = vertices[self.0[1]].clone();
-        let segment = LineSegment2d::new(a, b);
+        let segment = LineSegment2d::from_end_points(a, b);
         Some(Segment2d2Element::from(segment))
     }
 }

@@ -53,31 +53,31 @@ fn polygon_intersects_segment() {
 
     {
         // Segment is outside (and also outside its convex hull)
-        let segment = LineSegment2d::new(Point2::new(-8.0, -1.0), Point2::new(-7.0, 3.0));
+        let segment = LineSegment2d::from_end_points(Point2::new(-8.0, -1.0), Point2::new(-7.0, 3.0));
         assert_eq!(polygon.intersects_segment(&segment), false);
     }
 
     {
         // Segment is outside (but inside the convex hull of the polygon)
-        let segment = LineSegment2d::new(Point2::new(-3.0, 0.0), Point2::new(-2.0, 1.0));
+        let segment = LineSegment2d::from_end_points(Point2::new(-3.0, 0.0), Point2::new(-2.0, 1.0));
         assert_eq!(polygon.intersects_segment(&segment), false);
     }
 
     {
         // Segment is completely inside the polygon
-        let segment = LineSegment2d::new(Point2::new(-3.0, -2.0), Point2::new(-5.0, 0.0));
+        let segment = LineSegment2d::from_end_points(Point2::new(-3.0, -2.0), Point2::new(-5.0, 0.0));
         assert_eq!(polygon.intersects_segment(&segment), true);
     }
 
     {
         // Segment is partially inside, with one of its endpoints inside
-        let segment = LineSegment2d::new(Point2::new(-3.0, -2.0), Point2::new(-4.0, 0.5));
+        let segment = LineSegment2d::from_end_points(Point2::new(-3.0, -2.0), Point2::new(-4.0, 0.5));
         assert_eq!(polygon.intersects_segment(&segment), true);
     }
 
     {
         // Segment is partially inside, with none of its endpoints inside
-        let segment = LineSegment2d::new(Point2::new(0.0, -1.0), Point2::new(-6.0, 0.0));
+        let segment = LineSegment2d::from_end_points(Point2::new(0.0, -1.0), Point2::new(-6.0, 0.0));
         assert_eq!(polygon.intersects_segment(&segment), true);
     }
 }

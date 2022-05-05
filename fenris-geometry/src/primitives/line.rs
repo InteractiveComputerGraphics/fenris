@@ -1,8 +1,9 @@
 use crate::{ConvexPolygon, Disk, HalfPlane, Plane3d};
-use nalgebra::{clamp, Matrix2, RealField, Vector2};
+use nalgebra::{clamp, DefaultAllocator, DimName, Matrix2, OPoint, OVector, RealField, U2, U3, Vector2};
 use nalgebra::{Point2, Point3, Scalar};
 use numeric_literals::replace_float_literals;
 use std::fmt::Debug;
+use nalgebra::allocator::Allocator;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct LineSegment3d<T: Scalar> {
@@ -85,23 +86,34 @@ impl<T: RealField> LineSegment3d<T> {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct LineSegment2d<T>
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LineSegment<T, D>
 where
     T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>
 {
-    start: Point2<T>,
-    end: Point2<T>,
+    start: OPoint<T, D>,
+    end: OPoint<T, D>,
+}
+
+pub type LineSegment2d<T> = LineSegment<T, U2>;
+
+impl<T, D> LineSegment<T, D>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>
+{
+    pub fn from_end_points(start: OPoint<T, D>, end: OPoint<T, D>) -> Self {
+        Self { start, end }
+    }
 }
 
 impl<T> LineSegment2d<T>
 where
     T: Scalar,
 {
-    pub fn new(from: Point2<T>, to: Point2<T>) -> Self {
-        Self { start: from, end: to }
-    }
-
     pub fn start(&self) -> &Point2<T> {
         &self.start
     }
@@ -191,7 +203,7 @@ where
     pub fn segment_from_parameters(&self, t_begin: &T, t_end: &T) -> Self {
         let begin = self.point_from_parameter(t_begin.clone());
         let end = self.point_from_parameter(t_end.clone());
-        Self::new(begin, end)
+        Self::from_end_points(begin, end)
     }
 
     /// Computes the intersection of two line segments (if any), but returns the result as a parameter.
@@ -289,29 +301,70 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub struct Line2d<T>
+pub struct Line<T, D>
 where
     T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>
 {
-    point: Point2<T>,
-    dir: Vector2<T>,
+    point: OPoint<T, D>,
+    dir: OVector<T, D>,
 }
 
-impl<T> Line2d<T>
+pub type Line2d<T> = Line<T, U2>;
+pub type Line3d<T> = Line<T, U3>;
+
+impl<T, D> Line<T, D>
 where
     T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>
 {
-    pub fn from_point_and_dir(point: Point2<T>, dir: Vector2<T>) -> Self {
+    pub fn from_point_and_dir(point: OPoint<T, D>, dir: OVector<T, D>) -> Self {
         // TODO: Make dir Unit?
         Self { point, dir }
     }
 
-    pub fn point(&self) -> &Point2<T> {
+    pub fn point(&self) -> &OPoint<T, D> {
         &self.point
     }
 
-    pub fn dir(&self) -> &Vector2<T> {
+    pub fn dir(&self) -> &OVector<T, D> {
         &self.dir
+    }
+}
+
+impl<T, D> Line<T, D>
+where
+    T: RealField,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>
+{
+    /// A normalized vector tangent to the line.
+    pub fn tangent(&self) -> OVector<T, D> {
+        self.dir.normalize()
+    }
+
+    pub fn from_point_through_point(point: OPoint<T, D>, through: &OPoint<T, D>) -> Self {
+        let dir = through - &point;
+        Self::from_point_and_dir(point, dir)
+    }
+
+    /// Computes the projection of the given point onto the line, representing the point
+    /// in parametric form.
+    pub fn project_point_parametric(&self, point: &OPoint<T, D>) -> T {
+        let d2 = self.dir.magnitude_squared();
+        (point - &self.point).dot(&self.dir) / d2
+    }
+
+    /// Computes the projection of the given point onto the line.
+    pub fn project_point(&self, point: &OPoint<T, D>) -> OPoint<T, D> {
+        let t = self.project_point_parametric(point);
+        self.point_from_parameter(t)
+    }
+
+    pub fn point_from_parameter(&self, t: T) -> OPoint<T, D> {
+        &self.point + &self.dir * t
     }
 }
 
@@ -319,33 +372,6 @@ impl<T> Line2d<T>
 where
     T: RealField,
 {
-    /// A normalized vector tangent to the line.
-    pub fn tangent(&self) -> Vector2<T> {
-        self.dir.normalize()
-    }
-
-    pub fn from_point_through_point(point: Point2<T>, through: &Point2<T>) -> Self {
-        let dir = through - &point;
-        Self::from_point_and_dir(point, dir)
-    }
-
-    /// Computes the projection of the given point onto the line, representing the point
-    /// in parametric form.
-    pub fn project_point_parametric(&self, point: &Point2<T>) -> T {
-        let d2 = self.dir.magnitude_squared();
-        (point - &self.point).dot(&self.dir) / d2
-    }
-
-    /// Computes the projection of the given point onto the line.
-    pub fn project_point(&self, point: &Point2<T>) -> Point2<T> {
-        let t = self.project_point_parametric(point);
-        self.point_from_parameter(t)
-    }
-
-    pub fn point_from_parameter(&self, t: T) -> Point2<T> {
-        &self.point + &self.dir * t
-    }
-
     pub fn intersect(&self, other: &Line2d<T>) -> Option<Point2<T>> {
         self.intersect_line_parametric(other)
             .map(|(t1, _)| self.point_from_parameter(t1))
@@ -379,7 +405,7 @@ where
         let [t1, t2] = self.intersect_disk_parametric(disk)?;
         let p1 = self.point_from_parameter(t1);
         let p2 = self.point_from_parameter(t2);
-        Some(LineSegment2d::new(p1, p2))
+        Some(LineSegment2d::from_end_points(p1, p2))
     }
 
     #[replace_float_literals(T::from_f64(literal).unwrap())]

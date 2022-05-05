@@ -208,7 +208,7 @@ where
         for i in 0..3 {
             let a = &self.0[i];
             let b = &self.0[(i + 1) % 3];
-            let segment = LineSegment2d::new(*a, *b);
+            let segment = LineSegment2d::from_end_points(*a, *b);
             // Normal point outwards, i.e. towards the "right"
             let normal_dir = segment.normal_dir();
             let projected_point = segment.closest_point(point);

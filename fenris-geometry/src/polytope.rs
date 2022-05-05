@@ -153,7 +153,7 @@ where
         if self.is_point() || other.is_point() {
             unimplemented!()
         } else if self.is_line_segment() {
-            let segment = LineSegment2d::new(self.vertices[0], self.vertices[1]);
+            let segment = LineSegment2d::from_end_points(self.vertices[0], self.vertices[1]);
             segment
                 .intersect_polygon(other)
                 .map(|segment| ConvexPolygon::from_vertices(vec![*segment.start(), *segment.end()]))

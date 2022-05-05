@@ -47,7 +47,7 @@ fn map_reference_coords_quad2d() {
 fn map_reference_coords_edge2d() {
     let a = Point2::new(5.0, 3.0);
     let b = Point2::new(10.0, 4.0);
-    let edge = Segment2d2Element::from(LineSegment2d::new(a, b));
+    let edge = Segment2d2Element::from(LineSegment2d::from_end_points(a, b));
 
     let x0 = edge.map_reference_coords(&Point1::new(-1.0));
     assert!(x0.coords.relative_eq(&a.coords, 1e-10, 1e-10));
@@ -601,7 +601,7 @@ proptest! {
     fn edge2d_element_jacobian_is_derivative_of_transform(
         (a, b, xi) in (point2_f64_strategy(), point2_f64_strategy(), -1.0..=1.0)
     ) {
-        let segment = LineSegment2d::new(a, b);
+        let segment = LineSegment2d::from_end_points(a, b);
         let element = Segment2d2Element::from(segment);
         let xi = Point1::new(xi);
 
@@ -628,11 +628,11 @@ proptest! {
         (a, b, xi, eps) in (point2_f64_strategy(), point2_f64_strategy(),
                             -1.0..=1.0, prop_oneof!(Just(0.0), -1.0 .. 1.0))
     ) {
-        let segment = LineSegment2d::new(a, b);
+        let segment = LineSegment2d::from_end_points(a, b);
 
         prop_assume!(segment.length() > 0.0);
 
-        let element = Segment2d2Element::from(segment);
+        let element = Segment2d2Element::from(&segment);
         let xi = Point1::new(xi);
         let x = element.map_reference_coords(&xi);
         // Perturb the surface point in the direction normal to the surface. This checks
