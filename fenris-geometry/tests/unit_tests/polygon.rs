@@ -1,4 +1,4 @@
-use fenris_geometry::{GeneralPolygon2d, LineSegment2d, Polygon2d};
+use fenris_geometry::{SimplePolygon2d, LineSegment2d, Polygon2d};
 use matrixcompare::assert_scalar_eq;
 use nalgebra::{Point2, Vector2};
 
@@ -18,7 +18,7 @@ fn polygon_area_signed_unsigned() {
         Point2::new(-6.0, 3.0),
     ];
 
-    let polygon = GeneralPolygon2d::from_vertices(vertices.clone());
+    let polygon = SimplePolygon2d::from_vertices(vertices.clone());
 
     let expected_area = 10.5;
     assert_scalar_eq!(polygon.signed_area(), expected_area, comp = abs, tol = 1e-12);
@@ -30,7 +30,7 @@ fn polygon_area_signed_unsigned() {
         v
     };
 
-    let reversed_polygon = GeneralPolygon2d::from_vertices(vertices_reversed);
+    let reversed_polygon = SimplePolygon2d::from_vertices(vertices_reversed);
 
     assert_scalar_eq!(reversed_polygon.signed_area(), -expected_area, comp = abs, tol = 1e-12);
     assert_scalar_eq!(reversed_polygon.area(), expected_area, comp = abs, tol = 1e-12);
@@ -49,7 +49,7 @@ fn polygon_intersects_segment() {
         Point2::new(-6.0, 3.0),
     ];
 
-    let polygon = GeneralPolygon2d::from_vertices(vertices.clone());
+    let polygon = SimplePolygon2d::from_vertices(vertices.clone());
 
     {
         // Segment is outside (and also outside its convex hull)
@@ -95,7 +95,7 @@ fn polygon_closest_edge() {
         Point2::new(-6.0, 3.0),
     ];
 
-    let polygon = GeneralPolygon2d::from_vertices(vertices.clone());
+    let polygon = SimplePolygon2d::from_vertices(vertices.clone());
 
     {
         // Point is outside, but inside the convex hull of the polygon

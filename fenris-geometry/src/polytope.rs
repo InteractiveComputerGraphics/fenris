@@ -1,4 +1,4 @@
-use crate::{GeneralPolygon2d, HalfPlane, Line2d, LineSegment2d, Triangle, Triangle2d};
+use crate::{SimplePolygon2d, HalfPlane, Line2d, LineSegment2d, Triangle, Triangle2d};
 use itertools::Itertools;
 use nalgebra::{Point2, RealField, Scalar, Unit, Vector2};
 
@@ -185,11 +185,11 @@ where
     }
 }
 
-impl<T> From<ConvexPolygon<T>> for GeneralPolygon2d<T>
+impl<T> From<ConvexPolygon<T>> for SimplePolygon2d<T>
 where
     T: Scalar,
 {
     fn from(poly: ConvexPolygon<T>) -> Self {
-        GeneralPolygon2d::from_vertices(poly.vertices)
+        SimplePolygon2d::from_vertices(poly.vertices)
     }
 }

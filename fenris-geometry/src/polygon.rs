@@ -10,7 +10,7 @@ use numeric_literals::replace_float_literals;
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(bound(serialize = "OPoint<T, D>: Serialize"))]
 #[serde(bound(deserialize = "OPoint<T, D>: Deserialize<'de>"))]
-pub struct GeneralPolygon<T, D>
+pub struct SimplePolygon<T, D>
 where
     T: Scalar,
     D: DimName,
@@ -19,8 +19,8 @@ where
     vertices: Vec<OPoint<T, D>>,
 }
 
-pub type GeneralPolygon2d<T> = GeneralPolygon<T, U2>;
-pub type GeneralPolygon3d<T> = GeneralPolygon<T, U3>;
+pub type SimplePolygon2d<T> = SimplePolygon<T, U2>;
+pub type SimplePolygon3d<T> = SimplePolygon<T, U3>;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct ClosestEdge<T>
@@ -189,7 +189,7 @@ where
     }
 }
 
-impl<T, D> GeneralPolygon<T, D>
+impl<T, D> SimplePolygon<T, D>
 where
     T: Scalar,
     D: DimName,
@@ -221,7 +221,7 @@ where
     }
 }
 
-impl<T> GeneralPolygon3d<T>
+impl<T> SimplePolygon3d<T>
 where
     T: RealField
 {
@@ -272,7 +272,7 @@ where
 }
 
 
-impl<T> GeneralPolygon2d<T>
+impl<T> SimplePolygon2d<T>
 where
     T: Scalar,
 {
@@ -286,7 +286,7 @@ where
     }
 }
 
-impl<T> Polygon2d<T> for GeneralPolygon2d<T>
+impl<T> Polygon2d<T> for SimplePolygon2d<T>
 where
     T: RealField,
 {
@@ -331,7 +331,7 @@ where
     }
 }
 
-impl<T, D> BoundedGeometry<T> for GeneralPolygon<T, D>
+impl<T, D> BoundedGeometry<T> for SimplePolygon<T, D>
 where
     T: RealField,
     D: DimName,
@@ -344,7 +344,7 @@ where
     }
 }
 
-impl<T> Distance<T, Point2<T>> for GeneralPolygon2d<T>
+impl<T> Distance<T, Point2<T>> for SimplePolygon2d<T>
 where
     T: RealField,
 {
