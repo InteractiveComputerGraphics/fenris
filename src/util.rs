@@ -19,6 +19,7 @@ use std::io::{BufWriter, Write};
 use std::path::Path;
 
 pub use fenris_nested_vec::*;
+pub use fenris_geometry::util::compute_orthonormal_vectors_3d;
 
 use crate::allocators::{BiDimAllocator, DimAllocator};
 use crate::assembly::global::CsrParAssembler;

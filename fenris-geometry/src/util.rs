@@ -1,3 +1,25 @@
+use nalgebra::{RealField, UnitVector3, Vector3};
+
+pub fn compute_orthonormal_vectors_3d<T: RealField>(vector: &UnitVector3<T>) -> [UnitVector3<T>; 2] {
+    // Ported from
+    // https://github.com/dimforge/parry/blob/ac8dcf0197066cd2413a20e4420961b4694996c0/src/utils/wops.rs#L120-L138
+    // originally based on the Pixar paper "Building an Orthonormal Basis, Revisited",
+    // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
+    let v = vector;
+    let sign = T::copysign(T::one(), v.z);
+    let a = -T::one() / (sign + v.z);
+    let b = v.x * v.y * a;
+
+    [
+        Vector3::new(
+            T::one() + sign * v.x * v.x * a,
+            sign * b,
+            -sign * v.x,
+        ),
+        Vector3::new(b, sign + v.y * v.y * a, -v.y),
+    ].map(UnitVector3::new_unchecked)
+}
+
 /// Compares two arrays for *shift-invariant* equality with the given comparator function.
 ///
 /// If `X` and `Y` are the two arrays, then the two arrays are shift-invariant equal if X can be shifted/rotated
