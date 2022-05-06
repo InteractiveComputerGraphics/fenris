@@ -262,7 +262,7 @@ impl<T: RealField> Triangle3d<T> {
     pub fn compute_solid_angle(&self, p: &Point3<T>) -> T {
         // Based on equation (6) in Jacobson et al.,
         // "Robust Inside-Outside Segmentation using Generalized Winding Numbers"
-        let [a, b, c] = dbg!(self.0.clone().map(|v_i| v_i - p));
+        let [a, b, c] = self.0.clone().map(|v_i| v_i - p);
         let abc_matrix = Matrix3::from_columns(&[a.clone(), b.clone(), c.clone()]);
 
         let anorm = a.norm();
