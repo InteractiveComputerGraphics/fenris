@@ -276,10 +276,10 @@ pub struct PolygonClosestPoint<T, D>
 where
     T: Scalar,
     D: DimName,
-    DefaultAllocator: Allocator<T, D>
+    DefaultAllocator: Allocator<T, D>,
 {
     pub closest_point: OPoint<T, D>,
-    pub distance: T
+    pub distance: T,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -303,7 +303,7 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
 
     fn compute_plane(&self) -> Option<Plane<T>>
     where
-        T: RealField
+        T: RealField,
     {
         let normal = self.compute_normal();
         let point = self.get_vertex(0)?;
@@ -365,7 +365,7 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
 
     fn closest_point(&self, point: &Point3<T>) -> PolygonClosestPoint<T, U3>
     where
-        T: RealField
+        T: RealField,
     {
         assert!(self.num_vertices() >= 3, "Polygon must have at least 3 vertices.");
 
@@ -507,7 +507,8 @@ pub trait ConvexPolyhedron<'a, T: Scalar>: Debug {
         for i in 0..self.num_faces() {
             let face = self.get_face(i).unwrap();
             let n = face.compute_normal();
-            let x0 = face.get_vertex(0)
+            let x0 = face
+                .get_vertex(0)
                 .expect("TODO: How to handle empty polygon?");
             // Half-space normal must point opposite of the face normal
             let half_space = HalfSpace::from_point_and_normal(x0, Unit::new_unchecked(-n));

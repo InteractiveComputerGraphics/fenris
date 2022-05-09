@@ -1,6 +1,6 @@
 use crate::{Line2d, Plane};
-use nalgebra::{DefaultAllocator, DimName, OPoint, OVector, RealField, Scalar, U2, U3, Unit, Vector2};
 use nalgebra::allocator::Allocator;
+use nalgebra::{DefaultAllocator, DimName, OPoint, OVector, RealField, Scalar, Unit, Vector2, U2, U3};
 
 /// A $D$-dimensional half space.
 ///
@@ -15,7 +15,7 @@ use nalgebra::allocator::Allocator;
 #[derive(Debug, Clone, PartialEq)]
 pub struct HalfSpace<T: Scalar, D: DimName = U3>
 where
-    DefaultAllocator: Allocator<T, D>
+    DefaultAllocator: Allocator<T, D>,
 {
     point: OPoint<T, D>,
     normal: Unit<OVector<T, D>>,
@@ -27,7 +27,7 @@ impl<T, D> HalfSpace<T, D>
 where
     T: RealField,
     D: DimName,
-    DefaultAllocator: Allocator<T, D>
+    DefaultAllocator: Allocator<T, D>,
 {
     pub fn signed_distance_to_point(&self, point: &OPoint<T, D>) -> T {
         let d = point - &self.point;
@@ -60,7 +60,7 @@ where
 
 impl<T> HalfSpace<T>
 where
-    T: RealField
+    T: RealField,
 {
     pub fn plane(&self) -> Plane<T> {
         Plane::from_point_and_normal(self.point, self.normal)

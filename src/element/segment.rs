@@ -61,8 +61,8 @@ where
 }
 
 impl<'a, T> From<&'a LineSegment2d<T>> for Segment2d2Element<T>
-    where
-        T: Scalar,
+where
+    T: Scalar,
 {
     fn from(segment: &'a LineSegment2d<T>) -> Self {
         Self {

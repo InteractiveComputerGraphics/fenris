@@ -1,9 +1,9 @@
 use crate::{ConvexPolygon, Disk, HalfPlane, Plane};
-use nalgebra::{clamp, DefaultAllocator, DimName, Matrix2, OPoint, OVector, RealField, U2, U3, Vector2};
+use nalgebra::allocator::Allocator;
+use nalgebra::{clamp, DefaultAllocator, DimName, Matrix2, OPoint, OVector, RealField, Vector2, U2, U3};
 use nalgebra::{Point2, Point3, Scalar};
 use numeric_literals::replace_float_literals;
 use std::fmt::Debug;
-use nalgebra::allocator::Allocator;
 
 pub type LineSegment3d<T> = LineSegment<T, U3>;
 
@@ -49,7 +49,7 @@ pub struct LineSegment<T, D>
 where
     T: Scalar,
     D: DimName,
-    DefaultAllocator: Allocator<T, D>
+    DefaultAllocator: Allocator<T, D>,
 {
     start: OPoint<T, D>,
     end: OPoint<T, D>,
@@ -61,7 +61,7 @@ impl<T, D> LineSegment<T, D>
 where
     T: Scalar,
     D: DimName,
-    DefaultAllocator: Allocator<T, D>
+    DefaultAllocator: Allocator<T, D>,
 {
     pub fn from_end_points(start: OPoint<T, D>, end: OPoint<T, D>) -> Self {
         Self { start, end }
@@ -87,7 +87,7 @@ impl<T, D> LineSegment<T, D>
 where
     T: RealField,
     D: DimName,
-    DefaultAllocator: Allocator<T, D>
+    DefaultAllocator: Allocator<T, D>,
 {
     pub fn to_line(&self) -> Line<T, D> {
         let dir = &self.end - &self.start;
@@ -273,7 +273,7 @@ pub struct Line<T, D>
 where
     T: Scalar,
     D: DimName,
-    DefaultAllocator: Allocator<T, D>
+    DefaultAllocator: Allocator<T, D>,
 {
     point: OPoint<T, D>,
     dir: OVector<T, D>,
@@ -286,7 +286,7 @@ impl<T, D> Line<T, D>
 where
     T: Scalar,
     D: DimName,
-    DefaultAllocator: Allocator<T, D>
+    DefaultAllocator: Allocator<T, D>,
 {
     pub fn from_point_and_dir(point: OPoint<T, D>, dir: OVector<T, D>) -> Self {
         // TODO: Make dir Unit?
@@ -306,7 +306,7 @@ impl<T, D> Line<T, D>
 where
     T: RealField,
     D: DimName,
-    DefaultAllocator: Allocator<T, D>
+    DefaultAllocator: Allocator<T, D>,
 {
     /// A normalized vector tangent to the line.
     pub fn tangent(&self) -> OVector<T, D> {
@@ -425,7 +425,6 @@ where
         // that the line is entirely contained in the plane. However, this is so extremely
         // unlikely to be the case in the presence of floating-point arithmetic, that we
         // consider it never to be the case
-        (d_dot_n != T::zero())
-            .then(|| - b.dot(&n) / d_dot_n)
+        (d_dot_n != T::zero()).then(|| -b.dot(&n) / d_dot_n)
     }
 }

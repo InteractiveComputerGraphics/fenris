@@ -25,7 +25,7 @@ where
     pub fn flipped(&self) -> Self {
         Self {
             point: self.point.clone(),
-            normal: Unit::new_unchecked(-self.normal.into_inner())
+            normal: Unit::new_unchecked(-self.normal.into_inner()),
         }
     }
 

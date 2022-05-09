@@ -11,13 +11,10 @@ pub fn compute_orthonormal_vectors_3d<T: RealField>(vector: &UnitVector3<T>) -> 
     let b = v.x * v.y * a;
 
     [
-        Vector3::new(
-            T::one() + sign * v.x * v.x * a,
-            sign * b,
-            -sign * v.x,
-        ),
+        Vector3::new(T::one() + sign * v.x * v.x * a, sign * b, -sign * v.x),
         Vector3::new(b, sign + v.y * v.y * a, -v.y),
-    ].map(UnitVector3::new_unchecked)
+    ]
+    .map(UnitVector3::new_unchecked)
 }
 
 /// Compares two arrays for *shift-invariant* equality with the given comparator function.

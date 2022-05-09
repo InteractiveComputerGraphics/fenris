@@ -6,11 +6,11 @@ mod polytope;
 mod primitives;
 mod util;
 
+use ::util::assert_panics;
 use fenris_geometry::{assert_line_segments_approx_equal, LineSegment2d};
 use nalgebra::point;
 use proptest::collection::{hash_set, vec};
 use proptest::prelude::*;
-use ::util::assert_panics;
 
 use fenris_geometry::util::slices_are_equal_shift_invariant;
 

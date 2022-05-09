@@ -1,4 +1,4 @@
-use crate::{SimplePolygon2d, HalfPlane, Line2d, LineSegment2d, Triangle, Triangle2d};
+use crate::{HalfPlane, Line2d, LineSegment2d, SimplePolygon2d, Triangle, Triangle2d};
 use itertools::Itertools;
 use nalgebra::{Point2, RealField, Scalar, Unit, Vector2};
 

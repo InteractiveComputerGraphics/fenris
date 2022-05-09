@@ -1,9 +1,14 @@
-use crate::{AxisAlignedBoundingBox, BoundedGeometry, Convex, Distance, HalfSpace, LineSegment2d, LineSegment3d, Orientation, Triangle};
+use crate::{
+    AxisAlignedBoundingBox, BoundedGeometry, Convex, Distance, HalfSpace, LineSegment2d, LineSegment3d, Orientation,
+    Triangle,
+};
 use itertools::{izip, Itertools};
-use nalgebra::{Point2, RealField, Scalar, Vector2, U2, DimName, DefaultAllocator, OPoint, U3, clamp, Vector3, Point3, Isometry3};
+use nalgebra::allocator::Allocator;
+use nalgebra::{
+    clamp, DefaultAllocator, DimName, Isometry3, OPoint, Point2, Point3, RealField, Scalar, Vector2, Vector3, U2, U3,
+};
 use serde::{Deserialize, Serialize};
 use std::iter::once;
-use nalgebra::allocator::Allocator;
 
 use numeric_literals::replace_float_literals;
 
@@ -14,7 +19,7 @@ pub struct SimplePolygon<T, D>
 where
     T: Scalar,
     D: DimName,
-    DefaultAllocator: Allocator<T, D>
+    DefaultAllocator: Allocator<T, D>,
 {
     vertices: Vec<OPoint<T, D>>,
 }
@@ -166,7 +171,7 @@ where
         let vertices = self.vertices();
         let n = vertices.len();
         let mut area = T::zero();
-        for i in 0 .. n {
+        for i in 0..n {
             let a = &vertices[(i + 0) % n].coords;
             let b = &vertices[(i + 1) % n].coords;
             area += (b.y - a.y) * (b.x + a.x);
@@ -193,7 +198,7 @@ impl<T, D> SimplePolygon<T, D>
 where
     T: Scalar,
     D: DimName,
-    DefaultAllocator: Allocator<T, D>
+    DefaultAllocator: Allocator<T, D>,
 {
     pub fn from_vertices(vertices: Vec<OPoint<T, D>>) -> Self {
         Self { vertices }
@@ -204,8 +209,8 @@ where
     }
 
     pub fn transform_vertices<F>(&mut self, mut transform: F)
-        where
-            F: FnMut(&mut [OPoint<T, D>]),
+    where
+        F: FnMut(&mut [OPoint<T, D>]),
     {
         transform(&mut self.vertices)
 
@@ -230,7 +235,8 @@ impl<T: RealField> SimplePolygon2d<T> {
     ///
     /// Each 2D vertex is implicitly assumed to have z coordinate 0.
     pub fn apply_isometry(&self, similarity: &Isometry3<T>) -> SimplePolygon3d<T> {
-        let vertices = self.vertices()
+        let vertices = self
+            .vertices()
             .iter()
             .map(|v| similarity * Point3::new(v.x, v.y, T::zero()))
             .collect();
@@ -238,14 +244,13 @@ impl<T: RealField> SimplePolygon2d<T> {
     }
 }
 
-impl<T: RealField> SimplePolygon3d<T>
-{
+impl<T: RealField> SimplePolygon3d<T> {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     pub fn area_vector(&self) -> Vector3<T> {
         let vertices = self.vertices();
         let n = vertices.len();
         let mut area = Vector3::zeros();
-        for i in 0 .. n {
+        for i in 0..n {
             let v_curr = &vertices[(i + 0) % n].coords;
             let v_next = &vertices[(i + 1) % n].coords;
             area += v_curr.cross(&v_next);
@@ -286,7 +291,8 @@ impl<T: RealField> SimplePolygon3d<T>
                 // That way, even though its placement may be inaccurate, we at least
                 // are doing the topologically-speaking right thing with respect to
                 // the fact that either a or b is contained in the half-space
-                let t = segment.to_line()
+                let t = segment
+                    .to_line()
                     .intersect_plane_parametric(&plane)
                     .map(|t| clamp(t, T::zero(), T::one()))
                     .unwrap_or(T::zero());
@@ -297,7 +303,6 @@ impl<T: RealField> SimplePolygon3d<T>
         Self::from_vertices(new_vertices)
     }
 }
-
 
 impl<T> SimplePolygon2d<T>
 where
@@ -362,7 +367,7 @@ impl<T, D> BoundedGeometry<T> for SimplePolygon<T, D>
 where
     T: RealField,
     D: DimName,
-    DefaultAllocator: Allocator<T, D>
+    DefaultAllocator: Allocator<T, D>,
 {
     type Dimension = D;
 
@@ -395,12 +400,13 @@ where
         let n = polygon.vertices().len();
         let p = point;
 
-        (0 .. n)
+        (0..n)
             .map(|i| {
                 let a = polygon.vertices()[(i + 0) % n].clone();
                 let b = polygon.vertices()[(i + 1) % n].clone();
                 Triangle([p.clone(), a, b])
-            }).collect()
+            })
+            .collect()
     }
 
     /// Triangulates the convex polygon by creating a triangle fan starting from its
@@ -414,11 +420,12 @@ where
 
         let p = polygon.vertices().first().unwrap();
 
-        (1 .. (n - 1))
+        (1..(n - 1))
             .map(|i| {
                 let a = polygon.vertices()[(i + 0) % n].clone();
                 let b = polygon.vertices()[(i + 1) % n].clone();
                 Triangle([p.clone(), a, b])
-            }).collect()
+            })
+            .collect()
     }
 }

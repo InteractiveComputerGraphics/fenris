@@ -1,19 +1,19 @@
-use fenris_geometry::{SimplePolygon2d, LineSegment2d, Polygon2d, SimplePolygon3d, HalfSpace, Triangle};
+use fenris_geometry::{HalfSpace, LineSegment2d, Polygon2d, SimplePolygon2d, SimplePolygon3d, Triangle};
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
-use nalgebra::{clamp, Isometry3, point, Point2, Point3, vector, Vector2, Vector3};
+use nalgebra::{clamp, point, vector, Isometry3, Point2, Point3, Vector2, Vector3};
 
-use std::f64;
-use std::f64::consts::PI;
-use std::fs::create_dir_all;
-use std::path::Path;
+use fenris::eyre;
+use fenris::vtkio::model::{ByteOrder, DataSet, PolyDataPiece, Version, VertexNumbers};
+use fenris::vtkio::Vtk;
 use itertools::izip;
 use rand::distributions::{Distribution, Standard};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
-use rand_distr::{Normal};
-use fenris::eyre;
-use fenris::vtkio::model::{ByteOrder, DataSet, PolyDataPiece, Version, VertexNumbers};
-use fenris::vtkio::Vtk;
+use rand_distr::Normal;
+use std::f64;
+use std::f64::consts::PI;
+use std::fs::create_dir_all;
+use std::path::Path;
 use util::assert_approx_matrix_eq;
 
 #[test]
@@ -179,7 +179,7 @@ fn simple_polygon_3d_area_simple_example() {
         let poly = SimplePolygon3d::from_vertices(vec![
             point![0.0, 0.0, 0.0],
             point![1.0, 0.0, 0.0],
-            point![0.0, 1.0, 0.0]
+            point![0.0, 1.0, 0.0],
         ]);
         assert_matrix_eq!(poly.area_vector(), 0.5 * Vector3::z());
     }
@@ -195,28 +195,27 @@ fn simple_polygon_3d_area_simple_example() {
         let expected_area = 1.0 / f64::sqrt(2.0);
         let expected_normal = vector![1.0, 0.0, -1.0].normalize();
         assert_scalar_eq!(poly.area(), expected_area, comp = abs, tol = 1e-14);
-        assert_matrix_eq!(poly.area_vector(), expected_area * expected_normal, comp = abs, tol = 1e-14);
+        assert_matrix_eq!(
+            poly.area_vector(),
+            expected_area * expected_normal,
+            comp = abs,
+            tol = 1e-14
+        );
     }
 }
 
 #[test]
 fn simple_polygon_3d_convex_triangulate_at_point() {
-    let [a, b, c, d] = [
-        point![ 1.0, 1.0 ],
-        point![ 2.0, 1.0],
-        point![ 3.0, 2.0 ],
-        point![ 0.0, 5.0 ],
-    ];
+    let [a, b, c, d] = [point![1.0, 1.0], point![2.0, 1.0], point![3.0, 2.0], point![0.0, 5.0]];
     let p = point![1.0, 2.0];
     let polygon = SimplePolygon2d::from_vertices(vec![a, b, c, d]);
-    let triangles = polygon.assume_convex()
-        .triangulate_at_point(&p);
+    let triangles = polygon.assume_convex().triangulate_at_point(&p);
 
     let expected_triangles = vec![
         Triangle([p, a, b]),
         Triangle([p, b, c]),
         Triangle([p, c, d]),
-        Triangle([p, d, a])
+        Triangle([p, d, a]),
     ];
 
     assert_eq!(triangles, expected_triangles);
@@ -224,19 +223,11 @@ fn simple_polygon_3d_convex_triangulate_at_point() {
 
 #[test]
 fn simple_polygon_3d_convex_triangulate() {
-    let [a, b, c, d] = [
-        point![ 1.0, 1.0 ],
-        point![ 2.0, 1.0],
-        point![ 3.0, 2.0 ],
-        point![ 0.0, 5.0 ],
-    ];
+    let [a, b, c, d] = [point![1.0, 1.0], point![2.0, 1.0], point![3.0, 2.0], point![0.0, 5.0]];
     let polygon = SimplePolygon2d::from_vertices(vec![a, b, c, d]);
     let triangles = polygon.assume_convex().triangulate();
 
-    let expected_triangles = vec![
-        Triangle([a, b, c]),
-        Triangle([a, c, d]),
-    ];
+    let expected_triangles = vec![Triangle([a, b, c]), Triangle([a, c, d])];
 
     assert_eq!(triangles, expected_triangles);
 }
@@ -247,7 +238,7 @@ fn simple_polygon_3d_area_vector_random_examples() {
     let mut rng = ChaCha8Rng::seed_from_u64(2094583429058094235);
     let num_polygons = 200;
 
-    for i in 0 .. num_polygons {
+    for i in 0..num_polygons {
         let poly2d = generate_random_simple_polygon_2d(&mut rng);
         let expected_area = poly2d.area();
 
@@ -285,7 +276,7 @@ fn simple_polygon_3d_intersect_half_space() {
     // TODO: This test is far from complete. Currently it only checks that area checks out,
     // but this is not at all sufficient...
 
-    for i in 0 .. num_polygons {
+    for i in 0..num_polygons {
         let polygon = generate_random_simple_polygon_3d(&mut rng);
 
         let halfspace = HalfSpace::from_point_and_normal(Point3::origin(), Vector3::x_axis());
@@ -306,17 +297,25 @@ fn simple_polygon_3d_intersect_half_space() {
             export_simple_polygon_3d_vtk(complement_path, &complement).unwrap();
         }
 
-        assert_scalar_eq!(intersection.area() + complement.area(), polygon.area(),
-            comp = abs, tol = tol);
-        assert_matrix_eq!(intersection.area_vector() + complement.area_vector(), polygon.area_vector(),
-            comp = abs, tol = tol);
+        assert_scalar_eq!(
+            intersection.area() + complement.area(),
+            polygon.area(),
+            comp = abs,
+            tol = tol
+        );
+        assert_matrix_eq!(
+            intersection.area_vector() + complement.area_vector(),
+            polygon.area_vector(),
+            comp = abs,
+            tol = tol
+        );
     }
 }
 
 fn generate_random_simple_polygon_2d(rng: &mut impl Rng) -> SimplePolygon2d<f64> {
     // Only capable of generating star-shaped polygons
     let n_max = 20;
-    let n = rng.gen_range(3 .. n_max);
+    let n = rng.gen_range(3..n_max);
 
     let mut r_values = vec![0.0];
     let mut theta_values = vec![0.0];
@@ -325,17 +324,17 @@ fn generate_random_simple_polygon_2d(rng: &mut impl Rng) -> SimplePolygon2d<f64>
     let std_dev = delta_mean / 2.0;
     let delta_dist = Normal::new(delta_mean, std_dev).unwrap();
 
-    for i in 1 .. n {
+    for i in 1..n {
         let prev_theta = theta_values[i - 1];
         let delta = delta_dist.sample(rng);
         let delta = clamp(delta, 0.0, PI);
         let theta = f64::min(prev_theta + delta, 2.0 * PI);
         theta_values.push(theta);
-        r_values.push(rng.gen_range(0.0 .. 1.0));
+        r_values.push(rng.gen_range(0.0..1.0));
     }
 
     let vertices = izip!(r_values, theta_values)
-        .map(|(r, theta)| point![ r * theta.cos(), r * theta.sin() ])
+        .map(|(r, theta)| point![r * theta.cos(), r * theta.sin()])
         .collect();
 
     SimplePolygon2d::from_vertices(vertices)
@@ -343,8 +342,7 @@ fn generate_random_simple_polygon_2d(rng: &mut impl Rng) -> SimplePolygon2d<f64>
 
 fn generate_random_simple_polygon_3d(rng: &mut impl Rng) -> SimplePolygon3d<f64> {
     let isometry: Isometry3<f64> = Standard.sample(rng);
-    generate_random_simple_polygon_2d(rng)
-        .apply_isometry(&isometry)
+    generate_random_simple_polygon_2d(rng).apply_isometry(&isometry)
 }
 
 fn simple_polygon_3d_vtk_data_set(polygon: &SimplePolygon3d<f64>) -> DataSet {
@@ -370,21 +368,20 @@ fn simple_polygon_3d_vtk_data_set(polygon: &SimplePolygon3d<f64>) -> DataSet {
         verts: None,
         lines: Some(VertexNumbers::XML {
             connectivity: connectivity.clone(),
-            offsets: lines_offsets
+            offsets: lines_offsets,
         }),
         polys: Some(VertexNumbers::XML {
             connectivity,
-            offsets: poly_offsets
+            offsets: poly_offsets,
         }),
         strips: None,
-        data: Default::default()
+        data: Default::default(),
     };
 
     DataSet::from(piece)
 }
 
-fn export_simple_polygon_3d_vtk(path: impl AsRef<Path>, polygon: &SimplePolygon3d<f64>)
-    -> eyre::Result<()> {
+fn export_simple_polygon_3d_vtk(path: impl AsRef<Path>, polygon: &SimplePolygon3d<f64>) -> eyre::Result<()> {
     let path = path.as_ref();
     let data_set = simple_polygon_3d_vtk_data_set(polygon);
 
@@ -397,14 +394,18 @@ fn export_simple_polygon_3d_vtk(path: impl AsRef<Path>, polygon: &SimplePolygon3
         title: "Polygon".to_string(),
         byte_order: ByteOrder::BigEndian,
         data: data_set,
-        file_path: None
-    }.export(path)?;
+        file_path: None,
+    }
+    .export(path)?;
 
     Ok(())
 }
 
 fn export_half_space_vtk(path: impl AsRef<Path>, half_space: &HalfSpace<f64>) -> eyre::Result<()> {
-    let [t1, t2] = half_space.plane().compute_tangent_vectors().map(|t| t.into_inner());
+    let [t1, t2] = half_space
+        .plane()
+        .compute_tangent_vectors()
+        .map(|t| t.into_inner());
     let p = half_space.point();
     let e = 5.0;
     let corners = vec![
