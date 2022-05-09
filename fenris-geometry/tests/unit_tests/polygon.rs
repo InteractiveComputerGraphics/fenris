@@ -9,7 +9,7 @@ use std::path::Path;
 use itertools::izip;
 use rand::distributions::{Distribution, Standard};
 use rand::{Rng, SeedableRng};
-use rand::rngs::{StdRng};
+use rand_chacha::ChaCha8Rng;
 use rand_distr::{Normal};
 use fenris::eyre;
 use fenris::vtkio::model::{ByteOrder, DataSet, PolyDataPiece, Version, VertexNumbers};
@@ -202,8 +202,7 @@ fn simple_polygon_3d_area_simple_example() {
 #[test]
 fn simple_polygon_3d_area_vector_random_examples() {
     let dir = Path::new("output/tests/geometry/polygon/area_vector/");
-    // TODO: Use reliable rng
-    let mut rng = StdRng::seed_from_u64(2094583429058094235);
+    let mut rng = ChaCha8Rng::seed_from_u64(2094583429058094235);
     let num_polygons = 200;
 
     for i in 0 .. num_polygons {
@@ -235,26 +234,40 @@ fn simple_polygon_3d_area_vector_random_examples() {
 
 #[test]
 fn simple_polygon_3d_intersect_half_space() {
-    // TODO: Need a way to automatically test this!
-    let mut rng = StdRng::seed_from_u64(2094583429058094235);
+    let mut rng = ChaCha8Rng::seed_from_u64(2094583429058094235);
     let num_polygons = 200;
+
+    // Area should be on the order of 1, so we should be able to use an abs tolerance here
+    let tol = 1e-14;
+
+    // TODO: This test is far from complete. Currently it only checks that area checks out,
+    // but this is not at all sufficient...
+
     for i in 0 .. num_polygons {
-        let mut polygon = generate_random_simple_polygon_3d(&mut rng);
+        let polygon = generate_random_simple_polygon_3d(&mut rng);
+
         let halfspace = HalfSpace::from_point_and_normal(Point3::origin(), Vector3::x_axis());
-        polygon.intersect_half_space(&halfspace);
+        let intersection = polygon.intersect_half_space(&halfspace);
+        let complement = polygon.intersect_half_space(&halfspace.complement());
 
         // Only export the first 200 samples, in order to avoid filling up our hard drive
         // for larger sample numbers
         if i < 200 {
-            let dir = Path::new("output/tests/geometry/polygon/temp/");
-            let filename = format!("polygon_{i}.vtk");
-            let polygon_path = dir.join(filename);
+            let dir = Path::new("output/tests/geometry/polygon/intersect_half_space/");
+            let polygon_path = dir.join(format!("polygon_{i}.vtk"));
             let halfspace_path = dir.join(format!("halfspace_{i}.vtk"));
-            let intersection_path = dir.join(format!("polygon_intersection_{i}.vtk"));
+            let intersection_path = dir.join(format!("intersection_{i}.vtk"));
+            let complement_path = dir.join(format!("complement_{i}.vtk"));
             export_simple_polygon_3d_vtk(polygon_path, &polygon).unwrap();
             export_half_space_vtk(halfspace_path, &halfspace).unwrap();
-            export_simple_polygon_3d_vtk(intersection_path, &polygon).unwrap();
+            export_simple_polygon_3d_vtk(intersection_path, &intersection).unwrap();
+            export_simple_polygon_3d_vtk(complement_path, &complement).unwrap();
         }
+
+        assert_scalar_eq!(intersection.area() + complement.area(), polygon.area(),
+            comp = abs, tol = tol);
+        assert_matrix_eq!(intersection.area_vector() + complement.area_vector(), polygon.area_vector(),
+            comp = abs, tol = tol);
     }
 }
 
@@ -343,7 +356,7 @@ fn export_simple_polygon_3d_vtk(path: impl AsRef<Path>, polygon: &SimplePolygon3
         byte_order: ByteOrder::BigEndian,
         data: data_set,
         file_path: None
-    }.export_ascii(path)?;
+    }.export(path)?;
 
     Ok(())
 }

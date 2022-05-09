@@ -52,6 +52,10 @@ where
     pub fn normal(&self) -> &OVector<T, D> {
         &self.normal
     }
+
+    pub fn complement(&self) -> Self {
+        Self::from_point_and_normal(self.point.clone(), -self.normal.clone())
+    }
 }
 
 impl<T> HalfSpace<T>

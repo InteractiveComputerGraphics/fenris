@@ -253,11 +253,7 @@ impl<T: RealField> SimplePolygon3d<T>
         self.area_vector().norm()
     }
 
-    pub fn intersect_half_space(&mut self, half_space: &HalfSpace<T>) {
-        // TODO: Do this without allocating a new vector!
-        // For example, we can push new vertices to the end of the current vector
-        // and finally overwrite the original vertices and resize the vector
-
+    pub fn intersect_half_space(&self, half_space: &HalfSpace<T>) -> SimplePolygon3d<T> {
         let mut new_vertices = Vec::new();
 
         let n = self.vertices().len();
@@ -294,8 +290,7 @@ impl<T: RealField> SimplePolygon3d<T>
             }
         }
 
-        self.vertices.clear();
-        self.vertices.extend_from_slice(&new_vertices);
+        Self::from_vertices(new_vertices)
     }
 }
 
