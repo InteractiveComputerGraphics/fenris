@@ -1,6 +1,6 @@
 use crate::{AxisAlignedBoundingBox, BoundedGeometry, Distance, HalfSpace, LineSegment2d, LineSegment3d, Orientation};
 use itertools::{izip, Itertools};
-use nalgebra::{Point2, RealField, Scalar, Vector2, U2, DimName, DefaultAllocator, OPoint, U3, clamp};
+use nalgebra::{Point2, RealField, Scalar, Vector2, U2, DimName, DefaultAllocator, OPoint, U3, clamp, Vector3, Point3, Isometry3};
 use serde::{Deserialize, Serialize};
 use std::iter::once;
 use nalgebra::allocator::Allocator;
@@ -163,15 +163,15 @@ where
         // See e.g.
         //  https://math.blogoverflow.com/2014/06/04/greens-theorem-and-area-of-polygons/
         // for details.
-        let two_times_signed_area = (0..self.num_edges())
-            .map(|edge_idx| self.get_edge(edge_idx).unwrap())
-            .map(|segment| {
-                let a = segment.start();
-                let b = segment.end();
-                (b.y - a.y) * (b.x + a.x)
-            })
-            .fold(T::zero(), |sum, contrib| sum + contrib);
-        two_times_signed_area / 2.0
+        let vertices = self.vertices();
+        let n = vertices.len();
+        let mut area = T::zero();
+        for i in 0 .. n {
+            let a = &vertices[(i + 0) % n].coords;
+            let b = &vertices[(i + 1) % n].coords;
+            area += (b.y - a.y) * (b.x + a.x);
+        }
+        area * 0.5
     }
 
     /// Computes the area of the (simple) polygon.
@@ -221,10 +221,38 @@ where
     }
 }
 
-impl<T> SimplePolygon3d<T>
-where
-    T: RealField
+impl<T: RealField> SimplePolygon2d<T> {
+    /// Apply a similarity transform in order to construct a 3D simple polygon.
+    ///
+    /// Each 2D vertex is implicitly assumed to have z coordinate 0.
+    pub fn apply_isometry(&self, similarity: &Isometry3<T>) -> SimplePolygon3d<T> {
+        let vertices = self.vertices()
+            .iter()
+            .map(|v| similarity * Point3::new(v.x, v.y, T::zero()))
+            .collect();
+        SimplePolygon3d::from_vertices(vertices)
+    }
+}
+
+impl<T: RealField> SimplePolygon3d<T>
 {
+    #[replace_float_literals(T::from_f64(literal).unwrap())]
+    pub fn area_vector(&self) -> Vector3<T> {
+        let vertices = self.vertices();
+        let n = vertices.len();
+        let mut area = Vector3::zeros();
+        for i in 0 .. n {
+            let v_curr = &vertices[(i + 0) % n].coords;
+            let v_next = &vertices[(i + 1) % n].coords;
+            area += v_curr.cross(&v_next);
+        }
+        area * 0.5
+    }
+
+    pub fn area(&self) -> T {
+        self.area_vector().norm()
+    }
+
     pub fn intersect_half_space(&mut self, half_space: &HalfSpace<T>) {
         // TODO: Do this without allocating a new vector!
         // For example, we can push new vertices to the end of the current vector

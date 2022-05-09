@@ -1,4 +1,4 @@
-use nalgebra::{Point3, RealField, Scalar, Unit, Vector3};
+use nalgebra::{Point3, RealField, Scalar, Unit, UnitVector3, Vector3};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Plane<T: Scalar> {
@@ -27,5 +27,9 @@ where
             point: self.point.clone(),
             normal: Unit::new_unchecked(-self.normal.into_inner())
         }
+    }
+
+    pub fn compute_tangent_vectors(&self) -> [UnitVector3<T>; 2] {
+        crate::util::compute_orthonormal_vectors_3d(self.normal())
     }
 }
