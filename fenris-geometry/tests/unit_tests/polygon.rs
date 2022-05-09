@@ -1,4 +1,4 @@
-use fenris_geometry::{SimplePolygon2d, LineSegment2d, Polygon2d, SimplePolygon3d, HalfSpace};
+use fenris_geometry::{SimplePolygon2d, LineSegment2d, Polygon2d, SimplePolygon3d, HalfSpace, Triangle};
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
 use nalgebra::{clamp, Isometry3, point, Point2, Point3, vector, Vector2, Vector3};
 
@@ -197,6 +197,48 @@ fn simple_polygon_3d_area_simple_example() {
         assert_scalar_eq!(poly.area(), expected_area, comp = abs, tol = 1e-14);
         assert_matrix_eq!(poly.area_vector(), expected_area * expected_normal, comp = abs, tol = 1e-14);
     }
+}
+
+#[test]
+fn simple_polygon_3d_convex_triangulate_at_point() {
+    let [a, b, c, d] = [
+        point![ 1.0, 1.0 ],
+        point![ 2.0, 1.0],
+        point![ 3.0, 2.0 ],
+        point![ 0.0, 5.0 ],
+    ];
+    let p = point![1.0, 2.0];
+    let polygon = SimplePolygon2d::from_vertices(vec![a, b, c, d]);
+    let triangles = polygon.assume_convex()
+        .triangulate_at_point(&p);
+
+    let expected_triangles = vec![
+        Triangle([p, a, b]),
+        Triangle([p, b, c]),
+        Triangle([p, c, d]),
+        Triangle([p, d, a])
+    ];
+
+    assert_eq!(triangles, expected_triangles);
+}
+
+#[test]
+fn simple_polygon_3d_convex_triangulate() {
+    let [a, b, c, d] = [
+        point![ 1.0, 1.0 ],
+        point![ 2.0, 1.0],
+        point![ 3.0, 2.0 ],
+        point![ 0.0, 5.0 ],
+    ];
+    let polygon = SimplePolygon2d::from_vertices(vec![a, b, c, d]);
+    let triangles = polygon.assume_convex().triangulate();
+
+    let expected_triangles = vec![
+        Triangle([a, b, c]),
+        Triangle([a, c, d]),
+    ];
+
+    assert_eq!(triangles, expected_triangles);
 }
 
 #[test]

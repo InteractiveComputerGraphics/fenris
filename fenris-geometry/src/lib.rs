@@ -622,3 +622,13 @@ where
         }
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct Convex<T>(pub T);
+
+impl<T> Convex<T> {
+    pub fn assume_convex(obj: T) -> Self {
+        Self(obj)
+    }
+}

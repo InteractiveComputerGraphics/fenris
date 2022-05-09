@@ -1,4 +1,4 @@
-use crate::{AxisAlignedBoundingBox, BoundedGeometry, Distance, HalfSpace, LineSegment2d, LineSegment3d, Orientation};
+use crate::{AxisAlignedBoundingBox, BoundedGeometry, Convex, Distance, HalfSpace, LineSegment2d, LineSegment3d, Orientation, Triangle};
 use itertools::{izip, Itertools};
 use nalgebra::{Point2, RealField, Scalar, Vector2, U2, DimName, DefaultAllocator, OPoint, U3, clamp, Vector3, Point3, Isometry3};
 use serde::{Deserialize, Serialize};
@@ -219,6 +219,10 @@ where
     pub fn num_edges(&self) -> usize {
         self.vertices.len()
     }
+
+    pub fn assume_convex(&self) -> Convex<&Self> {
+        Convex::assume_convex(self)
+    }
 }
 
 impl<T: RealField> SimplePolygon2d<T> {
@@ -376,5 +380,45 @@ where
             .closest_edge(point)
             .expect("We don't support empty polygons at the moment (do we want to?)");
         T::max(closest_edge.signed_distance, T::zero())
+    }
+}
+
+impl<'a, T, D> Convex<&'a SimplePolygon<T, D>>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>,
+{
+    /// Triangulates the convex polygon by connecting the provided point with each edge.
+    pub fn triangulate_at_point(&self, point: &OPoint<T, D>) -> Vec<Triangle<T, D>> {
+        let Self(polygon) = self;
+        let n = polygon.vertices().len();
+        let p = point;
+
+        (0 .. n)
+            .map(|i| {
+                let a = polygon.vertices()[(i + 0) % n].clone();
+                let b = polygon.vertices()[(i + 1) % n].clone();
+                Triangle([p.clone(), a, b])
+            }).collect()
+    }
+
+    /// Triangulates the convex polygon by creating a triangle fan starting from its
+    /// first vertex.
+    pub fn triangulate(&self) -> Vec<Triangle<T, D>> {
+        let Self(polygon) = self;
+        let n = polygon.vertices().len();
+        if n == 0 {
+            return Vec::default();
+        }
+
+        let p = polygon.vertices().first().unwrap();
+
+        (1 .. (n - 1))
+            .map(|i| {
+                let a = polygon.vertices()[(i + 0) % n].clone();
+                let b = polygon.vertices()[(i + 1) % n].clone();
+                Triangle([p.clone(), a, b])
+            }).collect()
     }
 }
