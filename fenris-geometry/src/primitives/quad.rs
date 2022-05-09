@@ -1,5 +1,5 @@
 use crate::{
-    AxisAlignedBoundingBox2d, BoundedGeometry, ConvexPolygon3d, Distance, GeneralPolygon, Triangle, Triangle2d,
+    AxisAlignedBoundingBox2d, BoundedGeometry, ConvexPolygon3d, Distance, SimplePolygon2d, Triangle, Triangle2d,
 };
 use itertools::izip;
 use nalgebra::{Point2, Point3, RealField, Scalar, U2};
@@ -117,6 +117,6 @@ where
 {
     fn distance(&self, point: &Point2<T>) -> T {
         // TODO: Avoid heap allocation
-        GeneralPolygon::from_vertices(self.0.to_vec()).distance(point)
+        SimplePolygon2d::from_vertices(self.0.to_vec()).distance(point)
     }
 }

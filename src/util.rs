@@ -18,6 +18,7 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
 
+pub use fenris_geometry::util::compute_orthonormal_vectors_3d;
 pub use fenris_nested_vec::*;
 
 use crate::allocators::{BiDimAllocator, DimAllocator};

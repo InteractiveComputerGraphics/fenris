@@ -564,7 +564,8 @@ where
         let mut mesh = self.clone();
         for i in 0..polyhedron.num_faces() {
             let face = polyhedron.get_face(i).unwrap();
-            if let Some(half_space) = face.compute_half_space() {
+            if let Some(plane) = face.compute_plane() {
+                let half_space = HalfSpace::from_plane(&plane.flipped());
                 mesh = mesh.intersect_half_space(&half_space);
             }
         }
@@ -712,7 +713,7 @@ where
             } else {
                 let v_a = self.vertices[a];
                 let v_b = self.vertices[b];
-                let segment = LineSegment3d::from_end_points([v_a, v_b]);
+                let segment = LineSegment3d::from_end_points(v_a, v_b);
                 segment.closest_point_to_plane(&half_space.plane())
             };
             final_vertices[*new_vertex_idx] = vertex_coords;

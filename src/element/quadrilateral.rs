@@ -174,7 +174,7 @@ where
     T: RealField,
 {
     fn from(quad4: &'a Quad4d2Element<T>) -> Self {
-        let midpoint = |a: &Point2<_>, b: &Point2<_>| LineSegment2d::new(a.clone(), b.clone()).midpoint();
+        let midpoint = |a: &Point2<_>, b: &Point2<_>| LineSegment2d::from_end_points(a.clone(), b.clone()).midpoint();
 
         let quad4_v = &quad4.vertices;
         let mut vertices = [Point2::origin(); 9];

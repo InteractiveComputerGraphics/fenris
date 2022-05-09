@@ -159,7 +159,7 @@ where
     fn cell(&self, vertices: &[Point2<T>]) -> Option<Self::Cell> {
         let a = vertices.get(self.0[0]).cloned()?;
         let b = vertices.get(self.0[1]).cloned()?;
-        Some(LineSegment2d::new(a, b))
+        Some(LineSegment2d::from_end_points(a, b))
     }
 }
 

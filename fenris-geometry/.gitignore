@@ -1,0 +1,2 @@
+# Output directory is used for dumping files for debugging from tests
+output/

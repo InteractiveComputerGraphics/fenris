@@ -214,8 +214,8 @@ fn triangulate() {
 
 #[test]
 fn line_segment_intersect_segment_parametric() {
-    let segment1 = LineSegment2d::new(Point2::new(2.0, 3.0), Point2::new(3.0, 0.0));
-    let segment2 = LineSegment2d::new(Point2::new(3.0, 1.0), Point2::new(3.0, 4.0));
+    let segment1 = LineSegment2d::from_end_points(Point2::new(2.0, 3.0), Point2::new(3.0, 0.0));
+    let segment2 = LineSegment2d::from_end_points(Point2::new(3.0, 1.0), Point2::new(3.0, 4.0));
     assert_eq!(segment1.intersect_segment_parametric(&segment2), None);
 }
 
@@ -224,7 +224,7 @@ fn line_segment_intersect_half_plane() {
     let a = point![1.0, 2.0];
     let b = point![2.0, 1.0];
     let intersection_point = point![1.6, 1.4];
-    let segment = LineSegment2d::new(a, b);
+    let segment = LineSegment2d::from_end_points(a, b);
     let half_plane = {
         let half_plane_point = point![1.0, 1.0];
         let normal = Unit::new_normalize(vector![-0.8, 1.2]);
@@ -232,7 +232,7 @@ fn line_segment_intersect_half_plane() {
     };
 
     let intersection = segment.intersect_half_plane(&half_plane).unwrap();
-    let expected = LineSegment2d::new(b, intersection_point);
+    let expected = LineSegment2d::from_end_points(b, intersection_point);
     assert_line_segments_approx_equal!(intersection, expected, abstol = 1e-14);
 }
 
@@ -240,7 +240,7 @@ fn line_segment_intersect_half_plane() {
 fn line_segment_intersect_polygon() {
     let a = Point2::new(2.0, 3.0);
     let b = Point2::new(3.0, 0.0);
-    let segment = LineSegment2d::new(a, b);
+    let segment = LineSegment2d::from_end_points(a, b);
 
     let polygon = ConvexPolygon::from_vertices(vec![
         Point2::new(0.0, 1.0),
@@ -252,7 +252,7 @@ fn line_segment_intersect_polygon() {
     let result = segment
         .intersect_polygon(&polygon)
         .expect("Intersection is not empty");
-    let expected_intersection = LineSegment2d::new(Point2::new(2.0, 3.0), Point2::new(8.0 / 3.0, 1.0));
+    let expected_intersection = LineSegment2d::from_end_points(Point2::new(2.0, 3.0), Point2::new(8.0 / 3.0, 1.0));
     assert_line_segments_approx_equal!(result, expected_intersection, abstol = 1e-12);
 }
 
@@ -327,14 +327,14 @@ fn intersecting_line_segment_2d_and_half_plane() -> impl Strategy<Value = LineSe
             let x2 = x_i + alpha * (x_i - x1);
             // Randomly flip the order of vertices in the output in order to avoid bias in representation
             let output_segment = if should_flip {
-                LineSegment2d::new(*x_i, x1)
+                LineSegment2d::from_end_points(*x_i, x1)
             } else {
-                LineSegment2d::new(x1, *x_i)
+                LineSegment2d::from_end_points(x1, *x_i)
             };
 
             LineSegment2dHalfPlaneIntersection {
                 intersection_point: half_plane.point() + t_i * t,
-                input_segment: LineSegment2d::new(x1, x2),
+                input_segment: LineSegment2d::from_end_points(x1, x2),
                 output_segment,
                 half_plane,
             }
@@ -369,7 +369,7 @@ fn line_segment_2d_and_half_plane(
             let t = half_plane.surface().tangent();
             let x1 = x0 + alpha1 * t + beta1 * n;
             let x2 = x0 + alpha2 * t + beta2 * n;
-            let segment = LineSegment2d::new(x1, x2);
+            let segment = LineSegment2d::from_end_points(x1, x2);
             (segment, half_plane)
         },
     )

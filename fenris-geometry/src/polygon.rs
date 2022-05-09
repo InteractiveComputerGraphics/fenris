@@ -1,21 +1,31 @@
-use crate::{AxisAlignedBoundingBox2d, BoundedGeometry, Distance, LineSegment2d, Orientation};
+use crate::{
+    AxisAlignedBoundingBox, BoundedGeometry, Convex, Distance, HalfSpace, LineSegment2d, LineSegment3d, Orientation,
+    Triangle,
+};
 use itertools::{izip, Itertools};
-use nalgebra::{Point2, RealField, Scalar, Vector2, U2};
+use nalgebra::allocator::Allocator;
+use nalgebra::{
+    clamp, DefaultAllocator, DimName, Isometry3, OPoint, Point2, Point3, RealField, Scalar, Vector2, Vector3, U2, U3,
+};
 use serde::{Deserialize, Serialize};
 use std::iter::once;
 
 use numeric_literals::replace_float_literals;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(bound(serialize = "Point2<T>: Serialize"))]
-#[serde(bound(deserialize = "Point2<T>: Deserialize<'de>"))]
-pub struct GeneralPolygon<T>
+#[serde(bound(serialize = "OPoint<T, D>: Serialize"))]
+#[serde(bound(deserialize = "OPoint<T, D>: Deserialize<'de>"))]
+pub struct SimplePolygon<T, D>
 where
     T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>,
 {
-    vertices: Vec<Point2<T>>,
-    // TODO: Also use acceleration structure for fast queries?
+    vertices: Vec<OPoint<T, D>>,
 }
+
+pub type SimplePolygon2d<T> = SimplePolygon<T, U2>;
+pub type SimplePolygon3d<T> = SimplePolygon<T, U3>;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct ClosestEdge<T>
@@ -28,7 +38,7 @@ where
     pub edge_index: usize,
 }
 
-pub trait Polygon<T>
+pub trait Polygon2d<T>
 where
     T: RealField,
 {
@@ -158,15 +168,15 @@ where
         // See e.g.
         //  https://math.blogoverflow.com/2014/06/04/greens-theorem-and-area-of-polygons/
         // for details.
-        let two_times_signed_area = (0..self.num_edges())
-            .map(|edge_idx| self.get_edge(edge_idx).unwrap())
-            .map(|segment| {
-                let a = segment.start();
-                let b = segment.end();
-                (b.y - a.y) * (b.x + a.x)
-            })
-            .fold(T::zero(), |sum, contrib| sum + contrib);
-        two_times_signed_area / 2.0
+        let vertices = self.vertices();
+        let n = vertices.len();
+        let mut area = T::zero();
+        for i in 0..n {
+            let a = &vertices[(i + 0) % n].coords;
+            let b = &vertices[(i + 1) % n].coords;
+            area += (b.y - a.y) * (b.x + a.x);
+        }
+        area * 0.5
     }
 
     /// Computes the area of the (simple) polygon.
@@ -184,21 +194,23 @@ where
     }
 }
 
-impl<T> GeneralPolygon<T>
+impl<T, D> SimplePolygon<T, D>
 where
     T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>,
 {
-    pub fn from_vertices(vertices: Vec<Point2<T>>) -> Self {
+    pub fn from_vertices(vertices: Vec<OPoint<T, D>>) -> Self {
         Self { vertices }
     }
 
-    pub fn vertices(&self) -> &[Point2<T>] {
+    pub fn vertices(&self) -> &[OPoint<T, D>] {
         &self.vertices
     }
 
     pub fn transform_vertices<F>(&mut self, mut transform: F)
     where
-        F: FnMut(&mut [Point2<T>]),
+        F: FnMut(&mut [OPoint<T, D>]),
     {
         transform(&mut self.vertices)
 
@@ -213,33 +225,100 @@ where
         self.vertices.len()
     }
 
+    pub fn assume_convex(&self) -> Convex<&Self> {
+        Convex::assume_convex(self)
+    }
+}
+
+impl<T: RealField> SimplePolygon2d<T> {
+    /// Apply a similarity transform in order to construct a 3D simple polygon.
+    ///
+    /// Each 2D vertex is implicitly assumed to have z coordinate 0.
+    pub fn apply_isometry(&self, similarity: &Isometry3<T>) -> SimplePolygon3d<T> {
+        let vertices = self
+            .vertices()
+            .iter()
+            .map(|v| similarity * Point3::new(v.x, v.y, T::zero()))
+            .collect();
+        SimplePolygon3d::from_vertices(vertices)
+    }
+}
+
+impl<T: RealField> SimplePolygon3d<T> {
+    #[replace_float_literals(T::from_f64(literal).unwrap())]
+    pub fn area_vector(&self) -> Vector3<T> {
+        let vertices = self.vertices();
+        let n = vertices.len();
+        let mut area = Vector3::zeros();
+        for i in 0..n {
+            let v_curr = &vertices[(i + 0) % n].coords;
+            let v_next = &vertices[(i + 1) % n].coords;
+            area += v_curr.cross(&v_next);
+        }
+        area * 0.5
+    }
+
+    pub fn area(&self) -> T {
+        self.area_vector().norm()
+    }
+
+    pub fn intersect_half_space(&self, half_space: &HalfSpace<T>) -> SimplePolygon3d<T> {
+        let mut new_vertices = Vec::new();
+
+        let n = self.vertices().len();
+        let plane = half_space.plane();
+
+        for (a, b) in self.vertices().iter().cycle().take(n + 1).tuple_windows() {
+            let a_contained = half_space.contains_point(a);
+            let b_contained = half_space.contains_point(b);
+
+            if a_contained {
+                new_vertices.push(a.clone());
+            }
+
+            if a_contained != b_contained {
+                let segment = LineSegment3d::from_end_points(a.clone(), b.clone());
+                // The half space intersects the line segment between a and b,
+                // so must add the intersection point
+
+                // We're exceedingly unlikely to run into the case where there is no
+                // intersection, since we've already established that there *should*
+                // be an intersection on this edge. This can only happen due to a
+                // floating-point imprecision problem.
+                // To help prevent problems of a topological nature, we compute the
+                // intersection parameter for a *line* (not segment) and clamp the result
+                // to the [0, 1] interval in order to always produce some kind of vertex
+                // That way, even though its placement may be inaccurate, we at least
+                // are doing the topologically-speaking right thing with respect to
+                // the fact that either a or b is contained in the half-space
+                let t = segment
+                    .to_line()
+                    .intersect_plane_parametric(&plane)
+                    .map(|t| clamp(t, T::zero(), T::one()))
+                    .unwrap_or(T::zero());
+                new_vertices.push(segment.point_from_parameter(t));
+            }
+        }
+
+        Self::from_vertices(new_vertices)
+    }
+}
+
+impl<T> SimplePolygon2d<T>
+where
+    T: Scalar,
+{
     /// An iterator over edges as line segments
     pub fn edge_iter<'a>(&'a self) -> impl 'a + Iterator<Item = LineSegment2d<T>> {
         self.vertices
             .iter()
             .chain(once(self.vertices.first().unwrap()))
             .tuple_windows()
-            .map(|(a, b)| LineSegment2d::new(a.clone(), b.clone()))
+            .map(|(a, b)| LineSegment2d::from_end_points(a.clone(), b.clone()))
     }
 }
 
-impl<T> GeneralPolygon<T>
-where
-    T: RealField,
-{
-    /// Corrects the orientation of the polygon.
-    ///
-    /// The first vertex is guaranteed to be the same before and after the orientation
-    /// change.
-    pub fn orient(&mut self, desired_orientation: Orientation) {
-        if desired_orientation != self.orientation() {
-            self.vertices.reverse();
-            self.vertices.rotate_right(1);
-        }
-    }
-}
-
-impl<T> Polygon<T> for GeneralPolygon<T>
+impl<T> Polygon2d<T> for SimplePolygon2d<T>
 where
     T: RealField,
 {
@@ -254,7 +333,7 @@ where
     fn get_edge(&self, index: usize) -> Option<LineSegment2d<T>> {
         let a = self.vertices.get(index)?;
         let b = self.vertices.get((index + 1) % self.num_vertices())?;
-        Some(LineSegment2d::new(*a, *b))
+        Some(LineSegment2d::from_end_points(*a, *b))
     }
 
     #[replace_float_literals(T::from_f64(literal).unwrap())]
@@ -284,18 +363,20 @@ where
     }
 }
 
-impl<T> BoundedGeometry<T> for GeneralPolygon<T>
+impl<T, D> BoundedGeometry<T> for SimplePolygon<T, D>
 where
     T: RealField,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>,
 {
-    type Dimension = U2;
+    type Dimension = D;
 
-    fn bounding_box(&self) -> AxisAlignedBoundingBox2d<T> {
-        AxisAlignedBoundingBox2d::from_points(self.vertices()).expect("Vertex collection must be non-empty")
+    fn bounding_box(&self) -> AxisAlignedBoundingBox<T, D> {
+        AxisAlignedBoundingBox::from_points(self.vertices()).expect("Vertex collection must be non-empty")
     }
 }
 
-impl<T> Distance<T, Point2<T>> for GeneralPolygon<T>
+impl<T> Distance<T, Point2<T>> for SimplePolygon2d<T>
 where
     T: RealField,
 {
@@ -304,5 +385,47 @@ where
             .closest_edge(point)
             .expect("We don't support empty polygons at the moment (do we want to?)");
         T::max(closest_edge.signed_distance, T::zero())
+    }
+}
+
+impl<'a, T, D> Convex<&'a SimplePolygon<T, D>>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>,
+{
+    /// Triangulates the convex polygon by connecting the provided point with each edge.
+    pub fn triangulate_at_point(&self, point: &OPoint<T, D>) -> Vec<Triangle<T, D>> {
+        let Self(polygon) = self;
+        let n = polygon.vertices().len();
+        let p = point;
+
+        (0..n)
+            .map(|i| {
+                let a = polygon.vertices()[(i + 0) % n].clone();
+                let b = polygon.vertices()[(i + 1) % n].clone();
+                Triangle([p.clone(), a, b])
+            })
+            .collect()
+    }
+
+    /// Triangulates the convex polygon by creating a triangle fan starting from its
+    /// first vertex.
+    pub fn triangulate(&self) -> Vec<Triangle<T, D>> {
+        let Self(polygon) = self;
+        let n = polygon.vertices().len();
+        if n == 0 {
+            return Vec::default();
+        }
+
+        let p = polygon.vertices().first().unwrap();
+
+        (1..(n - 1))
+            .map(|i| {
+                let a = polygon.vertices()[(i + 0) % n].clone();
+                let b = polygon.vertices()[(i + 1) % n].clone();
+                Triangle([p.clone(), a, b])
+            })
+            .collect()
     }
 }

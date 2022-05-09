@@ -20,7 +20,10 @@ proptest = { version="1.0", optional = true }
 
 [dev-dependencies]
 fenris-geometry = { path = ".", features = [ "proptest-support" ] }
-nalgebra = { version = "0.28", features = [ "compare" ]}
+nalgebra = { version = "0.28", features = [ "compare", "rand" ]}
 matrixcompare = { version="0.3", features = ["proptest-support"] }
 util = { path="../util" }
 fenris = { path = ".." }
+rand = "0.8.5"
+rand_distr = "0.4.3"
+rand_chacha = "0.3.1"

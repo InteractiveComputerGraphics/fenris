@@ -208,7 +208,7 @@ where
         for i in 0..3 {
             let a = &self.0[i];
             let b = &self.0[(i + 1) % 3];
-            let segment = LineSegment2d::new(*a, *b);
+            let segment = LineSegment2d::from_end_points(*a, *b);
             // Normal point outwards, i.e. towards the "right"
             let normal_dir = segment.normal_dir();
             let projected_point = segment.closest_point(point);
@@ -242,7 +242,7 @@ where
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     fn distance(&self, point: &OPoint<T, U3>) -> T {
-        self.project_point(point).distance
+        self.closest_point(point).distance
     }
 }
 
@@ -262,7 +262,7 @@ impl<T: RealField> Triangle3d<T> {
     pub fn compute_solid_angle(&self, p: &Point3<T>) -> T {
         // Based on equation (6) in Jacobson et al.,
         // "Robust Inside-Outside Segmentation using Generalized Winding Numbers"
-        let [a, b, c] = dbg!(self.0.clone().map(|v_i| v_i - p));
+        let [a, b, c] = self.0.clone().map(|v_i| v_i - p);
         let abc_matrix = Matrix3::from_columns(&[a.clone(), b.clone(), c.clone()]);
 
         let anorm = a.norm();

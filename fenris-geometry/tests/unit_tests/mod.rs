@@ -4,12 +4,13 @@ mod polygon;
 mod polymesh;
 mod polytope;
 mod primitives;
+mod util;
 
+use ::util::assert_panics;
 use fenris_geometry::{assert_line_segments_approx_equal, LineSegment2d};
 use nalgebra::point;
 use proptest::collection::{hash_set, vec};
 use proptest::prelude::*;
-use util::assert_panics;
 
 use fenris_geometry::util::slices_are_equal_shift_invariant;
 
@@ -19,9 +20,9 @@ fn test_line_segment_assert() {
     let a = point![2.0, 3.0];
     let b = point![3.0, 4.0];
     let c = point![1.0, 3.0];
-    let segment1 = LineSegment2d::new(a, b);
-    let segment2 = LineSegment2d::new(b, a);
-    let segment3 = LineSegment2d::new(a, c);
+    let segment1 = LineSegment2d::from_end_points(a, b);
+    let segment2 = LineSegment2d::from_end_points(b, a);
+    let segment3 = LineSegment2d::from_end_points(a, c);
 
     assert_line_segments_approx_equal!(segment1, segment2, abstol = tol);
     assert_line_segments_approx_equal!(segment2, segment1, abstol = tol);

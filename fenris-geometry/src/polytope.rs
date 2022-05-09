@@ -1,4 +1,4 @@
-use crate::{GeneralPolygon, HalfPlane, Line2d, LineSegment2d, Triangle, Triangle2d};
+use crate::{HalfPlane, Line2d, LineSegment2d, SimplePolygon2d, Triangle, Triangle2d};
 use itertools::Itertools;
 use nalgebra::{Point2, RealField, Scalar, Unit, Vector2};
 
@@ -153,7 +153,7 @@ where
         if self.is_point() || other.is_point() {
             unimplemented!()
         } else if self.is_line_segment() {
-            let segment = LineSegment2d::new(self.vertices[0], self.vertices[1]);
+            let segment = LineSegment2d::from_end_points(self.vertices[0], self.vertices[1]);
             segment
                 .intersect_polygon(other)
                 .map(|segment| ConvexPolygon::from_vertices(vec![*segment.start(), *segment.end()]))
@@ -185,11 +185,11 @@ where
     }
 }
 
-impl<T> From<ConvexPolygon<T>> for GeneralPolygon<T>
+impl<T> From<ConvexPolygon<T>> for SimplePolygon2d<T>
 where
     T: Scalar,
 {
     fn from(poly: ConvexPolygon<T>) -> Self {
-        GeneralPolygon::from_vertices(poly.vertices)
+        SimplePolygon2d::from_vertices(poly.vertices)
     }
 }
