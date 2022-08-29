@@ -1,9 +1,9 @@
 use fenris_geometry::{HalfSpace, LineSegment2d, Polygon2d, SimplePolygon2d, SimplePolygon3d, Triangle};
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
-use nalgebra::{clamp, point, vector, Isometry3, Point2, Point3, Vector2, Vector3};
+use nalgebra::{clamp, point, vector, Isometry3, Point2, Point3, Vector2, Vector3, Unit};
 
 use fenris::eyre;
-use fenris::vtkio::model::{ByteOrder, DataSet, PolyDataPiece, Version, VertexNumbers};
+use fenris::vtkio::model::{Attribute, Attributes, ByteOrder, DataSet, PolyDataPiece, Version, VertexNumbers};
 use fenris::vtkio::Vtk;
 use itertools::izip;
 use rand::distributions::{Distribution, Standard};
@@ -312,6 +312,74 @@ fn simple_polygon_3d_intersect_half_space() {
     }
 }
 
+// TODO: This doesn't actually do anything, it's just for debugging. Should be removed but
+// temporarily keeping the code as it might be useful for later development/improvement
+#[ignore]
+#[allow(dead_code)]
+fn simple_polygon_3d_intersect_half_space_manual_examples() {
+    let polygon = SimplePolygon3d::from_vertices(vec![
+        point![
+                        0.9275983957221751,
+                        0.9885787695417991,
+                        0.7871816125737546
+                    ],
+        point![
+                        0.08245163203498629,
+                        0.06270868532434581,
+                        0.9151752915888964
+                    ],
+        point![
+                        0.3874741082479616,
+                        0.7451139603007322,
+                        0.8095833026585179
+        ],
+    ]);
+    let p = point![
+        0.547635183063019,
+        0.7008502553033911,
+        0.7983885368267101
+    ];
+    let n = vector![-0.27472249471876764,
+                    0.8760796727967517,
+                    -0.39624734422811364];
+
+    let half_space = HalfSpace::from_point_and_normal(p, Unit::new_unchecked(n));
+
+    // TODO: Remove
+    {
+        let contains: Vec<_> = polygon.vertices().iter()
+            .map(|v| half_space.contains_point(&v)).collect();
+        let signed_distances: Vec<_> = polygon.vertices().iter()
+            .map(|v| half_space.signed_distance_to_point(v))
+            .collect();
+        dbg!(contains);
+        dbg!(signed_distances);
+    }
+
+    let intersection = polygon.intersect_half_space(&half_space);
+
+    let p2 = point![
+        0.4926906841192654,
+                    0.8760661898627415,
+                    0.7191390679810874
+    ];
+    let n2 = vector![
+                    0.27472249471876764,
+                    -0.8760796727967517,
+                    0.39624734422811364
+                ];
+    let half_space2 = HalfSpace::from_point_and_normal(p2, Unit::new_unchecked(n2));
+    let intersection2 = intersection.intersect_half_space(&half_space2);
+
+    let dir = Path::new("output/tests/geometry/polygon/intersect_half_space/manual/");
+
+    export_simple_polygon_3d_vtk(dir.join("polygon_0.vtk"), &polygon).unwrap();
+    export_simple_polygon_3d_vtk(dir.join("intersection_0.vtk"), &intersection).unwrap();
+    export_simple_polygon_3d_vtk(dir.join("intersection2_0.vtk"), &intersection2).unwrap();
+    export_half_space_vtk(dir.join("half_space_0.vtk"), &half_space).unwrap();
+    export_half_space_vtk(dir.join("half_space2_0.vtk"), &half_space2).unwrap();
+}
+
 fn generate_random_simple_polygon_2d(rng: &mut impl Rng) -> SimplePolygon2d<f64> {
     // Only capable of generating star-shaped polygons
     let n_max = 20;
@@ -355,27 +423,38 @@ fn simple_polygon_3d_vtk_data_set(polygon: &SimplePolygon3d<f64>) -> DataSet {
     let mut lines_offsets = Vec::with_capacity(num_verts);
     let mut poly_offsets = Vec::with_capacity(1);
 
+    let normal = polygon.area_vector().normalize();
+    let mut vertex_normal_data = Vec::with_capacity(num_verts);
     for (idx_current, v) in polygon.vertices().iter().enumerate() {
         let idx_next = (idx_current + 1) % num_verts;
         vertex_buffer.extend_from_slice(v.coords.as_slice());
+        vertex_normal_data.extend_from_slice(normal.as_slice());
         connectivity.extend_from_slice(&[idx_current as u64, idx_next as u64]);
         lines_offsets.push(connectivity.len() as u64);
     }
     poly_offsets.push(connectivity.len() as u64);
 
+
+    let normal_data = Attribute::normals("Normals")
+        .with_data(vertex_normal_data);
+
     let piece = PolyDataPiece {
         points: vertex_buffer.into(),
         verts: None,
-        lines: Some(VertexNumbers::XML {
-            connectivity: connectivity.clone(),
-            offsets: lines_offsets,
-        }),
+        lines: None,
+        // lines: Some(VertexNumbers::XML {
+        //     connectivity: connectivity.clone(),
+        //     offsets: lines_offsets,
+        // }),
         polys: Some(VertexNumbers::XML {
             connectivity,
             offsets: poly_offsets,
         }),
         strips: None,
-        data: Default::default(),
+        data: Attributes {
+            point: vec![normal_data],
+            cell: vec![],
+        }
     };
 
     DataSet::from(piece)
