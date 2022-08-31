@@ -7,8 +7,9 @@ use crate::connectivity::{Quad4d2Connectivity, Quad9d2Connectivity};
 use crate::element::{ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement};
 use crate::geometry::{ConcavePolygonError, ConvexPolygon, LineSegment2d, Quad2d};
 use crate::nalgebra::{
-    distance, Matrix1x4, Matrix2, Matrix2x4, OMatrix, OPoint, Point2, RealField, Scalar, Vector2, U1, U2, U4, U9,
+    distance, Matrix1x4, Matrix2, Matrix2x4, OMatrix, OPoint, Point2, Scalar, Vector2, U1, U2, U4, U9,
 };
+use crate::Real;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Quad4d2Element<T>
@@ -42,7 +43,7 @@ where
 
 impl<T> Quad4d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     pub fn reference() -> Self {
@@ -57,7 +58,7 @@ where
 
 impl<T> TryFrom<Quad4d2Element<T>> for ConvexPolygon<T>
 where
-    T: RealField,
+    T: Real,
 {
     type Error = ConcavePolygonError;
 
@@ -68,7 +69,7 @@ where
 
 impl<T> FixedNodesReferenceFiniteElement<T> for Quad4d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type NodalDim = U4;
     type ReferenceDim = U2;
@@ -108,7 +109,7 @@ where
 
 impl<T> FiniteElement<T> for Quad4d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type GeometryDim = U2;
 
@@ -171,7 +172,7 @@ where
 
 impl<'a, T> From<&'a Quad4d2Element<T>> for Quad9d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     fn from(quad4: &'a Quad4d2Element<T>) -> Self {
         let midpoint = |a: &Point2<_>, b: &Point2<_>| LineSegment2d::from_end_points(a.clone(), b.clone()).midpoint();
@@ -194,7 +195,7 @@ where
 
 impl<'a, T> From<Quad4d2Element<T>> for Quad9d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     fn from(quad4: Quad4d2Element<T>) -> Self {
         Self::from(&quad4)
@@ -203,7 +204,7 @@ where
 
 impl<T> Quad9d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
     pub fn reference() -> Self {
@@ -225,7 +226,7 @@ where
 #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
 fn quad9_phi_1d<T>(alpha: T, xi: T) -> T
 where
-    T: RealField,
+    T: Real,
 {
     let alpha2 = alpha * alpha;
     let a = (3.0 / 2.0) * alpha2 - 1.0;
@@ -236,7 +237,7 @@ where
 
 impl<T> FixedNodesReferenceFiniteElement<T> for Quad9d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type ReferenceDim = U2;
     type NodalDim = U9;
@@ -307,7 +308,7 @@ where
 
 impl<T> FiniteElement<T> for Quad9d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type GeometryDim = U2;
 
@@ -329,7 +330,7 @@ where
 
 impl<T> TryFrom<Quad9d2Element<T>> for ConvexPolygon<T>
 where
-    T: RealField,
+    T: Real,
 {
     type Error = ConcavePolygonError;
 
@@ -340,7 +341,7 @@ where
 
 impl<T> ElementConnectivity<T> for Quad4d2Connectivity
 where
-    T: RealField,
+    T: Real,
 {
     type Element = Quad4d2Element<T>;
     type ReferenceDim = U2;
@@ -361,7 +362,7 @@ where
 
 impl<T> ElementConnectivity<T> for Quad9d2Connectivity
 where
-    T: RealField,
+    T: Real,
 {
     type Element = Quad9d2Element<T>;
     type ReferenceDim = U2;

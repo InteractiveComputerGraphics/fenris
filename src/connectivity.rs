@@ -1,7 +1,8 @@
 use crate::geometry::{Hexahedron, LineSegment2d, Quad2d, Tetrahedron, Triangle, Triangle2d, Triangle3d};
+use crate::Real;
 use itertools::izip;
 use nalgebra::allocator::Allocator;
-use nalgebra::{DefaultAllocator, DimName, OPoint, Point2, Point3, RealField, Scalar, U2, U3};
+use nalgebra::{DefaultAllocator, DimName, OPoint, Point2, Point3, Scalar, U2, U3};
 use serde::{Deserialize, Serialize};
 use std::ops::{Deref, DerefMut};
 
@@ -554,7 +555,7 @@ impl ConnectivityMut for Tet4Connectivity {
 
 impl<T> CellConnectivity<T, U3> for Tet4Connectivity
 where
-    T: RealField,
+    T: Real,
 {
     type Cell = Tetrahedron<T>;
 
@@ -645,7 +646,7 @@ impl ConnectivityMut for Hex8Connectivity {
 
 impl<T> CellConnectivity<T, U3> for Hex8Connectivity
 where
-    T: RealField,
+    T: Real,
 {
     type Cell = Hexahedron<T>;
 
@@ -707,7 +708,7 @@ impl ConnectivityMut for Hex27Connectivity {
 
 impl<T> CellConnectivity<T, U3> for Hex27Connectivity
 where
-    T: RealField,
+    T: Real,
 {
     type Cell = Hexahedron<T>;
 
@@ -773,7 +774,7 @@ impl ConnectivityMut for Hex20Connectivity {
 
 impl<T> CellConnectivity<T, U3> for Hex20Connectivity
 where
-    T: RealField,
+    T: Real,
 {
     type Cell = Hexahedron<T>;
 
@@ -948,7 +949,7 @@ impl ConnectivityMut for Tet10Connectivity {
 
 impl<T> CellConnectivity<T, U3> for Tet10Connectivity
 where
-    T: RealField,
+    T: Real,
 {
     type Cell = Tetrahedron<T>;
 
@@ -998,7 +999,7 @@ impl ConnectivityMut for Tet20Connectivity {
 
 impl<T> CellConnectivity<T, U3> for Tet20Connectivity
 where
-    T: RealField,
+    T: Real,
 {
     type Cell = Tetrahedron<T>;
 

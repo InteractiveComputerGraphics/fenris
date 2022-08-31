@@ -5,10 +5,11 @@ use crate::connectivity::{
 use crate::element::{ElementConnectivity, FiniteElement};
 use crate::mesh::{HexMesh, Mesh, Mesh2d, Mesh3d, Tet4Mesh};
 use nalgebra::allocator::Allocator;
-use nalgebra::{DefaultAllocator, DimName, OPoint, Point2, Point3, RealField, Scalar, U3};
+use nalgebra::{DefaultAllocator, DimName, OPoint, Point2, Point3, Scalar, U3};
 
 use crate::geometry::polymesh::{PolyMesh, PolyMesh3d};
 use crate::geometry::{OrientationTestResult, Triangle};
+use crate::Real;
 use fenris_nested_vec::NestedVec;
 use itertools::{izip, Itertools};
 use numeric_literals::replace_float_literals;
@@ -39,7 +40,7 @@ where
 
 impl<T> RefineFrom<T, U3, Tet4Connectivity> for Tet10Connectivity
 where
-    T: RealField,
+    T: Real,
     DefaultAllocator: Allocator<T, U3>,
 {
     fn refine(
@@ -82,7 +83,7 @@ where
 
 impl<T> RefineFrom<T, U3, Hex8Connectivity> for Hex27Connectivity
 where
-    T: RealField,
+    T: Real,
     DefaultAllocator: Allocator<T, U3>,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
@@ -165,7 +166,7 @@ where
 
 impl<T> RefineFrom<T, U3, Hex8Connectivity> for Hex20Connectivity
 where
-    T: RealField,
+    T: Real,
     DefaultAllocator: Allocator<T, U3>,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
@@ -224,7 +225,7 @@ pub trait FromTemp<T> {
 
 impl<'a, T, D, C, CNew> FromTemp<&'a Mesh<T, D, C>> for Mesh<T, D, CNew>
 where
-    T: RealField,
+    T: Real,
     D: DimName,
     C: Connectivity,
     CNew: RefineFrom<T, D, C>,
@@ -329,7 +330,7 @@ where
 
 impl<T> From<Mesh2d<T, Tri3d2Connectivity>> for Mesh2d<T, Tri6d2Connectivity>
 where
-    T: RealField,
+    T: Real,
 {
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
     fn from(initial_mesh: Mesh2d<T, Tri3d2Connectivity>) -> Self {
@@ -382,7 +383,7 @@ where
 
 impl<T> From<Mesh2d<T, Quad4d2Connectivity>> for Mesh2d<T, Quad9d2Connectivity>
 where
-    T: RealField,
+    T: Real,
 {
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
     fn from(initial_mesh: Mesh2d<T, Quad4d2Connectivity>) -> Self {
@@ -441,7 +442,7 @@ where
 
 impl<'a, T> From<&'a Mesh3d<T, Tet4Connectivity>> for Mesh3d<T, Tet10Connectivity>
 where
-    T: RealField,
+    T: Real,
 {
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
     fn from(initial_mesh: &'a Mesh3d<T, Tet4Connectivity>) -> Self {
@@ -451,7 +452,7 @@ where
 
 impl<'a, T> From<&'a Mesh3d<T, Tet10Connectivity>> for Mesh3d<T, Tet4Connectivity>
 where
-    T: RealField,
+    T: Real,
 {
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
     fn from(initial_mesh: &'a Mesh3d<T, Tet10Connectivity>) -> Self {
@@ -469,7 +470,7 @@ where
 
 impl<'a, T> From<&'a Mesh3d<T, Hex8Connectivity>> for Mesh3d<T, Hex27Connectivity>
 where
-    T: RealField,
+    T: Real,
 {
     fn from(initial_mesh: &'a Mesh3d<T, Hex8Connectivity>) -> Self {
         <Self as FromTemp<_>>::from(initial_mesh)
@@ -478,7 +479,7 @@ where
 
 impl<'a, T> From<&'a Mesh3d<T, Hex8Connectivity>> for Mesh3d<T, Hex20Connectivity>
 where
-    T: RealField,
+    T: Real,
 {
     fn from(initial_mesh: &'a Mesh3d<T, Hex8Connectivity>) -> Self {
         <Self as FromTemp<_>>::from(initial_mesh)
@@ -487,11 +488,11 @@ where
 
 impl<'a, T> From<&'a HexMesh<T>> for Tet4Mesh<T>
 where
-    T: RealField,
+    T: Real,
 {
     fn from(hex_mesh: &'a HexMesh<T>) -> Self {
         // TODO: Provide a "direct" method that does not rely on triangulation
-        // (then we could also reduce the `RealField` bound to `Scalar`)
+        // (then we could also reduce the `Real` bound to `Scalar`)
         let poly_mesh = PolyMesh3d::from(hex_mesh)
             .triangulate()
             .expect("Must be able to triangulate hex mesh");
@@ -562,7 +563,7 @@ where
 
 impl<'a, T> TryFrom<&'a PolyMesh3d<T>> for Tet4Mesh<T>
 where
-    T: RealField,
+    T: Real,
 {
     // TODO: Proper Error type
     type Error = Box<dyn Error>;

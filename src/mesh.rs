@@ -4,9 +4,10 @@ use crate::connectivity::{
     Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity,
 };
 use crate::geometry::{AxisAlignedBoundingBox, BoundedGeometry, GeometryCollection};
+use crate::Real;
 use fenris_nested_vec::NestedVec;
 use nalgebra::allocator::Allocator;
-use nalgebra::{DefaultAllocator, DimName, OPoint, OVector, RealField, Scalar, U2, U3};
+use nalgebra::{DefaultAllocator, DimName, OPoint, OVector, Scalar, U2, U3};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::iter::once;
@@ -216,7 +217,7 @@ where
 
 impl<T, D, Connectivity> BoundedGeometry<T> for Mesh<T, D, Connectivity>
 where
-    T: RealField,
+    T: Real,
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
     Connectivity: CellConnectivity<T, D>,
@@ -234,7 +235,7 @@ where
 
 impl<T, D, C> Mesh<T, D, C>
 where
-    T: RealField,
+    T: Real,
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
@@ -269,7 +270,7 @@ where
 
 impl<T> QuadMesh2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     pub fn split_into_triangles(self) -> TriangleMesh2d<T> {
         let triangles = self
@@ -354,7 +355,7 @@ where
 
 // impl<T, Cell> Mesh2d<T, Cell>
 // where
-//     T: RealField,
+//     T: Real,
 //     Cell: Connectivity<FaceConnectivity = Segment2d2Connectivity>,
 // {
 //     pub fn extract_contour(&self) -> Result<GeneralPolygon<T>, Box<dyn Error>> {
@@ -536,7 +537,7 @@ where
 
 // impl<'a, T, D, C, QueryGeometry> DistanceQuery<'a, QueryGeometry> for Mesh<T, D, C>
 // where
-//     T: RealField,
+//     T: Real,
 //     D: DimName,
 //     C: CellConnectivity<T, D>,
 //     C::Cell: Distance<T, QueryGeometry>,
@@ -578,7 +579,7 @@ where
 //
 // impl<T> PlanarFace<T> for LineSegment2d<T>
 // where
-//     T: RealField,
+//     T: Real,
 // {
 //     type Dimension = U2;
 //

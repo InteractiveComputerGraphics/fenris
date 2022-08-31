@@ -1,12 +1,12 @@
 use crate::allocators::{BiDimAllocator, DimAllocator};
 use crate::connectivity::Connectivity;
 use crate::nalgebra::MatrixSliceMut;
-use crate::SmallDim;
+use crate::{Real, SmallDim};
 use fenris_optimize::newton::NewtonSettings;
 use nalgebra::allocator::Allocator;
 use nalgebra::OPoint;
 use nalgebra::{DVectorSlice, DVectorSliceMut, DimName, Dynamic};
-use nalgebra::{DefaultAllocator, DimMin, OMatrix, OVector, RealField, Scalar, U1};
+use nalgebra::{DefaultAllocator, DimMin, OMatrix, OVector, Scalar, U1};
 use num::Zero;
 use numeric_literals::replace_float_literals;
 use std::error::Error;
@@ -244,7 +244,7 @@ pub type ElementGeometryDim<T, Element> = <Element as FiniteElement<T>>::Geometr
 #[inline(always)]
 fn phi_linear_1d<T>(alpha: T, xi: T) -> T
 where
-    T: RealField,
+    T: Real,
 {
     (1.0 + alpha * xi) / 2.0
 }
@@ -256,7 +256,7 @@ where
 #[inline(always)]
 fn phi_linear_1d_grad<T>(alpha: T) -> T
 where
-    T: RealField,
+    T: Real,
 {
     alpha / 2.0
 }
@@ -270,7 +270,7 @@ where
 #[inline(always)]
 fn phi_quadratic_1d<T>(alpha: T, xi: T) -> T
 where
-    T: RealField,
+    T: Real,
 {
     // The compiler should hopefully be able to use constant propagation to
     // precompute all expressions involving constants and alpha
@@ -288,7 +288,7 @@ where
 #[inline(always)]
 fn phi_quadratic_1d_grad<T>(alpha: T, xi: T) -> T
 where
-    T: RealField,
+    T: Real,
 {
     // The compiler should hopefully be able to use constant propagation to
     // precompute all expressions involving constants and alpha
@@ -304,7 +304,7 @@ pub fn map_physical_coordinates<T, Element, GeometryDim>(
     x: &OPoint<T, GeometryDim>,
 ) -> Result<OPoint<T, GeometryDim>, Box<dyn Error>>
 where
-    T: RealField,
+    T: Real,
     Element: FiniteElement<T, GeometryDim = GeometryDim, ReferenceDim = GeometryDim>,
     GeometryDim: DimName + DimMin<GeometryDim, Output = GeometryDim>,
     DefaultAllocator: DimAllocator<T, GeometryDim>,
@@ -397,7 +397,7 @@ pub fn project_physical_coordinates<T, Element>(
     x: &OPoint<T, Element::GeometryDim>,
 ) -> Result<OPoint<T, Element::ReferenceDim>, Box<dyn Error>>
 where
-    T: RealField,
+    T: Real,
     Element: FiniteElement<T>,
     Element::ReferenceDim: DimName + DimMin<Element::ReferenceDim, Output = Element::ReferenceDim>,
     DefaultAllocator: BiDimAllocator<T, Element::GeometryDim, Element::ReferenceDim>,

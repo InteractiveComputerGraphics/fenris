@@ -5,12 +5,11 @@ use crate::assembly::operators::Operator;
 use crate::define_thread_local_workspace;
 use crate::element::{ReferenceFiniteElement, VolumetricFiniteElement};
 use crate::nalgebra::{
-    DVectorSliceMut, DefaultAllocator, DimName, Dynamic, MatrixSlice, MatrixSliceMutMN, OPoint, OVector, RealField,
-    Scalar, U1,
+    DVectorSliceMut, DefaultAllocator, DimName, Dynamic, MatrixSlice, MatrixSliceMutMN, OPoint, OVector, Scalar, U1,
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
 use crate::workspace::with_thread_local_workspace;
-use crate::SmallDim;
+use crate::{Real, SmallDim};
 use itertools::izip;
 use std::marker::PhantomData;
 
@@ -146,7 +145,7 @@ where
 
 impl<T, D, Data> Default for SourceTermWorkspace<T, D, Data>
 where
-    T: RealField,
+    T: Real,
     D: SmallDim,
     DefaultAllocator: DimAllocator<T, D>,
 {
@@ -160,7 +159,7 @@ where
 
 impl<'a, T, Space, Source, QTable> ElementVectorAssembler<T> for ElementSourceAssembler<'a, T, Space, Source, QTable>
 where
-    T: RealField,
+    T: Real,
     Space: VolumetricFiniteElementSpace<T>,
     Source: SourceFunction<T, Space::ReferenceDim>,
     QTable: QuadratureTable<T, Space::ReferenceDim, Data = Source::Parameters>,
@@ -225,7 +224,7 @@ pub fn assemble_element_source_vector<T, Element, Source>(
     quadrature_data: &[Source::Parameters],
     basis_values_buffer: &mut [T],
 ) where
-    T: RealField,
+    T: Real,
     // We only support volumetric elements atm
     Element: VolumetricFiniteElement<T>,
     Source: SourceFunction<T, Element::GeometryDim>,

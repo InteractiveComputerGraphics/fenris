@@ -1,5 +1,6 @@
 use crate::mesh::Mesh;
-use nalgebra::{DefaultAllocator, DimName, RealField, Scalar};
+use crate::Real;
+use nalgebra::{DefaultAllocator, DimName, Scalar};
 use vtkio::model::{Attribute, CellType, Cells, DataSet, UnstructuredGridPiece, VertexNumbers};
 
 use crate::connectivity::{
@@ -223,7 +224,7 @@ impl VtkCellConnectivity for Hex27Connectivity {
 //     quadrature_rules: impl IntoIterator<Item = impl Quadrature<T, C::ReferenceDim>>,
 // ) -> DataSet
 // where
-//     T: RealField,
+//     T: Real,
 //     D: DimName + DimMin<D, Output = D>,
 //     C: ElementConnectivity<T, GeometryDim = D, ReferenceDim = D>,
 //     DefaultAllocator: Allocator<T, D> + ElementConnectivityAllocator<T, C>,
@@ -320,7 +321,7 @@ where
 
 impl<'a, T, D, C> FiniteElementMeshDataSetBuilder<'a, T, D, C>
 where
-    T: RealField + ToPrimitive,
+    T: Real + ToPrimitive,
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {

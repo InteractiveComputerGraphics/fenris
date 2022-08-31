@@ -1,7 +1,8 @@
 use crate::connectivity::{Segment2d1Connectivity, Segment2d2Connectivity};
 use crate::element::{ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement, SurfaceFiniteElement};
 use crate::geometry::LineSegment2d;
-use crate::nalgebra::{OMatrix, OPoint, Point1, Point2, RealField, Scalar, Vector2, U1, U2};
+use crate::nalgebra::{OMatrix, OPoint, Point1, Point2, Scalar, Vector2, U1, U2};
+use crate::Real;
 use nalgebra::{point, Vector1};
 use numeric_literals::replace_float_literals;
 
@@ -78,20 +79,20 @@ impl<'a, T: Scalar> From<&'a Segment2d2Element<T>> for LineSegment2d<T> {
 }
 
 #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-fn segment2_basis<T: RealField>(xi: T) -> OMatrix<T, U1, U2> {
+fn segment2_basis<T: Real>(xi: T) -> OMatrix<T, U1, U2> {
     let phi_1 = (1.0 - xi) / 2.0;
     let phi_2 = (1.0 + xi) / 2.0;
     OMatrix::<_, U1, U2>::new(phi_1, phi_2)
 }
 
 #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
-fn segment2_gradients<T: RealField>() -> OMatrix<T, U1, U2> {
+fn segment2_gradients<T: Real>() -> OMatrix<T, U1, U2> {
     OMatrix::<_, U1, U2>::new(-0.5, 0.5)
 }
 
 impl<T> FixedNodesReferenceFiniteElement<T> for Segment2d1Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type NodalDim = U2;
     type ReferenceDim = U1;
@@ -109,7 +110,7 @@ where
 
 impl<T> FixedNodesReferenceFiniteElement<T> for Segment2d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type NodalDim = U2;
     type ReferenceDim = U1;
@@ -125,7 +126,7 @@ where
 
 impl<T> FiniteElement<T> for Segment2d1Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type GeometryDim = U1;
 
@@ -153,7 +154,7 @@ where
 
 impl<T> FiniteElement<T> for Segment2d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type GeometryDim = U2;
 
@@ -183,7 +184,7 @@ where
 
 impl<T> SurfaceFiniteElement<T> for Segment2d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     fn normal(&self, _xi: &Point1<T>) -> Vector2<T> {
         self.to_line_segment().normal_dir().normalize()
@@ -192,7 +193,7 @@ where
 
 impl<T> ElementConnectivity<T> for Segment2d2Connectivity
 where
-    T: RealField,
+    T: Real,
 {
     type Element = Segment2d2Element<T>;
     type ReferenceDim = U1;
@@ -208,7 +209,7 @@ where
 
 impl<T> ElementConnectivity<T> for Segment2d1Connectivity
 where
-    T: RealField,
+    T: Real,
 {
     type Element = Segment2d1Element<T>;
     type GeometryDim = U1;

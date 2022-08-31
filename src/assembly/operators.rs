@@ -1,7 +1,7 @@
 use crate::allocators::BiDimAllocator;
 use crate::nalgebra::allocator::Allocator;
-use crate::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, OMatrix, OVector, RealField, Scalar};
-use crate::{SmallDim, Symmetry};
+use crate::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, OMatrix, OVector, Scalar};
+use crate::{Real, SmallDim, Symmetry};
 
 mod laplace;
 pub use laplace::*;
@@ -47,7 +47,7 @@ where
 /// TODO: Maybe return results in impls...?
 pub trait EllipticContraction<T, GeometryDim>: Operator<T, GeometryDim>
 where
-    T: RealField,
+    T: Real,
     GeometryDim: SmallDim,
     DefaultAllocator: BiDimAllocator<T, GeometryDim, Self::SolutionDim>,
 {
@@ -210,7 +210,7 @@ where
 /// e.g. $\psi = \psi(x, \nabla u)$.
 pub trait EllipticEnergy<T, GeometryDim>: Operator<T, GeometryDim>
 where
-    T: RealField,
+    T: Real,
     GeometryDim: SmallDim,
     DefaultAllocator: BiDimAllocator<T, GeometryDim, Self::SolutionDim>,
 {

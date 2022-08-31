@@ -7,8 +7,9 @@ use crate::nalgebra::{DMatrixSliceMut, DefaultAllocator, DimName, OPoint};
 use crate::space::{ElementInSpace, FiniteElementConnectivity, VolumetricFiniteElementSpace};
 use crate::util::clone_upper_to_lower;
 use crate::workspace::with_thread_local_workspace;
+use crate::Real;
 use itertools::izip;
-use nalgebra::{RealField, Scalar};
+use nalgebra::Scalar;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
@@ -31,7 +32,7 @@ impl<T> Density<T> {
     }
 }
 
-impl<T: RealField> Default for Density<T> {
+impl<T: Real> Default for Density<T> {
     fn default() -> Self {
         Density(T::zero())
     }
@@ -116,7 +117,7 @@ where
     basis_buffer: BasisFunctionBuffer<T>,
 }
 
-impl<T: RealField, D: DimName> Default for MassAssemblerWorkspace<T, D>
+impl<T: Real, D: DimName> Default for MassAssemblerWorkspace<T, D>
 where
     DefaultAllocator: DimAllocator<T, D>,
 {
@@ -130,7 +131,7 @@ where
 
 impl<'a, T, Space, QTable> ElementMatrixAssembler<T> for ElementMassAssembler<'a, Space, QTable>
 where
-    T: RealField,
+    T: Real,
     Space: VolumetricFiniteElementSpace<T>,
     QTable: QuadratureTable<T, Space::GeometryDim, Data = Density<T>>,
     DefaultAllocator: DimAllocator<T, Space::GeometryDim>,
@@ -198,7 +199,7 @@ pub fn assemble_element_mass_matrix<'a, T, Element>(
     basis_values_buffer: &mut [T],
 ) -> eyre::Result<()>
 where
-    T: RealField,
+    T: Real,
     // We only support volumetric elements atm
     Element: VolumetricFiniteElement<T>,
     DefaultAllocator: DimAllocator<T, Element::GeometryDim>,
@@ -225,7 +226,7 @@ fn assemble_element_mass_matrix_<T, Element>(
     basis_values_buffer: &mut [T],
 ) -> eyre::Result<()>
 where
-    T: RealField,
+    T: Real,
     // We only support volumetric elements atm
     Element: VolumetricFiniteElement<T>,
     DefaultAllocator: DimAllocator<T, Element::GeometryDim>,
