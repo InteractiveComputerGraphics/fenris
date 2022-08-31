@@ -280,7 +280,7 @@ unsafe impl<'a, T: 'a + Sync + Send> ParallelIndexedCollection<'a> for ParallelC
 
 // impl<T> CsrMatrix<T>
 // where
-//     T: RealField,
+//     T: Real,
 // {
 //     pub fn scale_rows<'a>(&mut self, diagonal_matrix: impl Into<DVectorSlice<'a, T>>) {
 //         let diag = diagonal_matrix.into();

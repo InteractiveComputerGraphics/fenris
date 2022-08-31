@@ -8,6 +8,7 @@ repository = "https://github.com/InteractiveComputerGraphics/fenris"
 description = "Sparse matrix functionality for fenris"
 
 [dependencies]
+fenris-traits = { version = "0.0.1", path = "../fenris-traits" }
 nalgebra = "0.28"
 nalgebra-sparse = "0.4"
 rayon = "1.3"
