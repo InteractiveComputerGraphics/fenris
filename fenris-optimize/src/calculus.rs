@@ -1,6 +1,6 @@
+use fenris_traits::Real;
 use nalgebra::{
-    DMatrix, DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, Dim, DimName, Dynamic, RealField, Scalar, Vector,
-    U1,
+    DMatrix, DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, Dim, DimName, Dynamic, Scalar, Vector, U1,
 };
 
 use nalgebra::base::storage::{Storage, StorageMut};
@@ -157,7 +157,7 @@ where
 #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
 pub fn approximate_jacobian<T>(mut f: impl VectorFunction<T>, x: &DVector<T>, h: &T) -> DMatrix<T>
 where
-    T: RealField,
+    T: Real,
 {
     let out_dim = f.dimension();
     let in_dim = x.len();
@@ -210,7 +210,7 @@ pub fn approximate_gradient_fd<'a, T>(
     h: T,
 ) -> DVector<T>
 where
-    T: RealField,
+    T: Real,
 {
     let x = x.into();
     let mut df = DVector::zeros(x.len());
@@ -231,7 +231,7 @@ pub fn approximate_gradient_fd_into<'a, T>(
     x: impl Into<DVectorSliceMut<'a, T>>,
     h: T,
 ) where
-    T: RealField,
+    T: Real,
 {
     approximate_gradient_fd_into_(DVectorSliceMut::from(&mut df), f, x.into(), h);
 }
@@ -243,7 +243,7 @@ fn approximate_gradient_fd_into_<T>(
     mut x: DVectorSliceMut<T>,
     h: T,
 ) where
-    T: RealField,
+    T: Real,
 {
     let n = x.len();
     for i in 0..n {
@@ -272,7 +272,7 @@ pub fn approximate_jacobian_fd<'a, T>(
     h: T,
 ) -> DMatrix<T>
 where
-    T: RealField,
+    T: Real,
 {
     let x = x.into();
     let n = x.len();
@@ -291,7 +291,7 @@ pub fn approximate_jacobian_fd_into<'a, T>(
     x: impl Into<DVectorSliceMut<'a, T>>,
     h: T,
 ) where
-    T: RealField,
+    T: Real,
 {
     approximate_jacobian_fd_into_(jacobian.into(), f, x.into(), h);
 }
@@ -303,7 +303,7 @@ fn approximate_jacobian_fd_into_<T>(
     mut x: DVectorSliceMut<T>,
     h: T,
 ) where
-    T: RealField,
+    T: Real,
 {
     let m = j.nrows();
     let n = x.len();
