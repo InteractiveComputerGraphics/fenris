@@ -1,7 +1,7 @@
 use crate::{
     AxisAlignedBoundingBox, BoundedGeometry, ConvexPolyhedron, Distance, OrientationTestResult, Triangle, Triangle3d,
 };
-use nalgebra::RealField;
+use fenris_traits::Real;
 use nalgebra::{OPoint, Point3, Scalar, U3};
 use numeric_literals::replace_float_literals;
 use serde::{Deserialize, Serialize};
@@ -32,7 +32,7 @@ where
 
 impl<T> Tetrahedron<T>
 where
-    T: RealField,
+    T: Real,
 {
     /// Reference tetrahedron.
     #[replace_float_literals(T::from_f64(literal).unwrap())]
@@ -46,7 +46,7 @@ where
     }
 }
 
-impl<T: RealField> BoundedGeometry<T> for Tetrahedron<T> {
+impl<T: Real> BoundedGeometry<T> for Tetrahedron<T> {
     type Dimension = U3;
 
     fn bounding_box(&self) -> AxisAlignedBoundingBox<T, U3> {
@@ -56,7 +56,7 @@ impl<T: RealField> BoundedGeometry<T> for Tetrahedron<T> {
 
 impl<'a, T> ConvexPolyhedron<'a, T> for Tetrahedron<T>
 where
-    T: RealField,
+    T: Real,
 {
     type Face = Triangle3d<T>;
 
@@ -81,7 +81,7 @@ where
 
 impl<T> Distance<T, Point3<T>> for Tetrahedron<T>
 where
-    T: RealField,
+    T: Real,
 {
     fn distance(&self, point: &OPoint<T, U3>) -> T {
         let triangle = |i, j, k| Triangle([self.vertices[i], self.vertices[j], self.vertices[k]]);

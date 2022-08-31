@@ -1,8 +1,9 @@
 use crate::{
     AxisAlignedBoundingBox2d, BoundedGeometry, ConvexPolygon3d, Distance, SimplePolygon2d, Triangle, Triangle2d,
 };
+use fenris_traits::Real;
 use itertools::izip;
-use nalgebra::{Point2, Point3, RealField, Scalar, U2};
+use nalgebra::{Point2, Point3, Scalar, U2};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Quad3d<T: Scalar> {
@@ -30,7 +31,7 @@ where
 
 impl<T> BoundedGeometry<T> for Quad2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     type Dimension = U2;
 
@@ -46,7 +47,7 @@ pub struct Quad2d<T: Scalar>(pub [Point2<T>; 4]);
 
 impl<T> Quad2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     /// Returns the index of a concave corner of the quadrilateral, if there is any.
     pub fn concave_corner(&self) -> Option<usize> {
@@ -113,7 +114,7 @@ where
 
 impl<T> Distance<T, Point2<T>> for Quad2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     fn distance(&self, point: &Point2<T>) -> T {
         // TODO: Avoid heap allocation

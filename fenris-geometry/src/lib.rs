@@ -1,7 +1,7 @@
+use fenris_traits::Real;
 use nalgebra::allocator::Allocator;
 use nalgebra::{
-    distance_squared, DefaultAllocator, DimName, OPoint, OVector, Point2, Point3, RealField, Scalar, Unit, Vector3, U2,
-    U3,
+    distance_squared, DefaultAllocator, DimName, OPoint, OVector, Point2, Point3, Scalar, Unit, Vector3, U2, U3,
 };
 use numeric_literals::replace_float_literals;
 use serde::{Deserialize, Serialize};
@@ -146,7 +146,7 @@ where
 
 impl<T, D> AxisAlignedBoundingBox<T, D>
 where
-    T: RealField,
+    T: Real,
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
@@ -241,13 +241,13 @@ where
     }
 }
 
-fn intervals_intersect<T: RealField>([l1, u1]: [T; 2], [l2, u2]: [T; 2]) -> bool {
+fn intervals_intersect<T: Real>([l1, u1]: [T; 2], [l2, u2]: [T; 2]) -> bool {
     l2 <= u1 && u2 >= l1
 }
 
 impl<T, D> BoundedGeometry<T> for AxisAlignedBoundingBox<T, D>
 where
-    T: RealField,
+    T: Real,
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
@@ -303,7 +303,7 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
 
     fn compute_plane(&self) -> Option<Plane<T>>
     where
-        T: RealField,
+        T: Real,
     {
         let normal = self.compute_normal();
         let point = self.get_vertex(0)?;
@@ -312,7 +312,7 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
 
     fn compute_half_space(&self) -> Option<HalfSpace<T>>
     where
-        T: RealField,
+        T: Real,
     {
         let normal = self.compute_normal();
         let point = self.get_vertex(0)?;
@@ -327,7 +327,7 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     fn compute_area_vector(&self) -> Vector3<T>
     where
-        T: RealField,
+        T: Real,
     {
         assert!(self.num_vertices() >= 3, "Polygons must have at least 3 vertices.");
 
@@ -348,7 +348,7 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
     /// Computes an outwards-facing normalized vector perpendicular to the polygon.
     fn compute_normal(&self) -> Vector3<T>
     where
-        T: RealField,
+        T: Real,
     {
         // In principle, we could compute the face normal simply by
         // taking the cross product of the first two segments. However, the first M segments
@@ -365,7 +365,7 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
 
     fn closest_point(&self, point: &Point3<T>) -> PolygonClosestPoint<T, U3>
     where
-        T: RealField,
+        T: Real,
     {
         assert!(self.num_vertices() >= 3, "Polygon must have at least 3 vertices.");
 
@@ -446,7 +446,7 @@ pub trait ConvexPolyhedron<'a, T: Scalar>: Debug {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     fn compute_signed_distance(&self, point: &Point3<T>) -> SignedDistanceResult<T, U3>
     where
-        T: RealField,
+        T: Real,
     {
         assert!(self.num_faces() >= 4, "Polyhedron must have at least 4 faces.");
         let mut inside = true;
@@ -486,7 +486,7 @@ pub trait ConvexPolyhedron<'a, T: Scalar>: Debug {
 
     fn compute_volume(&'a self) -> T
     where
-        T: RealField,
+        T: Real,
     {
         let faces = (0..self.num_faces()).map(move |idx| {
             self.get_face(idx)
@@ -500,7 +500,7 @@ pub trait ConvexPolyhedron<'a, T: Scalar>: Debug {
     /// TODO: Write tests
     fn contains_point(&'a self, point: &Point3<T>) -> bool
     where
-        T: RealField,
+        T: Real,
     {
         // The convex polyhedron contains the point if all half-spaces associated with
         // faces contain the point
@@ -524,7 +524,7 @@ pub trait ConvexPolyhedron<'a, T: Scalar>: Debug {
 #[replace_float_literals(T::from_f64(literal).unwrap())]
 pub fn compute_polyhedron_volume_from_faces<'a, T, F>(boundary_faces: impl 'a + IntoIterator<Item = F>) -> T
 where
-    T: RealField,
+    T: Real,
     F: ConvexPolygon3d<'a, T>,
 {
     // We use the formula given on the Wikipedia page for Polyhedra:
@@ -557,7 +557,7 @@ where
 // TODO: Actually implement SignedDistance for Tetrahedron
 //impl<T> SignedDistance<T, U3> for Tetrahedron<T>
 //where
-//    T: RealField
+//    T: Real
 //{
 //    #[replace_float_literals(T::from_f64(literal).unwrap())]
 //    fn query_signed_distance(&self, point: &Point3<T>) -> Option<SignedDistanceResult<T, U3>> {
@@ -608,7 +608,7 @@ where
 
 impl<T> TryFrom<Quad2d<T>> for ConvexPolygon<T>
 where
-    T: RealField,
+    T: Real,
 {
     type Error = ConcavePolygonError;
 

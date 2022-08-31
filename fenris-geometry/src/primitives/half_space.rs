@@ -1,6 +1,7 @@
 use crate::{Line2d, Plane};
+use fenris_traits::Real;
 use nalgebra::allocator::Allocator;
-use nalgebra::{DefaultAllocator, DimName, OPoint, OVector, RealField, Scalar, Unit, Vector2, U2, U3};
+use nalgebra::{DefaultAllocator, DimName, OPoint, OVector, Scalar, Unit, Vector2, U2, U3};
 
 /// A $D$-dimensional half space.
 ///
@@ -25,7 +26,7 @@ pub type HalfPlane<T> = HalfSpace<T, U2>;
 
 impl<T, D> HalfSpace<T, D>
 where
-    T: RealField,
+    T: Real,
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
@@ -60,7 +61,7 @@ where
 
 impl<T> HalfSpace<T>
 where
-    T: RealField,
+    T: Real,
 {
     pub fn plane(&self) -> Plane<T> {
         Plane::from_point_and_normal(self.point, self.normal)
@@ -73,7 +74,7 @@ where
 
 impl<T> HalfPlane<T>
 where
-    T: RealField,
+    T: Real,
 {
     /// Returns a line representing the surface of the half plane
     pub fn surface(&self) -> Line2d<T> {

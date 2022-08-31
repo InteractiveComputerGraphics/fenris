@@ -1,6 +1,7 @@
+use fenris_traits::Real;
 use itertools::Itertools;
 use nalgebra::allocator::Allocator;
-use nalgebra::{DefaultAllocator, DimName, OPoint, Point3, RealField, Scalar, Vector3, U3};
+use nalgebra::{DefaultAllocator, DimName, OPoint, Point3, Scalar, Vector3, U3};
 use numeric_literals::replace_float_literals;
 use serde::{Deserialize, Serialize};
 use std::cmp::{max, min};
@@ -276,7 +277,7 @@ where
 
 impl<T, D> PolyMesh<T, D>
 where
-    T: RealField,
+    T: Real,
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
@@ -504,7 +505,7 @@ where
 ///
 /// More precisely, given N vertices, a vector of N boolean values is returned.
 /// If element `i` is `true`, then vertex `i` is contained in the half space.
-fn mark_vertices<T: RealField>(vertices: &[Point3<T>], half_space: &HalfSpace<T>) -> Vec<bool> {
+fn mark_vertices<T: Real>(vertices: &[Point3<T>], half_space: &HalfSpace<T>) -> Vec<bool> {
     vertices
         .iter()
         .map(|v| half_space.contains_point(v))
@@ -537,7 +538,7 @@ fn is_intersection_vertex(vertex_edge_representation: &UndirectedEdge) -> bool {
 
 impl<T> PolyMesh3d<T>
 where
-    T: RealField,
+    T: Real,
 {
     pub fn translate(&mut self, translation: &Vector3<T>) {
         for v in self.vertices_mut() {

@@ -1,6 +1,7 @@
-use nalgebra::{RealField, UnitVector3, Vector3};
+use fenris_traits::Real;
+use nalgebra::{UnitVector3, Vector3};
 
-pub fn compute_orthonormal_vectors_3d<T: RealField>(vector: &UnitVector3<T>) -> [UnitVector3<T>; 2] {
+pub fn compute_orthonormal_vectors_3d<T: Real>(vector: &UnitVector3<T>) -> [UnitVector3<T>; 2] {
     // Ported from
     // https://github.com/dimforge/parry/blob/ac8dcf0197066cd2413a20e4420961b4694996c0/src/utils/wops.rs#L120-L138
     // originally based on the Pixar paper "Building an Orthonormal Basis, Revisited",

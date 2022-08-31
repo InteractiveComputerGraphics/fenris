@@ -1,4 +1,5 @@
-use nalgebra::{Point2, RealField, Scalar, Vector2, U2};
+use fenris_traits::Real;
+use nalgebra::{Point2, Scalar, Vector2, U2};
 
 use crate::{AxisAlignedBoundingBox2d, BoundedGeometry};
 use numeric_literals::replace_float_literals;
@@ -60,7 +61,7 @@ where
 
 impl<T> BoundedGeometry<T> for SdfCircle<T>
 where
-    T: RealField,
+    T: Real,
 {
     type Dimension = U2;
 
@@ -75,7 +76,7 @@ where
 
 impl<T> SignedDistanceFunction2d<T> for SdfCircle<T>
 where
-    T: RealField,
+    T: Real,
 {
     fn eval(&self, x: &Point2<T>) -> T {
         let y = x - self.center;
@@ -96,7 +97,7 @@ where
 
 impl<T, Left, Right> BoundedGeometry<T> for SdfUnion<Left, Right>
 where
-    T: RealField,
+    T: Real,
     Left: BoundedGeometry<T, Dimension = U2>,
     Right: BoundedGeometry<T, Dimension = U2>,
 {
@@ -109,7 +110,7 @@ where
 
 impl<T, Left, Right> SignedDistanceFunction2d<T> for SdfUnion<Left, Right>
 where
-    T: RealField,
+    T: Real,
     Left: SignedDistanceFunction2d<T>,
     Right: SignedDistanceFunction2d<T>,
 {
@@ -130,7 +131,7 @@ where
 
 impl<T> BoundedGeometry<T> for SdfAxisAlignedBox<T>
 where
-    T: RealField,
+    T: Real,
 {
     type Dimension = U2;
 
@@ -141,7 +142,7 @@ where
 
 impl<T> SignedDistanceFunction2d<T> for SdfAxisAlignedBox<T>
 where
-    T: RealField,
+    T: Real,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     fn eval(&self, x: &Point2<T>) -> T {

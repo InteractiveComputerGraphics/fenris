@@ -2,9 +2,10 @@ use crate::{
     AxisAlignedBoundingBox, BoundedGeometry, ConvexPolygon3d, Distance, LineSegment2d, Orientation,
     OrientationTestResult, SignedDistance, SignedDistanceResult,
 };
+use fenris_traits::Real;
 use nalgebra::allocator::Allocator;
+use nalgebra::Matrix3;
 use nalgebra::{DefaultAllocator, DimName, OPoint, OVector, Point2, Point3, Scalar, Vector3, U2, U3};
-use nalgebra::{Matrix3, RealField};
 use numeric_literals::replace_float_literals;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -50,7 +51,7 @@ where
 
 impl<T, D> Triangle<T, D>
 where
-    T: RealField,
+    T: Real,
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
@@ -73,7 +74,7 @@ where
 
 impl<T> Triangle2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     pub fn orientation(&self) -> Orientation {
         if self.signed_area() >= T::zero() {
@@ -100,7 +101,7 @@ where
 
 impl<T> Triangle3d<T>
 where
-    T: RealField,
+    T: Real,
 {
     /// Returns a vector normal to the triangle. The vector is *not* normalized.
     pub fn normal_dir(&self) -> Vector3<T> {
@@ -171,7 +172,7 @@ where
 
 impl<T, D> BoundedGeometry<T> for Triangle<T, D>
 where
-    T: RealField,
+    T: Real,
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
@@ -184,7 +185,7 @@ where
 
 impl<T> Distance<T, Point2<T>> for Triangle2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     fn distance(&self, point: &Point2<T>) -> T {
         let sdf = self.query_signed_distance(point).unwrap();
@@ -194,7 +195,7 @@ where
 
 impl<T> SignedDistance<T, U2> for Triangle2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     fn query_signed_distance(&self, point: &Point2<T>) -> Option<SignedDistanceResult<T, U2>> {
         // TODO: This is not the most efficient way to compute this
@@ -238,7 +239,7 @@ where
 
 impl<T> Distance<T, Point3<T>> for Triangle3d<T>
 where
-    T: RealField,
+    T: Real,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     fn distance(&self, point: &OPoint<T, U3>) -> T {
@@ -246,7 +247,7 @@ where
     }
 }
 
-impl<'a, T: RealField> ConvexPolygon3d<'a, T> for Triangle3d<T> {
+impl<'a, T: Real> ConvexPolygon3d<'a, T> for Triangle3d<T> {
     fn num_vertices(&self) -> usize {
         3
     }
@@ -256,7 +257,7 @@ impl<'a, T: RealField> ConvexPolygon3d<'a, T> for Triangle3d<T> {
     }
 }
 
-impl<T: RealField> Triangle3d<T> {
+impl<T: Real> Triangle3d<T> {
     /// Compute the solid angle to the given point.
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     pub fn compute_solid_angle(&self, p: &Point3<T>) -> T {
@@ -278,7 +279,7 @@ impl<T: RealField> Triangle3d<T> {
 #[replace_float_literals(T::from_f64(literal).unwrap())]
 pub fn compute_winding_number_for_triangles_3d<T, I>(triangles: I, point: &Point3<T>) -> T
 where
-    T: RealField,
+    T: Real,
     I: IntoIterator<Item = Triangle3d<T>>,
 {
     let angle_sum = triangles
