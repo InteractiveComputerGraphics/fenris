@@ -2,6 +2,7 @@ use crate::assembly::local::{
     ElementConnectivityAssembler, ElementMatrixAssembler, ElementScalarAssembler, ElementVectorAssembler,
 };
 use crate::space::FiniteElementConnectivity;
+use crate::Real;
 use fenris_nested_vec::NestedVec;
 use fenris_paradis::adapter::BlockAdapter;
 use fenris_paradis::coloring::sequential_greedy_coloring;
@@ -9,7 +10,7 @@ use fenris_paradis::DisjointSubsets;
 use fenris_sparse::ParallelCsrRowCollection;
 use nalgebra::base::storage::Storage;
 use nalgebra::{
-    DMatrix, DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DimName, Dynamic, Matrix, RealField, Scalar, U1,
+    DMatrix, DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DimName, Dynamic, Matrix, Scalar, U1,
 };
 use nalgebra_sparse::{pattern::SparsityPattern, CsrMatrix};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
@@ -107,7 +108,7 @@ impl<T: Scalar> CsrAssembler<T> {
     }
 }
 
-impl<T: RealField> CsrAssembler<T> {
+impl<T: Real> CsrAssembler<T> {
     pub fn assemble(&self, element_assembler: &impl ElementMatrixAssembler<T>) -> eyre::Result<CsrMatrix<T>> {
         let pattern = self.assemble_pattern(element_assembler);
         let initial_matrix_values = vec![T::zero(); pattern.nnz()];
@@ -263,7 +264,7 @@ impl<T: Scalar + Send> CsrParAssembler<T> {
     }
 }
 
-impl<T: RealField + Send> CsrParAssembler<T> {
+impl<T: Real + Send> CsrParAssembler<T> {
     pub fn assemble(
         &self,
         colors: &[DisjointSubsets],
@@ -344,7 +345,7 @@ impl<T: RealField + Send> CsrParAssembler<T> {
 
 pub fn apply_homogeneous_dirichlet_bc_csr<T>(matrix: &mut CsrMatrix<T>, nodes: &[usize], solution_dim: usize)
 where
-    T: RealField,
+    T: Real,
 {
     let d = solution_dim;
 
@@ -418,7 +419,7 @@ where
 
 pub fn apply_homogeneous_dirichlet_bc_matrix<T, SolutionDim>(matrix: &mut DMatrix<T>, nodes: &[usize])
 where
-    T: RealField,
+    T: Real,
     SolutionDim: DimName,
 {
     let d = SolutionDim::dim();
@@ -447,7 +448,7 @@ pub fn apply_homogeneous_dirichlet_bc_rhs<'a, T>(
     nodes: &[usize],
     solution_dim: usize,
 ) where
-    T: RealField,
+    T: Real,
 {
     let mut rhs = rhs.into();
     let d = solution_dim;
@@ -475,7 +476,7 @@ fn add_element_row_to_csr_row<T, S>(
     dim: usize,
     local_row: &Matrix<T, U1, Dynamic, S>,
 ) where
-    T: RealField,
+    T: Real,
     S: Storage<T, U1, Dynamic>,
 {
     assert_eq!(node_connectivity.len(), sorted_permutation.len());
@@ -522,7 +523,7 @@ struct VectorAssemblerWorkspace<T: Scalar> {
     nodes: Vec<usize>,
 }
 
-impl<T: RealField> Default for VectorAssemblerWorkspace<T> {
+impl<T: Real> Default for VectorAssemblerWorkspace<T> {
     fn default() -> Self {
         Self {
             vector: DVector::zeros(0),
@@ -536,7 +537,7 @@ pub struct VectorAssembler<T: Scalar> {
     workspace: RefCell<VectorAssemblerWorkspace<T>>,
 }
 
-impl<T: RealField> Default for VectorAssembler<T> {
+impl<T: Real> Default for VectorAssembler<T> {
     fn default() -> Self {
         Self {
             workspace: RefCell::new(VectorAssemblerWorkspace::default()),
@@ -544,7 +545,7 @@ impl<T: RealField> Default for VectorAssembler<T> {
     }
 }
 
-impl<T: RealField> VectorAssembler<T> {
+impl<T: Real> VectorAssembler<T> {
     pub fn assemble_vector_into<'a>(
         &self,
         output: impl Into<DVectorSliceMut<'a, T>>,
@@ -586,7 +587,7 @@ pub struct VectorParAssembler<T: Scalar + Send> {
     workspace: ThreadLocal<RefCell<VectorAssemblerWorkspace<T>>>,
 }
 
-impl<T: RealField> Default for VectorParAssembler<T> {
+impl<T: Real> Default for VectorParAssembler<T> {
     fn default() -> Self {
         Self {
             workspace: Default::default(),
@@ -594,7 +595,7 @@ impl<T: RealField> Default for VectorParAssembler<T> {
     }
 }
 
-impl<T: RealField> VectorParAssembler<T> {
+impl<T: Real> VectorParAssembler<T> {
     pub fn assemble_vector(
         &self,
         colors: &[DisjointSubsets],
@@ -654,7 +655,7 @@ impl<T: RealField> VectorParAssembler<T> {
 #[deprecated = "Use assemble_scalar instead"]
 pub fn compute_global_potential<T>(element_assembler: &(impl ElementScalarAssembler<T> + ?Sized)) -> eyre::Result<T>
 where
-    T: RealField,
+    T: Real,
 {
     assemble_scalar(element_assembler)
 }
@@ -662,7 +663,7 @@ where
 /// Computes the value of a global scalar potential as a sum of element-wise scalars.
 pub fn assemble_scalar<T>(element_assembler: &(impl ElementScalarAssembler<T> + ?Sized)) -> eyre::Result<T>
 where
-    T: RealField,
+    T: Real,
 {
     let num_elements = element_assembler.num_elements();
     let mut global_potential = T::zero();
@@ -681,7 +682,7 @@ pub fn par_compute_global_potential<T>(
     element_assembler: &(impl ElementScalarAssembler<T> + ?Sized + Sync),
 ) -> eyre::Result<T>
 where
-    T: RealField,
+    T: Real,
 {
     par_assemble_scalar(element_assembler)
 }
@@ -689,7 +690,7 @@ where
 /// Computes the value of a global scalar potential as a sum of element-wise scalars in parallel.
 pub fn par_assemble_scalar<T>(element_assembler: &(impl ElementScalarAssembler<T> + ?Sized + Sync)) -> eyre::Result<T>
 where
-    T: RealField,
+    T: Real,
 {
     let num_elements = element_assembler.num_elements();
     let global_potential = (0..num_elements)
@@ -733,7 +734,7 @@ fn gather_global_to_local_<T: Scalar>(
     }
 }
 
-pub fn add_local_to_global<'a, T: RealField>(
+pub fn add_local_to_global<'a, T: Real>(
     local: impl Into<DVectorSlice<'a, T>>,
     global: impl Into<DVectorSliceMut<'a, T>>,
     indices: &[usize],
@@ -742,7 +743,7 @@ pub fn add_local_to_global<'a, T: RealField>(
     add_local_to_global_(local.into(), global.into(), indices, solution_dim)
 }
 
-fn add_local_to_global_<'a, T: RealField>(
+fn add_local_to_global_<'a, T: Real>(
     local: DVectorSlice<'a, T>,
     mut global: DVectorSliceMut<'a, T>,
     indices: &[usize],

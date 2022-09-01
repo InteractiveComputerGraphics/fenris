@@ -1,7 +1,7 @@
 use crate::{compute_batch_contraction, HyperelasticMaterial};
 use fenris::allocators::DimAllocator;
-use fenris::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, OMatrix, OVector, RealField};
-use fenris::SmallDim;
+use fenris::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, OMatrix, OVector};
+use fenris::{Real, SmallDim};
 use numeric_literals::replace_float_literals;
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +13,7 @@ pub struct LameParameters<T> {
 
 impl<T> Default for LameParameters<T>
 where
-    T: RealField,
+    T: Real,
 {
     #[replace_float_literals(T::from_f64(literal).expect("literal must fit in T"))]
     fn default() -> Self {
@@ -30,7 +30,7 @@ pub struct YoungPoisson<T> {
 
 impl<T> From<YoungPoisson<T>> for LameParameters<T>
 where
-    T: RealField,
+    T: Real,
 {
     #[replace_float_literals(T::from_f64(literal).expect("literal must fit in T"))]
     fn from(params: YoungPoisson<T>) -> Self {
@@ -70,7 +70,7 @@ pub struct LinearElasticMaterial;
 #[allow(non_snake_case)]
 fn infinitesimal_strain_tensor<T, D>(deformation_gradient: &OMatrix<T, D, D>) -> OMatrix<T, D, D>
 where
-    T: RealField,
+    T: Real,
     D: DimName,
     DefaultAllocator: DimAllocator<T, D>,
 {
@@ -82,7 +82,7 @@ where
 #[replace_float_literals(T::from_f64(literal).expect("literal must fit in T"))]
 impl<T, D> HyperelasticMaterial<T, D> for LinearElasticMaterial
 where
-    T: RealField,
+    T: Real,
     D: DimName,
     DefaultAllocator: DimAllocator<T, D>,
 {
@@ -235,7 +235,7 @@ pub struct NeoHookeanMaterial;
 #[replace_float_literals(T::from_f64(literal).expect("literal must fit in T"))]
 impl<T, D> HyperelasticMaterial<T, D> for NeoHookeanMaterial
 where
-    T: RealField,
+    T: Real,
     D: SmallDim,
     DefaultAllocator: DimAllocator<T, D>,
 {
@@ -375,7 +375,7 @@ pub struct StVKMaterial;
 #[replace_float_literals(T::from_f64(literal).expect("literal must fit in T"))]
 fn green_strain_tensor<T, D>(deformation_gradient: &OMatrix<T, D, D>) -> OMatrix<T, D, D>
 where
-    T: RealField,
+    T: Real,
     D: DimName,
     DefaultAllocator: DimAllocator<T, D>,
 {
@@ -388,7 +388,7 @@ where
 #[replace_float_literals(T::from_f64(literal).expect("literal must fit in T"))]
 impl<T, D> HyperelasticMaterial<T, D> for StVKMaterial
 where
-    T: RealField,
+    T: Real,
     D: DimName,
     DefaultAllocator: DimAllocator<T, D>,
 {

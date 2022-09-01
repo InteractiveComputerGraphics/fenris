@@ -4,8 +4,9 @@ use crate::integrate::volume_form;
 use crate::quadrature::{
     BorrowedQuadratureParts, Quadrature, Quadrature1d, Quadrature2d, QuadraturePair1d, QuadraturePair2d,
 };
+use crate::Real;
 use itertools::izip;
-use nalgebra::{point, vector, Point1, Point2, RealField, U2};
+use nalgebra::{point, vector, Point1, Point2, U2};
 use numeric_literals::replace_float_literals;
 
 /// Construct a univariate quadrature rule by subdivision.
@@ -16,7 +17,7 @@ use numeric_literals::replace_float_literals;
 /// an aggregate quadrature rule from the individual pieces.
 pub fn subdivide_univariate<T>(quadrature: impl Quadrature1d<T>, subdivision_pieces: usize) -> QuadraturePair1d<T>
 where
-    T: RealField,
+    T: Real,
 {
     subdivide_univariate_(quadrature.weights(), quadrature.points(), subdivision_pieces)
 }
@@ -28,7 +29,7 @@ fn subdivide_univariate_<T>(
     subdivision_pieces: usize,
 ) -> QuadraturePair1d<T>
 where
-    T: RealField,
+    T: Real,
 {
     let mut points = Vec::new();
     let mut weights = Vec::new();
@@ -72,7 +73,7 @@ where
 /// Panics if `subdivisions == 0`.
 pub fn subdivide_triangle<T>(quadrature: impl Quadrature2d<T, Data = ()>, subdivisions: usize) -> QuadraturePair2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     subdivide_triangle_(quadrature.to_parts(), subdivisions)
 }
@@ -83,7 +84,7 @@ fn subdivide_triangle_<T>(
     subdivisions: usize,
 ) -> QuadraturePair2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     assert!(
         subdivisions > 0,
@@ -123,7 +124,7 @@ where
     quadrature
 }
 
-fn add_triangle_quadrature<T: RealField>(
+fn add_triangle_quadrature<T: Real>(
     quadrature: &mut QuadraturePair2d<T>,
     triangle_vertices: [Point2<T>; 3],
     base_quadrature: BorrowedQuadratureParts<T, U2, ()>,

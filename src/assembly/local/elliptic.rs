@@ -11,11 +11,12 @@ use crate::element::VolumetricFiniteElement;
 use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{
     DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, Dim, DimName, Dynamic, MatrixSlice,
-    MatrixSliceMut, MatrixSliceMutMN, OMatrix, OPoint, RealField, Scalar, U1,
+    MatrixSliceMut, MatrixSliceMutMN, OMatrix, OPoint, Scalar, U1,
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
 use crate::util::{clone_upper_to_lower, reshape_to_slice};
 use crate::workspace::with_thread_local_workspace;
+use crate::Real;
 use crate::Symmetry;
 use eyre::eyre;
 use itertools::izip;
@@ -28,7 +29,7 @@ pub(crate) fn compute_volume_u_grad<'a, T, GeometryDim, SolutionDim>(
     u: impl Into<MatrixSlice<'a, T, SolutionDim, Dynamic>>,
 ) -> OMatrix<T, GeometryDim, SolutionDim>
 where
-    T: RealField,
+    T: Real,
     SolutionDim: DimName,
     GeometryDim: DimName,
     DefaultAllocator: BiDimAllocator<T, SolutionDim, GeometryDim>,
@@ -200,7 +201,7 @@ where
 
 impl<T, GeometryDim, Data> Default for EllipticAssemblerWorkspace<T, GeometryDim, Data>
 where
-    T: RealField,
+    T: Real,
     GeometryDim: DimName,
     DefaultAllocator: Allocator<T, GeometryDim>,
 {
@@ -217,7 +218,7 @@ define_thread_local_workspace!(WORKSPACE);
 
 impl<'a, T, Space, Op, QTable> ElementScalarAssembler<T> for ElementEllipticAssembler<'a, T, Space, Op, QTable>
 where
-    T: RealField,
+    T: Real,
     Space: VolumetricFiniteElementSpace<T>,
     Op: EllipticEnergy<T, Space::ReferenceDim>,
     QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters> + ?Sized,
@@ -256,7 +257,7 @@ where
 
 impl<'a, T, Space, Op, QTable> ElementVectorAssembler<T> for ElementEllipticAssembler<'a, T, Space, Op, QTable>
 where
-    T: RealField,
+    T: Real,
     Space: VolumetricFiniteElementSpace<T>,
     Op: EllipticOperator<T, Space::ReferenceDim>,
     QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters> + ?Sized,
@@ -298,7 +299,7 @@ where
 
 impl<'a, T, Space, Op, QTable> ElementMatrixAssembler<T> for ElementEllipticAssembler<'a, T, Space, Op, QTable>
 where
-    T: RealField,
+    T: Real,
     Space: VolumetricFiniteElementSpace<T>,
     Op: EllipticContraction<T, Space::ReferenceDim>,
     QTable: QuadratureTable<T, Space::ReferenceDim, Data = Op::Parameters> + ?Sized,
@@ -369,7 +370,7 @@ pub fn assemble_element_elliptic_matrix<T, Element, Contraction>(
     basis_gradients_buffer: MatrixSliceMutMN<T, Element::ReferenceDim, Dynamic>,
 ) -> eyre::Result<()>
 where
-    T: RealField,
+    T: Real,
     // We only support volumetric elements atm
     Element: VolumetricFiniteElement<T>,
     Contraction: EllipticContraction<T, Element::GeometryDim>,
@@ -465,7 +466,7 @@ pub fn assemble_element_elliptic_vector<T, Element, Operator>(
     basis_gradients_buffer: MatrixSliceMutMN<T, Element::ReferenceDim, Dynamic>,
 ) -> eyre::Result<()>
 where
-    T: RealField,
+    T: Real,
     // We only support volumetric elements atm
     Element: VolumetricFiniteElement<T>,
     Operator: EllipticOperator<T, Element::GeometryDim>,
@@ -559,7 +560,7 @@ pub fn compute_element_elliptic_energy<T, Element, Operator>(
     basis_gradients_buffer: MatrixSliceMutMN<T, Element::ReferenceDim, Dynamic>,
 ) -> eyre::Result<T>
 where
-    T: RealField,
+    T: Real,
     // We only support volumetric elements atm
     Element: VolumetricFiniteElement<T>,
     Operator: EllipticEnergy<T, Element::GeometryDim>,

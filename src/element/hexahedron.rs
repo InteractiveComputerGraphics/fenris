@@ -6,11 +6,12 @@ use numeric_literals::replace_float_literals;
 use crate::connectivity::{Hex20Connectivity, Hex27Connectivity, Hex8Connectivity};
 use crate::element;
 use crate::element::{ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement};
-use crate::nalgebra::{distance, Matrix3, OMatrix, OPoint, Point3, RealField, Scalar, Vector3, U1, U20, U27, U3, U8};
+use crate::nalgebra::{distance, Matrix3, OMatrix, OPoint, Point3, Scalar, Vector3, U1, U20, U27, U3, U8};
+use crate::Real;
 
 impl<T> ElementConnectivity<T> for Hex8Connectivity
 where
-    T: RealField,
+    T: Real,
 {
     type Element = Hex8Element<T>;
     type GeometryDim = U3;
@@ -32,7 +33,7 @@ where
 
 impl<T> FixedNodesReferenceFiniteElement<T> for Hex8Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type ReferenceDim = U3;
     type NodalDim = U8;
@@ -84,7 +85,7 @@ where
 
 impl<T> FiniteElement<T> for Hex8Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type GeometryDim = U3;
 
@@ -135,7 +136,7 @@ where
 
 impl<T> Hex8Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
     pub fn reference() -> Self {
@@ -172,7 +173,7 @@ impl<T: Scalar + Copy> Hex27Element<T> {
     }
 }
 
-impl<T: RealField> Hex27Element<T> {
+impl<T: Real> Hex27Element<T> {
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
     pub fn reference() -> Self {
         Self::from_vertices([
@@ -212,7 +213,7 @@ impl<T: RealField> Hex27Element<T> {
 
 impl<T> FixedNodesReferenceFiniteElement<T> for Hex27Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type ReferenceDim = U3;
     type NodalDim = U27;
@@ -316,7 +317,7 @@ where
 
 impl<T> FiniteElement<T> for Hex27Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type GeometryDim = U3;
 
@@ -335,7 +336,7 @@ where
 
 impl<T> ElementConnectivity<T> for Hex27Connectivity
 where
-    T: RealField,
+    T: Real,
 {
     type Element = Hex27Element<T>;
     type GeometryDim = U3;
@@ -372,7 +373,7 @@ impl<T: Scalar + Copy> Hex20Element<T> {
     }
 }
 
-impl<T: RealField> Hex20Element<T> {
+impl<T: Real> Hex20Element<T> {
     #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
     pub fn reference() -> Self {
         Self::from_vertices([
@@ -403,7 +404,7 @@ impl<T: RealField> Hex20Element<T> {
 
 impl<T> FixedNodesReferenceFiniteElement<T> for Hex20Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type ReferenceDim = U3;
     type NodalDim = U20;
@@ -544,7 +545,7 @@ where
 
 impl<T> FiniteElement<T> for Hex20Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type GeometryDim = U3;
 
@@ -563,7 +564,7 @@ where
 
 impl<T> ElementConnectivity<T> for Hex20Connectivity
 where
-    T: RealField,
+    T: Real,
 {
     type Element = Hex20Element<T>;
     type GeometryDim = U3;

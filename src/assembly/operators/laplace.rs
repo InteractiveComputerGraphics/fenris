@@ -1,7 +1,7 @@
 use crate::allocators::{BiDimAllocator, DimAllocator};
 use crate::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
-use crate::nalgebra::{DefaultAllocator, OMatrix, OVector, RealField, U1};
-use crate::{SmallDim, Symmetry};
+use crate::nalgebra::{DefaultAllocator, OMatrix, OVector, U1};
+use crate::{Real, SmallDim, Symmetry};
 use numeric_literals::replace_float_literals;
 
 /// The Laplace operator $\Delta = \nabla^2$.
@@ -25,7 +25,7 @@ impl<T, GeometryDim> Operator<T, GeometryDim> for LaplaceOperator {
 
 impl<T, D> EllipticEnergy<T, D> for LaplaceOperator
 where
-    T: RealField,
+    T: Real,
     D: SmallDim,
     DefaultAllocator: BiDimAllocator<T, D, Self::SolutionDim>,
 {
@@ -37,7 +37,7 @@ where
 
 impl<T, D> EllipticOperator<T, D> for LaplaceOperator
 where
-    T: RealField,
+    T: Real,
     D: SmallDim,
     DefaultAllocator: BiDimAllocator<T, D, Self::SolutionDim>,
 {
@@ -52,7 +52,7 @@ where
 
 impl<T, D> EllipticContraction<T, D> for LaplaceOperator
 where
-    T: RealField,
+    T: Real,
     D: SmallDim,
     DefaultAllocator: DimAllocator<T, D>,
 {

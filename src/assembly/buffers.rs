@@ -2,13 +2,11 @@ use crate::allocators::{BiDimAllocator, DimAllocator};
 use crate::assembly::global::gather_global_to_local;
 use crate::assembly::local::QuadratureTable;
 use crate::nalgebra::allocator::Allocator;
-use crate::nalgebra::{
-    DMatrix, DefaultAllocator, DimName, Dynamic, MatrixSlice, MatrixSliceMut, OPoint, RealField, Scalar,
-};
+use crate::nalgebra::{DMatrix, DefaultAllocator, DimName, Dynamic, MatrixSlice, MatrixSliceMut, OPoint, Scalar};
 use crate::quadrature::Quadrature;
 use crate::space::FiniteElementSpace;
 use crate::util::compute_interpolation;
-use crate::SmallDim;
+use crate::{Real, SmallDim};
 use itertools::izip;
 use nalgebra::{DVector, DVectorSlice, OMatrix, OVector};
 
@@ -19,7 +17,7 @@ pub struct BasisFunctionBuffer<T: Scalar> {
     element_basis_gradients: DMatrix<T>,
 }
 
-impl<T: RealField> Default for BasisFunctionBuffer<T> {
+impl<T: Real> Default for BasisFunctionBuffer<T> {
     fn default() -> Self {
         Self {
             element_nodes: Vec::new(),
@@ -29,7 +27,7 @@ impl<T: RealField> Default for BasisFunctionBuffer<T> {
     }
 }
 
-impl<T: RealField> BasisFunctionBuffer<T> {
+impl<T: Real> BasisFunctionBuffer<T> {
     pub fn resize(&mut self, node_count: usize, reference_dim: usize) {
         self.element_nodes.resize(node_count, usize::MAX);
         self.element_basis_values.resize(node_count, T::zero());
@@ -146,7 +144,7 @@ where
 
 impl<T, GeometryDim, Data> QuadratureBuffer<T, GeometryDim, Data>
 where
-    T: RealField,
+    T: Real,
     GeometryDim: SmallDim,
     Data: Default + Clone,
     DefaultAllocator: DimAllocator<T, GeometryDim>,
@@ -224,7 +222,7 @@ pub struct InterpolationBuffer<T: Scalar> {
     u_local: DVector<T>,
 }
 
-impl<T: RealField> Default for InterpolationBuffer<T> {
+impl<T: Real> Default for InterpolationBuffer<T> {
     fn default() -> Self {
         Self {
             basis_buffer: Default::default(),
@@ -245,7 +243,7 @@ where
     element_index: usize,
 }
 
-impl<T: RealField> InterpolationBuffer<T> {
+impl<T: Real> InterpolationBuffer<T> {
     pub fn prepare_element_in_space<'a, Space>(
         &'a mut self,
         element_index: usize,
@@ -283,7 +281,7 @@ impl<T: RealField> InterpolationBuffer<T> {
 
 impl<'a, T, Space> InterpolationElementBuffer<'a, T, Space>
 where
-    T: RealField,
+    T: Real,
     Space: FiniteElementSpace<T>,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
 {

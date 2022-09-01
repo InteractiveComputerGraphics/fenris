@@ -40,7 +40,7 @@ fn interpolate_into() {
 // TODO: Use this in rewritten tests?
 // fn find_interior_point<T>(polygon: &ConvexPolygon<T>) -> Point2<T>
 // where
-//     T: RealField,
+//     T: Real,
 // {
 //     // Find an interior point by averaging all vertices (note: this is not in general the centroid)
 //     let num_vertices = polygon.vertices().len();

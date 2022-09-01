@@ -37,6 +37,8 @@ pub extern crate nalgebra;
 pub extern crate nalgebra_sparse;
 pub extern crate vtkio;
 
+pub use fenris_traits::Real;
+
 /// A small, fixed-size dimension.
 ///
 /// Used as a trait alias for various traits frequently needed by generic `fenris` routines.

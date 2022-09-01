@@ -4,7 +4,8 @@ use crate::geometry::polymesh::PolyMesh3d;
 use crate::geometry::sdf::BoundedSdf;
 use crate::geometry::{AxisAlignedBoundingBox2d, HalfSpace};
 use crate::mesh::{HexMesh, Mesh, QuadMesh2d, Tet4Mesh, TriangleMesh2d};
-use nalgebra::{convert, try_convert, Point2, Point3, RealField, Unit, Vector2, Vector3};
+use crate::Real;
+use nalgebra::{convert, try_convert, Point2, Point3, Unit, Vector2, Vector3};
 use numeric_literals::replace_float_literals;
 use ordered_float::NotNan;
 use std::cmp::min;
@@ -12,14 +13,14 @@ use std::f64::consts::PI;
 
 pub fn create_unit_square_uniform_quad_mesh_2d<T>(cells_per_dim: usize) -> QuadMesh2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     create_rectangular_uniform_quad_mesh_2d(T::one(), 1, 1, cells_per_dim, &Vector2::new(T::zero(), T::one()))
 }
 
 pub fn create_unit_square_uniform_tri_mesh_2d<T>(cells_per_dim: usize) -> TriangleMesh2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     create_rectangular_uniform_quad_mesh_2d(T::one(), 1, 1, cells_per_dim, &Vector2::new(T::zero(), T::one()))
         .split_into_triangles()
@@ -27,14 +28,14 @@ where
 
 pub fn create_unit_box_uniform_hex_mesh_3d<T>(cells_per_dim: usize) -> HexMesh<T>
 where
-    T: RealField,
+    T: Real,
 {
     create_rectangular_uniform_hex_mesh(T::one(), 1, 1, 1, cells_per_dim)
 }
 
 pub fn create_unit_box_uniform_tet_mesh_3d<T>(cells_per_dim: usize) -> Tet4Mesh<T>
 where
-    T: RealField,
+    T: Real,
 {
     let hex_mesh = create_unit_box_uniform_hex_mesh_3d(cells_per_dim);
     Tet4Mesh::from(&hex_mesh)
@@ -50,7 +51,7 @@ pub fn create_rectangular_uniform_quad_mesh_2d<T>(
     top_left: &Vector2<T>,
 ) -> QuadMesh2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     if cells_per_unit == 0 || units_x == 0 || units_y == 0 {
         QuadMesh2d::from_vertices_and_connectivity(Vec::new(), Vec::new())
@@ -94,7 +95,7 @@ where
 #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
 pub fn voxelize_bounding_box_2d<T>(bounds: &AxisAlignedBoundingBox2d<T>, max_cell_size: T) -> QuadMesh2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     assert!(max_cell_size > T::zero(), "Max cell size must be positive.");
 
@@ -138,7 +139,7 @@ where
 #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
 pub fn voxelize_sdf_2d<T>(sdf: &impl BoundedSdf<T>, max_cell_size: T) -> QuadMesh2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     let rectangular_mesh: QuadMesh2d<T> = voxelize_bounding_box_2d(&sdf.bounding_box(), max_cell_size);
     let desired_cell_indices: Vec<_> = rectangular_mesh
@@ -154,7 +155,7 @@ where
 #[replace_float_literals(T::from_f64(literal).expect("Literal must fit in T"))]
 pub fn approximate_quad_mesh_for_sdf_2d<T>(sdf: &impl BoundedSdf<T>, max_cell_size: T) -> QuadMesh2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     let mut mesh = voxelize_sdf_2d(sdf, max_cell_size);
 
@@ -172,7 +173,7 @@ where
 
 pub fn approximate_triangle_mesh_for_sdf_2d<T>(sdf: &impl BoundedSdf<T>, max_cell_size: T) -> TriangleMesh2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     // TODO: This is not the most efficient way to do this, since we compute SDFs for the same points
     // several times, but it's at least simple
@@ -220,7 +221,7 @@ pub fn create_rectangular_uniform_hex_mesh<T>(
     cells_per_unit: usize,
 ) -> HexMesh<T>
 where
-    T: RealField,
+    T: Real,
 {
     if cells_per_unit == 0 || units_x == 0 || units_y == 0 {
         HexMesh::from_vertices_and_connectivity(Vec::new(), Vec::new())

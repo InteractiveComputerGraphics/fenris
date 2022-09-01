@@ -1,4 +1,5 @@
-use nalgebra::{Point3, RealField, Scalar, Unit, UnitVector3, Vector3};
+use fenris_traits::Real;
+use nalgebra::{Point3, Scalar, Unit, UnitVector3, Vector3};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Plane<T: Scalar> {
@@ -8,7 +9,7 @@ pub struct Plane<T: Scalar> {
 
 impl<T> Plane<T>
 where
-    T: RealField,
+    T: Real,
 {
     pub fn normal(&self) -> &Unit<Vector3<T>> {
         &self.normal

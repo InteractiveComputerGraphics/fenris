@@ -1,8 +1,9 @@
 use crate::allocators::BiDimAllocator;
 use crate::geometry::DistanceQuery;
 use crate::space::GeometricFiniteElementSpace;
+use crate::Real;
 use nalgebra::allocator::Allocator;
-use nalgebra::{DVector, DefaultAllocator, DimMin, DimName, OPoint, OVector, RealField, U1};
+use nalgebra::{DVector, DefaultAllocator, DimMin, DimName, OPoint, OVector, U1};
 use serde::{Deserialize, Serialize};
 
 /// Interpolates solution variables onto a fixed set of interpolation points.
@@ -35,7 +36,7 @@ pub struct FiniteElementInterpolator<T> {
 
 impl<T> FiniteElementInterpolator<T>
 where
-    T: RealField,
+    T: Real,
 {
     pub fn interpolate<SolutionDim>(&self, u: &DVector<T>) -> Vec<OVector<T, SolutionDim>>
     where
@@ -101,7 +102,7 @@ impl<T> FiniteElementInterpolator<T> {
         _interpolation_points: &'a [OPoint<T, D>],
     ) -> Result<Self, Box<dyn std::error::Error>>
     where
-        T: RealField,
+        T: Real,
         D: DimName + DimMin<D, Output = D>,
         Space: GeometricFiniteElementSpace<'a, T, GeometryDim = D> + DistanceQuery<'a, OPoint<T, D>>,
         DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
@@ -146,7 +147,7 @@ impl<T> FiniteElementInterpolator<T> {
 
 pub trait MakeInterpolator<T, D>
 where
-    T: RealField,
+    T: Real,
     D: DimName + DimMin<D, Output = D>,
     DefaultAllocator: Allocator<T, D>,
 {

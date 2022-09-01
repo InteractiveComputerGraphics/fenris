@@ -10,9 +10,10 @@ use fenris::element::{Quad4d2Element, VolumetricFiniteElement};
 use fenris::geometry::Quad2d;
 use fenris::mesh::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::mesh::QuadMesh2d;
-use fenris::nalgebra::{DMatrix, DVector, DefaultAllocator, DimName, Matrix4, OPoint, OVector, Point2, RealField};
+use fenris::nalgebra::{DMatrix, DVector, DefaultAllocator, DimName, Matrix4, OPoint, OVector, Point2};
 use fenris::quadrature;
 use fenris::quadrature::QuadraturePair;
+use fenris::Real;
 use itertools::izip;
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
 use nalgebra::{DMatrixSliceMut, Matrix2};
@@ -24,7 +25,7 @@ mod source;
 
 fn reference_quad<T>() -> Quad2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     Quad2d([
         Point2::new(-T::one(), -T::one()),

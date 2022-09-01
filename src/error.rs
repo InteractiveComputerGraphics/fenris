@@ -8,9 +8,9 @@ use crate::integrate::{
     IntegrationWorkspace, VolumeFunction,
 };
 use crate::nalgebra::DVectorSlice;
-use crate::nalgebra::{DefaultAllocator, OPoint, OVector, RealField};
+use crate::nalgebra::{DefaultAllocator, OPoint, OVector};
 use crate::space::VolumetricFiniteElementSpace;
-use crate::SmallDim;
+use crate::{Real, SmallDim};
 use nalgebra::{OMatrix, Vector1, U1};
 
 /// Estimate the squared $L^2$ error $\norm{u_h - u}^2_{L^2}$ on the given element with the given basis
@@ -30,7 +30,7 @@ pub fn estimate_element_L2_error_squared<T, Element, SolutionDim>(
     workspace: &mut IntegrationWorkspace<T>,
 ) -> T
 where
-    T: RealField,
+    T: Real,
     Element: VolumetricFiniteElement<T>,
     SolutionDim: SmallDim,
     DefaultAllocator: TriDimAllocator<T, SolutionDim, Element::GeometryDim, Element::ReferenceDim>,
@@ -66,7 +66,7 @@ pub fn estimate_element_H1_seminorm_error_squared<T, Element, SolutionDim>(
     workspace: &mut IntegrationWorkspace<T>,
 ) -> T
 where
-    T: RealField,
+    T: Real,
     Element: VolumetricFiniteElement<T>,
     SolutionDim: SmallDim,
     DefaultAllocator: TriDimAllocator<T, SolutionDim, Element::GeometryDim, Element::ReferenceDim>,
@@ -103,7 +103,7 @@ pub fn estimate_element_H1_seminorm_error<T, Element, SolutionDim>(
     workspace: &mut IntegrationWorkspace<T>,
 ) -> T
 where
-    T: RealField,
+    T: Real,
     Element: VolumetricFiniteElement<T>,
     SolutionDim: SmallDim,
     DefaultAllocator: TriDimAllocator<T, SolutionDim, Element::GeometryDim, Element::ReferenceDim>,
@@ -136,7 +136,7 @@ pub fn estimate_element_L2_error<T, Element, SolutionDim>(
     workspace: &mut IntegrationWorkspace<T>,
 ) -> T
 where
-    T: RealField,
+    T: Real,
     Element: VolumetricFiniteElement<T>,
     SolutionDim: SmallDim,
     DefaultAllocator: TriDimAllocator<T, SolutionDim, Element::GeometryDim, Element::ReferenceDim>,
@@ -157,7 +157,7 @@ fn make_L2_error_squared_integrand<'a, T, SolutionDim, GeometryDim>(
     u: impl 'a + Fn(&OPoint<T, GeometryDim>) -> OVector<T, SolutionDim>,
 ) -> Integrand<SolutionDim, impl 'a + Fn(&OPoint<T, GeometryDim>, &OVector<T, SolutionDim>) -> Vector1<T>>
 where
-    T: RealField,
+    T: Real,
     SolutionDim: SmallDim,
     GeometryDim: SmallDim,
     DefaultAllocator: BiDimAllocator<T, SolutionDim, GeometryDim>,
@@ -175,7 +175,7 @@ fn make_H1_seminorm_error_squared_integrand<'a, T, SolutionDim, GeometryDim>(
     u_grad: impl 'a + Fn(&OPoint<T, GeometryDim>) -> OMatrix<T, GeometryDim, SolutionDim>,
 ) -> impl VolumeFunction<T, GeometryDim, SolutionDim = SolutionDim, OutputDim = U1>
 where
-    T: RealField,
+    T: Real,
     SolutionDim: SmallDim,
     GeometryDim: SmallDim,
     DefaultAllocator: BiDimAllocator<T, SolutionDim, GeometryDim>,
@@ -200,7 +200,7 @@ pub fn estimate_L2_error_squared<'a, T, Space, SolutionDim, QTable>(
     qtable: &QTable,
 ) -> eyre::Result<T>
 where
-    T: RealField,
+    T: Real,
     SolutionDim: SmallDim,
     Space: VolumetricFiniteElementSpace<T>,
     QTable: QuadratureTable<T, Space::ReferenceDim>,
@@ -226,7 +226,7 @@ pub fn estimate_L2_error<'a, T, Space, SolutionDim, QTable>(
     qtable: &QTable,
 ) -> eyre::Result<T>
 where
-    T: RealField,
+    T: Real,
     SolutionDim: SmallDim,
     Space: VolumetricFiniteElementSpace<T>,
     QTable: QuadratureTable<T, Space::ReferenceDim>,
@@ -245,7 +245,7 @@ pub fn estimate_H1_seminorm_error_squared<'a, T, Space, SolutionDim, QTable>(
     qtable: &QTable,
 ) -> eyre::Result<T>
 where
-    T: RealField,
+    T: Real,
     SolutionDim: SmallDim,
     Space: VolumetricFiniteElementSpace<T>,
     QTable: QuadratureTable<T, Space::ReferenceDim>,
@@ -271,7 +271,7 @@ pub fn estimate_H1_seminorm_error<'a, T, Space, SolutionDim, QTable>(
     qtable: &QTable,
 ) -> eyre::Result<T>
 where
-    T: RealField,
+    T: Real,
     SolutionDim: SmallDim,
     Space: VolumetricFiniteElementSpace<T>,
     QTable: QuadratureTable<T, Space::ReferenceDim>,

@@ -7,7 +7,7 @@
 // use crate::{ConvexPolygon, GeneralPolygon};
 // use ::vtkio::model::{Attributes, Cells, DataSet, PolyDataTopology};
 // use nalgebra::allocator::Allocator;
-// use nalgebra::{DefaultAllocator, DimName, OPoint, RealField, Scalar};
+// use nalgebra::{DefaultAllocator, DimName, OPoint, Real, Scalar};
 // use num::Zero;
 // use std::fs::create_dir_all;
 // use std::path::Path;
@@ -162,7 +162,7 @@
 //
 // impl<'a, T> From<&'a GeneralPolygon<T>> for DataSet
 // where
-//     T: RealField,
+//     T: Real,
 // {
 //     fn from(polygon: &'a GeneralPolygon<T>) -> Self {
 //         let mut points = Vec::with_capacity(polygon.num_vertices() * 3);

@@ -6,7 +6,7 @@ use crate::mesh::Mesh;
 use crate::nalgebra::{DefaultAllocator, DimName, Scalar};
 use crate::quadrature::QuadraturePair;
 use crate::quadrature::{tensor, total_order};
-use nalgebra::RealField;
+use crate::Real;
 
 /// A canonical quadrature for integrating the mass matrix terms.
 ///
@@ -38,7 +38,7 @@ macro_rules! impl_canonical_mass_for_element {
     ($element:ty, $quadrature:expr) => {
         impl<T> CanonicalMassQuadrature for $element
         where
-            T: RealField,
+            T: Real,
         {
             type Quadrature = QuadraturePair<T, <$element as ReferenceFiniteElement<T>>::ReferenceDim>;
 
@@ -53,7 +53,7 @@ macro_rules! impl_canonical_stiffness_for_element {
     ($element:ty, $quadrature:expr) => {
         impl<T> CanonicalStiffnessQuadrature for $element
         where
-            T: RealField,
+            T: Real,
         {
             type Quadrature = QuadraturePair<T, <$element as ReferenceFiniteElement<T>>::ReferenceDim>;
 

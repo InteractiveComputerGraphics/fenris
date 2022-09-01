@@ -1,3 +1,5 @@
+use crate::nalgebra::{convert, Point2, Point3, U1};
+use crate::Real;
 use nalgebra::allocator::Allocator;
 use nalgebra::{DefaultAllocator, DimName, OPoint, Point1, Scalar, U2, U3};
 use num::Zero;
@@ -10,8 +12,6 @@ pub use canonical::*;
 ///
 /// TODO: How to prevent collapse?
 pub use fenris_quadrature::Error as QuadratureError;
-
-use crate::nalgebra::{convert, Point2, Point3, RealField, U1};
 
 pub mod subdivide;
 pub mod tensor;
@@ -287,7 +287,7 @@ where
 
 fn convert_quadrature_rule_from_1d_f64<T>(quadrature: fenris_quadrature::Rule<1>) -> QuadraturePair1d<T>
 where
-    T: RealField,
+    T: Real,
 {
     let (weights, points) = quadrature;
     let weights = weights.into_iter().map(convert).collect();
@@ -297,7 +297,7 @@ where
 
 fn convert_quadrature_rule_from_2d_f64<T>(quadrature: fenris_quadrature::Rule<2>) -> QuadraturePair2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     let (weights, points) = quadrature;
     let weights = weights.into_iter().map(convert).collect();
@@ -307,7 +307,7 @@ where
 
 fn convert_quadrature_rule_from_3d_f64<T>(quadrature: fenris_quadrature::Rule<3>) -> QuadraturePair3d<T>
 where
-    T: RealField,
+    T: Real,
 {
     let (weights, points) = quadrature;
     let weights = weights.into_iter().map(convert).collect();

@@ -1,6 +1,7 @@
 use crate::{HalfPlane, Line2d, LineSegment2d, SimplePolygon2d, Triangle, Triangle2d};
+use fenris_traits::Real;
 use itertools::Itertools;
-use nalgebra::{Point2, RealField, Scalar, Unit, Vector2};
+use nalgebra::{Point2, Scalar, Unit, Vector2};
 
 /// Type used to indicate conversion failure in the presence of concavity.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -72,7 +73,7 @@ where
 
 impl<T> ConvexPolygon<T>
 where
-    T: RealField,
+    T: Real,
 {
     /// Iterates over the half planes that define the polygon.
     ///

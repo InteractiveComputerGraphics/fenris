@@ -1,8 +1,8 @@
 use fenris::allocators::DimAllocator;
 use fenris::assembly::local::{Density, SourceFunction};
 use fenris::assembly::operators::Operator;
-use fenris::nalgebra::{DefaultAllocator, OPoint, OVector, RealField, Scalar};
-use fenris::SmallDim;
+use fenris::nalgebra::{DefaultAllocator, OPoint, OVector, Scalar};
+use fenris::{Real, SmallDim};
 
 /// A source for the gravitational force.
 ///
@@ -44,7 +44,7 @@ where
 
 impl<T, D> Operator<T, D> for GravitySource<T, D>
 where
-    T: RealField,
+    T: Real,
     D: SmallDim,
     DefaultAllocator: DimAllocator<T, D>,
 {
@@ -56,7 +56,7 @@ where
 
 impl<T, D> SourceFunction<T, D> for GravitySource<T, D>
 where
-    T: RealField,
+    T: Real,
     D: SmallDim,
     DefaultAllocator: DimAllocator<T, D>,
 {

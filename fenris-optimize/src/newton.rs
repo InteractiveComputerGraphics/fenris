@@ -1,7 +1,8 @@
 use crate::calculus::{DifferentiableVectorFunction, VectorFunction};
+use fenris_traits::Real;
 use itertools::iterate;
 use log::debug;
-use nalgebra::{DVector, DVectorSlice, DVectorSliceMut, RealField, Scalar};
+use nalgebra::{DVector, DVectorSlice, DVectorSliceMut, Scalar};
 use numeric_literals::replace_float_literals;
 use std::error::Error;
 use std::fmt;
@@ -65,7 +66,7 @@ pub fn newton<'a, T, F>(
     settings: NewtonSettings<T>,
 ) -> Result<usize, NewtonError>
 where
-    T: RealField,
+    T: Real,
     F: DifferentiableVectorFunction<T>,
 {
     newton_line_search(function, x, f, dx, settings, &mut NoLineSearch {})
@@ -82,7 +83,7 @@ pub fn newton_line_search<'a, T, F>(
     line_search: &mut impl LineSearch<T, F>,
 ) -> Result<usize, NewtonError>
 where
-    T: RealField,
+    T: Real,
     F: DifferentiableVectorFunction<T>,
 {
     let mut x = x.into();
@@ -146,7 +147,7 @@ pub struct NoLineSearch;
 
 impl<T, F> LineSearch<T, F> for NoLineSearch
 where
-    T: RealField,
+    T: Real,
     F: VectorFunction<T>,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
@@ -172,7 +173,7 @@ pub struct BacktrackingLineSearch;
 
 impl<T, F> LineSearch<T, F> for BacktrackingLineSearch
 where
-    T: RealField,
+    T: Real,
     F: VectorFunction<T>,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]

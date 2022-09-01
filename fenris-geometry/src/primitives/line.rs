@@ -1,13 +1,14 @@
 use crate::{ConvexPolygon, Disk, HalfPlane, Plane};
+use fenris_traits::Real;
 use nalgebra::allocator::Allocator;
-use nalgebra::{clamp, DefaultAllocator, DimName, Matrix2, OPoint, OVector, RealField, Vector2, U2, U3};
+use nalgebra::{clamp, DefaultAllocator, DimName, Matrix2, OPoint, OVector, Vector2, U2, U3};
 use nalgebra::{Point2, Point3, Scalar};
 use numeric_literals::replace_float_literals;
 use std::fmt::Debug;
 
 pub type LineSegment3d<T> = LineSegment<T, U3>;
 
-impl<T: RealField> LineSegment3d<T> {
+impl<T: Real> LineSegment3d<T> {
     #[allow(non_snake_case)]
     pub fn closest_point_to_plane_parametric(&self, plane: &Plane<T>) -> T {
         let n = plane.normal();
@@ -85,7 +86,7 @@ where
 
 impl<T, D> LineSegment<T, D>
 where
-    T: RealField,
+    T: Real,
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
@@ -129,7 +130,7 @@ where
 
 impl<T> LineSegment2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     /// Returns a vector normal to the line segment, in the direction consistent with a
     /// counter-clockwise winding order when the edge is part of a polygon.
@@ -260,7 +261,7 @@ where
     }
 }
 
-impl<T: RealField> LineSegment3d<T> {
+impl<T: Real> LineSegment3d<T> {
     pub fn intersect_plane_parametric(&self, plane: &Plane<T>) -> Option<T> {
         self.to_line()
             .intersect_plane_parametric(plane)
@@ -304,7 +305,7 @@ where
 
 impl<T, D> Line<T, D>
 where
-    T: RealField,
+    T: Real,
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
@@ -345,7 +346,7 @@ where
 
 impl<T> Line2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     pub fn intersect(&self, other: &Line2d<T>) -> Option<Point2<T>> {
         self.intersect_line_parametric(other)
@@ -414,7 +415,7 @@ where
 
 impl<T> Line3d<T>
 where
-    T: RealField,
+    T: Real,
 {
     pub fn intersect_plane_parametric(&self, plane: &Plane<T>) -> Option<T> {
         let n = plane.normal();

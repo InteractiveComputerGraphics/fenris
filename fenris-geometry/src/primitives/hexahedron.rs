@@ -1,7 +1,8 @@
 use crate::{
     AxisAlignedBoundingBox, BoundedGeometry, ConvexPolyhedron, Distance, Quad3d, SignedDistance, SignedDistanceResult,
 };
-use nalgebra::{OPoint, Point3, RealField, Scalar, U3};
+use fenris_traits::Real;
+use nalgebra::{OPoint, Point3, Scalar, U3};
 use numeric_literals::replace_float_literals;
 
 #[derive(Debug, Copy, Clone, PartialEq, Hash)]
@@ -15,7 +16,7 @@ where
 
 impl<T> BoundedGeometry<T> for Hexahedron<T>
 where
-    T: RealField,
+    T: Real,
 {
     type Dimension = U3;
 
@@ -35,7 +36,7 @@ where
 
 impl<T> Hexahedron<T>
 where
-    T: RealField,
+    T: Real,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     pub fn reference() -> Self {
@@ -54,7 +55,7 @@ where
 
 impl<T> Distance<T, Point3<T>> for Hexahedron<T>
 where
-    T: RealField,
+    T: Real,
 {
     fn distance(&self, point: &Point3<T>) -> T {
         let signed_dist = self.compute_signed_distance(point).signed_distance;
@@ -64,7 +65,7 @@ where
 
 impl<T> SignedDistance<T, U3> for Hexahedron<T>
 where
-    T: RealField,
+    T: Real,
 {
     fn query_signed_distance(&self, point: &OPoint<T, U3>) -> Option<SignedDistanceResult<T, U3>> {
         Some(self.compute_signed_distance(point))
@@ -73,7 +74,7 @@ where
 
 impl<'a, T> ConvexPolyhedron<'a, T> for Hexahedron<T>
 where
-    T: RealField,
+    T: Real,
 {
     type Face = Quad3d<T>;
 

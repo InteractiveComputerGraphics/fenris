@@ -1,10 +1,9 @@
 use core::fmt;
+use fenris_traits::Real;
 use nalgebra::base::constraint::AreMultipliable;
 use nalgebra::constraint::{DimEq, ShapeConstraint};
 use nalgebra::storage::Storage;
-use nalgebra::{
-    ClosedAdd, ClosedMul, DVector, DVectorSlice, DVectorSliceMut, Dim, Dynamic, Matrix, RealField, Scalar, U1,
-};
+use nalgebra::{ClosedAdd, ClosedMul, DVector, DVectorSlice, DVectorSliceMut, Dim, Dynamic, Matrix, Scalar, U1};
 use nalgebra_sparse::ops::serial::spmm_csr_dense;
 use nalgebra_sparse::ops::Op;
 use nalgebra_sparse::CsrMatrix;
@@ -107,7 +106,7 @@ impl Default for RelativeResidualCriterion<f32> {
 
 impl<T> CgStoppingCriterion<T> for RelativeResidualCriterion<T>
 where
-    T: RealField,
+    T: Real,
 {
     fn has_converged(
         &self,
@@ -357,7 +356,7 @@ pub struct CgOutput<T> {
 
 impl<'a, T, A, P, Criterion> ConjugateGradient<'a, T, A, P, Criterion>
 where
-    T: RealField,
+    T: Real,
     A: LinearOperator<T>,
     P: LinearOperator<T>,
     Criterion: CgStoppingCriterion<T>,
@@ -387,10 +386,12 @@ where
         let Buffers { r, z, p, Ap } = self.workspace.prepare_buffers(x.len());
 
         // r = b - Ax
+        // First: r <- Ax
         if let Err(err) = apply_operator(&mut *r, &self.operator, &x) {
             return Err(SolveError::new(output, OperatorError(err)));
         }
-        r.zip_apply(&b, |Ax_i, b_i| b_i - Ax_i);
+        // Second: r <- b - r
+        r.zip_apply(&b, |r_i, b_i| *r_i = b_i - r_i.clone());
 
         // z = Pr
         if let Err(err) = apply_operator(&mut *z, &self.preconditioner, &*r) {
@@ -455,9 +456,9 @@ where
 
             let alpha = zTr / pAp;
             // x <- x + alpha * p
-            x.zip_apply(&*p, |x_i, p_i| x_i + alpha * p_i);
+            x.zip_apply(&*p, |x_i, p_i| *x_i += alpha * p_i);
             // r <- r - alpha * Ap
-            r.zip_apply(&*Ap, |r_i, Ap_i| r_i - alpha * Ap_i);
+            r.zip_apply(&*Ap, |r_i, Ap_i| *r_i -= alpha * Ap_i);
 
             // Number of iterations corresponds to number of updates to the x vector
             output.num_iterations += 1;
@@ -469,8 +470,11 @@ where
             let zTr_next = z.dot(&*r);
             let beta = zTr_next / zTr;
 
-            // p <- z + beta * p
-            p.zip_apply(&*z, |p_i, z_i| z_i + beta * p_i);
+            // p <- beta * p + z
+            p.zip_apply(&*z, |p_i, z_i| {
+                *p_i *= beta;
+                *p_i += z_i;
+            });
 
             zTr = zTr_next;
         }

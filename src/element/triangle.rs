@@ -5,9 +5,10 @@ use crate::connectivity::{Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connecti
 use crate::element::{ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement, SurfaceFiniteElement};
 use crate::geometry::{LineSegment2d, Triangle, Triangle2d, Triangle3d};
 use crate::nalgebra::{
-    distance, Matrix1x3, Matrix1x6, Matrix2, Matrix2x3, Matrix2x6, Matrix3, Matrix3x2, OPoint, Point2, Point3,
-    RealField, Scalar, Vector2, Vector3, U2, U3, U6,
+    distance, Matrix1x3, Matrix1x6, Matrix2, Matrix2x3, Matrix2x6, Matrix3, Matrix3x2, OPoint, Point2, Point3, Scalar,
+    Vector2, Vector3, U2, U3, U6,
 };
+use crate::Real;
 
 /// A finite element representing linear basis functions on a triangle, in two dimensions.
 ///
@@ -46,7 +47,7 @@ where
 
 impl<T> Tri3d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     pub fn reference() -> Self {
@@ -56,7 +57,7 @@ where
 
 impl<T> FixedNodesReferenceFiniteElement<T> for Tri3d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type NodalDim = U3;
     type ReferenceDim = U2;
@@ -85,7 +86,7 @@ where
 
 impl<T> FiniteElement<T> for Tri3d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type GeometryDim = U2;
 
@@ -148,7 +149,7 @@ where
 
 impl<'a, T> From<&'a Tri3d2Element<T>> for Tri6d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     // TODO: Test this
     fn from(tri3: &'a Tri3d2Element<T>) -> Self {
@@ -167,7 +168,7 @@ where
 
 impl<'a, T> From<Tri3d2Element<T>> for Tri6d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     fn from(tri3: Tri3d2Element<T>) -> Self {
         Self::from(&tri3)
@@ -176,7 +177,7 @@ where
 
 impl<T> Tri6d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     pub fn reference() -> Self {
@@ -196,7 +197,7 @@ where
 
 impl<T> FixedNodesReferenceFiniteElement<T> for Tri6d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type NodalDim = U6;
     type ReferenceDim = U2;
@@ -245,7 +246,7 @@ where
 
 impl<T> FiniteElement<T> for Tri6d2Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type GeometryDim = U2;
 
@@ -264,7 +265,7 @@ where
 
 impl<T> ElementConnectivity<T> for Tri3d2Connectivity
 where
-    T: RealField,
+    T: Real,
 {
     type Element = Tri3d2Element<T>;
     type ReferenceDim = U2;
@@ -284,7 +285,7 @@ where
 
 impl<T> ElementConnectivity<T> for Tri6d2Connectivity
 where
-    T: RealField,
+    T: Real,
 {
     type Element = Tri6d2Element<T>;
     type ReferenceDim = U2;
@@ -346,7 +347,7 @@ where
 
 impl<T> FixedNodesReferenceFiniteElement<T> for Tri3d3Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type NodalDim = U3;
     type ReferenceDim = U2;
@@ -377,7 +378,7 @@ where
 
 impl<T> FiniteElement<T> for Tri3d3Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type GeometryDim = U3;
 
@@ -408,7 +409,7 @@ where
 
 impl<T> SurfaceFiniteElement<T> for Tri3d3Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     fn normal(&self, _xi: &Point2<T>) -> Vector3<T> {
         Triangle3d::from(self).normal()
@@ -417,7 +418,7 @@ where
 
 impl<T> ElementConnectivity<T> for Tri3d3Connectivity
 where
-    T: RealField,
+    T: Real,
 {
     type Element = Tri3d3Element<T>;
     type ReferenceDim = U2;

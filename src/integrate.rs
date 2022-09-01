@@ -10,9 +10,9 @@ use crate::quadrature::Quadrature;
 use crate::space::{ElementInSpace, FiniteElementSpace, VolumetricFiniteElementSpace};
 use crate::util::{reshape_to_slice, try_transmute_ref};
 use crate::workspace::with_thread_local_workspace;
-use crate::SmallDim;
+use crate::{Real, SmallDim};
 use eyre::eyre;
-use nalgebra::{DVectorSlice, Dynamic, OVector, RealField};
+use nalgebra::{DVectorSlice, Dynamic, OVector};
 use std::marker::PhantomData;
 
 /// Computes the Riemannian volume form for the given dimensions.
@@ -20,7 +20,7 @@ use std::marker::PhantomData;
 /// TODO: This is not actively tested at the moment, need to do this.
 pub fn volume_form<T, GeometryDim, ReferenceDim>(jacobian: &OMatrix<T, GeometryDim, ReferenceDim>) -> T
 where
-    T: RealField,
+    T: Real,
     GeometryDim: SmallDim,
     ReferenceDim: SmallDim,
     DefaultAllocator: BiDimAllocator<T, GeometryDim, ReferenceDim>,
@@ -189,7 +189,7 @@ pub struct IntegrationWorkspace<T: Scalar> {
     basis_buffer: BasisFunctionBuffer<T>,
 }
 
-impl<T: RealField> Default for IntegrationWorkspace<T> {
+impl<T: Real> Default for IntegrationWorkspace<T> {
     fn default() -> Self {
         Self {
             basis_buffer: BasisFunctionBuffer::default(),
@@ -206,7 +206,7 @@ pub fn integrate_over_element<'a, T, F, Element, QuadratureRule, IntoDVectorSlic
     workspace: &mut IntegrationWorkspace<T>,
 ) -> OVector<T, F::OutputDim>
 where
-    T: RealField,
+    T: Real,
     F: Function<T, Element::GeometryDim>,
     Element: FiniteElement<T>,
     QuadratureRule: Quadrature<T, Element::ReferenceDim>,
@@ -256,7 +256,7 @@ pub fn integrate_over_volume_element<'a, T, Element, F>(
     workspace: &mut IntegrationWorkspace<T>,
 ) -> Result<OVector<T, F::OutputDim>, IntegrationFailure>
 where
-    T: RealField,
+    T: Real,
     F: VolumeFunction<T, Element::GeometryDim>,
     Element: VolumetricFiniteElement<T>,
     DefaultAllocator:
@@ -475,7 +475,7 @@ where
 
 impl<T, D> Default for ElementIntegralAssemblerWorkspace<T, D>
 where
-    T: RealField,
+    T: Real,
     D: DimName,
     DefaultAllocator: DimAllocator<T, D>,
 {
@@ -491,7 +491,7 @@ where
 
 impl<'a, T, F, Space, QTable> ElementScalarAssembler<T> for ElementIntegralAssembler<'a, T, F, Space, QTable>
 where
-    T: RealField,
+    T: Real,
     F: Function<T, Space::GeometryDim>,
     Space: FiniteElementSpace<T>,
     QTable: QuadratureTable<T, Space::ReferenceDim>,
@@ -532,7 +532,7 @@ where
 
 impl<'a, T, F, Space, QTable> ElementConnectivityAssembler for ElementIntegralVolumeAssembler<'a, T, F, Space, QTable>
 where
-    T: RealField,
+    T: Real,
     // TODO: For some reason this only works if we specify Space::ReferenceDim. However, Space::GeometryDim would be
     // more appropriate, and we anyway have Space::GeometryDim == Space::ReferenceDim by definition of
     // a volumetric finite element space... But unsure if it may cause downstream issues
@@ -564,7 +564,7 @@ where
 
 impl<'a, T, F, Space, QTable> ElementScalarAssembler<T> for ElementIntegralVolumeAssembler<'a, T, F, Space, QTable>
 where
-    T: RealField,
+    T: Real,
     // TODO: See comment in impl for ElementConnectivityAssembler. Here we should ideally have Space::GeometryDim
     F: VolumeFunction<T, Space::ReferenceDim>,
     Space: VolumetricFiniteElementSpace<T>,

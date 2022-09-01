@@ -1,8 +1,9 @@
 use crate::connectivity::Connectivity;
 use crate::mesh::Mesh;
 use crate::nalgebra::allocator::Allocator;
+use crate::nalgebra::{DMatrix, DVector, DVectorSliceMut};
 use crate::nalgebra::{DMatrixSliceMut, DefaultAllocator, DimName, Scalar};
-use crate::nalgebra::{DVector, DVectorSliceMut};
+use crate::Real;
 
 mod elliptic;
 mod mass;
@@ -11,7 +12,6 @@ mod source;
 
 pub use elliptic::*;
 pub use mass::*;
-use nalgebra::{DMatrix, RealField};
 pub use quadrature_table::*;
 pub use source::*;
 
@@ -79,7 +79,7 @@ pub trait ElementMatrixAssembler<T: Scalar>: ElementConnectivityAssembler {
 
     fn assemble_element_matrix(&self, element_index: usize) -> eyre::Result<DMatrix<T>>
     where
-        T: RealField,
+        T: Real,
     {
         let ndof = self.solution_dim() * self.element_node_count(element_index);
         let mut output = DMatrix::zeros(ndof, ndof);
@@ -107,7 +107,7 @@ pub trait ElementVectorAssembler<T: Scalar>: ElementConnectivityAssembler {
 
     fn assemble_element_vector(&self, element_index: usize) -> eyre::Result<DVector<T>>
     where
-        T: RealField,
+        T: Real,
     {
         let ndof = self.solution_dim() * self.element_node_count(element_index);
         let mut output = DVector::zeros(ndof);

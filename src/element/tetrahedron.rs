@@ -3,13 +3,14 @@ use numeric_literals::replace_float_literals;
 use crate::connectivity::{Tet10Connectivity, Tet4Connectivity};
 use crate::element::{ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement};
 use crate::nalgebra::{
-    distance, Matrix1x4, Matrix3, Matrix3x4, OMatrix, OPoint, Point3, RealField, Scalar, Vector3, U1, U10, U20, U3, U4,
+    distance, Matrix1x4, Matrix3, Matrix3x4, OMatrix, OPoint, Point3, Scalar, Vector3, U1, U10, U20, U3, U4,
 };
+use crate::Real;
 use itertools::Itertools;
 
 impl<T> ElementConnectivity<T> for Tet4Connectivity
 where
-    T: RealField,
+    T: Real,
 {
     type Element = Tet4Element<T>;
     type GeometryDim = U3;
@@ -29,7 +30,7 @@ where
 
 impl<T> ElementConnectivity<T> for Tet10Connectivity
 where
-    T: RealField,
+    T: Real,
 {
     type Element = Tet10Element<T>;
     type GeometryDim = U3;
@@ -84,7 +85,7 @@ where
 
 impl<'a, T> From<&'a Tet4Element<T>> for Tet10Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     fn from(tet4_element: &'a Tet4Element<T>) -> Self {
@@ -110,7 +111,7 @@ where
 
 impl<T> Tet10Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     pub fn reference() -> Self {
@@ -135,7 +136,7 @@ where
 #[replace_float_literals(T::from_f64(literal).unwrap())]
 impl<T> FixedNodesReferenceFiniteElement<T> for Tet10Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type ReferenceDim = U3;
     type NodalDim = U10;
@@ -190,7 +191,7 @@ where
 
 impl<T> FiniteElement<T> for Tet10Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type GeometryDim = U3;
 
@@ -221,7 +222,7 @@ where
 
 impl<T> Tet20Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     pub fn from_tet4_vertices(vertices: [Point3<T>; 4]) -> Self {
         // TODO: Test this method
@@ -262,7 +263,7 @@ where
 
 impl<T> Tet20Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     pub fn reference() -> Self {
@@ -309,7 +310,7 @@ where
 #[replace_float_literals(T::from_f64(literal).unwrap())]
 impl<T> FixedNodesReferenceFiniteElement<T> for Tet20Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type ReferenceDim = U3;
     type NodalDim = U20;
@@ -436,7 +437,7 @@ where
 
 impl<T> FiniteElement<T> for Tet20Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type GeometryDim = U3;
 
@@ -458,7 +459,7 @@ where
 
 impl<'a, T> From<&'a Tet4Element<T>> for Tet20Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     fn from(tet4: &'a Tet4Element<T>) -> Self {
         // TODO: Test this!
@@ -489,7 +490,7 @@ where
 
 impl<T> Tet4Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     pub fn reference() -> Self {
@@ -507,7 +508,7 @@ where
 #[replace_float_literals(T::from_f64(literal).unwrap())]
 impl<T> FixedNodesReferenceFiniteElement<T> for Tet4Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type ReferenceDim = U3;
     type NodalDim = U4;
@@ -535,7 +536,7 @@ where
 
 impl<T> FiniteElement<T> for Tet4Element<T>
 where
-    T: RealField,
+    T: Real,
 {
     type GeometryDim = U3;
 

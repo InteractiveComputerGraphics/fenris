@@ -1,12 +1,13 @@
+use crate::Real;
 use itertools::izip;
 use itertools::Itertools;
 use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{DimEq, ShapeConstraint};
-use nalgebra::storage::{ContiguousStorage, Storage, StorageMut};
+use nalgebra::storage::{IsContiguous, Storage, StorageMut};
 use nalgebra::{
     DMatrixSlice, DVector, DVectorSlice, DefaultAllocator, Dim, DimDiff, DimMin, DimMul, DimName, DimProd, DimSub,
-    Matrix, Matrix3, MatrixSlice, MatrixSliceMut, OMatrix, OPoint, OVector, Quaternion, RealField, Scalar,
-    SliceStorage, SliceStorageMut, SquareMatrix, UnitQuaternion, Vector, Vector3, U1,
+    Matrix, Matrix3, MatrixSlice, MatrixSliceMut, OMatrix, OPoint, OVector, Quaternion, Scalar, SliceStorage,
+    SliceStorageMut, SquareMatrix, UnitQuaternion, Vector, Vector3, U1,
 };
 use nalgebra_sparse::{CooMatrix, CsrMatrix};
 use num::Zero;
@@ -58,7 +59,7 @@ where
     C: Dim,
     R2: DimMul<C2>,
     C2: Dim,
-    S: ContiguousStorage<T, R, C>,
+    S: Storage<T, R, C> + IsContiguous,
     ShapeConstraint: DimEq<DimProd<R, C>, DimProd<R2, C2>>,
 {
     let (r2, c2) = shape;
@@ -120,10 +121,13 @@ where
 /// Returns a tuple `(U, S, V^T)`.
 pub fn rotation_svd<T, D>(matrix: &OMatrix<T, D, D>) -> (OMatrix<T, D, D>, OVector<T, D>, OMatrix<T, D, D>)
 where
-    T: RealField,
+    T: Real,
     D: DimName + DimMin<D, Output = D> + DimSub<U1>,
-    DefaultAllocator:
-        Allocator<T, D> + Allocator<T, D, D> + Allocator<T, <D as DimSub<U1>>::Output> + Allocator<(usize, usize), D>,
+    DefaultAllocator: Allocator<T, D>
+        + Allocator<T, D, D>
+        + Allocator<T, <D as DimSub<U1>>::Output>
+        + Allocator<(usize, usize), D>
+        + Allocator<(T, usize), D>,
 {
     let minus_one = T::from_f64(-1.0).unwrap();
     let mut svd = matrix.clone().svd(true, true);
@@ -162,7 +166,7 @@ where
 ///
 #[allow(non_snake_case)]
 #[replace_float_literals(T::from_f64(literal).unwrap())]
-pub fn apd<T: RealField>(
+pub fn apd<T: Real>(
     deformation_grad: &Matrix3<T>,
     initial_guess: &UnitQuaternion<T>,
     max_iter: usize,
@@ -172,7 +176,8 @@ pub fn apd<T: RealField>(
     let mut q: UnitQuaternion<T> = initial_guess.clone();
 
     let tol_squared = tol * tol;
-    let mut res = T::max_value();
+    // TODO: Fix unwrap
+    let mut res = T::max_value().unwrap();
     let mut iter = 0;
     while res > tol_squared && iter < max_iter {
         let R = q.to_rotation_matrix();
@@ -238,7 +243,7 @@ pub fn apd<T: RealField>(
 
 pub fn diag_left_mul<T, D1, D2, S>(diag: &Vector<T, D1, S>, matrix: &OMatrix<T, D1, D2>) -> OMatrix<T, D1, D2>
 where
-    T: RealField,
+    T: Real,
     D1: DimName,
     D2: DimName,
     S: Storage<T, D1>,
@@ -308,7 +313,7 @@ pub fn try_transmute_ref_mut<T: 'static, U: 'static>(e: &mut T) -> Option<&mut U
     }
 }
 
-pub fn cross_product_matrix<T: RealField>(x: &Vector3<T>) -> Matrix3<T> {
+pub fn cross_product_matrix<T: Real>(x: &Vector3<T>) -> Matrix3<T> {
     Matrix3::new(T::zero(), -x[2], x[1], x[2], T::zero(), -x[0], -x[1], x[0], T::zero())
 }
 
@@ -396,7 +401,7 @@ pub fn dump_csr_matrix_to_mm_file<T: Scalar + LowerExp>(
 
 pub fn min_eigenvalue_symmetric<T, D, S>(matrix: &SquareMatrix<T, D, S>) -> T
 where
-    T: RealField,
+    T: Real,
     D: Dim + DimSub<U1>,
     S: Storage<T, D, D>,
     DefaultAllocator:
@@ -430,7 +435,7 @@ where
 
 pub fn min_max_symmetric_eigenvalues<T, D, S>(matrix: &SquareMatrix<T, D, S>) -> (T, T)
 where
-    T: RealField,
+    T: Real,
     D: Dim + DimSub<U1>,
     S: Storage<T, D, D>,
     DefaultAllocator:
@@ -448,7 +453,7 @@ where
 
 pub fn condition_number_symmetric<T, D, S>(matrix: &SquareMatrix<T, D, S>) -> T
 where
-    T: RealField,
+    T: Real,
     D: Dim + DimSub<U1>,
     S: Storage<T, D, D>,
     DefaultAllocator:
@@ -469,7 +474,7 @@ where
 /*
 pub fn condition_number_csr<T>(matrix: &CsrMatrix<T>) -> T
 where
-    T: RealField + mkl_corrode::SupportedScalar,
+    T: Real + mkl_corrode::SupportedScalar,
 {
     assert_eq!(
         matrix.nrows(),
@@ -666,7 +671,7 @@ pub fn compute_interpolation<'a, 'b, T, SolutionDim>(
     basis: impl Into<DVectorSlice<'b, T>>,
 ) -> OVector<T, SolutionDim>
 where
-    T: RealField,
+    T: Real,
     SolutionDim: SmallDim,
     DefaultAllocator: DimAllocator<T, SolutionDim>,
 {
@@ -675,7 +680,7 @@ where
 
 fn compute_interpolation_<T, SolutionDim>(u: DVectorSlice<T>, basis: DVectorSlice<T>) -> OVector<T, SolutionDim>
 where
-    T: RealField,
+    T: Real,
     SolutionDim: SmallDim,
     DefaultAllocator: DimAllocator<T, SolutionDim>,
 {
@@ -727,7 +732,7 @@ pub fn compute_interpolation_gradient<'a, T, SolutionDim, GeometryDim>(
     basis_gradients: impl Into<DVectorSlice<'a, T>>,
 ) -> OMatrix<T, GeometryDim, SolutionDim>
 where
-    T: RealField,
+    T: Real,
     SolutionDim: SmallDim,
     GeometryDim: SmallDim,
     DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>,
@@ -740,7 +745,7 @@ fn compute_interpolation_gradient_<T, SolutionDim, GeometryDim>(
     basis_gradients: DVectorSlice<T>,
 ) -> OMatrix<T, GeometryDim, SolutionDim>
 where
-    T: RealField,
+    T: Real,
     SolutionDim: SmallDim,
     GeometryDim: SmallDim,
     DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>,

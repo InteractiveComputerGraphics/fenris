@@ -1,8 +1,8 @@
 //! Solid mechanics functionality for `fenris`.
 use fenris::allocators::DimAllocator;
 use fenris::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
-use fenris::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, OMatrix, OVector, RealField};
-use fenris::{SmallDim, Symmetry};
+use fenris::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, OMatrix, OVector};
+use fenris::{Real, SmallDim, Symmetry};
 use std::cmp::min;
 
 pub mod materials;
@@ -12,7 +12,7 @@ pub use gravity_source::GravitySource;
 
 pub trait HyperelasticMaterial<T, GeometryDim>
 where
-    T: RealField,
+    T: Real,
     GeometryDim: DimName,
     DefaultAllocator: DimAllocator<T, GeometryDim>,
 {
@@ -143,7 +143,7 @@ pub fn compute_batch_contraction<T, GeometryDim>(
     b: DVectorSlice<T>,
     mut contraction: impl FnMut(&OVector<T, GeometryDim>, &OVector<T, GeometryDim>) -> OMatrix<T, GeometryDim, GeometryDim>,
 ) where
-    T: RealField,
+    T: Real,
     GeometryDim: DimName,
     DefaultAllocator: DimAllocator<T, GeometryDim>,
 {
@@ -176,7 +176,7 @@ pub fn compute_batch_contraction<T, GeometryDim>(
             let mut c_IJ = output.generic_slice_mut((d * I, d * J), d_times_d);
             let contraction = contraction(&a_I, &b_J);
             // c_IJ += contraction * alpha
-            c_IJ.zip_apply(&contraction, |c: T, y: T| c + alpha * y);
+            c_IJ.zip_apply(&contraction, |c, y| *c += alpha * y);
         }
     }
 }
@@ -209,7 +209,7 @@ impl<'a, Material> MaterialEllipticOperator<'a, Material> {
 
 impl<'a, T, GeometryDim, Material> Operator<T, GeometryDim> for MaterialEllipticOperator<'a, Material>
 where
-    T: RealField,
+    T: Real,
     GeometryDim: SmallDim,
     Material: HyperelasticMaterial<T, GeometryDim>,
     DefaultAllocator: DimAllocator<T, GeometryDim>,
@@ -220,7 +220,7 @@ where
 
 impl<'a, T, GeometryDim, Material> EllipticEnergy<T, GeometryDim> for MaterialEllipticOperator<'a, Material>
 where
-    T: RealField,
+    T: Real,
     GeometryDim: SmallDim,
     Material: HyperelasticMaterial<T, GeometryDim>,
     DefaultAllocator: DimAllocator<T, GeometryDim>,
@@ -233,7 +233,7 @@ where
 
 impl<'a, T, GeometryDim, Material> EllipticOperator<T, GeometryDim> for MaterialEllipticOperator<'a, Material>
 where
-    T: RealField,
+    T: Real,
     GeometryDim: SmallDim,
     Material: HyperelasticMaterial<T, GeometryDim>,
     DefaultAllocator: DimAllocator<T, GeometryDim>,
@@ -251,7 +251,7 @@ where
 
 impl<'a, T, GeometryDim, Material> EllipticContraction<T, GeometryDim> for MaterialEllipticOperator<'a, Material>
 where
-    T: RealField,
+    T: Real,
     GeometryDim: SmallDim,
     Material: HyperelasticMaterial<T, GeometryDim>,
     DefaultAllocator: DimAllocator<T, GeometryDim>,

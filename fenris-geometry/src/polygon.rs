@@ -2,11 +2,10 @@ use crate::{
     AxisAlignedBoundingBox, BoundedGeometry, Convex, Distance, HalfSpace, LineSegment2d, LineSegment3d, Orientation,
     Triangle,
 };
+use fenris_traits::Real;
 use itertools::{izip, Itertools};
 use nalgebra::allocator::Allocator;
-use nalgebra::{
-    clamp, DefaultAllocator, DimName, Isometry3, OPoint, Point2, Point3, RealField, Scalar, Vector2, Vector3, U2, U3,
-};
+use nalgebra::{clamp, DefaultAllocator, DimName, Isometry3, OPoint, Point2, Point3, Scalar, Vector2, Vector3, U2, U3};
 use serde::{Deserialize, Serialize};
 use std::iter::once;
 
@@ -40,7 +39,7 @@ where
 
 pub trait Polygon2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     fn vertices(&self) -> &[Point2<T>];
 
@@ -71,7 +70,8 @@ where
 
     fn closest_edge(&self, x: &Point2<T>) -> Option<ClosestEdge<T>> {
         let mut closest_edge_index = None;
-        let mut smallest_squared_dist = T::max_value();
+        // TODO: Fix unwrap
+        let mut smallest_squared_dist = T::max_value().unwrap();
 
         self.for_each_edge(|edge_idx, edge| {
             let closest_point_on_edge = edge.closest_point(x);
@@ -117,7 +117,8 @@ where
         }
 
         let mut closest_edges = [0, 0];
-        let mut smallest_squared_dists = [T::max_value(), T::max_value()];
+        // TODO: Fix unwraps
+        let mut smallest_squared_dists = [T::max_value().unwrap(), T::max_value().unwrap()];
         let endpoints = [*segment.start(), *segment.end()];
 
         let mut intersects = false;
@@ -230,7 +231,7 @@ where
     }
 }
 
-impl<T: RealField> SimplePolygon2d<T> {
+impl<T: Real> SimplePolygon2d<T> {
     /// Apply a similarity transform in order to construct a 3D simple polygon.
     ///
     /// Each 2D vertex is implicitly assumed to have z coordinate 0.
@@ -244,7 +245,7 @@ impl<T: RealField> SimplePolygon2d<T> {
     }
 }
 
-impl<T: RealField> SimplePolygon3d<T> {
+impl<T: Real> SimplePolygon3d<T> {
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     pub fn area_vector(&self) -> Vector3<T> {
         let vertices = self.vertices();
@@ -320,7 +321,7 @@ where
 
 impl<T> Polygon2d<T> for SimplePolygon2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     fn vertices(&self) -> &[Point2<T>] {
         &self.vertices
@@ -365,7 +366,7 @@ where
 
 impl<T, D> BoundedGeometry<T> for SimplePolygon<T, D>
 where
-    T: RealField,
+    T: Real,
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
@@ -378,7 +379,7 @@ where
 
 impl<T> Distance<T, Point2<T>> for SimplePolygon2d<T>
 where
-    T: RealField,
+    T: Real,
 {
     fn distance(&self, point: &Point2<T>) -> T {
         let closest_edge = self
