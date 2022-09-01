@@ -14,7 +14,7 @@ mod local;
 //
 // impl<T> ElasticMaterialModel<T, U2> for MockIdentityMaterial
 // where
-//     T: RealField,
+//     T: Real,
 // {
 //     fn compute_strain_energy_density(&self, _deformation_gradient: &Matrix2<T>) -> T {
 //         unimplemented!()
@@ -40,7 +40,7 @@ mod local;
 // #[allow(non_snake_case)]
 // impl<T> ElasticMaterialModel<T, U2> for MockSimpleMaterial
 // where
-//     T: RealField,
+//     T: Real,
 // {
 //     fn compute_strain_energy_density(&self, _deformation_gradient: &Matrix2<T>) -> T {
 //         unimplemented!()

@@ -96,7 +96,8 @@ where
         ];
 
         let mut point_inside = true;
-        let mut min_dist = T::max_value();
+        // TODO: Fix unwrap
+        let mut min_dist = T::max_value().unwrap();
 
         for tri_face in &tri_faces {
             // Remember that the triangles are oriented such that *outwards* is the positive

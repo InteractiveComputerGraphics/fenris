@@ -2,11 +2,12 @@ use fenris::allocators::BiDimAllocator;
 use fenris::assembly::local::{assemble_element_elliptic_matrix, assemble_element_mass_matrix};
 use fenris::assembly::operators::LaplaceOperator;
 use fenris::element::*;
-use fenris::nalgebra::{DefaultAllocator, Dynamic, RealField};
+use fenris::nalgebra::{DefaultAllocator, Dynamic};
 use fenris::quadrature;
 use fenris::quadrature::{
     CanonicalMassQuadrature, CanonicalStiffnessQuadrature, Quadrature, QuadraturePair2d, QuadraturePair3d,
 };
+use fenris::Real;
 use matrixcompare::comparators::FloatElementwiseComparator;
 use matrixcompare::{assert_matrix_eq, compare_matrices};
 use nalgebra::{DMatrix, DMatrixSliceMut, DVector, DVectorSlice, MatrixSliceMut, OMatrix, U2, U3};
@@ -17,7 +18,7 @@ fn assemble_mass_for_element<T, Element>(
     quadrature: impl Quadrature<T, Element::ReferenceDim>,
 ) -> DMatrix<T>
 where
-    T: RealField,
+    T: Real,
     Element: VolumetricFiniteElement<T>,
     DefaultAllocator: BiDimAllocator<T, Element::GeometryDim, Element::ReferenceDim>,
 {
@@ -42,7 +43,7 @@ fn assemble_stiffness_for_element<T, Element>(
     quadrature: impl Quadrature<T, Element::ReferenceDim>,
 ) -> DMatrix<T>
 where
-    T: RealField,
+    T: Real,
     Element: VolumetricFiniteElement<T>,
     DefaultAllocator: BiDimAllocator<T, Element::GeometryDim, Element::ReferenceDim>,
 {

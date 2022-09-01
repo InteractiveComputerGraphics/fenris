@@ -12,7 +12,7 @@ proptest-support = [ "proptest", "nalgebra/proptest-support" ]
 
 [dependencies]
 itertools = "0.9"
-nalgebra = "0.28"
+nalgebra = "0.31"
 serde = { version="1.0", features = [ "derive" ] }
 numeric_literals = "0.2.0"
 fenris-nested-vec = { version = "0.0.1", path="../fenris-nested-vec" }
@@ -21,7 +21,7 @@ fenris-traits = { version = "0.0.1", path = "../fenris-traits" }
 
 [dev-dependencies]
 fenris-geometry = { path = ".", features = [ "proptest-support" ] }
-nalgebra = { version = "0.28", features = [ "compare", "rand" ]}
+nalgebra = { version = "0.31", features = [ "compare", "rand" ]}
 matrixcompare = { version="0.3", features = ["proptest-support"] }
 util = { path="../util" }
 fenris = { path = ".." }

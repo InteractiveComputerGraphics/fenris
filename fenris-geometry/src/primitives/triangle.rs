@@ -202,7 +202,8 @@ where
         let mut inside = true;
 
         let mut closest_segment = 0;
-        let mut closest_dist2 = T::max_value();
+        // TODO: Fix unwrap
+        let mut closest_dist2 = T::max_value().unwrap();
         let mut closest_point = Point2::origin();
 
         // We assume counterclockwise orientation.

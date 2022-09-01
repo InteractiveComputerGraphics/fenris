@@ -413,7 +413,7 @@ pub trait ConvexPolygon3d<'a, T: Scalar>: Debug {
             // Point is *not* contained inside the extruded prism. Thus we must pick the
             // closest point on any of the edges of the polygon.
 
-            let mut closest_dist2 = T::max_value();
+            let mut closest_dist2 = T::max_value().unwrap();
             let mut closest_point = Point3::origin();
 
             for i in 0..self.num_vertices() {
@@ -450,7 +450,7 @@ pub trait ConvexPolyhedron<'a, T: Scalar>: Debug {
     {
         assert!(self.num_faces() >= 4, "Polyhedron must have at least 4 faces.");
         let mut inside = true;
-        let mut closest_dist = T::max_value();
+        let mut closest_dist = T::max_value().unwrap();
         let mut closest_point = Point3::origin();
         let mut closest_face_index = 0;
 

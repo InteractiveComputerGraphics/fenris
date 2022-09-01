@@ -176,7 +176,7 @@ pub fn compute_batch_contraction<T, GeometryDim>(
             let mut c_IJ = output.generic_slice_mut((d * I, d * J), d_times_d);
             let contraction = contraction(&a_I, &b_J);
             // c_IJ += contraction * alpha
-            c_IJ.zip_apply(&contraction, |c: T, y: T| c + alpha * y);
+            c_IJ.zip_apply(&contraction, |c, y| *c += alpha * y);
         }
     }
 }

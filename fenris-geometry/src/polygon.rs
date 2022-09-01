@@ -70,7 +70,8 @@ where
 
     fn closest_edge(&self, x: &Point2<T>) -> Option<ClosestEdge<T>> {
         let mut closest_edge_index = None;
-        let mut smallest_squared_dist = T::max_value();
+        // TODO: Fix unwrap
+        let mut smallest_squared_dist = T::max_value().unwrap();
 
         self.for_each_edge(|edge_idx, edge| {
             let closest_point_on_edge = edge.closest_point(x);
@@ -116,7 +117,8 @@ where
         }
 
         let mut closest_edges = [0, 0];
-        let mut smallest_squared_dists = [T::max_value(), T::max_value()];
+        // TODO: Fix unwraps
+        let mut smallest_squared_dists = [T::max_value().unwrap(), T::max_value().unwrap()];
         let endpoints = [*segment.start(), *segment.end()];
 
         let mut intersects = false;
