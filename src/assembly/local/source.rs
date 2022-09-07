@@ -2,14 +2,13 @@ use crate::allocators::{BiDimAllocator, DimAllocator, TriDimAllocator};
 use crate::assembly::buffers::{BasisFunctionBuffer, QuadratureBuffer};
 use crate::assembly::local::{ElementConnectivityAssembler, ElementVectorAssembler, QuadratureTable};
 use crate::assembly::operators::Operator;
-use crate::define_thread_local_workspace;
 use crate::element::{ReferenceFiniteElement, VolumetricFiniteElement};
 use crate::nalgebra::{
     DVectorSliceMut, DefaultAllocator, DimName, Dynamic, MatrixSlice, MatrixSliceMutMN, OPoint, OVector, Scalar, U1,
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
-use crate::workspace::with_thread_local_workspace;
 use crate::{Real, SmallDim};
+use davenport::{define_thread_local_workspace, with_thread_local_workspace};
 use itertools::izip;
 use std::marker::PhantomData;
 

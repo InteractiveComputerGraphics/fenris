@@ -1,13 +1,12 @@
 use crate::allocators::DimAllocator;
 use crate::assembly::buffers::{BasisFunctionBuffer, QuadratureBuffer};
 use crate::assembly::local::{ElementConnectivityAssembler, ElementMatrixAssembler, QuadratureTable};
-use crate::define_thread_local_workspace;
 use crate::element::{ReferenceFiniteElement, VolumetricFiniteElement};
 use crate::nalgebra::{DMatrixSliceMut, DefaultAllocator, DimName, OPoint};
 use crate::space::{ElementInSpace, FiniteElementConnectivity, VolumetricFiniteElementSpace};
 use crate::util::clone_upper_to_lower;
-use crate::workspace::with_thread_local_workspace;
 use crate::Real;
+use davenport::{define_thread_local_workspace, with_thread_local_workspace};
 use itertools::izip;
 use nalgebra::Scalar;
 use serde::{Deserialize, Serialize};

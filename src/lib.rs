@@ -20,8 +20,6 @@ pub mod quadrature;
 pub mod space;
 pub mod util;
 
-pub mod workspace;
-
 pub mod geometry {
     pub use fenris_geometry::*;
 }
