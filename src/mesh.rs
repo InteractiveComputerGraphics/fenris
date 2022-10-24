@@ -13,6 +13,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::iter::once;
 
 pub mod procedural;
+pub mod refinement;
 pub mod reorder;
 
 /// Index-based data structure for conforming meshes (i.e. no hanging nodes).
