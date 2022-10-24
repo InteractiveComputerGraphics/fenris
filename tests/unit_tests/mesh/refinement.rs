@@ -7,7 +7,7 @@ use nalgebra::point;
 use std::path::Path;
 
 fn export_mesh_vtk(test_name: &str, file_stem: &str, mesh: &TriangleMesh2d<f64>) {
-    let output_path = Path::new("output/unit_tests/")
+    let output_path = Path::new("data/unit_tests/")
         .join(test_name)
         .join(format!("{file_stem}.vtu"));
     FiniteElementMeshDataSetBuilder::from_mesh(mesh)
