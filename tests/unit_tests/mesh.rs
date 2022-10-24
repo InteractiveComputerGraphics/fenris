@@ -14,6 +14,8 @@ use proptest::collection::vec;
 use proptest::prelude::*;
 use std::cmp::max;
 
+mod refinement;
+
 #[test]
 fn quad4_find_boundary_faces() {
     // Single quad
