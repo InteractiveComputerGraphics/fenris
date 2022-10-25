@@ -53,8 +53,8 @@ where
 }
 
 impl<T> ElementConnectivity<T> for Tet20Connectivity
-    where
-        T: Real,
+where
+    T: Real,
 {
     type Element = Tet20Element<T>;
     type GeometryDim = U3;

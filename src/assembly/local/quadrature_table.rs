@@ -90,20 +90,22 @@ where
 /// Checks that the provided quadrature rules are consistent, in the sense that
 /// the number of elements for each table is identical, and that each rule has
 /// consistent numbers of points, weights and data entries.
-fn check_rules_consistency<T, D, Data>(
-    points: &NestedVec<OPoint<T, D>>,
-    weights: &NestedVec<T>,
-    data: &NestedVec<Data>
-)
+fn check_rules_consistency<T, D, Data>(points: &NestedVec<OPoint<T, D>>, weights: &NestedVec<T>, data: &NestedVec<Data>)
 where
     T: Scalar,
     D: DimName,
-    DefaultAllocator: Allocator<T, D>
+    DefaultAllocator: Allocator<T, D>,
 {
-    assert_eq!(points.len(), weights.len(),
-               "Quadrature point and weight tables must have the same number of rules.");
-    assert_eq!(points.len(), data.len(),
-               "Quadrature point and data tables must have the same number of rules.");
+    assert_eq!(
+        points.len(),
+        weights.len(),
+        "Quadrature point and weight tables must have the same number of rules."
+    );
+    assert_eq!(
+        points.len(),
+        data.len(),
+        "Quadrature point and data tables must have the same number of rules."
+    );
 
     // Ensure that each element has a consistent quadrature rule
     let iter = izip!(points.iter(), weights.iter(), data.iter());
@@ -307,7 +309,7 @@ where
 /// where the elements are the same but different quadrature data is needed in different
 /// regions of the mesh.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct CompactQuadratureTable<T, D, Data=()>
+pub struct CompactQuadratureTable<T, D, Data = ()>
 where
     T: Scalar,
     D: DimName,
@@ -330,7 +332,7 @@ where
     pub fn from_points_weights_and_map(
         points: NestedVec<OPoint<T, D>>,
         weights: NestedVec<T>,
-        element_to_rule_map: Vec<usize>
+        element_to_rule_map: Vec<usize>,
     ) -> Self {
         let data = unit_data_table_for_weights(&weights);
         Self::from_quadrature_rules_and_map(points, weights, data, element_to_rule_map)
@@ -356,20 +358,22 @@ where
         points: NestedVec<OPoint<T, D>>,
         weights: NestedVec<T>,
         data: NestedVec<Data>,
-        element_to_rule_map: Vec<usize>
+        element_to_rule_map: Vec<usize>,
     ) -> Self {
         check_rules_consistency(&points, &weights, &data);
         let num_rules = points.len();
         let rule_indices_in_bounds = element_to_rule_map
             .iter()
             .all(|rule_index| rule_index < &num_rules);
-        assert!(rule_indices_in_bounds,
-                "Each rule index must correspond to a provided quadrature rule.");
+        assert!(
+            rule_indices_in_bounds,
+            "Each rule index must correspond to a provided quadrature rule."
+        );
         Self {
             element_to_rule_map,
             points,
             weights,
-            data
+            data,
         }
     }
 
@@ -389,25 +393,46 @@ where
 
     fn element_quadrature_size(&self, element_index: usize) -> usize {
         let rule_index = self.rule_index_for_element(element_index);
-        self.points.get(rule_index).expect("Internal error: Rule index out of bounds").len()
+        self.points
+            .get(rule_index)
+            .expect("Internal error: Rule index out of bounds")
+            .len()
     }
 
     fn populate_element_data(&self, element_index: usize, data: &mut [Self::Data]) {
         let rule_index = self.rule_index_for_element(element_index);
-        let data_array = self.data.get(rule_index).expect("Internal error: Rule index out of bounds");
-        assert_eq!(data.len(), data_array.len(),
-            "Length mismatch in data array: Stored quadrature data array has different length than output array.");
+        let data_array = self
+            .data
+            .get(rule_index)
+            .expect("Internal error: Rule index out of bounds");
+        assert_eq!(
+            data.len(),
+            data_array.len(),
+            "Length mismatch in data array: Stored quadrature data array has different length than output array."
+        );
         data.clone_from_slice(data_array);
     }
 
     fn populate_element_quadrature(&self, element_index: usize, points: &mut [OPoint<T, D>], weights: &mut [T]) {
         let rule_index = self.rule_index_for_element(element_index);
-        let points_array = self.points.get(rule_index).expect("Internal error: Rule index out of bounds");
-        let weights_array = self.weights.get(rule_index).expect("Internal error: Rule index out of bounds");
-        assert_eq!(points.len(), points_array.len(),
-                   "Length mismatch in points array: Stored points array has different length than output array.");
-        assert_eq!(weights.len(), weights_array.len(),
-                   "Length mismatch in points array: Stored points array has different length than output array.");
+        let points_array = self
+            .points
+            .get(rule_index)
+            .expect("Internal error: Rule index out of bounds");
+        let weights_array = self
+            .weights
+            .get(rule_index)
+            .expect("Internal error: Rule index out of bounds");
+        assert_eq!(
+            points.len(),
+            points_array.len(),
+            "Length mismatch in points array: Stored points array has different length than output array."
+        );
+        assert_eq!(
+            weights.len(),
+            weights_array.len(),
+            "Length mismatch in points array: Stored points array has different length than output array."
+        );
         points.clone_from_slice(points_array);
         weights.clone_from_slice(weights_array);
     }

@@ -1,7 +1,7 @@
-use crate::assembly::local::{UniformQuadratureTable};
+use crate::assembly::local::UniformQuadratureTable;
+use crate::connectivity::*;
 use crate::element::Tet4Element;
 use crate::element::*;
-use crate::connectivity::*;
 use crate::mesh::Mesh;
 use crate::quadrature::QuadraturePair;
 use crate::quadrature::{tensor, total_order};
@@ -48,7 +48,7 @@ macro_rules! impl_canonical_rule_for_element {
 
         impl<T> $trait_name for Mesh<T, ConnectivityGeometryDim<T, $connectivity>, $connectivity>
         where
-            T: Real
+            T: Real,
         {
             type Quadrature = UniformQuadratureTable<T, ConnectivityReferenceDim<T, $connectivity>>;
 
@@ -56,7 +56,7 @@ macro_rules! impl_canonical_rule_for_element {
                 UniformQuadratureTable::from_quadrature($quadrature)
             }
         }
-    }
+    };
 }
 
 macro_rules! impl_canonical_mass_for_element {
@@ -64,7 +64,10 @@ macro_rules! impl_canonical_mass_for_element {
         impl_canonical_rule_for_element!(
             CanonicalMassQuadrature,
             canonical_mass_quadrature,
-            $connectivity, $element, $quadrature);
+            $connectivity,
+            $element,
+            $quadrature
+        );
     };
 }
 
@@ -73,7 +76,10 @@ macro_rules! impl_canonical_stiffness_for_element {
         impl_canonical_rule_for_element!(
             CanonicalStiffnessQuadrature,
             canonical_stiffness_quadrature,
-            $connectivity, $element, $quadrature);
+            $connectivity,
+            $element,
+            $quadrature
+        );
     };
 }
 
