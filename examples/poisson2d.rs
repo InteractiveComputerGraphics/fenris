@@ -1,6 +1,4 @@
 use eyre::eyre;
-use nalgebra::Vector1;
-
 use fenris::assembly::global::{
     apply_homogeneous_dirichlet_bc_csr, apply_homogeneous_dirichlet_bc_rhs, CsrAssembler, VectorAssembler,
 };
@@ -14,6 +12,7 @@ use fenris::mesh::QuadMesh2d;
 use fenris::nalgebra::{DMatrix, DVector, Point2, U1, U2};
 use fenris::nalgebra_sparse::CsrMatrix;
 use fenris::quadrature;
+use nalgebra::Vector1;
 
 fn main() -> eyre::Result<()> {
     // TODO: Make it easy to construct triangle meshes as well.

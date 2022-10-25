@@ -75,7 +75,7 @@ macro_rules! test_canonical_assembly_is_exact_and_minimal {
             let element = $element::<f64>::reference();
 
             let reference_quadrature = $reference_quadrature;
-            let canonical_quadrature = $element::<f64>::$canonical_quadrature_method();
+            let canonical_quadrature = element.$canonical_quadrature_method();
             let canonical_matrix = $assembly_fn(&element, &canonical_quadrature);
             let reference_matrix = $assembly_fn(&element, &reference_quadrature);
 

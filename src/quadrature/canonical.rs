@@ -1,9 +1,8 @@
-use crate::allocators::BiDimAllocator;
 use crate::assembly::local::UniformQuadratureTable;
+use crate::connectivity::*;
 use crate::element::Tet4Element;
 use crate::element::*;
 use crate::mesh::Mesh;
-use crate::nalgebra::{DefaultAllocator, DimName, Scalar};
 use crate::quadrature::QuadraturePair;
 use crate::quadrature::{tensor, total_order};
 use crate::Real;
@@ -18,7 +17,7 @@ use crate::Real;
 pub trait CanonicalMassQuadrature {
     type Quadrature;
 
-    fn canonical_mass_quadrature() -> Self::Quadrature;
+    fn canonical_mass_quadrature(&self) -> Self::Quadrature;
 }
 
 /// A canonical quadrature for integrating the stiffness terms.
@@ -31,93 +30,83 @@ pub trait CanonicalMassQuadrature {
 pub trait CanonicalStiffnessQuadrature {
     type Quadrature;
 
-    fn canonical_stiffness_quadrature() -> Self::Quadrature;
+    fn canonical_stiffness_quadrature(&self) -> Self::Quadrature;
 }
 
-macro_rules! impl_canonical_mass_for_element {
-    ($element:ty, $quadrature:expr) => {
-        impl<T> CanonicalMassQuadrature for $element
+macro_rules! impl_canonical_rule_for_element {
+    ($trait_name:ty, $method_name:ident, $connectivity:ty, $element:ty, $quadrature:expr) => {
+        impl<T> $trait_name for $element
         where
             T: Real,
         {
-            type Quadrature = QuadraturePair<T, <$element as ReferenceFiniteElement<T>>::ReferenceDim>;
+            type Quadrature = QuadraturePair<T, ConnectivityReferenceDim<T, $connectivity>>;
 
-            fn canonical_mass_quadrature() -> Self::Quadrature {
+            fn $method_name(&self) -> Self::Quadrature {
                 $quadrature
             }
         }
+
+        impl<T> $trait_name for Mesh<T, ConnectivityGeometryDim<T, $connectivity>, $connectivity>
+        where
+            T: Real,
+        {
+            type Quadrature = UniformQuadratureTable<T, ConnectivityReferenceDim<T, $connectivity>>;
+
+            fn $method_name(&self) -> Self::Quadrature {
+                UniformQuadratureTable::from_quadrature($quadrature)
+            }
+        }
+    };
+}
+
+macro_rules! impl_canonical_mass_for_element {
+    ($connectivity:ty, $element:ty, $quadrature:expr) => {
+        impl_canonical_rule_for_element!(
+            CanonicalMassQuadrature,
+            canonical_mass_quadrature,
+            $connectivity,
+            $element,
+            $quadrature
+        );
     };
 }
 
 macro_rules! impl_canonical_stiffness_for_element {
-    ($element:ty, $quadrature:expr) => {
-        impl<T> CanonicalStiffnessQuadrature for $element
-        where
-            T: Real,
-        {
-            type Quadrature = QuadraturePair<T, <$element as ReferenceFiniteElement<T>>::ReferenceDim>;
-
-            fn canonical_stiffness_quadrature() -> Self::Quadrature {
-                $quadrature
-            }
-        }
+    ($connectivity:ty, $element:ty, $quadrature:expr) => {
+        impl_canonical_rule_for_element!(
+            CanonicalStiffnessQuadrature,
+            canonical_stiffness_quadrature,
+            $connectivity,
+            $element,
+            $quadrature
+        );
     };
 }
 
 // Triangular elements
-impl_canonical_mass_for_element!(Tri3d2Element<T>, total_order::triangle(2).unwrap());
-impl_canonical_mass_for_element!(Tri6d2Element<T>, total_order::triangle(4).unwrap());
-impl_canonical_stiffness_for_element!(Tri3d2Element<T>, total_order::triangle(1).unwrap());
-impl_canonical_stiffness_for_element!(Tri6d2Element<T>, total_order::triangle(2).unwrap());
+impl_canonical_mass_for_element!(Tri3d2Connectivity, Tri3d2Element<T>, total_order::triangle(2).unwrap());
+impl_canonical_mass_for_element!(Tri6d2Connectivity, Tri6d2Element<T>, total_order::triangle(4).unwrap());
+impl_canonical_stiffness_for_element!(Tri3d2Connectivity, Tri3d2Element<T>, total_order::triangle(1).unwrap());
+impl_canonical_stiffness_for_element!(Tri6d2Connectivity, Tri6d2Element<T>, total_order::triangle(2).unwrap());
 
 // Quadrilateral elements
-impl_canonical_mass_for_element!(Quad4d2Element<T>, tensor::quadrilateral_gauss(2));
-impl_canonical_mass_for_element!(Quad9d2Element<T>, tensor::quadrilateral_gauss(3));
-impl_canonical_stiffness_for_element!(Quad4d2Element<T>, tensor::quadrilateral_gauss(2));
-impl_canonical_stiffness_for_element!(Quad9d2Element<T>, tensor::quadrilateral_gauss(3));
+impl_canonical_mass_for_element!(Quad4d2Connectivity, Quad4d2Element<T>, tensor::quadrilateral_gauss(2));
+impl_canonical_mass_for_element!(Quad9d2Connectivity, Quad9d2Element<T>, tensor::quadrilateral_gauss(3));
+impl_canonical_stiffness_for_element!(Quad4d2Connectivity, Quad4d2Element<T>, tensor::quadrilateral_gauss(2));
+impl_canonical_stiffness_for_element!(Quad9d2Connectivity, Quad9d2Element<T>, tensor::quadrilateral_gauss(3));
 
 // Tetrahedral elements
-impl_canonical_mass_for_element!(Tet4Element<T>, total_order::tetrahedron(2).unwrap());
-impl_canonical_mass_for_element!(Tet10Element<T>, total_order::tetrahedron(4).unwrap());
-impl_canonical_mass_for_element!(Tet20Element<T>, total_order::tetrahedron(6).unwrap());
-impl_canonical_stiffness_for_element!(Tet4Element<T>, total_order::tetrahedron(1).unwrap());
-impl_canonical_stiffness_for_element!(Tet10Element<T>, total_order::tetrahedron(2).unwrap());
-impl_canonical_stiffness_for_element!(Tet20Element<T>, total_order::tetrahedron(4).unwrap());
+impl_canonical_mass_for_element!(Tet4Connectivity, Tet4Element<T>, total_order::tetrahedron(2).unwrap());
+impl_canonical_mass_for_element!(Tet10Connectivity, Tet10Element<T>, total_order::tetrahedron(4).unwrap());
+impl_canonical_mass_for_element!(Tet20Connectivity, Tet20Element<T>, total_order::tetrahedron(6).unwrap());
+impl_canonical_stiffness_for_element!(Tet4Connectivity, Tet4Element<T>, total_order::tetrahedron(1).unwrap());
+impl_canonical_stiffness_for_element!(Tet10Connectivity, Tet10Element<T>, total_order::tetrahedron(2).unwrap());
+impl_canonical_stiffness_for_element!(Tet20Connectivity, Tet20Element<T>, total_order::tetrahedron(4).unwrap());
 
 // Hexahedral elements
-impl_canonical_mass_for_element!(Hex8Element<T>, tensor::hexahedron_gauss(2));
-impl_canonical_mass_for_element!(Hex20Element<T>, tensor::hexahedron_gauss(3));
-impl_canonical_mass_for_element!(Hex27Element<T>, tensor::hexahedron_gauss(3));
-impl_canonical_stiffness_for_element!(Hex8Element<T>, tensor::hexahedron_gauss(2));
-impl_canonical_stiffness_for_element!(Hex20Element<T>, tensor::hexahedron_gauss(3));
-impl_canonical_stiffness_for_element!(Hex27Element<T>, tensor::hexahedron_gauss(3));
-
-impl<T, D, C> CanonicalMassQuadrature for Mesh<T, D, C>
-where
-    T: Scalar,
-    D: DimName,
-    C: ElementConnectivity<T, GeometryDim = D>,
-    C::Element: CanonicalMassQuadrature<Quadrature = QuadraturePair<T, C::ReferenceDim>>,
-    DefaultAllocator: BiDimAllocator<T, C::GeometryDim, C::ReferenceDim>,
-{
-    type Quadrature = UniformQuadratureTable<T, C::ReferenceDim>;
-
-    fn canonical_mass_quadrature() -> Self::Quadrature {
-        UniformQuadratureTable::from_quadrature(C::Element::canonical_mass_quadrature())
-    }
-}
-
-impl<T, D, C> CanonicalStiffnessQuadrature for Mesh<T, D, C>
-where
-    T: Scalar,
-    D: DimName,
-    C: ElementConnectivity<T, GeometryDim = D>,
-    C::Element: CanonicalStiffnessQuadrature<Quadrature = QuadraturePair<T, C::ReferenceDim>>,
-    DefaultAllocator: BiDimAllocator<T, C::GeometryDim, C::ReferenceDim>,
-{
-    type Quadrature = UniformQuadratureTable<T, C::ReferenceDim>;
-
-    fn canonical_stiffness_quadrature() -> Self::Quadrature {
-        UniformQuadratureTable::from_quadrature(C::Element::canonical_stiffness_quadrature())
-    }
-}
+impl_canonical_mass_for_element!(Hex8Connectivity, Hex8Element<T>, tensor::hexahedron_gauss(2));
+impl_canonical_mass_for_element!(Hex20Connectivity, Hex20Element<T>, tensor::hexahedron_gauss(3));
+impl_canonical_mass_for_element!(Hex27Connectivity, Hex27Element<T>, tensor::hexahedron_gauss(3));
+impl_canonical_stiffness_for_element!(Hex8Connectivity, Hex8Element<T>, tensor::hexahedron_gauss(2));
+impl_canonical_stiffness_for_element!(Hex20Connectivity, Hex20Element<T>, tensor::hexahedron_gauss(3));
+impl_canonical_stiffness_for_element!(Hex27Connectivity, Hex27Element<T>, tensor::hexahedron_gauss(3));
