@@ -45,25 +45,25 @@ where
 /// The linear elastic material model.
 ///
 /// Given Lamé parameters $\mu$ and $\lambda$, the strain energy density is
-/// $$
+/// <div>$$
 /// \psi(\vec F) =
 ///     \mu \vec \epsilon : \vec \epsilon
 ///   + \frac{\lambda}{2} \operatorname{tr}^2(\vec \epsilon),
-/// $$
+/// $$</div>
 /// where
-/// $$
+/// <div>$$
 /// \vec \epsilon(\vec F) = \frac{(\vec F + \vec F^T)}{2} - \vec I
-/// $$
+/// $$</div>
 /// is the infinitesimal strain tensor. The associated stress tensor is
-/// $$
+/// <div>$$
 /// \vec P(\vec F) = 2 \mu \vec \epsilon + \lambda \operatorname{tr}(\vec \epsilon) \vec I.
-/// $$
+/// $$</div>
 /// Finally, the contraction operator associated with the stress tensor is
-/// $$
+/// <div>$$
 /// \mathcal{C}_{\vec P}(\vec F, \vec a, \vec b) =
 ///     \mu \left[ (\vec a \cdot \vec b) \vec I + \vec b \vec a^T \right]
 ///     + \lambda \vec a \vec b^T.
-/// $$
+/// $$</div>
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LinearElasticMaterial;
 
@@ -152,7 +152,7 @@ where
 ///
 /// For posterity, we sketch out the derivation. We assume throughout that $J > 0$, and thus $\vec F$ is invertible.
 ///
-/// ## Stress tensor (first derivative)
+/// ### Stress tensor (first derivative)
 ///
 /// We have that
 ///
@@ -174,7 +174,7 @@ where
 ///         = (-\mu + \lambda \log J) \vec F^{-T} + \mu \vec F
 /// $$
 ///
-/// ## Stress contraction (second derivative)
+/// ### Stress contraction (second derivative)
 ///
 /// We define $\alpha := -\mu + \lambda \log J$, and write out the derivative of $\vec P$ as
 /// <div>$$
@@ -352,22 +352,22 @@ where
 /// The Saint Venant-Kirchhoff material model.
 ///
 /// This material model is characterized by the strain energy density
-/// $$
+/// <div>$$
 /// \psi(\vec F) = \mu \vec E : \vec E + \frac{\lambda}{2} \operatorname{tr}^2(\vec E)
-/// $$
+/// $$</div>
 /// where $\mu$ and $\lambda$ are Lamé parameters and $\vec E = \frac{1}{2} \left( \vec F^T \vec F - \vec I \right)$
 /// is the Green strain tensor. The stress tensor is
-/// $$
+/// <div>$$
 /// \vec P(\vec F) = \vec F (2 \mu \vec E + \lambda \tr{E} \vec I)
-/// $$
+/// $$</div>
 /// and the contraction operator is
-/// $$
+/// <div>$$
 /// \mathcal{C}_{\vec P}(\vec F, \vec a, \vec b) =
 ///     \left[ 2 \mu \vec a^T \vec E \vec b + \lambda \tr{\vec E} (\vec a \cdot \vec b) \right] \vec I
 ///     + \mu (\vec F \vec b) (\vec F \vec a)^T
 ///     + \lambda (\vec F \vec a) (\vec F \vec b)^T
 ///     + \mu (\vec a \cdot \vec b) \vec F \vec F^T.
-/// $$
+/// $$</div>
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StVKMaterial;
 
