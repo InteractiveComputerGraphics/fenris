@@ -4,6 +4,7 @@ use crate::quadrature::QuadraturePair;
 use crate::util::NestedVec;
 use crate::SmallDim;
 use itertools::izip;
+use nalgebra::{U1, U2, U3};
 use serde::{Deserialize, Serialize};
 
 /// Lookup table mapping elements to quadrature rules.
@@ -37,6 +38,19 @@ where
         self.populate_element_data(element_index, data);
     }
 }
+
+/// Trait alias for a one-dimensional quadrature table.
+pub trait QuadratureTable1d<T: Scalar>: QuadratureTable<T, U1> {}
+
+/// Trait alias for a two-dimensional quadrature table.
+pub trait QuadratureTable2d<T: Scalar>: QuadratureTable<T, U2> {}
+
+/// Trait alias for a three-dimensional quadrature table.
+pub trait QuadratureTable3d<T: Scalar>: QuadratureTable<T, U3> {}
+
+impl<T: Scalar, Table: QuadratureTable<T, U1>> QuadratureTable1d<T> for Table {}
+impl<T: Scalar, Table: QuadratureTable<T, U2>> QuadratureTable2d<T> for Table {}
+impl<T: Scalar, Table: QuadratureTable<T, U3>> QuadratureTable3d<T> for Table {}
 
 /// A quadrature table that keeps a separate quadrature rule per element.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
