@@ -67,6 +67,14 @@ where
     data: NestedVec<Data>,
 }
 
+fn unit_data_table_for_weights<T>(points: &NestedVec<T>) -> NestedVec<()> {
+    let mut data = NestedVec::new();
+    for i in 0..points.len() {
+        data.push(&vec![(); points.get(i).unwrap().len()]);
+    }
+    data
+}
+
 impl<T, GeometryDim> GeneralQuadratureTable<T, GeometryDim>
 where
     T: Scalar,
@@ -74,10 +82,7 @@ where
     DefaultAllocator: Allocator<T, GeometryDim>,
 {
     pub fn from_points_and_weights(points: NestedVec<OPoint<T, GeometryDim>>, weights: NestedVec<T>) -> Self {
-        let mut data = NestedVec::new();
-        for i in 0..points.len() {
-            data.push(&vec![(); points.get(i).unwrap().len()]);
-        }
+        let data = unit_data_table_for_weights(&weights);
         Self::from_points_weights_and_data(points, weights, data)
     }
 }
@@ -314,6 +319,22 @@ where
     weights: NestedVec<T>,
     data: NestedVec<Data>,
     element_to_rule_map: Vec<usize>,
+}
+
+impl<T, D> CompactQuadratureTable<T, D>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>,
+{
+    pub fn from_points_weights_and_map(
+        points: NestedVec<OPoint<T, D>>,
+        weights: NestedVec<T>,
+        element_to_rule_map: Vec<usize>
+    ) -> Self {
+        let data = unit_data_table_for_weights(&weights);
+        Self::from_quadrature_rules_and_map(points, weights, data, element_to_rule_map)
+    }
 }
 
 impl<T, D, Data> CompactQuadratureTable<T, D, Data>
