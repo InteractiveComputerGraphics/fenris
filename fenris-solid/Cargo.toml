@@ -1,6 +1,6 @@
 [package]
 name = "fenris-solid"
-version = "0.0.22"
+version = "0.0.23"
 authors = ["Andreas Longva <andreas.b.longva@gmail.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -14,7 +14,7 @@ rustdoc-args = [ "--html-in-header", "assets/doc-header.html",
                  "--html-before-content", "assets/doc-header.html" ]
 
 [dependencies]
-fenris = { version = "^0.0.22", path = ".." }
+fenris = { version = "^0.0.23", path = ".." }
 serde = "1.0.126"
 numeric_literals = "0.2.0"
 
