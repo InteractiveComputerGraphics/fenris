@@ -1,6 +1,6 @@
 use numeric_literals::replace_float_literals;
 
-use crate::connectivity::{Tet10Connectivity, Tet4Connectivity};
+use crate::connectivity::{Tet10Connectivity, Tet20Connectivity, Tet4Connectivity};
 use crate::element::{ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement};
 use crate::nalgebra::{
     distance, Matrix1x4, Matrix3, Matrix3x4, OMatrix, OPoint, Point3, Scalar, Vector3, U1, U10, U20, U3, U4,
@@ -48,6 +48,30 @@ where
         Some(Tet10Element {
             tet4: Tet4Element::from_vertices(tet4_vertices),
             vertices: tet10_vertices,
+        })
+    }
+}
+
+impl<T> ElementConnectivity<T> for Tet20Connectivity
+    where
+        T: Real,
+{
+    type Element = Tet20Element<T>;
+    type GeometryDim = U3;
+    type ReferenceDim = U3;
+
+    fn element(&self, vertices: &[OPoint<T, Self::GeometryDim>]) -> Option<Self::Element> {
+        let mut tet20_vertices = [Point3::origin(); 20];
+        for (i, v) in tet20_vertices.iter_mut().enumerate() {
+            *v = vertices.get(self.0[i])?.clone();
+        }
+
+        let mut tet4_vertices = [Point3::origin(); 4];
+        tet4_vertices.copy_from_slice(&tet20_vertices[0..4]);
+
+        Some(Tet20Element {
+            tet4: Tet4Element::from_vertices(tet4_vertices),
+            vertices: tet20_vertices,
         })
     }
 }
