@@ -9,8 +9,9 @@ description = "Solid mechanics functionality for fenris"
 
 [package.metadata.docs.rs]
 # For rendering KaTeX on docs.rs
-# TODO: Find a way to sync assets/ with root folder assets/
-rustdoc-args = [ "--html-in-header", "assets/doc-header.html"]
+# TODO: Find a way to automatically sync assets/ with root folder assets/ ?
+rustdoc-args = [ "--html-in-header", "assets/doc-header.html",
+                 "--html-before-content", "assets/doc-header.html" ]
 
 [dependencies]
 fenris = { version = "^0.0.22", path = ".." }
