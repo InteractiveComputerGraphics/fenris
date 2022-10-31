@@ -86,8 +86,8 @@ where
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(bound(
-    serialize = "OVector<T, D>: Serialize",
-    deserialize = "OVector<T, D>: Deserialize<'de>"
+    serialize = "OPoint<T, D>: Serialize",
+    deserialize = "OPoint<T, D>: Deserialize<'de>"
 ))]
 pub struct AxisAlignedBoundingBox<T, D>
 where
@@ -95,8 +95,8 @@ where
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
-    min: OVector<T, D>,
-    max: OVector<T, D>,
+    min: OPoint<T, D>,
+    max: OPoint<T, D>,
 }
 
 impl<T, D> Copy for AxisAlignedBoundingBox<T, D>
@@ -104,7 +104,7 @@ where
     T: Scalar,
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
-    OVector<T, D>: Copy,
+    OPoint<T, D>: Copy,
 {
 }
 
@@ -117,18 +117,18 @@ where
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
-    pub fn new(min: OVector<T, D>, max: OVector<T, D>) -> Self {
+    pub fn new(min: OPoint<T, D>, max: OPoint<T, D>) -> Self {
         for i in 0..D::dim() {
             assert!(min[i] <= max[i]);
         }
         Self { min, max }
     }
 
-    pub fn min(&self) -> &OVector<T, D> {
+    pub fn min(&self) -> &OPoint<T, D> {
         &self.min
     }
 
-    pub fn max(&self) -> &OVector<T, D> {
+    pub fn max(&self) -> &OPoint<T, D> {
         &self.max
     }
 }
@@ -140,7 +140,7 @@ where
     DefaultAllocator: Allocator<T, D>,
 {
     fn from(point: OPoint<T, D>) -> Self {
-        AxisAlignedBoundingBox::new(point.coords.clone(), point.coords)
+        AxisAlignedBoundingBox::new(point.clone(), point)
     }
 }
 
@@ -152,13 +152,13 @@ where
 {
     /// Computes the minimal bounding box which encloses both `this` and `other`.
     pub fn enclose(&self, other: &AxisAlignedBoundingBox<T, D>) -> Self {
-        let min = self.min.iter().zip(&other.min).map(|(a, b)| T::min(*a, *b));
+        let min = self.min.iter().zip(&other.min.coords).map(|(a, b)| T::min(*a, *b));
         let min = OVector::<T, D>::from_iterator(min);
 
-        let max = self.max.iter().zip(&other.max).map(|(a, b)| T::max(*a, *b));
+        let max = self.max.iter().zip(&other.max.coords).map(|(a, b)| T::max(*a, *b));
         let max = OVector::<T, D>::from_iterator(max);
 
-        AxisAlignedBoundingBox::new(min, max)
+        AxisAlignedBoundingBox::new(min.into(), max.into())
     }
 
     pub fn from_points<'a>(points: impl IntoIterator<Item = &'a OPoint<T, D>>) -> Option<Self> {
@@ -179,7 +179,7 @@ where
     }
 
     pub fn center(&self) -> OPoint<T, D> {
-        OPoint::from((self.max() + self.min()) / T::from_f64(2.0).unwrap())
+        OPoint::from((&self.max().coords + &self.min().coords) / T::from_f64(2.0).unwrap())
     }
 
     /// Uniformly scales each axis by the given scale amount, with respect to the center of
@@ -187,21 +187,21 @@ where
     ///
     /// ```rust
     /// # use fenris_geometry::AxisAlignedBoundingBox;
-    /// use nalgebra::vector;
+    /// use nalgebra::{point, vector};
     /// use matrixcompare::assert_matrix_eq;
     ///
-    /// let aabb = AxisAlignedBoundingBox::new(vector![0.0, 0.0], vector![1.0, 1.0]);
+    /// let aabb = AxisAlignedBoundingBox::new(point![0.0, 0.0], point![1.0, 1.0]);
     /// let scaled = aabb.uniformly_scale(0.5);
     ///
-    /// assert_matrix_eq!(scaled.min(), vector![0.25, 0.25], comp = float);
-    /// assert_matrix_eq!(scaled.max(), vector![0.75, 0.75], comp = float);
+    /// assert_matrix_eq!(scaled.min().coords, vector![0.25, 0.25], comp = float);
+    /// assert_matrix_eq!(scaled.max().coords, vector![0.75, 0.75], comp = float);
     /// ```
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     pub fn uniformly_scale(&self, scale: T) -> Self {
         assert!(scale >= T::zero());
         let s = scale;
         let (a, b) = (&self.min, &self.max);
-        let ref c = self.center().coords;
+        let ref c = self.center();
         Self {
             min: c + (a - c) * s,
             max: c + (b - c) * s,
@@ -227,11 +227,11 @@ where
     ///
     /// ```rust
     /// # use fenris_geometry::AxisAlignedBoundingBox;
-    /// # use nalgebra::vector;
-    /// let aabb = AxisAlignedBoundingBox::new(vector![0.0, 0.0], vector![1.0, 1.0]);
+    /// # use nalgebra::point;
+    /// let aabb = AxisAlignedBoundingBox::new(point![0.0, 0.0], point![1.0, 1.0]);
     /// let grown = aabb.grow_uniformly(1.0);
-    /// assert_eq!(grown.min(), &vector![-1.0, -1.0]);
-    /// assert_eq!(grown.max(), &vector![2.0, 2.0]);
+    /// assert_eq!(grown.min(), &point![-1.0, -1.0]);
+    /// assert_eq!(grown.max(), &point![2.0, 2.0]);
     /// ```
     ///
     pub fn grow_uniformly(&self, distance: T) -> Self {

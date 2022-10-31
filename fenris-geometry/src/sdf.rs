@@ -1,5 +1,5 @@
 use fenris_traits::Real;
-use nalgebra::{Point2, Scalar, Vector2, U2};
+use nalgebra::{Point2, Scalar, Vector2, U2, OPoint};
 
 use crate::{AxisAlignedBoundingBox2d, BoundedGeometry};
 use numeric_literals::replace_float_literals;
@@ -68,8 +68,8 @@ where
     fn bounding_box(&self) -> AxisAlignedBoundingBox2d<T> {
         let eps = self.radius * T::from_f64(0.01).unwrap();
         AxisAlignedBoundingBox2d::new(
-            self.center - Vector2::repeat(T::one()) * (self.radius + eps),
-            self.center + Vector2::repeat(T::one()) * (self.radius + eps),
+            OPoint::from(self.center - Vector2::repeat(T::one()) * (self.radius + eps)),
+            OPoint::from(self.center + Vector2::repeat(T::one()) * (self.radius + eps)),
         )
     }
 }

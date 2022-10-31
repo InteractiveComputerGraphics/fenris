@@ -230,7 +230,7 @@ where
         let mut bbs = self.cell_iter().map(|cell| cell.bounding_box());
         bbs.next()
             .map(|first_bb| bbs.fold(first_bb, |bb1, bb2| bb1.enclose(&bb2)))
-            .unwrap_or_else(|| AxisAlignedBoundingBox::new(OVector::zeros(), OVector::zeros()))
+            .unwrap_or_else(|| AxisAlignedBoundingBox::from(OPoint::origin()))
     }
 }
 
