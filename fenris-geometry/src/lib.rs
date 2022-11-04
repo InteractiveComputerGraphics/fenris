@@ -210,7 +210,7 @@ where
     }
 
     pub fn contains_point(&self, point: &OPoint<T, D>) -> bool {
-        (0..D::dim()).all(|dim| point[dim] > self.min[dim] && point[dim] < self.max[dim])
+        (0..D::dim()).all(|dim| point[dim] >= self.min[dim] && point[dim] <= self.max[dim])
     }
 
     pub fn intersects(&self, other: &Self) -> bool {
@@ -256,6 +256,63 @@ where
                     _ => unreachable!()
                 }).into()
             })
+    }
+
+    /// Compute the point in the bounding box furthest away from the given point.
+    ///
+    /// # Panics
+    ///
+    /// Panics if two distances cannot be ordered. This typically only happens if
+    /// one of the numbers is not a number (NaN) or the comparison is not sensible, such as
+    /// comparing two infinities. Since given finite coordinates no distance should be infinite,
+    /// this method will realistically only panic in cases where one of the points
+    /// --- either of the bounding box or the query point --- has components that are not
+    /// finite numbers.
+    #[replace_float_literals(T::from_f64(literal).unwrap())]
+    pub fn furthest_point_to(&self, point: &OPoint<T, D>) -> OPoint<T, D>
+    where
+        DefaultAllocator: Allocator<usize, D>
+    {
+        // It turns out that we can choose, along each dimension, the point in the interval
+        // [a_i, b_i] furthest away from p_i.
+        point.coords.zip_zip_map(
+            &self.min.coords,
+            &self.max.coords,
+            |p_i, a_i, b_i| {
+                let mid = (a_i + b_i) / 2.0;
+                if p_i < mid {
+                    b_i
+                } else {
+                    a_i
+                }
+            }
+        ).into()
+    }
+
+    /// The squared distance to the point in the bounding box furthest away from the given point.
+    ///
+    /// # Panics
+    ///
+    /// Panic behavior is identical to [`furthest_point_to`](Self::furthest_point_to).
+    pub fn max_dist2_to(&self, point: &OPoint<T, D>) -> T
+    where
+        // TODO: Use DimAllocator and SmallDim
+        DefaultAllocator: Allocator<usize, D>
+    {
+        (self.furthest_point_to(point) - point).norm_squared()
+    }
+
+    /// The distance to the point in the bounding box furthest away from the given point.
+    ///
+    /// # Panics
+    ///
+    /// Panic behavior is identical to [`max_dist2_to`](Self::max_dist2_to).
+    pub fn max_dist_to(&self, point: &OPoint<T, D>) -> T
+    where
+    // TODO: Use DimAllocator and SmallDim
+        DefaultAllocator: Allocator<usize, D>
+    {
+        self.max_dist2_to(point).sqrt()
     }
 }
 
