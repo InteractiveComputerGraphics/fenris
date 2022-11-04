@@ -1,9 +1,37 @@
-// use crate::procedural::create_rectangular_uniform_quad_mesh_2d;
 use crate::Orientation::Counterclockwise;
-use crate::{HalfPlane, LineSegment2d, Orientation, Quad2d, Triangle, Triangle2d, Triangle3d};
+use crate::{
+    AxisAlignedBoundingBox, AxisAlignedBoundingBox2d, AxisAlignedBoundingBox3d, HalfPlane, LineSegment2d, Orientation,
+    Quad2d, Triangle, Triangle2d, Triangle3d,
+};
+use nalgebra::allocator::Allocator;
 use nalgebra::proptest::vector;
-use nalgebra::{DimName, Point2, Point3, Unit, Vector2, Vector3, U2, U3};
+use nalgebra::{DefaultAllocator, DimName, Point2, Point3, RealField, Unit, Vector2, Vector3, U2, U3};
 use proptest::prelude::*;
+
+pub fn aabb<D>() -> impl Strategy<Value = AxisAlignedBoundingBox<f64, D>>
+where
+    D: DimName,
+    DefaultAllocator: Allocator<f64, D>,
+{
+    let value_strategy = -10.0..10.0;
+    (
+        vector(value_strategy.clone(), D::name()),
+        vector(value_strategy, D::name()),
+    )
+        .prop_map(|(a, b)| {
+            let min = a.zip_map(&b, |a_i, b_i| RealField::min(a_i, b_i));
+            let max = a.zip_map(&b, |a_i, b_i| RealField::max(a_i, b_i));
+            AxisAlignedBoundingBox::new(min.into(), max.into())
+        })
+}
+
+pub fn aabb2() -> impl Strategy<Value = AxisAlignedBoundingBox2d<f64>> {
+    aabb()
+}
+
+pub fn aabb3() -> impl Strategy<Value = AxisAlignedBoundingBox3d<f64>> {
+    aabb()
+}
 
 pub fn vector2() -> impl Strategy<Value = Vector2<f64>> {
     vector(-10.0..10.0, U2::name())
