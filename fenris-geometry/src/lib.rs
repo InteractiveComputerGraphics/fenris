@@ -14,6 +14,7 @@ mod primitives;
 pub use polygon::*;
 pub use polytope::*;
 pub use primitives::*;
+use crate::util::{index_set_nth_power_iter};
 
 pub mod polymesh;
 pub mod sdf;
@@ -238,6 +239,23 @@ where
         let min = self.min().map(|b_i| b_i - distance);
         let max = self.max().map(|b_i| b_i + distance);
         Self::new(min, max)
+    }
+
+    /// Creates an iterator over the corners of the bounding box.
+    pub fn corners_iter<'a>(&'a self) -> impl 'a + Iterator<Item=OPoint<T, D>>
+    where
+        DefaultAllocator: Allocator<usize, D>
+    {
+        // We can enumerate the corners by looking at {0, 1}^D, i.e. the D-th power of the
+        // set {0, 1}, and associating 0 and 1 with min and max coordinates for the i-th axis.
+        index_set_nth_power_iter::<D>(2)
+            .map(move |multi_idx| {
+                OVector::<T, D>::from_fn(|idx, _| match multi_idx[idx] {
+                    0 => self.min[idx].clone(),
+                    1 => self.max[idx].clone(),
+                    _ => unreachable!()
+                }).into()
+            })
     }
 }
 
