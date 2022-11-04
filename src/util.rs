@@ -1,3 +1,4 @@
+use std::any::TypeId;
 use crate::Real;
 use itertools::izip;
 use itertools::Itertools;
@@ -17,6 +18,7 @@ use std::fmt::Display;
 use std::fmt::LowerExp;
 use std::fs::File;
 use std::io::{BufWriter, Write};
+use std::mem::transmute;
 use std::path::Path;
 
 pub use fenris_geometry::util::compute_orthonormal_vectors_3d;
@@ -293,9 +295,15 @@ where
     }
 }
 
+pub fn try_transmute_slice<T: 'static, U: 'static>(e: &[T]) -> Option<&[U]> {
+    if TypeId::of::<T>() == TypeId::of::<U>() {
+        Some(unsafe { transmute(e) })
+    } else {
+        None
+    }
+}
+
 pub fn try_transmute_ref<T: 'static, U: 'static>(e: &T) -> Option<&U> {
-    use std::any::TypeId;
-    use std::mem::transmute;
     if TypeId::of::<T>() == TypeId::of::<U>() {
         Some(unsafe { transmute(e) })
     } else {
@@ -304,8 +312,6 @@ pub fn try_transmute_ref<T: 'static, U: 'static>(e: &T) -> Option<&U> {
 }
 
 pub fn try_transmute_ref_mut<T: 'static, U: 'static>(e: &mut T) -> Option<&mut U> {
-    use std::any::TypeId;
-    use std::mem::transmute;
     if TypeId::of::<T>() == TypeId::of::<U>() {
         Some(unsafe { transmute(e) })
     } else {

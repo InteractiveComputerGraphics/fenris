@@ -45,6 +45,7 @@ fenris-geometry = { version= "^0.0.5", path = "fenris-geometry", features = [ "p
 fenris-optimize = { version= "0.0.2", path = "fenris-optimize" }
 fenris-quadrature = { version= "0.0.4", path = "fenris-quadrature" }
 mshio = "0.4.2"
+rstar = { git = "https://github.com/Andlon/rstar.git", branch="no-copy-bound" }
 
 [dev-dependencies]
 fenris = { path = ".", features = [ "proptest-support" ]}
