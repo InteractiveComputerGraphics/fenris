@@ -23,7 +23,7 @@ proptest-support = [ "proptest", "fenris-geometry/proptest-support", "nalgebra/p
 [dependencies]
 nalgebra = { version = "0.31", features = [ "serde-serialize" ] }
 nalgebra-sparse = { version = "0.7", features = ["compare"] }
-davenport = "0.1.0"
+davenport = "0.1.1"
 vtkio = "0.6"
 num = "0.4"
 numeric_literals = "0.2.0"
