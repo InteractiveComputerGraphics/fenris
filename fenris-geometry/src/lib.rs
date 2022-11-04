@@ -11,10 +11,10 @@ use std::fmt::Debug;
 mod polygon;
 mod polytope;
 mod primitives;
+use crate::util::index_set_nth_power_iter;
 pub use polygon::*;
 pub use polytope::*;
 pub use primitives::*;
-use crate::util::{index_set_nth_power_iter};
 
 pub mod polymesh;
 pub mod sdf;
@@ -153,10 +153,18 @@ where
 {
     /// Computes the minimal bounding box which encloses both `this` and `other`.
     pub fn enclose(&self, other: &AxisAlignedBoundingBox<T, D>) -> Self {
-        let min = self.min.iter().zip(&other.min.coords).map(|(a, b)| T::min(*a, *b));
+        let min = self
+            .min
+            .iter()
+            .zip(&other.min.coords)
+            .map(|(a, b)| T::min(*a, *b));
         let min = OVector::<T, D>::from_iterator(min);
 
-        let max = self.max.iter().zip(&other.max.coords).map(|(a, b)| T::max(*a, *b));
+        let max = self
+            .max
+            .iter()
+            .zip(&other.max.coords)
+            .map(|(a, b)| T::max(*a, *b));
         let max = OVector::<T, D>::from_iterator(max);
 
         AxisAlignedBoundingBox::new(min.into(), max.into())
@@ -242,20 +250,20 @@ where
     }
 
     /// Creates an iterator over the corners of the bounding box.
-    pub fn corners_iter<'a>(&'a self) -> impl 'a + Iterator<Item=OPoint<T, D>>
+    pub fn corners_iter<'a>(&'a self) -> impl 'a + Iterator<Item = OPoint<T, D>>
     where
-        DefaultAllocator: Allocator<usize, D>
+        DefaultAllocator: Allocator<usize, D>,
     {
         // We can enumerate the corners by looking at {0, 1}^D, i.e. the D-th power of the
         // set {0, 1}, and associating 0 and 1 with min and max coordinates for the i-th axis.
-        index_set_nth_power_iter::<D>(2)
-            .map(move |multi_idx| {
-                OVector::<T, D>::from_fn(|idx, _| match multi_idx[idx] {
-                    0 => self.min[idx].clone(),
-                    1 => self.max[idx].clone(),
-                    _ => unreachable!()
-                }).into()
+        index_set_nth_power_iter::<D>(2).map(move |multi_idx| {
+            OVector::<T, D>::from_fn(|idx, _| match multi_idx[idx] {
+                0 => self.min[idx].clone(),
+                1 => self.max[idx].clone(),
+                _ => unreachable!(),
             })
+            .into()
+        })
     }
 
     /// Compute the point in the bounding box furthest away from the given point.
@@ -271,22 +279,21 @@ where
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     pub fn furthest_point_to(&self, point: &OPoint<T, D>) -> OPoint<T, D>
     where
-        DefaultAllocator: Allocator<usize, D>
+        DefaultAllocator: Allocator<usize, D>,
     {
         // It turns out that we can choose, along each dimension, the point in the interval
         // [a_i, b_i] furthest away from p_i.
-        point.coords.zip_zip_map(
-            &self.min.coords,
-            &self.max.coords,
-            |p_i, a_i, b_i| {
+        point
+            .coords
+            .zip_zip_map(&self.min.coords, &self.max.coords, |p_i, a_i, b_i| {
                 let mid = (a_i + b_i) / 2.0;
                 if p_i < mid {
                     b_i
                 } else {
                     a_i
                 }
-            }
-        ).into()
+            })
+            .into()
     }
 
     /// The squared distance to the point in the bounding box furthest away from the given point.
@@ -297,7 +304,7 @@ where
     pub fn max_dist2_to(&self, point: &OPoint<T, D>) -> T
     where
         // TODO: Use DimAllocator and SmallDim
-        DefaultAllocator: Allocator<usize, D>
+        DefaultAllocator: Allocator<usize, D>,
     {
         (self.furthest_point_to(point) - point).norm_squared()
     }
@@ -309,8 +316,8 @@ where
     /// Panic behavior is identical to [`max_dist2_to`](Self::max_dist2_to).
     pub fn max_dist_to(&self, point: &OPoint<T, D>) -> T
     where
-    // TODO: Use DimAllocator and SmallDim
-        DefaultAllocator: Allocator<usize, D>
+        // TODO: Use DimAllocator and SmallDim
+        DefaultAllocator: Allocator<usize, D>,
     {
         self.max_dist2_to(point).sqrt()
     }

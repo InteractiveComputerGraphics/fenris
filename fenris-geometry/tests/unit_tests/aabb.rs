@@ -1,11 +1,11 @@
-use matrixcompare::assert_scalar_eq;
-use fenris_geometry::AxisAlignedBoundingBox;
-use nalgebra::{DefaultAllocator, DimName, OPoint, point, U2};
-use nalgebra::allocator::Allocator;
-use proptest::prelude::*;
 use fenris::allocators::DimAllocator;
 use fenris_geometry::proptest::{aabb2, aabb3, point2, point3};
+use fenris_geometry::AxisAlignedBoundingBox;
+use matrixcompare::assert_scalar_eq;
+use nalgebra::allocator::Allocator;
 use nalgebra::distance_squared;
+use nalgebra::{point, DefaultAllocator, DimName, OPoint, U2};
+use proptest::prelude::*;
 
 #[test]
 fn aabb_intersects_2d() {
@@ -48,54 +48,44 @@ fn aabb_intersects_2d() {
 }
 
 /// Helper function for collecting corners from corner iterator.
-fn corners<D: DimName>(aabb:& AxisAlignedBoundingBox<f64, D>) -> Vec<OPoint<f64, D>>
+fn corners<D: DimName>(aabb: &AxisAlignedBoundingBox<f64, D>) -> Vec<OPoint<f64, D>>
 where
-    DefaultAllocator: DimAllocator<f64, D>
+    DefaultAllocator: DimAllocator<f64, D>,
 {
     aabb.corners_iter().collect()
 }
 
 fn compare_unordered_points<D: DimName>(points1: &[OPoint<f64, D>], points2: &[OPoint<f64, D>]) -> bool
 where
-    DefaultAllocator: Allocator<f64, D>
+    DefaultAllocator: Allocator<f64, D>,
 {
     assert_eq!(points1.len(), points2.len());
     // This is O(n^2) but is acceptable for use in tests here
-    points1.iter()
-        .all(|p1| points2.contains(p1))
+    points1.iter().all(|p1| points2.contains(p1))
 }
 
 macro_rules! assert_unordered_eq {
-    ($p1:expr, $p2:expr) => {
-        {
-            let eq = compare_unordered_points((&$p1).as_ref(), (&$p2).as_ref());
-            if !eq {
-                dbg!(&$p1, &$p2);
-                assert!(eq, "Point lists do not contain the same points");
-            }
+    ($p1:expr, $p2:expr) => {{
+        let eq = compare_unordered_points((&$p1).as_ref(), (&$p2).as_ref());
+        if !eq {
+            dbg!(&$p1, &$p2);
+            assert!(eq, "Point lists do not contain the same points");
         }
-    }
+    }};
 }
-
 
 #[test]
 fn test_aabb_corners_iter() {
-
     // 1D
     {
         let aabb = AxisAlignedBoundingBox::new(point![3.0], point![4.0]);
-        assert_eq!(corners(&aabb), vec![ point![3.0 ], point![4.0] ]);
+        assert_eq!(corners(&aabb), vec![point![3.0], point![4.0]]);
     }
 
     // 2D
     {
         let aabb = AxisAlignedBoundingBox::new(point![3.0, 4.0], point![5.0, 6.0]);
-        let expected = [
-            [3.0, 4.0],
-            [3.0, 6.0],
-            [5.0, 4.0],
-            [5.0, 6.0]
-        ].map(OPoint::from);
+        let expected = [[3.0, 4.0], [3.0, 6.0], [5.0, 4.0], [5.0, 6.0]].map(OPoint::from);
         assert_unordered_eq!(corners(&aabb), &expected);
     }
 
@@ -110,8 +100,9 @@ fn test_aabb_corners_iter() {
             [4.0, 2.0, 3.0],
             [4.0, 2.0, 6.0],
             [4.0, 5.0, 3.0],
-            [4.0, 5.0, 6.0]
-        ].map(OPoint::from);
+            [4.0, 5.0, 6.0],
+        ]
+        .map(OPoint::from);
         assert_unordered_eq!(corners(&aabb), expected);
     }
 }

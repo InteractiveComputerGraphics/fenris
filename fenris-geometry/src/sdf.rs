@@ -1,5 +1,5 @@
 use fenris_traits::Real;
-use nalgebra::{Point2, Scalar, Vector2, U2, OPoint};
+use nalgebra::{OPoint, Point2, Scalar, Vector2, U2};
 
 use crate::{AxisAlignedBoundingBox2d, BoundedGeometry};
 use numeric_literals::replace_float_literals;

@@ -1,6 +1,6 @@
 use fenris_traits::Real;
-use nalgebra::{DefaultAllocator, DimName, OVector, UnitVector3, Vector3};
 use nalgebra::allocator::Allocator;
+use nalgebra::{DefaultAllocator, DimName, OVector, UnitVector3, Vector3};
 
 pub fn compute_orthonormal_vectors_3d<T: Real>(vector: &UnitVector3<T>) -> [UnitVector3<T>; 2] {
     // Ported from
@@ -90,7 +90,7 @@ macro_rules! assert_line_segments_approx_equal {
 /// TODO: Currently only implicitly tested through [`AxisAlignedBoundingBox::corners_iter`].
 pub(crate) fn index_set_nth_power_iter<D: DimName>(n: usize) -> impl Iterator<Item = OVector<usize, D>>
 where
-    DefaultAllocator: Allocator<usize, D>
+    DefaultAllocator: Allocator<usize, D>,
 {
     let mut multi_idx = OVector::from_element(0);
     let mut i = 0;
