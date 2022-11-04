@@ -97,14 +97,14 @@ impl<T> FiniteElementInterpolator<T> {
 }
 
 impl<T> FiniteElementInterpolator<T> {
-    pub fn interpolate_space<'a, Space, D>(
-        _space: &'a Space,
-        _interpolation_points: &'a [OPoint<T, D>],
+    pub fn interpolate_space<Space, D>(
+        _space: &Space,
+        _interpolation_points: &[OPoint<T, D>],
     ) -> Result<Self, Box<dyn std::error::Error>>
     where
         T: Real,
         D: DimName + DimMin<D, Output = D>,
-        Space: GeometricFiniteElementSpace<'a, T, GeometryDim = D> + DistanceQuery<'a, OPoint<T, D>>,
+        Space: GeometricFiniteElementSpace<T, GeometryDim = D> + DistanceQuery<OPoint<T, D>>,
         DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
     {
         todo!("Reimplement this function or scrap it in favor of a different design?");

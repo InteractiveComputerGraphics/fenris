@@ -45,7 +45,7 @@ where
     }
 }
 
-impl<'a, T, D, C> GeometricFiniteElementSpace<'a, T> for Mesh<T, D, C>
+impl<T, D, C> GeometricFiniteElementSpace<T> for Mesh<T, D, C>
 where
     T: Scalar,
     D: SmallDim,

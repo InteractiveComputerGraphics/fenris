@@ -84,7 +84,7 @@ where
 /// This trait essentially functions as a marker trait for finite element spaces which can
 /// also be interpreted as a collection of geometry objects, with a 1:1 correspondence between
 /// elements and geometries.
-pub trait GeometricFiniteElementSpace<'a, T>: FiniteElementSpace<T> + GeometryCollection<'a>
+pub trait GeometricFiniteElementSpace<T>: FiniteElementSpace<T> + GeometryCollection
 where
     T: Scalar,
     DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>,

@@ -516,20 +516,20 @@ where
     }
 }
 
-impl<'a, T, D, C> GeometryCollection<'a> for Mesh<T, D, C>
+impl<T, D, C> GeometryCollection for Mesh<T, D, C>
 where
     T: Scalar,
     D: DimName,
     C: CellConnectivity<T, D>,
     DefaultAllocator: Allocator<T, D>,
 {
-    type Geometry = C::Cell;
+    type Geometry<'a> = C::Cell where C: 'a;
 
     fn num_geometries(&self) -> usize {
         self.connectivity.len()
     }
 
-    fn get_geometry(&'a self, index: usize) -> Option<Self::Geometry> {
+    fn get_geometry<'a>(&'a self, index: usize) -> Option<Self::Geometry<'a>> {
         self.connectivity()
             .get(index)
             .map(|conn| conn.cell(self.vertices()).unwrap())

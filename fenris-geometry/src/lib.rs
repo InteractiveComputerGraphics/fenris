@@ -49,19 +49,21 @@ where
     fn distance(&self, query_geometry: &QueryGeometry) -> T;
 }
 
-pub trait GeometryCollection<'a> {
-    type Geometry;
+pub trait GeometryCollection {
+    type Geometry<'a>
+    where
+        Self: 'a;
 
     fn num_geometries(&self) -> usize;
-    fn get_geometry(&'a self, index: usize) -> Option<Self::Geometry>;
+    fn get_geometry<'a>(&'a self, index: usize) -> Option<Self::Geometry<'a>>;
 }
 
-pub trait DistanceQuery<'a, QueryGeometry>: GeometryCollection<'a> {
+pub trait DistanceQuery<QueryGeometry>: GeometryCollection {
     //    type KNearestIter: Iterator<Item=usize>;
 
     //    fn k_nearest(&'a self, query_geometry: &'a QueryGeometry, k: usize) -> Self::KNearestIter;
 
-    fn nearest(&'a self, query_geometry: &'a QueryGeometry) -> Option<usize>;
+    fn nearest(&self, query_geometry: &QueryGeometry) -> Option<usize>;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
