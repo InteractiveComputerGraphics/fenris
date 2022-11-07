@@ -1,7 +1,6 @@
 //! Helper traits for allocator trait bounds.
 use crate::element::{ConnectivityGeometryDim, ConnectivityReferenceDim, ElementConnectivity};
-use nalgebra::allocator::Allocator;
-use nalgebra::{DefaultAllocator, DimName, Scalar, U1};
+use nalgebra::{DefaultAllocator, Scalar};
 
 pub trait ElementConnectivityAllocator<T, Connectivity>:
     BiDimAllocator<T, ConnectivityGeometryDim<T, Connectivity>, ConnectivityReferenceDim<T, Connectivity>>
