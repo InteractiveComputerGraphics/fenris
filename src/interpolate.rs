@@ -1,19 +1,12 @@
 use crate::allocators::{BiDimAllocator, DimAllocator};
 use crate::space::{FiniteElementConnectivity, FiniteElementSpace, GeometricFiniteElementSpace};
-use crate::{Real, SmallDim};
-use nalgebra::{Const, DefaultAllocator, DimName, Dynamic, MatrixSliceMut, OMatrix, OPoint, OVector, Point, Point2, Point3, Scalar};
-use std::array;
-use std::cell::RefCell;
+use crate::Real;
+use nalgebra::{DefaultAllocator, DimName, Dynamic, MatrixSliceMut, OMatrix, OPoint, OVector, Scalar};
 use std::marker::PhantomData;
-use std::mem::transmute;
-use std::ops::Deref;
-use davenport::Workspace;
-use itertools::izip;
 use nalgebra::allocator::Allocator;
-use rstar::{AABB, RTree, RTreeObject};
-use rstar::primitives::{GeomWithData, Rectangle};
-use fenris_geometry::{AxisAlignedBoundingBox, BoundedGeometry, DistanceQuery, GeometryCollection};
-use crate::util::{try_transmute_ref, try_transmute_slice};
+use rstar::{AABB, Envelope, PointDistance, RTree, RTreeObject};
+use rstar::primitives::{GeomWithData};
+use fenris_geometry::{AxisAlignedBoundingBox, BoundedGeometry, GeometryCollection};
 
 pub enum ClosestPoint<T, D>
 where
@@ -47,25 +40,7 @@ where
     fn find_closest_element_and_reference_coords(
         &self,
         point: &OPoint<T, Self::GeometryDim>,
-    ) -> (usize, OPoint<T, Self::ReferenceDim>) {
-        let mut result = [(usize::MAX, OPoint::default()); 1];
-        self.populate_closest_element_and_reference_coords(array::from_ref(point), &mut result);
-        let [result] = result;
-        result
-    }
-
-    /// Same as [`find_closest_element_and_reference_coords`], but applied to several
-    /// points at the same time.
-    ///
-    /// # Panics
-    ///
-    /// The method should panic if the input point slice and the output slice
-    /// do not have the same length.
-    fn populate_closest_element_and_reference_coords(
-        &self,
-        points: &[OPoint<T, Self::GeometryDim>],
-        result: &mut [(usize, OPoint<T, Self::ReferenceDim>)],
-    );
+    ) -> Option<(usize, OPoint<T, Self::ReferenceDim>)>;
 }
 
 struct RTreeAccelerationStructure<D: DimName>
@@ -90,16 +65,16 @@ where
     type Scalar = f64;
     const DIMENSIONS: usize = D::USIZE;
 
-    fn generate(generator: impl FnMut(usize) -> Self::Scalar) -> Self {
-        todo!()
+    fn generate(mut generator: impl FnMut(usize) -> Self::Scalar) -> Self {
+        Self(OVector::<f64, D>::from_fn(|i, _| generator(i)).into())
     }
 
     fn nth(&self, index: usize) -> Self::Scalar {
-        todo!()
+        self.0[index]
     }
 
     fn nth_mut(&mut self, index: usize) -> &mut Self::Scalar {
-        todo!()
+        &mut self.0[index]
     }
 }
 
@@ -114,6 +89,19 @@ where
         let box_min = aabb.min().clone();
         let box_max = aabb.max().clone();
         AABB::from_corners(RTreePoint(box_min), RTreePoint(box_max))
+    }
+}
+
+impl<D: DimName> PointDistance for RTreeAABB<D>
+where
+    DefaultAllocator: Allocator<f64, D>
+{
+    fn distance_2(&self, point: &RTreePoint<D>) -> <<Self::Envelope as Envelope>::Point as rstar::Point>::Scalar {
+        self.0.dist2_to(&point.0)
+    }
+
+    fn contains_point(&self, point: &<Self::Envelope as Envelope>::Point) -> bool {
+        self.0.contains_point(&point.0)
     }
 }
 
@@ -145,31 +133,24 @@ where
         Self { tree }
     }
 
-    pub fn closest_element_candidates<T: Real>(&self, point: &OPoint<T, D>) -> impl Iterator<Item=usize>
+    pub fn closest_cell_candidates<'a, T: Real>(&'a self, point: &OPoint<T, D>) -> impl 'a + Iterator<Item=usize>
     where
         DefaultAllocator: DimAllocator<T, D>
     {
-        // let mut iter = self.tree.nearest_neighbor_iter(point);
-        // std::iter::from_fn(|| {
-        //     if let Some(item) = iter.next() {
-        //         Some(item.data)
-        //     } else {
-        //         None
-        //     }
-        // })
+        let point_f64: OPoint<f64, D> = point.map(|x_i| x_i.to_subset().expect("TODO"));
+        let mut iter = self.tree.nearest_neighbor_iter(&RTreePoint(point_f64.clone()))
+            .map(|geom| (&geom.geom().0, geom.data))
+            .peekable();
 
-        std::iter::empty()
-
-
-        // let mut iter = self.tree.nearest_neighbor_iter(point);
-        // if let Some(first) = iter.next() {
-        //     let index = first.data;
-        //     let rectangle = first.geom();
-        //     let max_dist = rectangle.max_dist_squared_to_point(&)
-        // }
-        // if let Some(first) = iter.peek() {
-        //     let
-        // }
+        // First find the maximum possible distance to any point in the first AABB
+        let d2_max = iter.peek()
+            .map(|(aabb, _)| aabb.max_dist2_to(&point_f64))
+            .unwrap_or(f64::NAN);
+        iter
+            // Any subsequent AABB can be excluded if its closest point is larger
+            // than the maximum possible distance to any point in the first AABB
+            .take_while(move |&(aabb, _)| aabb.dist2_to(&point_f64) <= d2_max)
+            .map(|(_, index)| index)
     }
 }
 
@@ -196,21 +177,7 @@ where
         let bounding_boxes: Vec<_> = (0 .. space.num_geometries())
             .map(|i| space.get_geometry(i).unwrap().bounding_box())
             .collect();
-
         let rtree = RTreeAccelerationStructure::from_bounding_boxes(&bounding_boxes);
-        // workspace.try_insert(rtree);
-        // match Space::GeometryDim::dim() {
-        //     // TODO: Support dimension 1, probably need to send a PR to rstar for this
-        //     2 => {
-        //         // TODO: Implement a try_insert method on davenport::Workspace?
-        //         workspace.get_or_insert_with(|| RTreeAccelerationStructure::<2>::from_bounding_boxes(&bounding_boxes));
-        //     },
-        //     3 => {
-        //         workspace.get_or_insert_with(|| RTreeAccelerationStructure::<3>::from_bounding_boxes(&bounding_boxes));
-        //     },
-        //     _ => panic!("Unsupported dimension. Currently we only support dimension 2 and 3")
-        // }
-
         Self {
             space,
             // workspace: RefCell::new(workspace),
@@ -276,56 +243,34 @@ where
 impl<T, Space> InterpolateFiniteElementSpace<T> for Interpolator<T, Space>
 where
     T: Real,
-    // for<'a> Space: GeometricFiniteElementSpace<'a, T>,
-    // for<'a> <Space as GeometryCollection<'a>>::Geometry: BoundedGeometry<T, Dimension=Space::GeometryDim>,
     Space: InterpolateFiniteElementSpace<T>,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>
 {
     fn closest_point_on_element(&self,
                                 element_index: usize,
                                 p: &OPoint<T, Self::GeometryDim>) -> ClosestPoint<T, Self::ReferenceDim> {
-        todo!()
+        self.space.closest_point_on_element(element_index, p)
     }
 
-    fn populate_closest_element_and_reference_coords(
-        &self,
-        points: &[OPoint<T, Self::GeometryDim>],
-        result: &mut [(usize, OPoint<T, Self::ReferenceDim>)]
-    ) {
-        assert_eq!(points.len(), result.len());
-        for (query_point, (closest_element_idx, ref_coords)) in izip!(points, result) {
-            for candidate_element_idx in self.tree.closest_element_candidates(query_point) {
+    fn find_closest_element_and_reference_coords(&self, point: &OPoint<T, Self::GeometryDim>) -> Option<(usize, OPoint<T, Self::ReferenceDim>)> {
+        let mut min_dist2 = None;
+        let mut closest_result = None;
+        for candidate_element_idx in self.tree.closest_cell_candidates(point) {
+            match self.space.closest_point_on_element(candidate_element_idx, point) {
+                // Pick the first element that reports that the point is contained in the element
+                ClosestPoint::InElement(ref_coords) => return Some((candidate_element_idx, ref_coords)),
+                ClosestPoint::ClosestPoint(ref_coords) => {
+                    let x = self.space.map_element_reference_coords(candidate_element_idx, &ref_coords);
+                    let dist2 = (x - point).norm_squared();
 
+                    let is_min = min_dist2.map(|d2| d2 <= dist2).unwrap_or(true);
+                    if is_min {
+                        min_dist2 = Some(dist2);
+                        closest_result = Some((candidate_element_idx, ref_coords));
+                    }
+                }
             }
-            // TODO: Instead of first collecting all candidates, it *may* be prudent
-            // to actually directly query element closest points, since each
-            // iteration through rstar's closest points may incur some manner of tree traversal.
-            // We currently collect element indices first, because this is the only
-            // "dimension-dependent" piece of code right now.
-            // TODO: Get rid of this mess. The matching is an unfortunate necessity because
-            // we have to use typenum on the nalgebra side, but rtree requires us to
-            // give a constant integer for the dimension. These concepts are unfortunately not
-            // compatible, in the sense that there appears to be no way to convert
-            //
-            // match Space::GeometryDim::dim() {
-            //     2 => {
-            //         let tree: &RTreeAccelerationStructure<2> = workspace.try_get().unwrap();
-            //         let point: &Point2<T> = try_transmute_ref(query_point).unwrap();
-            //         let rtree_point: [f64; 2] = point.coords.map(|x_i| x_i.to_subset().unwrap())
-            //             .into();
-            //         elements_buffer.extend(tree.closest_element_candidates(&rtree_point));
-            //     },
-            //     3 => {
-            //         let tree: &RTreeAccelerationStructure<3> = workspace.try_get().unwrap();
-            //         let point: &Point3<T> = try_transmute_ref(query_point).unwrap();
-            //         let rtree_point: [f64; 3] = point.coords.map(|x_i| x_i.to_subset().unwrap())
-            //             .into();
-            //         elements_buffer.extend(tree.closest_element_candidates(&rtree_point));
-            //     }
-            //     _ => todo!("Make this work for other dims? Especially 1D...")
-            // }
         }
-
-        todo!()
+        closest_result
     }
 }
