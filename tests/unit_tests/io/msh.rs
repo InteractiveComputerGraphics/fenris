@@ -1,7 +1,7 @@
 use crate::export_mesh_vtk;
 use fenris::connectivity::{
-    Quad4d2Connectivity, Quad9d2Connectivity, Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity,
-    Tri6d2Connectivity,
+    Quad4d2Connectivity, Quad9d2Connectivity, Tet10Connectivity, Tet4Connectivity, Tri3d2Connectivity,
+    Tri3d3Connectivity, Tri6d2Connectivity,
 };
 use fenris::io::msh::load_msh_from_file;
 use insta::assert_debug_snapshot;
@@ -60,22 +60,6 @@ fn load_msh_square_quad4d2_large() -> eyre::Result<()> {
     Ok(())
 }
 
-// Quad4d3Connectivity does not implement ElementConnectivity
-/*
-#[test]
-fn load_msh_square_quad4d3_large() -> eyre::Result<()> {
-    let mesh = load_msh_from_file::<f64, U3, Quad4d3Connectivity, _>("assets/meshes/square_quad4_79.msh")?;
-
-    assert_eq!(mesh.vertices().len(), 96);
-    assert_eq!(mesh.connectivity().len(), 79);
-
-    export_mesh_vtk("io_msh", "load_msh_square_quad4d3_large", &mesh);
-    assert_debug_snapshot!(mesh);
-
-    Ok(())
-}
-*/
-
 #[test]
 fn load_msh_square_tri3d2() -> eyre::Result<()> {
     let mesh = load_msh_from_file::<f64, U2, Tri3d2Connectivity, _>("assets/meshes/square_tri3_4.msh")?;
@@ -123,6 +107,32 @@ fn load_msh_square_quad9d2() -> eyre::Result<()> {
     assert_eq!(mesh.connectivity().len(), 4);
 
     export_mesh_vtk("io_msh", "load_msh_square_quad9d2", &mesh);
+    assert_debug_snapshot!(mesh);
+
+    Ok(())
+}
+
+#[test]
+fn load_msh_cube_tet4() -> eyre::Result<()> {
+    let mesh = load_msh_from_file::<f64, U3, Tet4Connectivity, _>("assets/meshes/cube_tet4_24.msh")?;
+
+    assert_eq!(mesh.vertices().len(), 14);
+    assert_eq!(mesh.connectivity().len(), 24);
+
+    export_mesh_vtk("io_msh", "load_msh_cube_tet4", &mesh);
+    assert_debug_snapshot!(mesh);
+
+    Ok(())
+}
+
+#[test]
+fn load_msh_cube_tet10() -> eyre::Result<()> {
+    let mesh = load_msh_from_file::<f64, U3, Tet10Connectivity, _>("assets/meshes/cube_tet10_24.msh")?;
+
+    assert_eq!(mesh.vertices().len(), 63);
+    assert_eq!(mesh.connectivity().len(), 24);
+
+    export_mesh_vtk("io_msh", "load_msh_cube_tet10", &mesh);
     assert_debug_snapshot!(mesh);
 
     Ok(())
