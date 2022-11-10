@@ -151,7 +151,7 @@ where
     D: DimName,
     DefaultAllocator: Allocator<T, D>,
 {
-    /// Computes the minimal bounding box which encloses both `this` and `other`.
+    /// Computes the minimal bounding box which encloses both `self` and `other`.
     pub fn enclose(&self, other: &AxisAlignedBoundingBox<T, D>) -> Self {
         let min = self
             .min
@@ -266,16 +266,33 @@ where
         })
     }
 
+    /// Computes the point in the bounding box closest to the given point.
+    pub fn closest_point_to(&self, point: &OPoint<T, D>) -> OPoint<T, D> {
+        point
+            .coords
+            .zip_zip_map(&self.min.coords, &self.max.coords, |p_i, a_i, b_i| {
+                if p_i <= a_i {
+                    a_i
+                } else if p_i >= b_i {
+                    b_i
+                } else {
+                    p_i
+                }
+            })
+            .into()
+    }
+
+    /// Computes the distance between the bounding box and the given point.
+    pub fn dist_to(&self, point: &OPoint<T, D>) -> T {
+        self.dist2_to(point).sqrt()
+    }
+
+    /// Computes the squared distance between the bounding box and the given point.
+    pub fn dist2_to(&self, point: &OPoint<T, D>) -> T {
+        (self.closest_point_to(point) - point).norm_squared()
+    }
+
     /// Compute the point in the bounding box furthest away from the given point.
-    ///
-    /// # Panics
-    ///
-    /// Panics if two distances cannot be ordered. This typically only happens if
-    /// one of the numbers is not a number (NaN) or the comparison is not sensible, such as
-    /// comparing two infinities. Since given finite coordinates no distance should be infinite,
-    /// this method will realistically only panic in cases where one of the points
-    /// --- either of the bounding box or the query point --- has components that are not
-    /// finite numbers.
     #[replace_float_literals(T::from_f64(literal).unwrap())]
     pub fn furthest_point_to(&self, point: &OPoint<T, D>) -> OPoint<T, D>
     where
