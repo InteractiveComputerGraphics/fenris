@@ -1,4 +1,4 @@
-use crate::connectivity::{Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity};
+use crate::connectivity::{Quad4d2Connectivity, Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity};
 use crate::mesh::Mesh;
 use eyre::{eyre, Context};
 use nalgebra::allocator::Allocator;
@@ -249,17 +249,20 @@ macro_rules! impl_msh_connectivity {
 
 impl_msh_connectivity!(Tri3d2Connectivity, Tri3, num_nodes = 3);
 impl_msh_connectivity!(Tri3d3Connectivity, Tri3, num_nodes = 3);
+impl_msh_connectivity!(Quad4d2Connectivity, Qua4, num_nodes = 4);
+// Quad4d3Connectivity does not implement ElementConnectivity
+//impl_msh_connectivity!(Quad4d3Connectivity, Qua4, num_nodes = 4);
 impl_msh_connectivity!(Tet4Connectivity, Tet4, num_nodes = 4);
 
 #[cfg(test)]
 mod msh_tests {
-    use crate::connectivity::{Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity};
+    use crate::connectivity::{Quad4d2Connectivity, Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity};
     use crate::io::msh::load_msh_from_file;
     use nalgebra::{U2, U3};
 
     #[test]
     fn load_msh_sphere_tet4() -> eyre::Result<()> {
-        let mesh = load_msh_from_file::<f64, U3, Tet4Connectivity, _>("assets/meshes/sphere_593.msh")?;
+        let mesh = load_msh_from_file::<f64, U3, Tet4Connectivity, _>("assets/meshes/sphere_tet4_593.msh")?;
 
         assert_eq!(mesh.vertices().len(), 183);
         assert_eq!(mesh.connectivity().len(), 593);
@@ -268,7 +271,7 @@ mod msh_tests {
 
     #[test]
     fn load_msh_rect_tri3d2() -> eyre::Result<()> {
-        let mesh = load_msh_from_file::<f64, U2, Tri3d2Connectivity, _>("assets/meshes/rectangle_110.msh")?;
+        let mesh = load_msh_from_file::<f64, U2, Tri3d2Connectivity, _>("assets/meshes/rectangle_tri3_110.msh")?;
 
         assert_eq!(mesh.vertices().len(), 70);
         assert_eq!(mesh.connectivity().len(), 110);
@@ -278,10 +281,30 @@ mod msh_tests {
     #[test]
     fn load_msh_rect_tri3d3() -> eyre::Result<()> {
         // Loading a 2D triangle mesh to a 3D triangle mesh should work
-        let mesh = load_msh_from_file::<f64, U3, Tri3d3Connectivity, _>("assets/meshes/rectangle_110.msh")?;
+        let mesh = load_msh_from_file::<f64, U3, Tri3d3Connectivity, _>("assets/meshes/rectangle_tri3_110.msh")?;
 
         assert_eq!(mesh.vertices().len(), 70);
         assert_eq!(mesh.connectivity().len(), 110);
         Ok(())
     }
+
+    #[test]
+    fn load_msh_square_quad4d2() -> eyre::Result<()> {
+        let mesh = load_msh_from_file::<f64, U2, Quad4d2Connectivity, _>("assets/meshes/square_quad4_79.msh")?;
+
+        assert_eq!(mesh.vertices().len(), 96);
+        assert_eq!(mesh.connectivity().len(), 79);
+        Ok(())
+    }
+
+    /*
+    #[test]
+    fn load_msh_square_quad4d3() -> eyre::Result<()> {
+        let mesh = load_msh_from_file::<f64, U3, Quad4d3Connectivity, _>("assets/meshes/square_quad4_79.msh")?;
+
+        assert_eq!(mesh.vertices().len(), 96);
+        assert_eq!(mesh.connectivity().len(), 79);
+        Ok(())
+    }
+    */
 }
