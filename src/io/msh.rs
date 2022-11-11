@@ -1,3 +1,22 @@
+//! Support for loading Gmsh MSH 4.1 files as [`Mesh`]es.
+//!
+//! This module supports Gmsh MSH files with the file format version 4.1 as specified in the
+//! [Gmsh documentation](https://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format). All element types
+//! that implement the [`MshConnectivity`] trait are supported.
+//!
+//! Example usage:
+//! ```
+//! use nalgebra::U2;
+//! use fenris::connectivity::Tri3d2Connectivity;
+//! use fenris::io::msh::load_msh_from_file;
+//!
+//! let mesh = load_msh_from_file::<f64, U2, Tri3d2Connectivity, _>(
+//!     "assets/meshes/square_tri3_4.msh").unwrap();
+//!
+//! assert_eq!(mesh.vertices().len(), 5);
+//! assert_eq!(mesh.connectivity().len(), 4);
+//! ```
+
 use crate::connectivity::{
     Quad4d2Connectivity, Quad9d2Connectivity, Tet10Connectivity, Tet4Connectivity, Tri3d2Connectivity,
     Tri3d3Connectivity, Tri6d2Connectivity,
