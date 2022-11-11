@@ -18,8 +18,8 @@
 //! ```
 
 use crate::connectivity::{
-    Quad4d2Connectivity, Quad9d2Connectivity, Tet10Connectivity, Tet4Connectivity, Tri3d2Connectivity,
-    Tri3d3Connectivity, Tri6d2Connectivity,
+    Hex27Connectivity, Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity, Tet10Connectivity, Tet4Connectivity,
+    Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity,
 };
 use crate::mesh::Mesh;
 use eyre::{eyre, Context};
@@ -276,6 +276,8 @@ impl_msh_connectivity!(Quad4d2Connectivity, Qua4, num_nodes = 4);
 impl_msh_connectivity!(Quad9d2Connectivity, Qua9, num_nodes = 9);
 impl_msh_connectivity!(Tet4Connectivity, Tet4, num_nodes = 4);
 impl_msh_connectivity!(Tet10Connectivity, Tet10, num_nodes = 10);
+impl_msh_connectivity!(Hex8Connectivity, Hex8, num_nodes = 8);
+impl_msh_connectivity!(Hex27Connectivity, Hex27, num_nodes = 27);
 
 // The following connectivities do not implement ElementConnectivity yet
 //impl_msh_connectivity!(Tri6d3Connectivity, Tri6, num_nodes = 6);

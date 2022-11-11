@@ -1,7 +1,7 @@
 use crate::export_mesh_vtk;
 use fenris::connectivity::{
-    Quad4d2Connectivity, Quad9d2Connectivity, Tet10Connectivity, Tet4Connectivity, Tri3d2Connectivity,
-    Tri3d3Connectivity, Tri6d2Connectivity,
+    Hex27Connectivity, Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity, Tet10Connectivity, Tet4Connectivity,
+    Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity,
 };
 use fenris::io::msh::load_msh_from_file;
 use insta::assert_debug_snapshot;
@@ -133,6 +133,32 @@ fn load_msh_cube_tet10() -> eyre::Result<()> {
     assert_eq!(mesh.connectivity().len(), 24);
 
     export_mesh_vtk("io_msh", "load_msh_cube_tet10", &mesh);
+    assert_debug_snapshot!(mesh);
+
+    Ok(())
+}
+
+#[test]
+fn load_msh_cube_hex8() -> eyre::Result<()> {
+    let mesh = load_msh_from_file::<f64, U3, Hex8Connectivity, _>("assets/meshes/cube_hex8_8.msh")?;
+
+    assert_eq!(mesh.vertices().len(), 27);
+    assert_eq!(mesh.connectivity().len(), 8);
+
+    export_mesh_vtk("io_msh", "load_msh_cube_hex8", &mesh);
+    assert_debug_snapshot!(mesh);
+
+    Ok(())
+}
+
+#[test]
+fn load_msh_cube_hex27() -> eyre::Result<()> {
+    let mesh = load_msh_from_file::<f64, U3, Hex27Connectivity, _>("assets/meshes/cube_hex27_8.msh")?;
+
+    assert_eq!(mesh.vertices().len(), 125);
+    assert_eq!(mesh.connectivity().len(), 8);
+
+    export_mesh_vtk("io_msh", "load_msh_cube_hex27", &mesh);
     assert_debug_snapshot!(mesh);
 
     Ok(())
