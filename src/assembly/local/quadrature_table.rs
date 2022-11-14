@@ -147,6 +147,15 @@ where
             data: self.data,
         }
     }
+
+    /// Replaces the data of the quadrature table with the given data.
+    pub fn with_data<NewData>(self, data: NestedVec<NewData>) -> GeneralQuadratureTable<T, GeometryDim, NewData> {
+        GeneralQuadratureTable {
+            points: self.points,
+            weights: self.weights,
+            data: data,
+        }
+    }
 }
 
 pub struct GeneralQuadratureParts<T, GeometryDim, Data>
@@ -263,6 +272,28 @@ where
 
     pub fn with_uniform_data<Data2: Clone>(self, data: Data2) -> UniformQuadratureTable<T, GeometryDim, Data2> {
         UniformQuadratureTable::from_quadrature_and_uniform_data((self.weights, self.points), data)
+    }
+}
+
+impl<T, GeometryDim, Data> UniformQuadratureTable<T, GeometryDim, Data>
+where
+    T: Scalar,
+    GeometryDim: DimName,
+    DefaultAllocator: Allocator<T, GeometryDim>,
+    Data: Clone,
+{
+    pub fn to_general(&self, num_elements: usize) -> GeneralQuadratureTable<T, GeometryDim, Data> {
+        let mut points = NestedVec::new();
+        let mut weights = NestedVec::new();
+        let mut data = NestedVec::new();
+
+        for _ in 0..num_elements {
+            points.push(&self.points);
+            weights.push(&self.weights);
+            data.push(&self.data);
+        }
+
+        GeneralQuadratureTable::from_points_weights_and_data(points, weights, data)
     }
 }
 
