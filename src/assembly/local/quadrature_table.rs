@@ -161,15 +161,15 @@ where
     /// point in reference coordinates and its element index.
     pub fn with_data_from_fn<NewData>(
         self,
-        mut data_fn: impl FnMut(usize, &OPoint<T, GeometryDim>) -> NewData,
+        mut data_fn: impl FnMut(usize, &OPoint<T, GeometryDim>, &Data) -> NewData,
     ) -> GeneralQuadratureTable<T, GeometryDim, NewData> {
         let mut data = NestedVec::new();
 
-        for (element_index, points) in self.points.iter().enumerate() {
+        for (element_index, (points, datas)) in self.points.iter().zip(self.data.iter()).enumerate() {
             let mut arr = data.begin_array();
 
-            for point in points {
-                arr.push_single(data_fn(element_index, point));
+            for (point, data) in points.iter().zip(datas.iter()) {
+                arr.push_single(data_fn(element_index, point, data));
             }
         }
 
