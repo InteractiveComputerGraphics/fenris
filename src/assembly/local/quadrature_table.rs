@@ -156,6 +156,27 @@ where
             data: data,
         }
     }
+
+    pub fn with_data_from_fn<NewData>(
+        self,
+        mut data_fn: impl FnMut(usize, &OPoint<T, GeometryDim>) -> NewData,
+    ) -> GeneralQuadratureTable<T, GeometryDim, NewData> {
+        let mut data = NestedVec::new();
+
+        for (element_index, points) in self.points.iter().enumerate() {
+            let mut arr = data.begin_array();
+
+            for point in points {
+                arr.push_single(data_fn(element_index, point));
+            }
+        }
+
+        GeneralQuadratureTable {
+            points: self.points,
+            weights: self.weights,
+            data: data,
+        }
+    }
 }
 
 pub struct GeneralQuadratureParts<T, GeometryDim, Data>
