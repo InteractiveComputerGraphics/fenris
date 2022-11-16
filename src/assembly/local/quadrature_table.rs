@@ -157,6 +157,8 @@ where
         }
     }
 
+    /// Replaces the data of the quadrature table by calling the given closure with every quadrature
+    /// point in reference coordinates and its element index.
     pub fn with_data_from_fn<NewData>(
         self,
         mut data_fn: impl FnMut(usize, &OPoint<T, GeometryDim>) -> NewData,
