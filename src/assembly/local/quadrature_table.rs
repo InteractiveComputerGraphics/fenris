@@ -150,11 +150,7 @@ where
 
     /// Replaces the data of the quadrature table with the given data.
     pub fn with_data<NewData>(self, data: NestedVec<NewData>) -> GeneralQuadratureTable<T, GeometryDim, NewData> {
-        GeneralQuadratureTable {
-            points: self.points,
-            weights: self.weights,
-            data: data,
-        }
+        GeneralQuadratureTable::from_points_weights_and_data(self.points, self.weights, data)
     }
 
     /// Replaces the data of the quadrature table by calling the given closure with every quadrature
@@ -173,11 +169,7 @@ where
             }
         }
 
-        GeneralQuadratureTable {
-            points: self.points,
-            weights: self.weights,
-            data: data,
-        }
+        self.with_data(data)
     }
 }
 
@@ -302,8 +294,8 @@ impl<T, GeometryDim, Data> UniformQuadratureTable<T, GeometryDim, Data>
 where
     T: Scalar,
     GeometryDim: DimName,
-    DefaultAllocator: Allocator<T, GeometryDim>,
     Data: Clone,
+    DefaultAllocator: Allocator<T, GeometryDim>,
 {
     pub fn to_general(&self, num_elements: usize) -> GeneralQuadratureTable<T, GeometryDim, Data> {
         let mut points = NestedVec::new();
