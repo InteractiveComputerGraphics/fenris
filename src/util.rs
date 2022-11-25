@@ -4,7 +4,7 @@ use itertools::izip;
 use itertools::Itertools;
 use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{DimEq, ShapeConstraint};
-use nalgebra::storage::{IsContiguous, Storage, StorageMut};
+use nalgebra::storage::{Storage, StorageMut};
 use nalgebra::{
     DMatrixSlice, DVector, DVectorSlice, DefaultAllocator, Dim, DimDiff, DimMin, DimMul, DimName, DimProd, DimSub,
     Matrix, Matrix3, MatrixSlice, MatrixSliceMut, OMatrix, OPoint, OVector, Quaternion, Scalar, SliceStorage,
@@ -61,7 +61,7 @@ where
     C: Dim,
     R2: DimMul<C2>,
     C2: Dim,
-    S: Storage<T, R, C> + IsContiguous,
+    S: Storage<T, R, C>,
     ShapeConstraint: DimEq<DimProd<R, C>, DimProd<R2, C2>>,
 {
     let (r2, c2) = shape;
@@ -70,8 +70,9 @@ where
         r2.value() * c2.value(),
         "Cannot reshape with different number of elements"
     );
-    let data_slice = matrix.as_slice();
-    MatrixSlice::from_slice_generic(data_slice, r2, c2)
+    let strides = (U1::name(), r2);
+    let storage = unsafe { SliceStorage::from_raw_parts(matrix.data.ptr(), shape, strides) };
+    Matrix::from_data(storage)
 }
 
 /// Creates a column-major slice from the given matrix.

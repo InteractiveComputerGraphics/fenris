@@ -5,10 +5,10 @@ use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{DMatrix, DefaultAllocator, DimName, Dynamic, MatrixSlice, MatrixSliceMut, OPoint, Scalar};
 use crate::quadrature::Quadrature;
 use crate::space::FiniteElementSpace;
-use crate::util::compute_interpolation;
+use crate::util::{compute_interpolation, compute_interpolation_gradient, reshape_to_slice};
 use crate::{Real, SmallDim};
 use itertools::izip;
-use nalgebra::{DVector, DVectorSlice, OMatrix, OVector};
+use nalgebra::{DVector, DVectorSlice, OMatrix, OVector, U1};
 
 #[derive(Debug)]
 pub struct BasisFunctionBuffer<T: Scalar> {
@@ -37,7 +37,7 @@ impl<T: Real> BasisFunctionBuffer<T> {
 
     pub fn populate_element_nodes_from_space<Space>(&mut self, element_index: usize, space: &Space)
     where
-        Space: FiniteElementSpace<T>,
+        Space: FiniteElementSpace<T> + ?Sized,
         DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
     {
         space.populate_element_nodes(&mut self.element_nodes, element_index);
@@ -50,7 +50,7 @@ impl<T: Real> BasisFunctionBuffer<T> {
         space: &Space,
         reference_coords: &OPoint<T, Space::ReferenceDim>,
     ) where
-        Space: FiniteElementSpace<T>,
+        Space: FiniteElementSpace<T> + ?Sized,
         DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
     {
         space.populate_element_basis(element_index, &mut self.element_basis_values, reference_coords);
@@ -62,7 +62,7 @@ impl<T: Real> BasisFunctionBuffer<T> {
         space: &Space,
         reference_coords: &OPoint<T, Space::ReferenceDim>,
     ) where
-        Space: FiniteElementSpace<T>,
+        Space: FiniteElementSpace<T> + ?Sized,
         DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
     {
         space.populate_element_gradients(
@@ -233,7 +233,7 @@ impl<T: Real> Default for InterpolationBuffer<T> {
 
 pub struct InterpolationElementBuffer<'a, T: Scalar, Space>
 where
-    Space: FiniteElementSpace<T>,
+    Space: FiniteElementSpace<T> + ?Sized,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
 {
     basis_buffer: &'a mut BasisFunctionBuffer<T>,
@@ -252,7 +252,7 @@ impl<T: Real> InterpolationBuffer<T> {
         solution_dim: usize,
     ) -> InterpolationElementBuffer<'a, T, Space>
     where
-        Space: FiniteElementSpace<T>,
+        Space: FiniteElementSpace<T> + ?Sized,
         DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
     {
         let node_count = space.element_node_count(element_index);
@@ -279,15 +279,28 @@ impl<T: Real> InterpolationBuffer<T> {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BufferUpdate {
+    BasisValues,
+    BasisGradients,
+    Both
+}
+
 impl<'a, T, Space> InterpolationElementBuffer<'a, T, Space>
 where
     T: Real,
-    Space: FiniteElementSpace<T>,
+    Space: FiniteElementSpace<T> + ?Sized,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
 {
-    pub fn update_reference_point(&mut self, reference_point: &OPoint<T, Space::ReferenceDim>) {
-        self.basis_buffer
-            .populate_element_basis_values_from_space(self.element_index, self.space, reference_point);
+    pub fn update_reference_point(&mut self, reference_point: &OPoint<T, Space::ReferenceDim>, update: BufferUpdate) {
+        if matches!(update, BufferUpdate::BasisValues | BufferUpdate::Both) {
+            self.basis_buffer
+                .populate_element_basis_values_from_space(self.element_index, self.space, reference_point);
+        }
+        if matches!(update, BufferUpdate::BasisGradients | BufferUpdate::Both) {
+            self.basis_buffer
+                .populate_element_basis_gradients_from_space(self.element_index, self.space, reference_point);
+        }
         self.reference_point = reference_point.clone();
     }
 
@@ -307,6 +320,16 @@ where
         DefaultAllocator: DimAllocator<T, S>,
     {
         compute_interpolation(self.u_local, self.basis_buffer.element_basis_values())
+    }
+
+    pub fn interpolate_gradient<S>(&self) -> OMatrix<T, Space::ReferenceDim, S>
+    where
+        S: SmallDim,
+        DefaultAllocator: BiDimAllocator<T, Space::ReferenceDim, S>
+    {
+        let gradients: MatrixSlice<T, Space::ReferenceDim, _> = self.basis_buffer.element_gradients();
+        let gradients = reshape_to_slice(&gradients, (Dynamic::new(gradients.len()), U1::name()));
+        compute_interpolation_gradient(self.u_local, gradients)
     }
 
     pub fn basis_values(&self) -> &[T] {
