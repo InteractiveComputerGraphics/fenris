@@ -3,7 +3,14 @@ use crate::element::{FiniteElement, ReferenceFiniteElement};
 use crate::geometry::GeometryCollection;
 use crate::nalgebra::{Dynamic, MatrixSliceMut, OMatrix};
 use crate::SmallDim;
-use nalgebra::{DefaultAllocator, OPoint, Scalar};
+use nalgebra::{DefaultAllocator, DimName, OPoint, Scalar};
+use nalgebra::allocator::Allocator;
+use fenris_geometry::AxisAlignedBoundingBox;
+
+mod space_impl;
+mod spatially_indexed;
+
+pub use spatially_indexed::SpatiallyIndexed;
 
 /// Describes the connectivity of elements in a finite element space.
 pub trait FiniteElementConnectivity {
@@ -157,3 +164,68 @@ where
         self.space.diameter(self.element_index)
     }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ClosestPoint<T, D>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>,
+{
+    /// The point is inside the element.
+    InElement(OPoint<T, D>),
+    /// The closest point in the element to the query point.
+    ClosestPoint(OPoint<T, D>),
+}
+
+pub trait ClosestPointInElement<T: Scalar>: FiniteElementSpace<T>
+where
+    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>
+{
+    fn closest_point_on_element(&self, element_index: usize, p: &OPoint<T, Self::GeometryDim>)
+                                -> ClosestPoint<T, Self::ReferenceDim>;
+}
+
+pub trait BoundsForElement<T: Scalar>: FiniteElementSpace<T>
+where
+    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>
+{
+    fn bounds_for_element(&self, element_index: usize)
+        -> AxisAlignedBoundingBox<T, Self::GeometryDim>;
+
+    fn populate_bounds_for_all_elements(&self, bounds: &mut [AxisAlignedBoundingBox<T, Self::GeometryDim>]) {
+        assert_eq!(bounds.len(), self.num_elements());
+        for (i, aabb) in (0 .. self.num_elements()).zip(bounds) {
+            *aabb = self.bounds_for_element(i);
+        }
+    }
+
+    fn bounds_for_all_elements(&self) -> Vec<AxisAlignedBoundingBox<T, Self::GeometryDim>> {
+        (0 .. self.num_elements()).map(|i| self.bounds_for_element(i)).collect()
+    }
+}
+
+pub trait FindClosestElement<T: Scalar>: FiniteElementSpace<T>
+where
+    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>
+{
+    /// Find the closest point on the mesh to the given point, represented as the
+    /// index of the closest element and the coordinates in the reference element.
+    fn find_closest_element_and_reference_coords(
+        &self,
+        point: &OPoint<T, Self::GeometryDim>,
+    ) -> Option<(usize, OPoint<T, Self::ReferenceDim>)>;
+}
+
+/// A finite element space that supports geometric queries.
+pub trait GeometricSpace<T: Scalar>: ClosestPointInElement<T> + BoundsForElement<T> + FindClosestElement<T>
+where
+    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>
+{ }
+
+impl<T, Space> GeometricSpace<T> for Space
+where
+    T: Scalar,
+    Space: ClosestPointInElement<T> + BoundsForElement<T> + FindClosestElement<T>,
+    DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>
+{}

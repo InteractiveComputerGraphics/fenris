@@ -29,7 +29,6 @@ pub mod geometry {
 pub mod proptest;
 
 mod mesh_convert;
-mod space_impl;
 
 pub extern crate eyre;
 pub extern crate nalgebra;
