@@ -208,8 +208,8 @@ where
     Space: VolumetricFiniteElementSpace<T> + ClosestPointInElement<T>,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>
 {
-    fn closest_point_on_element(&self, element_index: usize, p: &OPoint<T, Self::GeometryDim>) -> ClosestPoint<T, Self::ReferenceDim> {
-        self.space.closest_point_on_element(element_index, p)
+    fn closest_point_in_element(&self, element_index: usize, p: &OPoint<T, Self::GeometryDim>) -> ClosestPoint<T, Self::ReferenceDim> {
+        self.space.closest_point_in_element(element_index, p)
     }
 }
 
@@ -234,7 +234,7 @@ where
         let mut min_dist2 = None;
         let mut closest_result = None;
         for candidate_element_idx in self.tree.closest_cell_candidates(point) {
-            match self.space.closest_point_on_element(candidate_element_idx, point) {
+            match self.space.closest_point_in_element(candidate_element_idx, point) {
                 // Pick the first element that reports that the point is contained in the element
                 ClosestPoint::InElement(ref_coords) => return Some((candidate_element_idx, ref_coords)),
                 ClosestPoint::ClosestPoint(ref_coords) => {

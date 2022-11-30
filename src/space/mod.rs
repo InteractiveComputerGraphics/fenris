@@ -23,7 +23,10 @@ pub trait FiniteElementConnectivity {
     fn populate_element_nodes(&self, nodes: &mut [usize], element_index: usize);
 }
 
-/// The "new" FiniteElementSpace trait. Currently playground for new design
+/// A finite element space.
+///
+/// A finite element space is a set of $N$ elements, for which basis functions and geometric maps
+/// are provided.
 pub trait FiniteElementSpace<T: Scalar>: FiniteElementConnectivity
 where
     DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
@@ -165,6 +168,7 @@ where
     }
 }
 
+/// The result of a [`ClosestPointInElement`] query.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ClosestPoint<T, D>
 where
@@ -178,14 +182,16 @@ where
     ClosestPoint(OPoint<T, D>),
 }
 
+/// A finite element space you can query for the closest point in an element to a given point.
 pub trait ClosestPointInElement<T: Scalar>: FiniteElementSpace<T>
 where
     DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>
 {
-    fn closest_point_on_element(&self, element_index: usize, p: &OPoint<T, Self::GeometryDim>)
+    fn closest_point_in_element(&self, element_index: usize, p: &OPoint<T, Self::GeometryDim>)
                                 -> ClosestPoint<T, Self::ReferenceDim>;
 }
 
+/// A finite element space that can be queried for the bounding boxes of individual elements.
 pub trait BoundsForElement<T: Scalar>: FiniteElementSpace<T>
 where
     DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>
@@ -205,6 +211,8 @@ where
     }
 }
 
+/// A finite element space which can be queried for the closest element to a given point in
+/// physical space.
 pub trait FindClosestElement<T: Scalar>: FiniteElementSpace<T>
 where
     DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>
