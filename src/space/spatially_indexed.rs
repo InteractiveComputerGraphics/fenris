@@ -1,12 +1,13 @@
-use crate::space::{BoundsForElement, ClosestPoint, ClosestPointInElement, FindClosestElement, FiniteElementConnectivity, FiniteElementSpace, VolumetricFiniteElementSpace};
-use nalgebra::{DefaultAllocator, DimName, Dynamic, MatrixSliceMut, OMatrix, OPoint, OVector, Scalar};
+use crate::space::{BoundsForElement, ClosestPoint, ClosestPointInElement, FindClosestElement, FiniteElementConnectivity, FiniteElementSpace, interpolate_at_points, interpolate_gradient_at_points, InterpolateAtPoints, InterpolateGradientAtPoints, VolumetricFiniteElementSpace};
+use nalgebra::{DefaultAllocator, DimName, DVectorSlice, Dynamic, MatrixSliceMut, OMatrix, OPoint, OVector, Scalar};
 use rstar::{AABB, Envelope, PointDistance, RTree, RTreeObject};
 use nalgebra::allocator::Allocator;
 use fenris_geometry::AxisAlignedBoundingBox;
-use fenris_traits::allocators::{BiDimAllocator, DimAllocator};
+use fenris_traits::allocators::{BiDimAllocator, DimAllocator, TriDimAllocator};
 use fenris_traits::Real;
 use rstar::primitives::GeomWithData;
 use std::marker::PhantomData;
+use crate::SmallDim;
 
 struct RTreeAccelerationStructure<D: DimName>
 where
@@ -205,7 +206,7 @@ where
 impl<T, Space> ClosestPointInElement<T> for SpatiallyIndexed<T, Space>
 where
     T: Real,
-    Space: VolumetricFiniteElementSpace<T> + ClosestPointInElement<T>,
+    Space: ClosestPointInElement<T>,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>
 {
     fn closest_point_in_element(&self, element_index: usize, p: &OPoint<T, Self::GeometryDim>) -> ClosestPoint<T, Self::ReferenceDim> {
@@ -216,7 +217,7 @@ where
 impl<T, Space> BoundsForElement<T> for SpatiallyIndexed<T, Space>
 where
     T: Real,
-    Space: VolumetricFiniteElementSpace<T> + BoundsForElement<T>,
+    Space: BoundsForElement<T>,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>
 {
     fn bounds_for_element(&self, element_index: usize) -> AxisAlignedBoundingBox<T, Self::GeometryDim> {
@@ -227,7 +228,7 @@ where
 impl<T, Space> FindClosestElement<T> for SpatiallyIndexed<T, Space>
 where
     T: Real,
-    Space: VolumetricFiniteElementSpace<T> + ClosestPointInElement<T>,
+    Space: ClosestPointInElement<T>,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>
 {
     fn find_closest_element_and_reference_coords(&self, point: &OPoint<T, Self::GeometryDim>) -> Option<(usize, OPoint<T, Self::ReferenceDim>)> {
@@ -250,5 +251,37 @@ where
             }
         }
         closest_result
+    }
+}
+
+impl<T, Space, SolutionDim> InterpolateAtPoints<T, SolutionDim> for SpatiallyIndexed<T, Space>
+where
+    T: Real,
+    SolutionDim: SmallDim,
+    Space: FiniteElementSpace<T> + BoundsForElement<T> + ClosestPointInElement<T>,
+    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>,
+{
+    fn interpolate_at_points(&self,
+                             points: &[OPoint<T, Self::GeometryDim>],
+                             interpolation_weights: DVectorSlice<T>,
+                             result_buffer: &mut [OVector<T, SolutionDim>]
+    ) {
+        interpolate_at_points(self, points, interpolation_weights, result_buffer)
+    }
+}
+
+impl<T, Space, SolutionDim> InterpolateGradientAtPoints<T, SolutionDim> for SpatiallyIndexed<T, Space>
+where
+    T: Real,
+    SolutionDim: SmallDim,
+    Space: VolumetricFiniteElementSpace<T> + BoundsForElement<T> + ClosestPointInElement<T>,
+    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>,
+{
+    fn interpolate_gradient_at_points(&self,
+                                      points: &[OPoint<T, Self::GeometryDim>],
+                                      interpolation_weights: DVectorSlice<T>,
+                                      result_buffer: &mut [OMatrix<T, Self::GeometryDim, SolutionDim>]
+    ) {
+        interpolate_gradient_at_points(self, points, interpolation_weights, result_buffer)
     }
 }

@@ -13,7 +13,6 @@ pub mod connectivity;
 pub mod element;
 pub mod error;
 pub mod integrate;
-pub mod interpolate;
 pub mod io;
 pub mod mesh;
 pub mod model;

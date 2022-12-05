@@ -1,3 +1,5 @@
+//! Finite element spaces.
+
 use crate::allocators::BiDimAllocator;
 use crate::element::{FiniteElement, ReferenceFiniteElement};
 use crate::geometry::GeometryCollection;
@@ -7,10 +9,12 @@ use nalgebra::{DefaultAllocator, DimName, OPoint, Scalar};
 use nalgebra::allocator::Allocator;
 use fenris_geometry::AxisAlignedBoundingBox;
 
+mod interpolate;
 mod space_impl;
 mod spatially_indexed;
 
 pub use spatially_indexed::SpatiallyIndexed;
+pub use interpolate::*;
 
 /// Describes the connectivity of elements in a finite element space.
 pub trait FiniteElementConnectivity {
