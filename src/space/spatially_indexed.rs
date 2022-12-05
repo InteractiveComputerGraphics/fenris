@@ -1,4 +1,4 @@
-use crate::space::{BoundsForElement, ClosestPoint, ClosestPointInElement, FindClosestElement, FiniteElementConnectivity, FiniteElementSpace, interpolate_at_points, interpolate_gradient_at_points, InterpolateAtPoints, InterpolateGradientAtPoints, VolumetricFiniteElementSpace};
+use crate::space::{BoundsForElementInSpace, ClosestPoint, ClosestPointInElementInSpace, FindClosestElement, FiniteElementConnectivity, FiniteElementSpace, interpolate_at_points, interpolate_gradient_at_points, InterpolateInSpace, InterpolateGradientInSpace, VolumetricFiniteElementSpace};
 use nalgebra::{DefaultAllocator, DimName, DVectorSlice, Dynamic, MatrixSliceMut, OMatrix, OPoint, OVector, Scalar};
 use rstar::{AABB, Envelope, PointDistance, RTree, RTreeObject};
 use nalgebra::allocator::Allocator;
@@ -122,6 +122,14 @@ where
 
 /// Provides accelerated geometry queries for a
 /// [finite element space](crate::space::FiniteElementSpace).
+///
+/// Specifically, given a space that implements [`BoundsForElementInSpace`] and [`ClosestPointInElementInSpace`],
+/// `SpatiallyIndexed` wraps the space and provides an implementation of
+/// [`FindClosestElement`] on top.
+///
+/// In addition, `SpatiallyIndexed` provides interpolation of arbitrary points by implementing
+/// the [`InterpolateInSpace`] and [`InterpolateGradientInSpace`] finite element space
+/// traits.
 pub struct SpatiallyIndexed<T, Space>
 where
     T: Scalar,
@@ -136,7 +144,7 @@ where
 impl<T, Space> SpatiallyIndexed<T, Space>
 where
     T: Real,
-    Space: BoundsForElement<T>,
+    Space: BoundsForElementInSpace<T>,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>
 {
     pub fn from_space(space: Space) -> Self {
@@ -147,6 +155,17 @@ where
             tree: rtree,
             marker: Default::default()
         }
+    }
+}
+
+impl<T, Space> SpatiallyIndexed<T, Space>
+where
+    T: Scalar,
+    Space: FiniteElementSpace<T>,
+    DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
+{
+    pub fn space(&self) -> &Space {
+        &self.space
     }
 }
 
@@ -203,10 +222,10 @@ where
     }
 }
 
-impl<T, Space> ClosestPointInElement<T> for SpatiallyIndexed<T, Space>
+impl<T, Space> ClosestPointInElementInSpace<T> for SpatiallyIndexed<T, Space>
 where
     T: Real,
-    Space: ClosestPointInElement<T>,
+    Space: ClosestPointInElementInSpace<T>,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>
 {
     fn closest_point_in_element(&self, element_index: usize, p: &OPoint<T, Self::GeometryDim>) -> ClosestPoint<T, Self::ReferenceDim> {
@@ -214,10 +233,10 @@ where
     }
 }
 
-impl<T, Space> BoundsForElement<T> for SpatiallyIndexed<T, Space>
+impl<T, Space> BoundsForElementInSpace<T> for SpatiallyIndexed<T, Space>
 where
     T: Real,
-    Space: BoundsForElement<T>,
+    Space: BoundsForElementInSpace<T>,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>
 {
     fn bounds_for_element(&self, element_index: usize) -> AxisAlignedBoundingBox<T, Self::GeometryDim> {
@@ -228,7 +247,7 @@ where
 impl<T, Space> FindClosestElement<T> for SpatiallyIndexed<T, Space>
 where
     T: Real,
-    Space: ClosestPointInElement<T>,
+    Space: ClosestPointInElementInSpace<T>,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>
 {
     fn find_closest_element_and_reference_coords(&self, point: &OPoint<T, Self::GeometryDim>) -> Option<(usize, OPoint<T, Self::ReferenceDim>)> {
@@ -254,11 +273,11 @@ where
     }
 }
 
-impl<T, Space, SolutionDim> InterpolateAtPoints<T, SolutionDim> for SpatiallyIndexed<T, Space>
+impl<T, Space, SolutionDim> InterpolateInSpace<T, SolutionDim> for SpatiallyIndexed<T, Space>
 where
     T: Real,
     SolutionDim: SmallDim,
-    Space: FiniteElementSpace<T> + BoundsForElement<T> + ClosestPointInElement<T>,
+    Space: FiniteElementSpace<T> + BoundsForElementInSpace<T> + ClosestPointInElementInSpace<T>,
     DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>,
 {
     fn interpolate_at_points(&self,
@@ -270,11 +289,11 @@ where
     }
 }
 
-impl<T, Space, SolutionDim> InterpolateGradientAtPoints<T, SolutionDim> for SpatiallyIndexed<T, Space>
+impl<T, Space, SolutionDim> InterpolateGradientInSpace<T, SolutionDim> for SpatiallyIndexed<T, Space>
 where
     T: Real,
     SolutionDim: SmallDim,
-    Space: VolumetricFiniteElementSpace<T> + BoundsForElement<T> + ClosestPointInElement<T>,
+    Space: VolumetricFiniteElementSpace<T> + BoundsForElementInSpace<T> + ClosestPointInElementInSpace<T>,
     DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>,
 {
     fn interpolate_gradient_at_points(&self,

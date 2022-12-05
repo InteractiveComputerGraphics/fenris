@@ -1,16 +1,32 @@
+use std::array;
 use crate::space::{FindClosestElement, FiniteElementSpace, VolumetricFiniteElementSpace};
 use crate::{Real, SmallDim};
-use nalgebra::{DefaultAllocator, DVectorSlice, OMatrix, OPoint, OVector, Scalar};
+use nalgebra::{DefaultAllocator, DVectorSlice, OMatrix, OPoint, OVector};
 use davenport::{define_thread_local_workspace, with_thread_local_workspace};
 use itertools::izip;
 use crate::allocators::TriDimAllocator;
 use crate::assembly::buffers::{BufferUpdate, InterpolationBuffer};
 
-/// A finite element space that admits interpolation at arbitrary points.
-pub trait InterpolateAtPoints<T: Scalar, SolutionDim: SmallDim>: FiniteElementSpace<T>
+/// A finite element space that allows interpolation at arbitrary points.
+pub trait InterpolateInSpace<T: Real, SolutionDim: SmallDim>: FiniteElementSpace<T>
 where
     DefaultAllocator: TriDimAllocator<T, Self::GeometryDim, Self::ReferenceDim, SolutionDim>,
 {
+    /// Interpolate a quantity at a single point.
+    ///
+    /// Same as [`interpolate_at_points`], but provided for convenience. Generally speaking,
+    /// it will be more efficient to call [`interpolate_at_points`] if you need to interpolate
+    /// at more than one point.
+    fn interpolate_at_point(&self,
+                            point: &OPoint<T, Self::GeometryDim>,
+                            interpolation_weights: DVectorSlice<T>
+    ) -> OVector<T, SolutionDim> {
+        let mut buffer = [OVector::<_, SolutionDim>::zeros()];
+        self.interpolate_at_points(array::from_ref(point), interpolation_weights, &mut buffer);
+        let [result] = buffer;
+        result
+    }
+
     /// Interpolate a quantity, defined by the global interpolation weights associated with this
     /// finite element space, at a set of arbitrary points.
     ///
@@ -32,6 +48,10 @@ where
     /// # Panics
     /// An implementation must panic if the result buffer is not of the same length as the
     /// number of points.
+    ///
+    /// An implementation may also panic if the length of the interpolation weights vector
+    /// is not equal to $s n$, where $s$ is the solution dimension and $n$ is the number of
+    /// nodes/vertices in the space.
     fn interpolate_at_points(
         &self,
         points: &[OPoint<T, Self::GeometryDim>],
@@ -40,11 +60,27 @@ where
     );
 }
 
-/// A volumetric finite element space that admits interpolation of gradients at arbitrary points.
-pub trait InterpolateGradientAtPoints<T: Scalar, SolutionDim: SmallDim>: VolumetricFiniteElementSpace<T>
+/// A volumetric finite element space that allows interpolation of gradients at arbitrary points.
+pub trait InterpolateGradientInSpace<T: Real, SolutionDim: SmallDim>: VolumetricFiniteElementSpace<T>
 where
     DefaultAllocator: TriDimAllocator<T, Self::GeometryDim, Self::ReferenceDim, SolutionDim>,
 {
+    /// Interpolate the gradient of a quantity at a single point.
+    ///
+    /// Same as [`interpolate_gradient_at_points`], but provided for convenience. Generally speaking,
+    /// it will be more efficient to call [`interpolate_gradient_at_points`] if you need to interpolate
+    /// at more than one point.
+    fn interpolate_gradient_at_point(
+        &self,
+        point: &OPoint<T, Self::GeometryDim>,
+        interpolation_weights: DVectorSlice<T>,
+    ) -> OMatrix<T, Self::GeometryDim, SolutionDim> {
+        let mut buffer = [OMatrix::<_, Self::GeometryDim, SolutionDim>::zeros()];
+        self.interpolate_gradient_at_points(array::from_ref(point), interpolation_weights, &mut buffer);
+        let [result] = buffer;
+        result
+    }
+
     /// Interpolate the gradient of a quantity, defined by the global interpolation weights
     /// associated with this finite element space, at a set of arbitrary points.
     ///
@@ -66,6 +102,10 @@ where
     /// # Panics
     /// An implementation must panic if the result buffer is not of the same length as the
     /// number of points.
+    ///
+    /// An implementation may also panic if the length of the interpolation weights vector
+    /// is not equal to $s n$, where $s$ is the solution dimension and $n$ is the number of
+    /// nodes/vertices in the space.
     fn interpolate_gradient_at_points(
         &self,
         points: &[OPoint<T, Self::GeometryDim>],

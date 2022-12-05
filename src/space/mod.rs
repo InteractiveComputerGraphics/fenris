@@ -172,7 +172,7 @@ where
     }
 }
 
-/// The result of a [`ClosestPointInElement`] query.
+/// The result of a [`ClosestPointInElementInSpace`] query.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ClosestPoint<T, D>
 where
@@ -187,7 +187,7 @@ where
 }
 
 /// A finite element space you can query for the closest point in an element to a given point.
-pub trait ClosestPointInElement<T: Scalar>: FiniteElementSpace<T>
+pub trait ClosestPointInElementInSpace<T: Scalar>: FiniteElementSpace<T>
 where
     DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>
 {
@@ -196,7 +196,7 @@ where
 }
 
 /// A finite element space that can be queried for the bounding boxes of individual elements.
-pub trait BoundsForElement<T: Scalar>: FiniteElementSpace<T>
+pub trait BoundsForElementInSpace<T: Scalar>: FiniteElementSpace<T>
 where
     DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>
 {
@@ -230,7 +230,7 @@ where
 }
 
 /// A finite element space that supports geometric queries.
-pub trait GeometricSpace<T: Scalar>: ClosestPointInElement<T> + BoundsForElement<T> + FindClosestElement<T>
+pub trait GeometricSpace<T: Scalar>: ClosestPointInElementInSpace<T> + BoundsForElementInSpace<T> + FindClosestElement<T>
 where
     DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>
 { }
@@ -238,6 +238,6 @@ where
 impl<T, Space> GeometricSpace<T> for Space
 where
     T: Scalar,
-    Space: ClosestPointInElement<T> + BoundsForElement<T> + FindClosestElement<T>,
+    Space: ClosestPointInElementInSpace<T> + BoundsForElementInSpace<T> + FindClosestElement<T>,
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>
 {}
