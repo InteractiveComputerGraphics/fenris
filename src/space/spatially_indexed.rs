@@ -1,4 +1,4 @@
-use crate::space::{BoundsForElementInSpace, ClosestPoint, ClosestPointInElementInSpace, FindClosestElement, FiniteElementConnectivity, FiniteElementSpace, interpolate_at_points, interpolate_gradient_at_points, InterpolateInSpace, InterpolateGradientInSpace, VolumetricFiniteElementSpace};
+use crate::space::{BoundsForElementInSpace, ClosestPointInElementInSpace, FindClosestElement, FiniteElementConnectivity, FiniteElementSpace, interpolate_at_points, interpolate_gradient_at_points, InterpolateGradientInSpace, InterpolateInSpace, VolumetricFiniteElementSpace};
 use nalgebra::{DefaultAllocator, DimName, DVectorSlice, Dynamic, MatrixSliceMut, OMatrix, OPoint, OVector, Scalar};
 use rstar::{AABB, Envelope, PointDistance, RTree, RTreeObject};
 use nalgebra::allocator::Allocator;
@@ -7,6 +7,7 @@ use fenris_traits::allocators::{BiDimAllocator, DimAllocator, TriDimAllocator};
 use fenris_traits::Real;
 use rstar::primitives::GeomWithData;
 use std::marker::PhantomData;
+use crate::element::ClosestPoint;
 use crate::SmallDim;
 
 struct RTreeAccelerationStructure<D: DimName>

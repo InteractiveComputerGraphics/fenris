@@ -1,12 +1,11 @@
 //! Finite element spaces.
 
 use crate::allocators::BiDimAllocator;
-use crate::element::{FiniteElement, ReferenceFiniteElement};
+use crate::element::{ClosestPoint, FiniteElement, ReferenceFiniteElement};
 use crate::geometry::GeometryCollection;
 use crate::nalgebra::{Dynamic, MatrixSliceMut, OMatrix};
 use crate::SmallDim;
-use nalgebra::{DefaultAllocator, DimName, OPoint, Scalar};
-use nalgebra::allocator::Allocator;
+use nalgebra::{DefaultAllocator, OPoint, Scalar};
 use fenris_geometry::AxisAlignedBoundingBox;
 
 mod interpolate;
@@ -172,20 +171,6 @@ where
     }
 }
 
-/// The result of a [`ClosestPointInElementInSpace`] query.
-#[derive(Debug, Clone, PartialEq)]
-pub enum ClosestPoint<T, D>
-where
-    T: Scalar,
-    D: DimName,
-    DefaultAllocator: Allocator<T, D>,
-{
-    /// The point is inside the element.
-    InElement(OPoint<T, D>),
-    /// The closest point in the element to the query point.
-    ClosestPoint(OPoint<T, D>),
-}
-
 /// A finite element space you can query for the closest point in an element to a given point.
 pub trait ClosestPointInElementInSpace<T: Scalar>: FiniteElementSpace<T>
 where
@@ -228,16 +213,3 @@ where
         point: &OPoint<T, Self::GeometryDim>,
     ) -> Option<(usize, OPoint<T, Self::ReferenceDim>)>;
 }
-
-/// A finite element space that supports geometric queries.
-pub trait GeometricSpace<T: Scalar>: ClosestPointInElementInSpace<T> + BoundsForElementInSpace<T> + FindClosestElement<T>
-where
-    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>
-{ }
-
-impl<T, Space> GeometricSpace<T> for Space
-where
-    T: Scalar,
-    Space: ClosestPointInElementInSpace<T> + BoundsForElementInSpace<T> + FindClosestElement<T>,
-    DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>
-{}
