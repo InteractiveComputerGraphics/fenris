@@ -11,11 +11,13 @@ use std::fmt::Debug;
 mod polygon;
 mod polytope;
 mod primitives;
+
 use crate::util::index_set_nth_power_iter;
 pub use polygon::*;
 pub use polytope::*;
 pub use primitives::*;
 
+pub mod predicates;
 pub mod polymesh;
 pub mod sdf;
 pub mod util;
