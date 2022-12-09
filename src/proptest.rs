@@ -1,12 +1,13 @@
-use crate::element::Tet4Element;
+use crate::element::{Tet4Element, Tri3d2Element};
 use crate::geometry::proptest::Triangle3dParams;
 use crate::geometry::Orientation::Counterclockwise;
 use crate::mesh::procedural::create_rectangular_uniform_quad_mesh_2d;
 use crate::mesh::QuadMesh2d;
 use ::proptest::prelude::*;
-use fenris_geometry::Triangle3d;
+use fenris_geometry::{Triangle2d, Triangle3d};
 use nalgebra::{Point2, Point3, Vector2};
 use std::cmp::max;
+use fenris_geometry::proptest::Triangle2dParams;
 
 pub fn point2() -> impl Strategy<Value = Point2<f64>> {
     // Pick a reasonably small range to pick coordinates from,
@@ -22,6 +23,17 @@ pub fn point3() -> impl Strategy<Value = Point3<f64>> {
     // so ridiculously large as to break anything we might want to do with them
     let range = -10.0..10.0;
     [range.clone(), range.clone(), range.clone()].prop_map(|[x, y, z]| Point3::new(x, y, z))
+}
+
+impl Arbitrary for Tri3d2Element<f64> {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        any_with::<Triangle2d<f64>>(Triangle2dParams::default().with_orientation(Counterclockwise))
+            .prop_map(|triangle| Self::from(triangle))
+            .boxed()
+    }
 }
 
 impl Arbitrary for Tet4Element<f64> {

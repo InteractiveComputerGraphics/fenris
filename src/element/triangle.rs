@@ -1,12 +1,15 @@
 use itertools::Itertools;
 use numeric_literals::replace_float_literals;
+use fenris_geometry::predicates::orient2d_inexact;
+use nalgebra::distance_squared;
+use std::cmp::Ordering;
 
 use crate::connectivity::{Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity};
-use crate::element::{ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement, SurfaceFiniteElement};
+use crate::element::{ClosestPoint, ClosestPointInElement, ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement, SurfaceFiniteElement};
 use crate::geometry::{LineSegment2d, Triangle, Triangle2d, Triangle3d};
 use crate::nalgebra::{
     distance, Matrix1x3, Matrix1x6, Matrix2, Matrix2x3, Matrix2x6, Matrix3, Matrix3x2, OPoint, Point2, Point3, Scalar,
-    Vector2, Vector3, U2, U3, U6,
+    U2, U3, U6, Vector2, Vector3,
 };
 use crate::Real;
 
@@ -433,5 +436,56 @@ where
             lookup_vertex(1)?,
             lookup_vertex(2)?,
         ])))
+    }
+}
+
+impl<T: Real> ClosestPointInElement<T> for Tri3d2Element<T> {
+    fn closest_point(&self, p: &Point2<T>) -> ClosestPoint<T, U2> {
+        let [a, b, c] = self.vertices();
+
+        let edges = [(a, b), (b, c), (c, a)];
+        let point_in_interior = edges
+            .iter()
+            .map(|(x1, x2)| orient2d_inexact(x1, x2, p))
+            .all(|sign| sign >= T::zero());
+
+        if point_in_interior {
+            // Transformation is affine, so Jacobian is constant:
+            //  p = A xi + p0
+            // for some p0 which we can determine by evaluating at xi = 0
+            let a = self.reference_jacobian(&Point2::origin());
+            if let Some(a_inv) = a.try_inverse() {
+                let p0 = self.map_reference_coords(&Point2::origin());
+                let xi = a_inv * (p - p0);
+                return ClosestPoint::InElement(xi.into());
+            }
+        }
+
+        // Compute the closest point on each edge and take the point corresponding to the
+        // smallest distance (squared)
+        let (idx, t, _) = edges.into_iter()
+            .map(|(x1, x2)| LineSegment2d::from_end_points(x1.clone(), x2.clone()))
+            .enumerate()
+            .map(|(idx, segment)| {
+                // Parameter is [0, 1]
+                let t = segment.closest_point_parametric(p);
+                let point = segment.point_from_parameter(t);
+                let dist2 = distance_squared(p, &point);
+                (idx, t, dist2)
+            })
+            .min_by(|(_, _, dist2_a), (_, _, dist2_b)| dist2_a.partial_cmp(&dist2_b)
+                // TODO: This is an arbitrary choice. Ideally we'd consistently choose
+                // in such a way that NaNs would be selected as the minimum to
+                // avoid hiding potential bugs, but the RealField trait atm does not seem
+                // to expose something like an "is_nan" method
+                .unwrap_or(Ordering::Less))
+            .expect("We always have exactly 3 items in the iterator");
+
+        // Use parameter representation to transfer result to reference element
+        let reference_element = Tri3d2Element::reference();
+        let a = reference_element.vertices()[(idx + 0) % 3];
+        let b = reference_element.vertices()[(idx + 1) % 3];
+        let ref_coords = LineSegment2d::from_end_points(a, b).point_from_parameter(t);
+        ClosestPoint::ClosestPoint(ref_coords)
     }
 }

@@ -53,7 +53,7 @@ rstar = { git = "https://github.com/Andlon/rstar.git", branch="no-copy-bound" }
 fenris = { path = ".", features = [ "proptest-support" ]}
 nalgebra = { version = "0.31", features = [ "serde-serialize", "compare" ] }
 proptest = "1.0"
-matrixcompare = "0.3"
+matrixcompare = { version="0.3", features = ["proptest-support"] }
 util = { path = "util" }
 paste = "1.0.6"
 insta = "1.21.0"

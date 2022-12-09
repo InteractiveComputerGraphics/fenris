@@ -11,7 +11,7 @@ use num::Zero;
 use numeric_literals::replace_float_literals;
 use std::error::Error;
 use std::fmt::Debug;
-use fenris_geometry::AxisAlignedBoundingBox;
+use fenris_geometry::{AxisAlignedBoundingBox};
 
 mod hexahedron;
 mod quadrilateral;
@@ -469,6 +469,19 @@ where
     InElement(OPoint<T, D>),
     /// The closest point in the element to the query point.
     ClosestPoint(OPoint<T, D>),
+}
+
+impl<T, D> ClosestPoint<T, D>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>
+{
+    pub fn point(&self) -> &OPoint<T, D> {
+        match self {
+            ClosestPoint::InElement(point) | ClosestPoint::ClosestPoint(point) => point
+        }
+    }
 }
 
 /// A finite element you can query for the closest point to an arbitrary point.
