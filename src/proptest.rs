@@ -118,7 +118,7 @@ mod tests {
             triangle in nondegenerate_triangle2d_strategy_f64()
         ){
             prop_assert!(triangle.area() > 0.0);
-            prop_assert!(triangle.orientation() == Orientation::Clockwise);
+            prop_assert!(triangle.orientation() == Orientation::Counterclockwise);
         }
 
         #[test]

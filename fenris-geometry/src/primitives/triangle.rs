@@ -78,9 +78,9 @@ where
 {
     pub fn orientation(&self) -> Orientation {
         if self.signed_area() >= T::zero() {
-            Orientation::Clockwise
-        } else {
             Orientation::Counterclockwise
+        } else {
+            Orientation::Clockwise
         }
     }
 
