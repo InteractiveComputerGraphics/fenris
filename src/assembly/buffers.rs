@@ -322,7 +322,9 @@ where
         compute_interpolation(self.u_local, self.basis_buffer.element_basis_values())
     }
 
-    pub fn interpolate_gradient<S>(&self) -> OMatrix<T, Space::ReferenceDim, S>
+    /// Compute the gradient $\nabla_{\vec \xi} u_h$ of the interpolated quantity $u_h$ with
+    /// respect to *reference coordinateS* $\vec \xi$.
+    pub fn interpolate_ref_gradient<S>(&self) -> OMatrix<T, Space::ReferenceDim, S>
     where
         S: SmallDim,
         DefaultAllocator: BiDimAllocator<T, Space::ReferenceDim, S>

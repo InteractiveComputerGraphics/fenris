@@ -216,7 +216,7 @@ where
                 element_buf.update_reference_point(&ref_coords, BufferUpdate::BasisGradients);
                 // We need to compute the gradient with respect to physical coordinates,
                 // so need to transform it by inverse transpose Jacobian matrix
-                let ref_gradient = element_buf.interpolate_gradient();
+                let ref_gradient = element_buf.interpolate_ref_gradient();
                 let j = element_buf.element_reference_jacobian();
                 let inv_j_t = j.try_inverse()
                     .expect("TODO: Fix this")

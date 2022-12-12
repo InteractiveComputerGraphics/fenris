@@ -3,9 +3,10 @@ use numeric_literals::replace_float_literals;
 use fenris_geometry::predicates::orient2d_inexact;
 use nalgebra::distance_squared;
 use std::cmp::Ordering;
+use fenris_geometry::AxisAlignedBoundingBox;
 
 use crate::connectivity::{Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity};
-use crate::element::{ClosestPoint, ClosestPointInElement, ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement, SurfaceFiniteElement};
+use crate::element::{BoundsForElement, ClosestPoint, ClosestPointInElement, ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement, SurfaceFiniteElement};
 use crate::geometry::{LineSegment2d, Triangle, Triangle2d, Triangle3d};
 use crate::nalgebra::{
     distance, Matrix1x3, Matrix1x6, Matrix2, Matrix2x3, Matrix2x6, Matrix3, Matrix3x2, OPoint, Point2, Point3, Scalar,
@@ -487,5 +488,12 @@ impl<T: Real> ClosestPointInElement<T> for Tri3d2Element<T> {
         let b = reference_element.vertices()[(idx + 1) % 3];
         let ref_coords = LineSegment2d::from_end_points(a, b).point_from_parameter(t);
         ClosestPoint::ClosestPoint(ref_coords)
+    }
+}
+
+impl<T: Real> BoundsForElement<T> for Tri3d2Element<T> {
+    fn element_bounds(&self) -> AxisAlignedBoundingBox<T, Self::GeometryDim> {
+        AxisAlignedBoundingBox::from_points(self.vertices())
+            .expect("Never fails since we always have > 0 vertices")
     }
 }
