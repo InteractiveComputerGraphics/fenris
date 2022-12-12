@@ -11,7 +11,7 @@ edition = "2021"
 proptest-support = [ "proptest", "nalgebra/proptest-support" ]
 
 [dependencies]
-itertools = "0.9"
+itertools = "0.10.5"
 nalgebra = "0.31"
 serde = { version="1.0", features = [ "derive" ] }
 numeric_literals = "0.2.0"

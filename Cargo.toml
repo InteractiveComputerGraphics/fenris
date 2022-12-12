@@ -27,7 +27,7 @@ davenport = "0.1.1"
 vtkio = "0.6"
 num = "0.4"
 numeric_literals = "0.2.0"
-itertools = "0.9"
+itertools = "0.10.5"
 ordered-float = "1.0"
 proptest = { version = "1.0", optional = true }
 rayon = "1.3"
