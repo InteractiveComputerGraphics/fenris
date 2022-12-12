@@ -61,7 +61,8 @@ where
 }
 
 /// A volumetric finite element space that allows interpolation of gradients at arbitrary points.
-pub trait InterpolateGradientInSpace<T: Real, SolutionDim: SmallDim>: VolumetricFiniteElementSpace<T>
+pub trait InterpolateGradientInSpace<T: Real, SolutionDim: SmallDim>:
+    VolumetricFiniteElementSpace<T> + InterpolateInSpace<T, SolutionDim>
 where
     DefaultAllocator: TriDimAllocator<T, Self::GeometryDim, Self::ReferenceDim, SolutionDim>,
 {

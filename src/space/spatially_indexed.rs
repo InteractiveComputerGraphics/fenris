@@ -254,6 +254,11 @@ where
     fn find_closest_element_and_reference_coords(&self, point: &OPoint<T, Self::GeometryDim>) -> Option<(usize, OPoint<T, Self::ReferenceDim>)> {
         let mut min_dist2 = None;
         let mut closest_result = None;
+        // TODO: This is inefficient because we could have pruned way more candidates
+        // if we used the *actual* current minimum distance to the element
+        // to prune further bounding boxes. This suggests that this routine
+        // needs to be merged with the implementation of closest_cell_candidates so that
+        // we have all the information at hand
         for candidate_element_idx in self.tree.closest_cell_candidates(point) {
             match self.space.closest_point_in_element(candidate_element_idx, point) {
                 // Pick the first element that reports that the point is contained in the element
@@ -262,7 +267,7 @@ where
                     let x = self.space.map_element_reference_coords(candidate_element_idx, &ref_coords);
                     let dist2 = (x - point).norm_squared();
 
-                    let is_min = min_dist2.map(|d2| d2 <= dist2).unwrap_or(true);
+                    let is_min = min_dist2.map(|d2| dist2 <= d2).unwrap_or(true);
                     if is_min {
                         min_dist2 = Some(dist2);
                         closest_result = Some((candidate_element_idx, ref_coords));
