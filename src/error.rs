@@ -3,10 +3,7 @@ use crate::allocators::{BiDimAllocator, TriDimAllocator};
 use crate::assembly::global::assemble_scalar;
 use crate::assembly::local::QuadratureTable;
 use crate::element::VolumetricFiniteElement;
-use crate::integrate::{
-    integrate_over_element, integrate_over_volume_element, ElementIntegralAssemblerBuilder, Integrand,
-    IntegrationWorkspace, VolumeFunction,
-};
+use crate::integrate::{integrate_over_element, integrate_over_volume_element, ElementIntegralAssemblerBuilder, Integrand, IntegrationWorkspace, OldUGradUFunction, UFunction};
 use crate::nalgebra::DVectorSlice;
 use crate::nalgebra::{DefaultAllocator, OPoint, OVector};
 use crate::space::VolumetricFiniteElementSpace;
@@ -73,17 +70,18 @@ where
 {
     let n = element.num_nodes();
     assert_eq!(u_h_element.len(), n * SolutionDim::dim());
-    let result_as_vector: Vector1<T> = integrate_over_volume_element(
-        make_H1_seminorm_error_squared_integrand(u_grad),
-        element,
-        (quadrature_weights, quadrature_points),
-        u_h_element,
-        workspace,
-    )
-    .expect("TODO: Handle the case where this might fail (due to e.g. singular Jacobian)");
-
-    // Result is a 1-vector, we want to return a scalar
-    result_as_vector[0]
+    todo!()
+    // let result_as_vector: Vector1<T> = integrate_over_volume_element(
+    //     make_H1_seminorm_error_squared_integrand(u_grad),
+    //     element,
+    //     (quadrature_weights, quadrature_points),
+    //     u_h_element,
+    //     workspace,
+    // )
+    // .expect("TODO: Handle the case where this might fail (due to e.g. singular Jacobian)");
+    //
+    // // Result is a 1-vector, we want to return a scalar
+    // result_as_vector[0]
 }
 
 /// Estimate the $H^1$ *seminorm* error $\seminorm{u_h - u}_{H^1}$ on the given element with the given basis
@@ -155,7 +153,8 @@ where
 #[allow(non_snake_case)]
 fn make_L2_error_squared_integrand<'a, T, SolutionDim, GeometryDim>(
     u: impl 'a + Fn(&OPoint<T, GeometryDim>) -> OVector<T, SolutionDim>,
-) -> Integrand<SolutionDim, impl 'a + Fn(&OPoint<T, GeometryDim>, &OVector<T, SolutionDim>) -> Vector1<T>>
+) -> impl 'a + UFunction<T, GeometryDim, SolutionDim>
+//Integrand<SolutionDim, impl 'a + Fn(&OPoint<T, GeometryDim>, &OVector<T, SolutionDim>) -> Vector1<T>>
 where
     T: Real,
     SolutionDim: SmallDim,
@@ -167,13 +166,14 @@ where
         let error = u_h - u_at_x;
         Vector1::new(error.norm_squared())
     };
-    Integrand::new_with_solution_dim::<SolutionDim>().with_function(function)
+    function
+    // Integrand::new_with_solution_dim::<SolutionDim>().with_function(function)
 }
 
 #[allow(non_snake_case)]
 fn make_H1_seminorm_error_squared_integrand<'a, T, SolutionDim, GeometryDim>(
     u_grad: impl 'a + Fn(&OPoint<T, GeometryDim>) -> OMatrix<T, GeometryDim, SolutionDim>,
-) -> impl VolumeFunction<T, GeometryDim, SolutionDim = SolutionDim, OutputDim = U1>
+) -> impl OldUGradUFunction<T, GeometryDim, SolutionDim = SolutionDim, OutputDim = U1>
 where
     T: Real,
     SolutionDim: SmallDim,
@@ -206,7 +206,7 @@ where
     QTable: QuadratureTable<T, Space::ReferenceDim>,
     DefaultAllocator: TriDimAllocator<T, SolutionDim, Space::GeometryDim, Space::ReferenceDim>,
 {
-    let assembler = ElementIntegralAssemblerBuilder::new()
+    let assembler = ElementIntegralAssemblerBuilder::new_with_solution_dim()
         .with_space(space)
         .with_quadrature_table(qtable)
         .with_interpolation_weights(u_h.into())

@@ -91,6 +91,10 @@ impl<T: Real> BasisFunctionBuffer<T> {
     pub fn element_gradients_mut<D: DimName>(&mut self) -> MatrixSliceMut<T, D, Dynamic> {
         MatrixSliceMut::from(&mut self.element_basis_gradients)
     }
+
+    pub fn element_values_gradients_mut<D: DimName>(&mut self) -> (&mut [T], MatrixSliceMut<T, D, Dynamic>) {
+        (&mut self.element_basis_values, MatrixSliceMut::from(&mut self.element_basis_gradients))
+    }
 }
 
 /// A buffer for storing intermediate quadrature data.

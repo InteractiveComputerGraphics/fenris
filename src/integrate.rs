@@ -11,7 +11,7 @@ use crate::util::{reshape_to_slice, try_transmute_ref};
 use crate::{Real, SmallDim};
 use davenport::{define_thread_local_workspace, with_thread_local_workspace};
 use eyre::eyre;
-use nalgebra::{DVectorSlice, Dynamic, OVector};
+use nalgebra::{DVectorSlice, Dynamic, MatrixSliceMut, OVector};
 use std::marker::PhantomData;
 
 /// Computes the Riemannian volume form for the given dimensions.
@@ -34,6 +34,67 @@ where
     }
 }
 
+pub struct FnFunction<F>(pub F);
+pub struct FnUFunction<F>(pub F);
+
+impl<T, F, GeometryDim, OutputDim> Function<T, GeometryDim> for FnFunction<F>
+where
+    T: Scalar,
+    F: Fn(&OPoint<T, GeometryDim>) -> OVector<T, OutputDim>,
+    GeometryDim: SmallDim,
+    OutputDim: SmallDim,
+    DefaultAllocator: DimAllocator<T, OutputDim> + DimAllocator<T, GeometryDim>
+{
+    type OutputDim = OutputDim;
+
+    fn evaluate(&self, x: &OPoint<T, GeometryDim>) -> OVector<T, Self::OutputDim> {
+        self.0(x)
+    }
+}
+
+impl<T, F, GeometryDim, OutputDim, SolutionDim> UFunction<T, GeometryDim, SolutionDim> for FnUFunction<F>
+where
+    T: Scalar,
+    F: Fn(&OPoint<T, GeometryDim>, &OVector<T, SolutionDim>) -> OVector<T, OutputDim>,
+    GeometryDim: SmallDim,
+    OutputDim: SmallDim,
+    DefaultAllocator: DimAllocator<T, OutputDim> + DimAllocator<T, GeometryDim> + DimAllocator<T, SolutionDim>
+{
+    type OutputDim = OutputDim;
+
+    fn evaluate(&self, x: &OPoint<T, GeometryDim>, u: impl FnOnce() -> OVector<T, SolutionDim>) -> OVector<T, Self::OutputDim> {
+        self.0(x, &u())
+    }
+}
+
+pub fn function_from_fn<T, GeometryDim, OutputDim>(f: impl Fn(&OPoint<T, GeometryDim>) -> OVector<T, OutputDim>)
+    -> impl Function<T, GeometryDim>
+where
+    T: Scalar,
+    GeometryDim: SmallDim,
+    OutputDim: SmallDim,
+    DefaultAllocator: DimAllocator<T, OutputDim> + DimAllocator<T, GeometryDim>
+{
+    struct Wrapper<F>(F);
+
+    impl<T, F, GeometryDim, OutputDim> Function<T, GeometryDim> for Wrapper<F>
+    where
+        T: Scalar,
+        F: Fn(&OPoint<T, GeometryDim>) -> OVector<T, OutputDim>,
+        GeometryDim: SmallDim,
+        OutputDim: SmallDim,
+        DefaultAllocator: DimAllocator<T, OutputDim> + DimAllocator<T, GeometryDim>
+    {
+        type OutputDim = OutputDim;
+
+        fn evaluate(&self, x: &OPoint<T, GeometryDim>) -> OVector<T, Self::OutputDim> {
+            self.0(x)
+        }
+    }
+
+    Wrapper(f)
+}
+
 /// A vector-valued function $f(x)$.
 ///
 /// Functions of this type can be integrated over both volumes and surfaces.
@@ -48,86 +109,164 @@ where
     fn evaluate(&self, x: &OPoint<T, GeometryDim>) -> OVector<T, Self::OutputDim>;
 }
 
+impl<T, F, GeometryDim, OutputDim> Function<T, GeometryDim> for F
+where
+    T: Scalar,
+    GeometryDim: SmallDim,
+    OutputDim: SmallDim,
+    F: Fn(&OPoint<T, GeometryDim>) -> OVector<T, OutputDim>,
+    DefaultAllocator: DimAllocator<T, GeometryDim> + DimAllocator<T, OutputDim>
+{
+    type OutputDim = OutputDim;
+
+    fn evaluate(&self, x: &OPoint<T, GeometryDim>) -> OVector<T, OutputDim> {
+        self(x)
+    }
+}
+
 /// A vector-valued function $f(x, u)$.
 ///
 /// Here $u = u(x)$ is a function $u: \Omega \rightarrow \mathbb{R}^s$.
 ///
 /// Functions of this type can be integrated over both volumes and surfaces.
-pub trait UFunction<T, GeometryDim>
+pub trait UFunction<T, GeometryDim, SolutionDim>
 where
     T: Scalar,
     GeometryDim: SmallDim,
-    DefaultAllocator:
-        DimAllocator<T, Self::SolutionDim> + DimAllocator<T, Self::OutputDim> + DimAllocator<T, GeometryDim>,
+    SolutionDim: SmallDim,
+    DefaultAllocator: DimAllocator<T, SolutionDim> + DimAllocator<T, Self::OutputDim> + DimAllocator<T, GeometryDim>,
 {
     type OutputDim: SmallDim;
-    type SolutionDim: SmallDim;
 
-    fn evaluate(&self, x: &OPoint<T, GeometryDim>, u: &OVector<T, Self::SolutionDim>) -> OVector<T, Self::OutputDim>;
+    fn evaluate<'a>(
+        &'a self,
+        x: &OPoint<T, GeometryDim>,
+        u: impl FnOnce() -> OVector<T, SolutionDim>) -> OVector<T, Self::OutputDim>;
 }
 
-impl<'a, T, GeometryDim, F> UFunction<T, GeometryDim> for &'a F
+impl<T, GeometryDim, SolutionDim, F> UFunction<T, GeometryDim, SolutionDim> for F
 where
     T: Scalar,
     GeometryDim: SmallDim,
-    F: UFunction<T, GeometryDim>,
-    DefaultAllocator: DimAllocator<T, F::SolutionDim> + DimAllocator<T, F::OutputDim> + DimAllocator<T, GeometryDim>,
+    SolutionDim: SmallDim,
+    F: Function<T, GeometryDim>,
+    DefaultAllocator: DimAllocator<T, F::OutputDim> + DimAllocator<T, GeometryDim> + DimAllocator<T, SolutionDim>
 {
     type OutputDim = F::OutputDim;
-    type SolutionDim = F::SolutionDim;
 
-    fn evaluate(&self, x: &OPoint<T, GeometryDim>, u: &OVector<T, Self::SolutionDim>) -> OVector<T, Self::OutputDim> {
-        F::evaluate(self, x, u)
+    fn evaluate(&self,
+                x: &OPoint<T, GeometryDim>,
+                _: impl FnOnce() -> OVector<T, SolutionDim>
+    ) -> OVector<T, Self::OutputDim> {
+        self.evaluate(x)
     }
 }
 
-#[derive(Debug)]
-pub struct Integrand<SolutionDim = (), F = ()> {
-    marker: PhantomData<SolutionDim>,
-    function: F,
-}
+// /// A vector-valued function $f(x, u)$.
+// ///
+// /// Here $u = u(x)$ is a function $u: \Omega \rightarrow \mathbb{R}^s$.
+// ///
+// /// Functions of this type can be integrated over both volumes and surfaces.
+// #[deprecated]
+// pub trait OldUFunction<T, GeometryDim>
+// where
+//     T: Scalar,
+//     GeometryDim: SmallDim,
+//     DefaultAllocator:
+//         DimAllocator<T, Self::SolutionDim> + DimAllocator<T, Self::OutputDim> + DimAllocator<T, GeometryDim>,
+// {
+//     type OutputDim: SmallDim;
+//     type SolutionDim: SmallDim;
+//
+//     fn evaluate(&self, x: &OPoint<T, GeometryDim>, u: &OVector<T, Self::SolutionDim>) -> OVector<T, Self::OutputDim>;
+// }
 
-impl Integrand {
-    pub fn new_with_solution_dim<SolutionDim>() -> Integrand<SolutionDim> {
-        Integrand {
-            marker: Default::default(),
-            function: (),
-        }
-    }
-}
+// impl<'a, T, GeometryDim, F> OldUFunction<T, GeometryDim> for &'a F
+// where
+//     T: Scalar,
+//     GeometryDim: SmallDim,
+//     F: OldUFunction<T, GeometryDim>,
+//     DefaultAllocator: DimAllocator<T, F::SolutionDim> + DimAllocator<T, F::OutputDim> + DimAllocator<T, GeometryDim>,
+// {
+//     type OutputDim = F::OutputDim;
+//     type SolutionDim = F::SolutionDim;
+//
+//     fn evaluate(&self, x: &OPoint<T, GeometryDim>, u: &OVector<T, Self::SolutionDim>) -> OVector<T, Self::OutputDim> {
+//         F::evaluate(self, x, u)
+//     }
+// }
 
-impl<SolutionDim> Integrand<SolutionDim, ()> {
-    pub fn with_function<F>(self, f: F) -> Integrand<SolutionDim, F> {
-        Integrand {
-            marker: Default::default(),
-            function: f,
-        }
-    }
+// #[derive(Debug)]
+// pub struct Integrand<SolutionDim = (), F = ()> {
+//     marker: PhantomData<SolutionDim>,
+//     function: F,
+// }
 
-    pub fn with_volume_function<F>(self, f: F) -> Integrand<SolutionDim, VolumeIntegrand<F>> {
-        Integrand {
-            marker: Default::default(),
-            function: VolumeIntegrand(f),
-        }
-    }
-}
+// impl Integrand {
+//     pub fn new_with_solution_dim<SolutionDim>() -> Integrand<SolutionDim> {
+//         Integrand {
+//             marker: Default::default(),
+//             function: (),
+//         }
+//     }
+// }
 
-impl<F, T, OutputDim, SolutionDim, GeometryDim> UFunction<T, GeometryDim> for Integrand<SolutionDim, F>
-where
-    F: Fn(&OPoint<T, GeometryDim>, &OVector<T, SolutionDim>) -> OVector<T, OutputDim>,
-    T: Scalar,
-    OutputDim: SmallDim,
-    SolutionDim: SmallDim,
-    GeometryDim: SmallDim,
-    DefaultAllocator: DimAllocator<T, OutputDim> + DimAllocator<T, SolutionDim> + DimAllocator<T, GeometryDim>,
-{
-    type OutputDim = OutputDim;
-    type SolutionDim = SolutionDim;
+// impl<SolutionDim> Integrand<SolutionDim, ()> {
+//     pub fn with_function<F>(self, f: F) -> Integrand<SolutionDim, F> {
+//         Integrand {
+//             marker: Default::default(),
+//             function: f,
+//         }
+//     }
+//
+//     pub fn with_volume_function<F>(self, f: F) -> Integrand<SolutionDim, VolumeIntegrand<F>> {
+//         Integrand {
+//             marker: Default::default(),
+//             function: VolumeIntegrand(f),
+//         }
+//     }
+// }
 
-    fn evaluate(&self, x: &OPoint<T, GeometryDim>, u: &OVector<T, SolutionDim>) -> OVector<T, OutputDim> {
-        (self.function)(x, u)
-    }
-}
+// impl<F, T, OutputDim, SolutionDim, GeometryDim> OldUFunction<T, GeometryDim> for Integrand<SolutionDim, F>
+// where
+//     F: Fn(&OPoint<T, GeometryDim>, &OVector<T, SolutionDim>) -> OVector<T, OutputDim>,
+//     T: Scalar,
+//     OutputDim: SmallDim,
+//     SolutionDim: SmallDim,
+//     GeometryDim: SmallDim,
+//     DefaultAllocator: DimAllocator<T, OutputDim> + DimAllocator<T, SolutionDim> + DimAllocator<T, GeometryDim>,
+// {
+//     type OutputDim = OutputDim;
+//     type SolutionDim = SolutionDim;
+//
+//     fn evaluate(&self, x: &OPoint<T, GeometryDim>, u: &OVector<T, SolutionDim>) -> OVector<T, OutputDim> {
+//         (self.function)(x, u)
+//     }
+// }
+
+// /// A vector-valued function $f(x, u, \nabla u)$.
+// ///
+// /// Here $u = u(x)$ is a function $u: \Omega \rightarrow \mathbb{R}^s$.
+// ///
+// /// Functions of this type can be integrated only over volumes, since the gradient $\nabla u$
+// /// is otherwise not well-defined.
+// #[deprecated]
+// pub trait OldUGradUFunction<T, GeometryDim>
+// where
+//     T: Scalar,
+//     GeometryDim: SmallDim,
+//     DefaultAllocator: DimAllocator<T, Self::OutputDim> + BiDimAllocator<T, Self::SolutionDim, GeometryDim>,
+// {
+//     type OutputDim: SmallDim;
+//     type SolutionDim: SmallDim;
+//
+//     fn evaluate(
+//         &self,
+//         x: &OPoint<T, GeometryDim>,
+//         u: &OVector<T, Self::SolutionDim>,
+//         u_grad: &OMatrix<T, GeometryDim, Self::SolutionDim>,
+//     ) -> OVector<T, Self::OutputDim>;
+// }
 
 /// A vector-valued function $f(x, u, \nabla u)$.
 ///
@@ -135,69 +274,108 @@ where
 ///
 /// Functions of this type can be integrated only over volumes, since the gradient $\nabla u$
 /// is otherwise not well-defined.
-pub trait VolumeFunction<T, GeometryDim>
+pub trait UGradUFunction<T, GeometryDim, SolutionDim>
 where
     T: Scalar,
     GeometryDim: SmallDim,
-    DefaultAllocator: DimAllocator<T, Self::OutputDim> + BiDimAllocator<T, Self::SolutionDim, GeometryDim>,
+    SolutionDim: SmallDim,
+    DefaultAllocator: DimAllocator<T, Self::OutputDim> + BiDimAllocator<T, GeometryDim, SolutionDim>,
 {
     type OutputDim: SmallDim;
-    type SolutionDim: SmallDim;
 
     fn evaluate(
         &self,
         x: &OPoint<T, GeometryDim>,
-        u: &OVector<T, Self::SolutionDim>,
-        u_grad: &OMatrix<T, GeometryDim, Self::SolutionDim>,
+        u: impl FnOnce() -> OVector<T, SolutionDim>,
+        u_grad: impl FnOnce() -> OMatrix<T, GeometryDim, SolutionDim>,
     ) -> OVector<T, Self::OutputDim>;
 }
 
-impl<'a, T, GeometryDim, F> VolumeFunction<T, GeometryDim> for &'a F
+impl<T, GeometryDim, SolutionDim, F> UGradUFunction<T, GeometryDim, SolutionDim> for F
 where
     T: Scalar,
     GeometryDim: SmallDim,
-    F: VolumeFunction<T, GeometryDim>,
-    DefaultAllocator: BiDimAllocator<T, F::SolutionDim, GeometryDim> + DimAllocator<T, F::OutputDim>,
+    SolutionDim: SmallDim,
+    F: UFunction<T, GeometryDim, SolutionDim>,
+    DefaultAllocator: DimAllocator<T, F::OutputDim> + BiDimAllocator<T, GeometryDim, SolutionDim>,
 {
     type OutputDim = F::OutputDim;
-    type SolutionDim = F::SolutionDim;
 
-    fn evaluate(
-        &self,
-        x: &OPoint<T, GeometryDim>,
-        u: &OVector<T, Self::SolutionDim>,
-        u_grad: &OMatrix<T, GeometryDim, Self::SolutionDim>,
+    fn evaluate(&self,
+                x: &OPoint<T, GeometryDim>,
+                u: impl FnOnce() -> OVector<T, SolutionDim>,
+                _: impl FnOnce() -> OMatrix<T, GeometryDim, SolutionDim>
     ) -> OVector<T, Self::OutputDim> {
-        F::evaluate(self, x, u, u_grad)
+        self.evaluate(x, u)
     }
 }
 
-impl<F, T, OutputDim, SolutionDim, GeometryDim> VolumeFunction<T, GeometryDim>
-    for Integrand<SolutionDim, VolumeIntegrand<F>>
-where
-    F: Fn(
-        &OPoint<T, GeometryDim>,
-        &OVector<T, SolutionDim>,
-        &OMatrix<T, GeometryDim, SolutionDim>,
-    ) -> OVector<T, OutputDim>,
-    T: Scalar,
-    OutputDim: SmallDim,
-    SolutionDim: SmallDim,
-    GeometryDim: SmallDim,
-    DefaultAllocator: DimAllocator<T, OutputDim> + BiDimAllocator<T, SolutionDim, GeometryDim>,
-{
-    type OutputDim = OutputDim;
-    type SolutionDim = SolutionDim;
+// impl<'a, T, F, GeometryDim, SolutionDim> UGradUFunction<T, GeometryDim, SolutionDim> for &'a F
+// where
+//     T: Scalar,
+//     GeometryDim: SmallDim,
+//     SolutionDim: SmallDim,
+//     F: UGradUFunction<T, GeometryDim, SolutionDim>,
+//     DefaultAllocator: BiDimAllocator<T, SolutionDim, GeometryDim> + DimAllocator<T, F::OutputDim>,
+// {
+//     type OutputDim = F::OutputDim;
+//
+//     fn evaluate(
+//         &self,
+//         x: &OPoint<T, GeometryDim>,
+//         u: &OVector<T, SolutionDim>,
+//         u_grad: &OMatrix<T, GeometryDim, SolutionDim>,
+//     ) -> OVector<T, Self::OutputDim> {
+//         F::evaluate(self, x, u, u_grad)
+//     }
+// }
 
-    fn evaluate(
-        &self,
-        x: &OPoint<T, GeometryDim>,
-        u: &OVector<T, SolutionDim>,
-        u_grad: &OMatrix<T, GeometryDim, SolutionDim>,
-    ) -> OVector<T, OutputDim> {
-        (self.function.0)(x, u, u_grad)
-    }
-}
+// impl<'a, T, GeometryDim, F> OldUGradUFunction<T, GeometryDim> for &'a F
+// where
+//     T: Scalar,
+//     GeometryDim: SmallDim,
+//     F: OldUGradUFunction<T, GeometryDim>,
+//     DefaultAllocator: BiDimAllocator<T, F::SolutionDim, GeometryDim> + DimAllocator<T, F::OutputDim>,
+// {
+//     type OutputDim = F::OutputDim;
+//     type SolutionDim = F::SolutionDim;
+//
+//     fn evaluate(
+//         &self,
+//         x: &OPoint<T, GeometryDim>,
+//         u: &OVector<T, Self::SolutionDim>,
+//         u_grad: &OMatrix<T, GeometryDim, Self::SolutionDim>,
+//     ) -> OVector<T, Self::OutputDim> {
+//         F::evaluate(self, x, u, u_grad)
+//     }
+// }
+
+// impl<F, T, OutputDim, SolutionDim, GeometryDim> OldUGradUFunction<T, GeometryDim>
+//     for Integrand<SolutionDim, VolumeIntegrand<F>>
+// where
+//     F: Fn(
+//         &OPoint<T, GeometryDim>,
+//         &OVector<T, SolutionDim>,
+//         &OMatrix<T, GeometryDim, SolutionDim>,
+//     ) -> OVector<T, OutputDim>,
+//     T: Scalar,
+//     OutputDim: SmallDim,
+//     SolutionDim: SmallDim,
+//     GeometryDim: SmallDim,
+//     DefaultAllocator: DimAllocator<T, OutputDim> + BiDimAllocator<T, SolutionDim, GeometryDim>,
+// {
+//     type OutputDim = OutputDim;
+//     type SolutionDim = SolutionDim;
+//
+//     fn evaluate(
+//         &self,
+//         x: &OPoint<T, GeometryDim>,
+//         u: &OVector<T, SolutionDim>,
+//         u_grad: &OMatrix<T, GeometryDim, SolutionDim>,
+//     ) -> OVector<T, OutputDim> {
+//         (self.function.0)(x, u, u_grad)
+//     }
+// }
 
 pub struct IntegrationWorkspace<T: Scalar> {
     basis_buffer: BasisFunctionBuffer<T>,
@@ -212,8 +390,8 @@ impl<T: Real> Default for IntegrationWorkspace<T> {
 }
 
 /// Integrates the given function on the given element with the provided quadrature and interpolation weights.
-pub fn integrate_over_element<'a, T, F, Element>(
-    integrand: F,
+pub fn integrate_over_element<'a, T, F, Element, SolutionDim>(
+    integrand: &F,
     element: &Element,
     quadrature: impl Quadrature<T, Element::ReferenceDim>,
     interpolation_weights: impl Into<DVectorSlice<'a, T>>,
@@ -221,9 +399,10 @@ pub fn integrate_over_element<'a, T, F, Element>(
 ) -> OVector<T, F::OutputDim>
 where
     T: Real,
-    F: UFunction<T, Element::GeometryDim>,
+    F: UFunction<T, Element::GeometryDim, SolutionDim>,
+    SolutionDim: SmallDim,
     Element: FiniteElement<T>,
-    DefaultAllocator: TriDimAllocator<T, F::SolutionDim, Element::GeometryDim, Element::ReferenceDim>
+    DefaultAllocator: TriDimAllocator<T, SolutionDim, Element::GeometryDim, Element::ReferenceDim>
         // This is a separate bound because we generally don't need to mix the output dimension
         // with the other dimensions, so this way the bounds necessary for downstream consumers
         // are somewhat relaxed (the output dimension is often *fixed*, so maybe no bounds at all are necessary)
@@ -238,14 +417,16 @@ where
 
     let mut result = OVector::<T, F::OutputDim>::zeros();
     for (w, p_ref) in weights.iter().zip(points) {
-        element.populate_basis(basis_buffer.element_basis_values_mut(), p_ref);
-        let u_h = crate::util::compute_interpolation(
-            interpolation_weights,
-            DVectorSlice::from_slice(basis_buffer.element_basis_values(), n),
-        );
+        let u_h = || {
+            element.populate_basis(basis_buffer.element_basis_values_mut(), p_ref);
+            crate::util::compute_interpolation(
+                interpolation_weights,
+                DVectorSlice::from_slice(basis_buffer.element_basis_values(), n),
+            )
+        };
         let x = element.map_reference_coords(p_ref);
         let jacobian = element.reference_jacobian(p_ref);
-        let f = integrand.evaluate(&x, &u_h);
+        let f = integrand.evaluate(&x, u_h);
         let volume_form = volume_form(&jacobian);
 
         result += f * (w.clone() * volume_form);
@@ -260,8 +441,8 @@ pub enum IntegrationFailure {
 }
 
 /// Integrates the given volume function on the given element with the provided quadrature and interpolation weights.
-pub fn integrate_over_volume_element<'a, T, Element, F>(
-    function: F,
+pub fn integrate_over_volume_element<'a, T, Element, F, SolutionDim>(
+    function: &F,
     element: &Element,
     quadrature: impl Quadrature<T, Element::ReferenceDim>,
     interpolation_weights: impl Into<DVectorSlice<'a, T>>,
@@ -269,10 +450,11 @@ pub fn integrate_over_volume_element<'a, T, Element, F>(
 ) -> Result<OVector<T, F::OutputDim>, IntegrationFailure>
 where
     T: Real,
-    F: VolumeFunction<T, Element::GeometryDim>,
+    F: UGradUFunction<T, Element::GeometryDim, SolutionDim>,
+    SolutionDim: SmallDim,
     Element: VolumetricFiniteElement<T>,
     DefaultAllocator:
-        TriDimAllocator<T, F::SolutionDim, Element::GeometryDim, Element::ReferenceDim> + DimAllocator<T, F::OutputDim>,
+        TriDimAllocator<T, Element::GeometryDim, Element::ReferenceDim, SolutionDim> + DimAllocator<T, F::OutputDim>,
 {
     let interpolation_weights = interpolation_weights.into();
     let n = element.num_nodes();
@@ -289,22 +471,32 @@ where
             .try_inverse()
             .ok_or_else(|| IntegrationFailure::SingularJacobian)?;
 
+        let (values_buffer, mut gradients_buffer): (_, MatrixSliceMut<_, Element::ReferenceDim, _>)
+            = basis_buffer.element_values_gradients_mut();
+
         // First we compute u_h
-        element.populate_basis(basis_buffer.element_basis_values_mut(), p_ref);
-        let u_h = crate::util::compute_interpolation(
-            interpolation_weights,
-            DVectorSlice::from_slice(basis_buffer.element_basis_values(), n),
-        );
+        let u_h = || {
+            element.populate_basis(values_buffer, p_ref);
+            crate::util::compute_interpolation(
+                interpolation_weights,
+                DVectorSlice::from_slice(values_buffer, n),
+            )
+        };
 
         // Then we compute u_h_grad. To do so we first compute the gradient with respect to *reference element coords*,
         // then we transform this to physical coordinates by the inverse transposed Jacobian
-        element.populate_basis_gradients(basis_buffer.element_gradients_mut(), p_ref);
-        let reference_gradients = basis_buffer.element_gradients::<Element::ReferenceDim>();
-        let reference_gradients = reshape_to_slice(&reference_gradients, (Dynamic::new(r * n), U1::name()));
-        let u_h_ref_grad: OMatrix<T, Element::ReferenceDim, F::SolutionDim> =
-            crate::util::compute_interpolation_gradient(interpolation_weights, &reference_gradients);
-        let u_h_grad = jacobian_inv_t * u_h_ref_grad;
-        let f = function.evaluate(&x, &u_h, &u_h_grad);
+        let u_h_grad = || {
+            element.populate_basis_gradients(MatrixSliceMut::from(&mut gradients_buffer), p_ref);
+            let reference_gradients = gradients_buffer;
+            // let reference_gradients = basis_buffer.element_gradients::<Element::ReferenceDim>();
+            let reference_gradients = reshape_to_slice(&reference_gradients, (Dynamic::new(r * n), U1::name()));
+            let u_h_ref_grad: OMatrix<T, Element::ReferenceDim, SolutionDim> =
+                crate::util::compute_interpolation_gradient(interpolation_weights, &reference_gradients);
+            let u_h_grad = jacobian_inv_t * u_h_ref_grad;
+            u_h_grad
+        };
+
+        let f = function.evaluate(&x, u_h, u_h_grad);
         let volume_form = volume_form(&jacobian);
 
         result += f * (w.clone() * volume_form);
@@ -313,7 +505,7 @@ where
     Ok(result)
 }
 
-pub struct ElementIntegralAssembler<'a, T, F, Space, QTable>
+pub struct ElementIntegralAssembler<'a, T, F, SolutionDim, Space, QTable>
 where
     T: Scalar,
 {
@@ -321,9 +513,10 @@ where
     u: DVectorSlice<'a, T>,
     integrand: F,
     qtable: &'a QTable,
+    marker: PhantomData<SolutionDim>,
 }
 
-pub struct ElementIntegralVolumeAssembler<'a, T, F, Space, QTable>
+pub struct ElementIntegralVolumeAssembler<'a, T, F, SolutionDim, Space, QTable>
 where
     T: Scalar,
 {
@@ -331,9 +524,10 @@ where
     u: DVectorSlice<'a, T>,
     integrand: F,
     qtable: &'a QTable,
+    marker: PhantomData<SolutionDim>,
 }
 
-pub struct ElementIntegralAssemblerBuilder<'a, T, F, Space, QTable>
+pub struct ElementIntegralAssemblerBuilder<'a, T, F, SolutionDim, Space, QTable>
 where
     T: Scalar,
 {
@@ -341,13 +535,15 @@ where
     u: Option<DVectorSlice<'a, T>>,
     integrand: Option<F>,
     qtable: Option<&'a QTable>,
+    marker: PhantomData<SolutionDim>,
 }
 
-pub struct VolumeIntegrand<T>(pub T);
+// pub struct VolumeIntegrand<T>(pub T);
 
-impl<'a, T, F, Space, QTable> ElementIntegralAssemblerBuilder<'a, T, F, Space, QTable>
+impl<'a, T, F, SolutionDim, Space, QTable> ElementIntegralAssemblerBuilder<'a, T, F, SolutionDim, Space, QTable>
 where
     T: Scalar,
+    SolutionDim: SmallDim,
 {
     pub fn new() -> Self {
         Self {
@@ -355,6 +551,7 @@ where
             u: None,
             integrand: None,
             qtable: None,
+            marker: PhantomData
         }
     }
 
@@ -386,12 +583,12 @@ where
         }
     }
 
-    pub fn build_integrator(self) -> ElementIntegralAssembler<'a, T, F, Space, QTable>
+    pub fn build_integrator(self) -> ElementIntegralAssembler<'a, T, F, SolutionDim, Space, QTable>
     where
         Space: FiniteElementSpace<T>,
-        F: UFunction<T, Space::GeometryDim>,
+        F: UFunction<T, Space::GeometryDim, SolutionDim>,
         DefaultAllocator:
-            TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
+            TriDimAllocator<T, SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
     {
         // We take all the trait bounds here so that we can do some sanity checking.
         // This makes it much easier for the user to debug where something went wrong,
@@ -401,40 +598,42 @@ where
             u: self.u.expect("Must provide interpolation weights"),
             integrand: self.integrand.expect("Must provide integrand"),
             qtable: self.qtable.expect("Must provide quadrature table"),
+            marker: PhantomData,
         };
 
-        let ndof = assembler.space.num_nodes() * F::SolutionDim::dim();
+        let ndof = assembler.space.num_nodes() * SolutionDim::dim();
         assert_eq!(
             assembler.u.len(),
             ndof,
             "Size of interpolation weight vector does not match expected number of DOFs ( {} x {} )",
-            F::SolutionDim::dim(),
+            SolutionDim::dim(),
             assembler.space.num_nodes()
         );
 
         assembler
     }
 
-    pub fn build_volume_integrator(self) -> ElementIntegralVolumeAssembler<'a, T, F, Space, QTable>
+    pub fn build_volume_integrator(self) -> ElementIntegralVolumeAssembler<'a, T, F, SolutionDim, Space, QTable>
     where
         Space: VolumetricFiniteElementSpace<T>,
-        F: VolumeFunction<T, Space::ReferenceDim>,
+        F: UGradUFunction<T, Space::ReferenceDim, SolutionDim>,
         DefaultAllocator:
-            TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
+            TriDimAllocator<T, SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
     {
         let assembler = ElementIntegralVolumeAssembler {
             space: self.space.expect("Must provide space"),
             u: self.u.expect("Must provide interpolation weights"),
             integrand: self.integrand.expect("Must provide integrand"),
             qtable: self.qtable.expect("Must provide quadrature table"),
+            marker: PhantomData,
         };
 
-        let ndof = assembler.space.num_nodes() * F::SolutionDim::dim();
+        let ndof = assembler.space.num_nodes() * SolutionDim::dim();
         assert_eq!(
             assembler.u.len(),
             ndof,
             "Size of interpolation weight vector does not match expected number of DOFs ( {} x {} )",
-            F::SolutionDim::dim(),
+            SolutionDim::dim(),
             assembler.space.num_nodes()
         );
 
@@ -442,16 +641,17 @@ where
     }
 }
 
-impl<'a, T, F, Space, QTable> ElementConnectivityAssembler for ElementIntegralAssembler<'a, T, F, Space, QTable>
+impl<'a, T, F, SolutionDim, Space, QTable> ElementConnectivityAssembler for ElementIntegralAssembler<'a, T, F, SolutionDim, Space, QTable>
 where
     T: Scalar,
+    SolutionDim: SmallDim,
     Space: FiniteElementSpace<T>,
-    F: UFunction<T, Space::GeometryDim>,
+    F: UFunction<T, Space::GeometryDim, SolutionDim>,
     DefaultAllocator:
-        TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
+        TriDimAllocator<T, SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
 {
     fn solution_dim(&self) -> usize {
-        F::SolutionDim::dim()
+        SolutionDim::dim()
     }
 
     fn num_elements(&self) -> usize {
@@ -501,14 +701,15 @@ where
     }
 }
 
-impl<'a, T, F, Space, QTable> ElementScalarAssembler<T> for ElementIntegralAssembler<'a, T, F, Space, QTable>
+impl<'a, T, F, SolutionDim, Space, QTable> ElementScalarAssembler<T> for ElementIntegralAssembler<'a, T, F, SolutionDim, Space, QTable>
 where
     T: Real,
-    F: UFunction<T, Space::GeometryDim>,
+    F: UFunction<T, Space::GeometryDim, SolutionDim>,
+    SolutionDim: SmallDim,
     Space: FiniteElementSpace<T>,
     QTable: QuadratureTable<T, Space::ReferenceDim>,
     DefaultAllocator:
-        TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
+        TriDimAllocator<T, SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
 {
     fn assemble_element_scalar(&self, element_index: usize) -> eyre::Result<T> {
         let n = self.element_node_count(element_index);
@@ -542,19 +743,20 @@ where
     }
 }
 
-impl<'a, T, F, Space, QTable> ElementConnectivityAssembler for ElementIntegralVolumeAssembler<'a, T, F, Space, QTable>
+impl<'a, T, F, SolutionDim, Space, QTable> ElementConnectivityAssembler for ElementIntegralVolumeAssembler<'a, T, F, SolutionDim, Space, QTable>
 where
     T: Real,
     // TODO: For some reason this only works if we specify Space::ReferenceDim. However, Space::GeometryDim would be
     // more appropriate, and we anyway have Space::GeometryDim == Space::ReferenceDim by definition of
     // a volumetric finite element space... But unsure if it may cause downstream issues
-    F: VolumeFunction<T, Space::ReferenceDim>,
+    F: UGradUFunction<T, Space::ReferenceDim, SolutionDim>,
+    SolutionDim: SmallDim,
     Space: VolumetricFiniteElementSpace<T>,
     DefaultAllocator:
-        TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
+        TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim> + DimAllocator<T, F::OutputDim>
 {
     fn solution_dim(&self) -> usize {
-        F::SolutionDim::dim()
+        SolutionDim::dim()
     }
 
     fn num_elements(&self) -> usize {
@@ -574,15 +776,16 @@ where
     }
 }
 
-impl<'a, T, F, Space, QTable> ElementScalarAssembler<T> for ElementIntegralVolumeAssembler<'a, T, F, Space, QTable>
+impl<'a, T, F, SolutionDim, Space, QTable> ElementScalarAssembler<T> for ElementIntegralVolumeAssembler<'a, T, F, SolutionDim, Space, QTable>
 where
     T: Real,
     // TODO: See comment in impl for ElementConnectivityAssembler. Here we should ideally have Space::GeometryDim
-    F: VolumeFunction<T, Space::ReferenceDim>,
+    F: UGradUFunction<T, Space::ReferenceDim, SolutionDim>,
+    SolutionDim: SmallDim,
     Space: VolumetricFiniteElementSpace<T>,
     QTable: QuadratureTable<T, Space::ReferenceDim>,
     DefaultAllocator:
-        TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
+        TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim> + DimAllocator<T, F::OutputDim>,
 {
     fn assemble_element_scalar(&self, element_index: usize) -> eyre::Result<T> {
         let n = self.element_node_count(element_index);
