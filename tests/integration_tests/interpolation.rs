@@ -4,11 +4,14 @@ use nalgebra::{DefaultAllocator, DVectorSlice, OMatrix, OVector, Point2, U1, U2,
 use fenris::assembly::buffers::{BufferUpdate, InterpolationBuffer};
 use fenris::io::vtk::FiniteElementMeshDataSetBuilder;
 use fenris::mesh::procedural::create_unit_square_uniform_tri_mesh_2d;
-use fenris::mesh::TriangleMesh2d;
-use fenris::space::{InterpolateGradientInSpace, SpatiallyIndexed};
+use fenris::mesh::{Mesh, TriangleMesh2d};
+use fenris::space::{InterpolateGradientInSpace, InterpolateInSpace, SpatiallyIndexed};
 use fenris::util::global_vector_from_point_fn;
 use fenris::{quadrature, SmallDim};
+use fenris::connectivity::Tri3d2Connectivity;
+use fenris::mesh::refinement::refine_uniformly_repeat;
 use fenris_traits::allocators::{BiDimAllocator, TriDimAllocator};
+use util::flatten_vertically;
 use crate::integration_tests::data_output_path;
 
 fn u_scalar(p: &Point2<f64>) -> Vector1<f64> {
@@ -157,4 +160,81 @@ fn spatially_indexed_interpolation_trimesh() {
             assert_matrix_eq!(u, u_expected, comp = abs, tol = 1e-12);
         }
     }
+}
+
+#[test]
+fn basic_extrapolation() {
+    // We don't have any guarantees about how extrapolation should perform,
+    // but we want to make sure it doesn't do anything crazy. Therefore we use this test
+    // to visually confirm that we get reasonable behavior for a simple example,
+    // and use insta to track any changes in its output.
+
+    // The set up consists of two meshes of a square with a hole. The "base" mesh is smaller,
+    // and the "outer" mesh is slightly thicker, so that there are parts of "outer" that
+    // extend beyond the domain of "base". We then interpolate an arbitrary function
+    // from "base" onto "outer", so that some parts are interpolated and some are extrapolated.
+
+    // Increase this for higher fidelity visualization
+    let refinement_rounds = 2;
+
+    // The s variable determines the "extruded" thickness
+    let vertices = |s: f64| [
+        [-s, -s],
+        [1.0, -s],
+        [2.0, -s],
+        [3.0 + s, -s],
+        [-s, 1.0],
+        [1.0 + s, 1.0 + s],
+        [2.0 - s, 1.0 + s],
+        [3.0 + s, 1.0 + s],
+        [0.0 - s, 2.0 - s],
+        [1.0 + s, 2.0 - s],
+        [2.0 - s, 2.0 - s],
+        [3.0 + s, 2.0 - s],
+        [0.0 - s, 3.0 + s],
+        [1.0, 3.0 + s],
+        [2.0, 3.0 + s],
+        [3.0 + s, 3.0 + s],
+    ].map(Point2::from);
+    let connectivity = [
+        [0, 1, 4],
+        [1, 5, 4],
+        [1, 2, 6],
+        [1, 5, 6],
+        [2, 3, 6],
+        [3, 7, 6],
+        [6, 7, 11],
+        [6, 11, 10],
+        [10, 11, 14],
+        [11, 15, 14],
+        [10, 14, 9],
+        [9, 14, 13],
+        [12, 9, 13],
+        [8, 9, 12],
+        [4, 9, 8],
+        [4, 5, 9],
+    ].map(Tri3d2Connectivity);
+    let base_mesh = Mesh::from_vertices_and_connectivity(vertices(0.0).to_vec(), connectivity.to_vec());
+    let base_mesh = refine_uniformly_repeat(&base_mesh, refinement_rounds);
+    let outer_mesh = Mesh::from_vertices_and_connectivity(vertices(0.1).to_vec(), connectivity.to_vec());
+    let outer_mesh = refine_uniformly_repeat(&outer_mesh, refinement_rounds);
+
+    let u_base = global_vector_from_point_fn(base_mesh.vertices(), u_scalar);
+    FiniteElementMeshDataSetBuilder::from_mesh(&base_mesh)
+        .with_point_scalar_attributes("u", 1, u_base.as_slice())
+        .try_export(data_output_path()
+            .join("interpolation/extrapolation/base_mesh.vtu"))
+        .unwrap();
+
+    let mut u_outer = vec![Vector1::zeros(); outer_mesh.vertices().len()];
+    SpatiallyIndexed::from_space(base_mesh)
+        .interpolate_at_points(outer_mesh.vertices(), DVectorSlice::from(&u_base), &mut u_outer);
+
+    FiniteElementMeshDataSetBuilder::from_mesh(&outer_mesh)
+        .with_point_scalar_attributes("u", 1, flatten_vertically(&u_outer).unwrap().as_slice())
+        .try_export(data_output_path()
+            .join("interpolation/extrapolation/outer_mesh.vtu"))
+        .unwrap();
+
+    insta::assert_debug_snapshot!(&u_outer);
 }
