@@ -212,19 +212,17 @@ impl<T: Real> Default for IntegrationWorkspace<T> {
 }
 
 /// Integrates the given function on the given element with the provided quadrature and interpolation weights.
-pub fn integrate_over_element<'a, T, F, Element, QuadratureRule, IntoDVectorSlice>(
+pub fn integrate_over_element<'a, T, F, Element>(
     integrand: F,
     element: &Element,
-    quadrature: QuadratureRule,
-    interpolation_weights: IntoDVectorSlice,
+    quadrature: impl Quadrature<T, Element::ReferenceDim>,
+    interpolation_weights: impl Into<DVectorSlice<'a, T>>,
     workspace: &mut IntegrationWorkspace<T>,
 ) -> OVector<T, F::OutputDim>
 where
     T: Real,
     F: UFunction<T, Element::GeometryDim>,
     Element: FiniteElement<T>,
-    QuadratureRule: Quadrature<T, Element::ReferenceDim>,
-    IntoDVectorSlice: Into<DVectorSlice<'a, T>>,
     DefaultAllocator: TriDimAllocator<T, F::SolutionDim, Element::GeometryDim, Element::ReferenceDim>
         // This is a separate bound because we generally don't need to mix the output dimension
         // with the other dimensions, so this way the bounds necessary for downstream consumers
