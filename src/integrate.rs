@@ -34,12 +34,26 @@ where
     }
 }
 
+/// A vector-valued function $f(x)$.
+///
+/// Functions of this type can be integrated over both volumes and surfaces.
+pub trait Function<T, GeometryDim>
+where
+    T: Scalar,
+    GeometryDim: SmallDim,
+    DefaultAllocator: DimAllocator<T, GeometryDim> + DimAllocator<T, Self::OutputDim>
+{
+    type OutputDim: SmallDim;
+
+    fn evaluate(&self, x: &OPoint<T, GeometryDim>) -> OVector<T, Self::OutputDim>;
+}
+
 /// A vector-valued function $f(x, u)$.
 ///
 /// Here $u = u(x)$ is a function $u: \Omega \rightarrow \mathbb{R}^s$.
 ///
 /// Functions of this type can be integrated over both volumes and surfaces.
-pub trait Function<T, GeometryDim>
+pub trait UFunction<T, GeometryDim>
 where
     T: Scalar,
     GeometryDim: SmallDim,
@@ -52,11 +66,11 @@ where
     fn evaluate(&self, x: &OPoint<T, GeometryDim>, u: &OVector<T, Self::SolutionDim>) -> OVector<T, Self::OutputDim>;
 }
 
-impl<'a, T, GeometryDim, F> Function<T, GeometryDim> for &'a F
+impl<'a, T, GeometryDim, F> UFunction<T, GeometryDim> for &'a F
 where
     T: Scalar,
     GeometryDim: SmallDim,
-    F: Function<T, GeometryDim>,
+    F: UFunction<T, GeometryDim>,
     DefaultAllocator: DimAllocator<T, F::SolutionDim> + DimAllocator<T, F::OutputDim> + DimAllocator<T, GeometryDim>,
 {
     type OutputDim = F::OutputDim;
@@ -98,7 +112,7 @@ impl<SolutionDim> Integrand<SolutionDim, ()> {
     }
 }
 
-impl<F, T, OutputDim, SolutionDim, GeometryDim> Function<T, GeometryDim> for Integrand<SolutionDim, F>
+impl<F, T, OutputDim, SolutionDim, GeometryDim> UFunction<T, GeometryDim> for Integrand<SolutionDim, F>
 where
     F: Fn(&OPoint<T, GeometryDim>, &OVector<T, SolutionDim>) -> OVector<T, OutputDim>,
     T: Scalar,
@@ -119,7 +133,8 @@ where
 ///
 /// Here $u = u(x)$ is a function $u: \Omega \rightarrow \mathbb{R}^s$.
 ///
-/// Functions of this type can be integrated over both volumes and surfaces.
+/// Functions of this type can be integrated only over volumes, since the gradient $\nabla u$
+/// is otherwise not well-defined.
 pub trait VolumeFunction<T, GeometryDim>
 where
     T: Scalar,
@@ -206,7 +221,7 @@ pub fn integrate_over_element<'a, T, F, Element, QuadratureRule, IntoDVectorSlic
 ) -> OVector<T, F::OutputDim>
 where
     T: Real,
-    F: Function<T, Element::GeometryDim>,
+    F: UFunction<T, Element::GeometryDim>,
     Element: FiniteElement<T>,
     QuadratureRule: Quadrature<T, Element::ReferenceDim>,
     IntoDVectorSlice: Into<DVectorSlice<'a, T>>,
@@ -376,7 +391,7 @@ where
     pub fn build_integrator(self) -> ElementIntegralAssembler<'a, T, F, Space, QTable>
     where
         Space: FiniteElementSpace<T>,
-        F: Function<T, Space::GeometryDim>,
+        F: UFunction<T, Space::GeometryDim>,
         DefaultAllocator:
             TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
     {
@@ -433,7 +448,7 @@ impl<'a, T, F, Space, QTable> ElementConnectivityAssembler for ElementIntegralAs
 where
     T: Scalar,
     Space: FiniteElementSpace<T>,
-    F: Function<T, Space::GeometryDim>,
+    F: UFunction<T, Space::GeometryDim>,
     DefaultAllocator:
         TriDimAllocator<T, F::SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
 {
@@ -491,7 +506,7 @@ where
 impl<'a, T, F, Space, QTable> ElementScalarAssembler<T> for ElementIntegralAssembler<'a, T, F, Space, QTable>
 where
     T: Real,
-    F: Function<T, Space::GeometryDim>,
+    F: UFunction<T, Space::GeometryDim>,
     Space: FiniteElementSpace<T>,
     QTable: QuadratureTable<T, Space::ReferenceDim>,
     DefaultAllocator:
