@@ -34,8 +34,43 @@ where
     }
 }
 
-pub struct FnFunction<F>(pub F);
-pub struct FnUFunction<F>(pub F);
+/// A wrapper for turning an [`Fn`] into a [`Function`].
+///
+/// # Examples
+///
+/// ```rust
+/// use nalgebra::{Point2, Vector1};
+/// use fenris::integrate::FnFunction;
+/// use fenris::mesh::procedural::create_unit_square_uniform_tri_mesh_2d;
+///
+/// let mesh = create_unit_square_uniform_tri_mesh_2d(5);
+///
+/// let f = FnFunction::new(|x: &Point2<f64>| Vector1::new(x.x + x.y));
+///
+/// let f = FnFunction::new(|x, u| )
+/// ```
+#[derive(Debug, Clone, Copy)]
+pub struct FnFunction<F, Dependencies=dependency::AutoDeps> {
+    f: F,
+    marker: PhantomData<Dependencies>
+}
+
+impl<F> FnFunction<F> {
+    pub fn new(f: F) -> Self {
+        Self { f, marker: PhantomData }
+    }
+
+    pub fn with_dependencies<Dependencies>(self) -> FnFunction<F, Dependencies> {
+        FnFunction { f: self.f, marker: PhantomData }
+    }
+}
+
+pub mod dependency {
+    pub struct AutoDeps;
+    pub struct NoDeps;
+    pub struct DependsOnU;
+    pub struct DependsOnGrad;
+}
 
 impl<T, F, GeometryDim, OutputDim> Function<T, GeometryDim> for FnFunction<F>
 where
@@ -48,52 +83,129 @@ where
     type OutputDim = OutputDim;
 
     fn evaluate(&self, x: &OPoint<T, GeometryDim>) -> OVector<T, Self::OutputDim> {
-        self.0(x)
+        (self.f)(x)
     }
 }
 
-impl<T, F, GeometryDim, OutputDim, SolutionDim> UFunction<T, GeometryDim, SolutionDim> for FnUFunction<F>
+impl<T, F, GeometryDim, OutputDim, SolutionDim> UFunction<T, GeometryDim, SolutionDim> for FnFunction<F>
 where
     T: Scalar,
     F: Fn(&OPoint<T, GeometryDim>, &OVector<T, SolutionDim>) -> OVector<T, OutputDim>,
     GeometryDim: SmallDim,
     OutputDim: SmallDim,
+    SolutionDim: SmallDim,
     DefaultAllocator: DimAllocator<T, OutputDim> + DimAllocator<T, GeometryDim> + DimAllocator<T, SolutionDim>
 {
     type OutputDim = OutputDim;
 
     fn evaluate(&self, x: &OPoint<T, GeometryDim>, u: impl FnOnce() -> OVector<T, SolutionDim>) -> OVector<T, Self::OutputDim> {
-        self.0(x, &u())
+        (self.f)(x, &u())
     }
 }
 
-pub fn function_from_fn<T, GeometryDim, OutputDim>(f: impl Fn(&OPoint<T, GeometryDim>) -> OVector<T, OutputDim>)
-    -> impl Function<T, GeometryDim>
+impl<T, F, GeometryDim, OutputDim, SolutionDim> UFunction<T, GeometryDim, SolutionDim> for FnFunction<F, dependency::NoDeps>
 where
     T: Scalar,
+    F: Fn(&OPoint<T, GeometryDim>) -> OVector<T, OutputDim>,
     GeometryDim: SmallDim,
     OutputDim: SmallDim,
-    DefaultAllocator: DimAllocator<T, OutputDim> + DimAllocator<T, GeometryDim>
+    SolutionDim: SmallDim,
+    DefaultAllocator: DimAllocator<T, OutputDim> + DimAllocator<T, GeometryDim> + DimAllocator<T, SolutionDim>
 {
-    struct Wrapper<F>(F);
+    type OutputDim = OutputDim;
 
-    impl<T, F, GeometryDim, OutputDim> Function<T, GeometryDim> for Wrapper<F>
-    where
-        T: Scalar,
-        F: Fn(&OPoint<T, GeometryDim>) -> OVector<T, OutputDim>,
-        GeometryDim: SmallDim,
-        OutputDim: SmallDim,
-        DefaultAllocator: DimAllocator<T, OutputDim> + DimAllocator<T, GeometryDim>
-    {
-        type OutputDim = OutputDim;
-
-        fn evaluate(&self, x: &OPoint<T, GeometryDim>) -> OVector<T, Self::OutputDim> {
-            self.0(x)
-        }
+    fn evaluate(&self, x: &OPoint<T, GeometryDim>, _: impl FnOnce() -> OVector<T, SolutionDim>) -> OVector<T, Self::OutputDim> {
+        (self.f)(x)
     }
-
-    Wrapper(f)
 }
+
+impl<T, F, GeometryDim, OutputDim, SolutionDim> UGradFunction<T, GeometryDim, SolutionDim> for FnFunction<F>
+where
+    T: Scalar,
+    F: Fn(&OPoint<T, GeometryDim>, &OVector<T, SolutionDim>, &OMatrix<T, GeometryDim, SolutionDim>) -> OVector<T, OutputDim>,
+    GeometryDim: SmallDim,
+    OutputDim: SmallDim,
+    SolutionDim: SmallDim,
+    DefaultAllocator: DimAllocator<T, OutputDim> + BiDimAllocator<T, GeometryDim, SolutionDim>
+{
+    type OutputDim = OutputDim;
+
+    fn evaluate(&self,
+                x: &OPoint<T, GeometryDim>,
+                u: impl FnOnce() -> OVector<T, SolutionDim>,
+                u_grad: impl FnOnce() -> OMatrix<T, GeometryDim, SolutionDim>
+    ) -> OVector<T, Self::OutputDim> {
+        (self.f)(x, &u(), &u_grad())
+    }
+}
+
+impl<T, F, GeometryDim, OutputDim, SolutionDim> UGradFunction<T, GeometryDim, SolutionDim> for FnFunction<F, dependency::DependsOnGrad>
+where
+    T: Scalar,
+    F: Fn(&OPoint<T, GeometryDim>, &OMatrix<T, GeometryDim, SolutionDim>) -> OVector<T, OutputDim>,
+    GeometryDim: SmallDim,
+    OutputDim: SmallDim,
+    SolutionDim: SmallDim,
+    DefaultAllocator: DimAllocator<T, OutputDim> + BiDimAllocator<T, GeometryDim, SolutionDim>
+{
+    type OutputDim = OutputDim;
+
+    fn evaluate(&self,
+                x: &OPoint<T, GeometryDim>,
+                _: impl FnOnce() -> OVector<T, SolutionDim>,
+                u_grad: impl FnOnce() -> OMatrix<T, GeometryDim, SolutionDim>
+    ) -> OVector<T, Self::OutputDim> {
+        (self.f)(x, &u_grad())
+    }
+}
+
+impl<T, F, GeometryDim, OutputDim, SolutionDim> UGradFunction<T, GeometryDim, SolutionDim> for FnFunction<F, dependency::DependsOnU>
+where
+    T: Scalar,
+    F: Fn(&OPoint<T, GeometryDim>, &OVector<T, SolutionDim>) -> OVector<T, OutputDim>,
+    GeometryDim: SmallDim,
+    OutputDim: SmallDim,
+    SolutionDim: SmallDim,
+    DefaultAllocator: DimAllocator<T, OutputDim> + BiDimAllocator<T, GeometryDim, SolutionDim>
+{
+    type OutputDim = OutputDim;
+
+    fn evaluate(&self,
+                x: &OPoint<T, GeometryDim>,
+                u: impl FnOnce() -> OVector<T, SolutionDim>,
+                _: impl FnOnce() -> OMatrix<T, GeometryDim, SolutionDim>
+    ) -> OVector<T, Self::OutputDim> {
+        (self.f)(x, &u())
+    }
+}
+
+// pub fn function_from_fn<T, GeometryDim, OutputDim>(f: impl Fn(&OPoint<T, GeometryDim>) -> OVector<T, OutputDim>)
+//     -> impl Function<T, GeometryDim>
+// where
+//     T: Scalar,
+//     GeometryDim: SmallDim,
+//     OutputDim: SmallDim,
+//     DefaultAllocator: DimAllocator<T, OutputDim> + DimAllocator<T, GeometryDim>
+// {
+//     struct Wrapper<F>(F);
+//
+//     impl<T, F, GeometryDim, OutputDim> Function<T, GeometryDim> for Wrapper<F>
+//     where
+//         T: Scalar,
+//         F: Fn(&OPoint<T, GeometryDim>) -> OVector<T, OutputDim>,
+//         GeometryDim: SmallDim,
+//         OutputDim: SmallDim,
+//         DefaultAllocator: DimAllocator<T, OutputDim> + DimAllocator<T, GeometryDim>
+//     {
+//         type OutputDim = OutputDim;
+//
+//         fn evaluate(&self, x: &OPoint<T, GeometryDim>) -> OVector<T, Self::OutputDim> {
+//             self.0(x)
+//         }
+//     }
+//
+//     Wrapper(f)
+// }
 
 /// A vector-valued function $f(x)$.
 ///
@@ -109,20 +221,20 @@ where
     fn evaluate(&self, x: &OPoint<T, GeometryDim>) -> OVector<T, Self::OutputDim>;
 }
 
-impl<T, F, GeometryDim, OutputDim> Function<T, GeometryDim> for F
-where
-    T: Scalar,
-    GeometryDim: SmallDim,
-    OutputDim: SmallDim,
-    F: Fn(&OPoint<T, GeometryDim>) -> OVector<T, OutputDim>,
-    DefaultAllocator: DimAllocator<T, GeometryDim> + DimAllocator<T, OutputDim>
-{
-    type OutputDim = OutputDim;
-
-    fn evaluate(&self, x: &OPoint<T, GeometryDim>) -> OVector<T, OutputDim> {
-        self(x)
-    }
-}
+// impl<T, F, GeometryDim, OutputDim> Function<T, GeometryDim> for F
+// where
+//     T: Scalar,
+//     GeometryDim: SmallDim,
+//     OutputDim: SmallDim,
+//     F: Fn(&OPoint<T, GeometryDim>) -> OVector<T, OutputDim>,
+//     DefaultAllocator: DimAllocator<T, GeometryDim> + DimAllocator<T, OutputDim>
+// {
+//     type OutputDim = OutputDim;
+//
+//     fn evaluate(&self, x: &OPoint<T, GeometryDim>) -> OVector<T, OutputDim> {
+//         self(x)
+//     }
+// }
 
 /// A vector-valued function $f(x, u)$.
 ///
@@ -144,23 +256,23 @@ where
         u: impl FnOnce() -> OVector<T, SolutionDim>) -> OVector<T, Self::OutputDim>;
 }
 
-impl<T, GeometryDim, SolutionDim, F> UFunction<T, GeometryDim, SolutionDim> for F
-where
-    T: Scalar,
-    GeometryDim: SmallDim,
-    SolutionDim: SmallDim,
-    F: Function<T, GeometryDim>,
-    DefaultAllocator: DimAllocator<T, F::OutputDim> + DimAllocator<T, GeometryDim> + DimAllocator<T, SolutionDim>
-{
-    type OutputDim = F::OutputDim;
-
-    fn evaluate(&self,
-                x: &OPoint<T, GeometryDim>,
-                _: impl FnOnce() -> OVector<T, SolutionDim>
-    ) -> OVector<T, Self::OutputDim> {
-        self.evaluate(x)
-    }
-}
+// impl<T, GeometryDim, SolutionDim, F> UFunction<T, GeometryDim, SolutionDim> for F
+// where
+//     T: Scalar,
+//     GeometryDim: SmallDim,
+//     SolutionDim: SmallDim,
+//     F: Function<T, GeometryDim>,
+//     DefaultAllocator: DimAllocator<T, F::OutputDim> + DimAllocator<T, GeometryDim> + DimAllocator<T, SolutionDim>
+// {
+//     type OutputDim = F::OutputDim;
+//
+//     fn evaluate(&self,
+//                 x: &OPoint<T, GeometryDim>,
+//                 _: impl FnOnce() -> OVector<T, SolutionDim>
+//     ) -> OVector<T, Self::OutputDim> {
+//         self.evaluate(x)
+//     }
+// }
 
 // /// A vector-valued function $f(x, u)$.
 // ///
@@ -274,7 +386,7 @@ where
 ///
 /// Functions of this type can be integrated only over volumes, since the gradient $\nabla u$
 /// is otherwise not well-defined.
-pub trait UGradUFunction<T, GeometryDim, SolutionDim>
+pub trait UGradFunction<T, GeometryDim, SolutionDim>
 where
     T: Scalar,
     GeometryDim: SmallDim,
@@ -291,24 +403,24 @@ where
     ) -> OVector<T, Self::OutputDim>;
 }
 
-impl<T, GeometryDim, SolutionDim, F> UGradUFunction<T, GeometryDim, SolutionDim> for F
-where
-    T: Scalar,
-    GeometryDim: SmallDim,
-    SolutionDim: SmallDim,
-    F: UFunction<T, GeometryDim, SolutionDim>,
-    DefaultAllocator: DimAllocator<T, F::OutputDim> + BiDimAllocator<T, GeometryDim, SolutionDim>,
-{
-    type OutputDim = F::OutputDim;
-
-    fn evaluate(&self,
-                x: &OPoint<T, GeometryDim>,
-                u: impl FnOnce() -> OVector<T, SolutionDim>,
-                _: impl FnOnce() -> OMatrix<T, GeometryDim, SolutionDim>
-    ) -> OVector<T, Self::OutputDim> {
-        self.evaluate(x, u)
-    }
-}
+// impl<T, GeometryDim, SolutionDim, F> UGradUFunction<T, GeometryDim, SolutionDim> for F
+// where
+//     T: Scalar,
+//     GeometryDim: SmallDim,
+//     SolutionDim: SmallDim,
+//     F: UFunction<T, GeometryDim, SolutionDim>,
+//     DefaultAllocator: DimAllocator<T, F::OutputDim> + BiDimAllocator<T, GeometryDim, SolutionDim>,
+// {
+//     type OutputDim = F::OutputDim;
+//
+//     fn evaluate(&self,
+//                 x: &OPoint<T, GeometryDim>,
+//                 u: impl FnOnce() -> OVector<T, SolutionDim>,
+//                 _: impl FnOnce() -> OMatrix<T, GeometryDim, SolutionDim>
+//     ) -> OVector<T, Self::OutputDim> {
+//         self.evaluate(x, u)
+//     }
+// }
 
 // impl<'a, T, F, GeometryDim, SolutionDim> UGradUFunction<T, GeometryDim, SolutionDim> for &'a F
 // where
@@ -450,7 +562,7 @@ pub fn integrate_over_volume_element<'a, T, Element, F, SolutionDim>(
 ) -> Result<OVector<T, F::OutputDim>, IntegrationFailure>
 where
     T: Real,
-    F: UGradUFunction<T, Element::GeometryDim, SolutionDim>,
+    F: UGradFunction<T, Element::GeometryDim, SolutionDim>,
     SolutionDim: SmallDim,
     Element: VolumetricFiniteElement<T>,
     DefaultAllocator:
@@ -616,7 +728,7 @@ where
     pub fn build_volume_integrator(self) -> ElementIntegralVolumeAssembler<'a, T, F, SolutionDim, Space, QTable>
     where
         Space: VolumetricFiniteElementSpace<T>,
-        F: UGradUFunction<T, Space::ReferenceDim, SolutionDim>,
+        F: UGradFunction<T, Space::ReferenceDim, SolutionDim>,
         DefaultAllocator:
             TriDimAllocator<T, SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
     {
@@ -749,7 +861,7 @@ where
     // TODO: For some reason this only works if we specify Space::ReferenceDim. However, Space::GeometryDim would be
     // more appropriate, and we anyway have Space::GeometryDim == Space::ReferenceDim by definition of
     // a volumetric finite element space... But unsure if it may cause downstream issues
-    F: UGradUFunction<T, Space::ReferenceDim, SolutionDim>,
+    F: UGradFunction<T, Space::ReferenceDim, SolutionDim>,
     SolutionDim: SmallDim,
     Space: VolumetricFiniteElementSpace<T>,
     DefaultAllocator:
@@ -780,7 +892,7 @@ impl<'a, T, F, SolutionDim, Space, QTable> ElementScalarAssembler<T> for Element
 where
     T: Real,
     // TODO: See comment in impl for ElementConnectivityAssembler. Here we should ideally have Space::GeometryDim
-    F: UGradUFunction<T, Space::ReferenceDim, SolutionDim>,
+    F: UGradFunction<T, Space::ReferenceDim, SolutionDim>,
     SolutionDim: SmallDim,
     Space: VolumetricFiniteElementSpace<T>,
     QTable: QuadratureTable<T, Space::ReferenceDim>,
