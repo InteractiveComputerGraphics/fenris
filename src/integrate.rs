@@ -36,18 +36,62 @@ where
 
 /// A wrapper for turning an [`Fn`] into a [`Function`].
 ///
+/// This wrapper works around some limitations of the type system, and provides facilities
+/// to disambiguate otherwise ambiguous situations. See the below examples for usage.
+///
 /// # Examples
 ///
 /// ```rust
-/// use nalgebra::{Point2, Vector1};
-/// use fenris::integrate::FnFunction;
+/// use nalgebra::{Matrix2, Point2, U2, vector, Vector1, Vector2};
+/// use fenris::element::{Tet4Element, Tri3d2Element};
+/// use fenris::integrate::{FnFunction, integrate_over_element, integrate_over_volume_element,
+///     IntegrationWorkspace};
+/// use fenris::integrate::dependency::{DependsOnGrad, DependsOnU, NoDeps};
 /// use fenris::mesh::procedural::create_unit_square_uniform_tri_mesh_2d;
+/// use fenris::quadrature::CanonicalStiffnessQuadrature;
+/// use fenris::util::global_vector_from_point_fn;
 ///
-/// let mesh = create_unit_square_uniform_tri_mesh_2d(5);
+/// // Set up some arbitrary test data: a 2D linear triangle element,
+/// // a quadrature rule and arbitrary interpolation weights
+/// let element = Tri3d2Element::<f64>::reference();
+/// let quadrature = element.canonical_stiffness_quadrature();
+/// let u = vector![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+/// let mut workspace = IntegrationWorkspace::default();
 ///
-/// let f = FnFunction::new(|x: &Point2<f64>| Vector1::new(x.x + x.y));
+/// // Integrate a function f(x) with integrate_over_element
+/// let f1 = FnFunction::new(|x: &Point2<_>| vector![x.x + x.y, 3.0])
+///     // Since the function has no dependency on u, we need to indicate which
+///     // dimension the solution variables have if we want to use it
+///     // in a context where UFunction/UGradFunction is required
+///     .with_dependencies::<NoDeps<U2>>();
+/// let i1 = integrate_over_element(&f1, &element, &quadrature, &u, &mut workspace);
 ///
-/// let f = FnFunction::new(|x, u| )
+/// // Integrate a function f(x, u) -> R^2
+/// let f2 = FnFunction::new(|x: &Point2<_>, u: &Vector2<_>| vector![x.x * u[1], u[0] + u[1]]);
+/// let i2 = integrate_over_element(&f2, &element, &quadrature, &u, &mut workspace);
+///
+/// // Integrate a function f(x, u, grad u) -> R^2
+/// // In this case we need to use integrate_over_volume_element, since grad u is not
+/// // well-defined for surface elements
+/// let f3 = FnFunction::new(|x: &Point2<_>, u: &Vector2<_>, u_grad: &Matrix2<_>|
+///     vector![x.x + x.y + u.x + u.y, u_grad.determinant()]);
+/// let i3 = integrate_over_volume_element(&f3, &element, &quadrature, &u, &mut workspace)
+///     .expect("Element is non-degenerate");
+///
+/// // Integrate a function f(x, grad u) -> R^2
+/// let f4 = FnFunction::new(|x: &Point2<_>, u_grad: &Matrix2<_>|
+///     vector![x.x + x.y + u_grad.determinant(), u_grad.norm()])
+///     // In order to resolve ambiguities due to the two-parameter closure,
+///     // we need to declare that the function depends only on grad u and not u
+///     .with_dependencies::<DependsOnGrad>();
+/// let i4 = integrate_over_volume_element(&f4, &element, &quadrature, &u, &mut workspace)
+///     .expect("Element is non-degenerate");
+///
+/// // Similarly, if we want to ingrate f2, which is of the form f(x, u),
+/// // with integrate_over_volume_element, we must declare that it depends only on u
+/// let f5 = f2.with_dependencies::<DependsOnU>();
+/// let i5 = integrate_over_volume_element(&f5, &element, &quadrature, &u, &mut workspace)
+///     .expect("Element is non-degenerate");
 /// ```
 #[derive(Debug, Clone, Copy)]
 pub struct FnFunction<F, Dependencies=dependency::AutoDeps> {
@@ -66,9 +110,23 @@ impl<F> FnFunction<F> {
 }
 
 pub mod dependency {
+    use std::marker::PhantomData;
+
+    /// Indicates that dependencies are "automatic", i.e. the natural dependencies for the
+    /// given situation.
+    ///
+    /// This is generally used if the wrapped `Fn` has the same number of parameters as the
+    /// function trait it is used with. For example, if passed to a function taking an instance
+    /// of [`UFunction`] ($f(x, u)$, the "automatic" dependencies are $x$ and $u$.
     pub struct AutoDeps;
-    pub struct NoDeps;
+
+    /// The function has no dependencies on $u$, i.e. $f = f(x)$.
+    pub struct NoDeps<SolutionDim> { marker: PhantomData<SolutionDim> }
+
+    /// The function has the form $f(x, u)$.
     pub struct DependsOnU;
+
+    /// The function has the form $f(x, grad u)$.
     pub struct DependsOnGrad;
 }
 
@@ -103,7 +161,7 @@ where
     }
 }
 
-impl<T, F, GeometryDim, OutputDim, SolutionDim> UFunction<T, GeometryDim, SolutionDim> for FnFunction<F, dependency::NoDeps>
+impl<T, F, GeometryDim, OutputDim, SolutionDim> UFunction<T, GeometryDim, SolutionDim> for FnFunction<F, dependency::NoDeps<SolutionDim>>
 where
     T: Scalar,
     F: Fn(&OPoint<T, GeometryDim>) -> OVector<T, OutputDim>,
@@ -649,8 +707,6 @@ where
     qtable: Option<&'a QTable>,
     marker: PhantomData<SolutionDim>,
 }
-
-// pub struct VolumeIntegrand<T>(pub T);
 
 impl<'a, T, F, SolutionDim, Space, QTable> ElementIntegralAssemblerBuilder<'a, T, F, SolutionDim, Space, QTable>
 where
