@@ -109,6 +109,7 @@ impl<F> FnFunction<F> {
     }
 }
 
+/// Dependency declarations for [`FnFunction`].
 pub mod dependency {
     use std::marker::PhantomData;
 
@@ -117,16 +118,24 @@ pub mod dependency {
     ///
     /// This is generally used if the wrapped `Fn` has the same number of parameters as the
     /// function trait it is used with. For example, if passed to a function taking an instance
-    /// of [`UFunction`] ($f(x, u)$, the "automatic" dependencies are $x$ and $u$.
+    /// of [`UFunction`](crate::integrate::UFunction)
+    /// ($f(x, u)$, the "automatic" dependencies are $x$ and $u$.
+    #[derive(Debug, Clone, PartialEq, Eq)]
     pub struct AutoDeps;
 
     /// The function has no dependencies on $u$, i.e. $f = f(x)$.
+    ///
+    /// Since the function does not depend on $u$, it is necessary to specify the solution
+    /// dimension, since it cannot be deduced from the function parameters.
+    #[derive(Debug, Clone, PartialEq, Eq)]
     pub struct NoDeps<SolutionDim> { marker: PhantomData<SolutionDim> }
 
     /// The function has the form $f(x, u)$.
+    #[derive(Debug, Clone, PartialEq, Eq)]
     pub struct DependsOnU;
 
-    /// The function has the form $f(x, grad u)$.
+    /// The function has the form $f(x, \nabla u)$.
+    #[derive(Debug, Clone, PartialEq, Eq)]
     pub struct DependsOnGrad;
 }
 
