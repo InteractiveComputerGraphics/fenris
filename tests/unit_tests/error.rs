@@ -65,7 +65,7 @@ fn test_element_L2_error_scalar() {
     let (weights, points) = quadrature::total_order::tetrahedron(10).unwrap();
     let L2_error_computed = estimate_element_L2_error(
         &element,
-        |x| Vector1::new(u1_scalar(x)),
+        &|x: &Point3<_>| Vector1::new(u1_scalar(x)),
         DVectorSlice::from(&u_h_element),
         &weights,
         &points,
@@ -95,7 +95,7 @@ fn test_element_L2_error_vector() {
     let (weights, points) = quadrature::total_order::tetrahedron(10).unwrap();
     let L2_error_computed = estimate_element_L2_error(
         &element,
-        u1_vector,
+        &u1_vector,
         DVectorSlice::from(&u_h_element),
         &weights,
         &points,
@@ -126,7 +126,7 @@ fn test_element_H1_seminorm_error_scalar() {
     let (weights, points) = quadrature::total_order::tetrahedron(8).unwrap();
     let H1_seminorm_computed = estimate_element_H1_seminorm_error(
         &element,
-        u1_scalar_grad,
+        &u1_scalar_grad,
         DVectorSlice::from(&u_h_element),
         &weights,
         &points,
@@ -155,7 +155,7 @@ fn test_element_H1_seminorm_error_vector() {
     let (weights, points) = quadrature::total_order::tetrahedron(10).unwrap();
     let H1_seminorm_computed = estimate_element_H1_seminorm_error(
         &element,
-        u1_vector_grad,
+        &u1_vector_grad,
         DVectorSlice::from(&u_h_element),
         &weights,
         &points,
@@ -199,7 +199,7 @@ fn test_estimate_L2_error_on_mesh() {
         Vector2::new(3.0 * x + 2.0 * y * z.powi(3), 4.0 * x.powi(2) + 2.0 * y + z)
     };
     let u_h = flatten_vertically(&mesh.vertices().iter().map(g).collect::<Vec<_>>()).unwrap();
-    let computed_L2_error = estimate_L2_error(&mesh, u_vector, &u_h, &quadrature_table).unwrap();
+    let computed_L2_error = estimate_L2_error(&mesh, &u_vector, &u_h, &quadrature_table).unwrap();
 
     // Compute the error "manually" element-by-element for comparison
     let expected_L2_error = {
@@ -214,7 +214,7 @@ fn test_estimate_L2_error_on_mesh() {
                 let points = error_quadrature_points.get(i).unwrap();
                 estimate_element_L2_error_squared(
                     &element,
-                    u_vector,
+                    &u_vector,
                     DVectorSlice::from(&u_h_element),
                     weights,
                     points,
@@ -256,7 +256,7 @@ fn test_estimate_H1_seminorm_error_on_mesh() {
         Vector2::new(3.0 * x + 2.0 * y * z.powi(3), 4.0 * x.powi(2) + 2.0 * y + z)
     };
     let u_h = flatten_vertically(&mesh.vertices().iter().map(g).collect::<Vec<_>>()).unwrap();
-    let computed_H1_seminorm_error = estimate_H1_seminorm_error(&mesh, u_vector_grad, &u_h, &quadrature_table).unwrap();
+    let computed_H1_seminorm_error = estimate_H1_seminorm_error(&mesh, &u_vector_grad, &u_h, &quadrature_table).unwrap();
 
     // Compute the error "manually" element-by-element for comparison
     let expected_H1_seminorm_error = {
@@ -271,7 +271,7 @@ fn test_estimate_H1_seminorm_error_on_mesh() {
                 let points = error_quadrature_points.get(i).unwrap();
                 estimate_element_H1_seminorm_error_squared(
                     &element,
-                    u_vector_grad,
+                    &u_vector_grad,
                     DVectorSlice::from(&u_h_element),
                     weights,
                     points,

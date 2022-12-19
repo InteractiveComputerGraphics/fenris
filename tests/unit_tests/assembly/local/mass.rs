@@ -62,7 +62,7 @@ fn squared_norm_agrees_with_element_mass_matrix_quadratic_form_tet20() {
     // Compute the squared norm of g_h as the L^2 squared error ||0 - g_h||^2
     let g_h_squared_norm = estimate_element_L2_error_squared(
         &element,
-        |_| Vector1::zeros(),
+        &|_: &Point3<_>| Vector1::zeros(),
         DVectorSlice::from(&g_h),
         quadrature.weights(),
         quadrature.points(),
@@ -180,7 +180,7 @@ fn squared_norm_agrees_with_mass_matrix_quadratic_form_full_mesh_tet10() {
     // interpolation of the zero function
     let g_h_squared_norm = estimate_L2_error_squared(
         &mesh,
-        |p| Vector1::new(g(p.x, p.y, p.z)),
+        &|p: &Point3<_>| Vector1::new(g(p.x, p.y, p.z)),
         &DVector::zeros(mesh.vertices().len()),
         &quadrature_table,
     )

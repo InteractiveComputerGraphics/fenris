@@ -267,7 +267,7 @@ fn quad4_bilinear_function_exact_error() {
     let (weights, points) = quadrature::total_order::quadrilateral(11).unwrap();
     let error = estimate_element_L2_error(
         &element,
-        |x| Vector1::new(u_exact(x)),
+        &|x: &Point2<_>| Vector1::new(u_exact(x)),
         MatrixSlice::from(&u_weights),
         &weights,
         &points,
@@ -307,7 +307,7 @@ fn hex27_triquadratic_function_exact_error() {
     let (weights, points) = quadrature::total_order::hexahedron(11).unwrap();
     let error = estimate_element_L2_error(
         &element,
-        |x| Vector1::new(u_exact(x)),
+        &|x: &Point3<_>| Vector1::new(u_exact(x)),
         MatrixSlice::from(&u_weights),
         &weights,
         &points,
@@ -343,7 +343,7 @@ fn hex20_quadratic_function_exact_error() {
     let (weights, points) = quadrature::total_order::hexahedron(11).unwrap();
     let error = estimate_element_L2_error(
         &element,
-        |x| Vector1::new(u_exact(x)),
+        &|x: &Point3<_>| Vector1::new(u_exact(x)),
         DVectorSlice::from(&u_weights),
         &weights,
         &points,
@@ -505,7 +505,7 @@ proptest! {
         let (weights, points) = quadrature::total_order::triangle(5).unwrap();
         let error = estimate_element_L2_error(
             &element,
-            |x| Vector1::new(u_exact(x)),
+            &|x: &Point2<_>| Vector1::new(u_exact(x)),
             DVectorSlice::from(&u_weights),
             &weights,
             &points,
@@ -527,7 +527,7 @@ proptest! {
         let (weights, points) = quadrature::total_order::triangle(5).unwrap();
         let error = estimate_element_L2_error(
             &element,
-            |x| Vector1::new(u_exact(x)),
+            &|x: &Point2<_>| Vector1::new(u_exact(x)),
             DVectorSlice::from(&u_weights),
             &weights,
             &points,
@@ -549,7 +549,7 @@ proptest! {
         let (weights, points) = quadrature::total_order::triangle(5).unwrap();
         let error = estimate_element_L2_error(
             &element,
-            |x| Vector1::new(u_exact(x)),
+            &|x: &Point2<_>| Vector1::new(u_exact(x)),
             DVectorSlice::from(&u_weights),
             &weights,
             &points,
@@ -581,7 +581,7 @@ proptest! {
         let (weights, points) = quadrature::total_order::quadrilateral(11).unwrap();
         let error = estimate_element_L2_error(
             &element,
-            |x| Vector1::new(u_exact(x)),
+            &|x: &Point2<_>| Vector1::new(u_exact(x)),
             MatrixSlice::from(&u_weights),
             &weights,
             &points,
@@ -721,7 +721,7 @@ proptest! {
 
         let (weights, points) = quadrature::total_order::tetrahedron(10).unwrap();
         let error = estimate_element_L2_error(
-            &element, |x| Vector1::new(u_exact(x)),
+            &element, &|x: &Point3<_>| Vector1::new(u_exact(x)),
             MatrixSlice::from(&u_weights),
             &weights,
             &points,
