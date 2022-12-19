@@ -581,7 +581,7 @@ where
     F: UFunction<T, Element::GeometryDim, SolutionDim>,
     SolutionDim: SmallDim,
     Element: FiniteElement<T>,
-    DefaultAllocator: TriDimAllocator<T, SolutionDim, Element::GeometryDim, Element::ReferenceDim>
+    DefaultAllocator: TriDimAllocator<T, Element::GeometryDim, Element::ReferenceDim, SolutionDim>
         // This is a separate bound because we generally don't need to mix the output dimension
         // with the other dimensions, so this way the bounds necessary for downstream consumers
         // are somewhat relaxed (the output dimension is often *fixed*, so maybe no bounds at all are necessary)
@@ -886,7 +886,7 @@ where
     Space: FiniteElementSpace<T>,
     QTable: QuadratureTable<T, Space::ReferenceDim>,
     DefaultAllocator:
-        TriDimAllocator<T, SolutionDim, Space::GeometryDim, Space::ReferenceDim> + DimAllocator<T, F::OutputDim>,
+        TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim> + DimAllocator<T, F::OutputDim>,
 {
     fn assemble_element_scalar(&self, element_index: usize) -> eyre::Result<T> {
         let n = self.element_node_count(element_index);
