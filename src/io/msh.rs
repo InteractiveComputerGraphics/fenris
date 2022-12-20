@@ -121,14 +121,17 @@ where
         ));
     }
 
-    // Note: The MSH `node_block`'s `entity_dim` does not seem to correspond to the geometrical
+    // Note: The following check is commented out because it can lead to missing nodes.
+    //  Probable explanation:
+    //  The MSH `node_block`'s `entity_dim` does not seem to correspond to the geometrical
     //  dimension of the points. Rather it seems to correspond to the dimension of the "physical"
     //  object represented by the node block.
     //  When creating primitives in Gmsh for example, the nodes of a triangulation of a sphere are
     //  divided into node_blocks representing its equator, surface and volume and all of them are
     //  referenced by the volumetric elements.
-    //  In addition, all node blocks have to be read in order for the global `node_tag` indexing to
-    //  be consistent work.
+    //  In addition, all node blocks have to be read anyway in order for the global `node_tag` indexing to
+    //  work consistently.
+    // TODO: Revisit this after some more experience with loading MSH files and delete this.
     /*
     if node_block
         .entity_dim
