@@ -3,6 +3,7 @@ mod basis;
 mod element;
 mod error;
 mod fe_mesh;
+mod io;
 mod mesh;
 mod quadrature;
 mod reorder;

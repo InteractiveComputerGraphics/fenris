@@ -1,19 +1,9 @@
+use crate::export_mesh_vtk;
 use fenris::connectivity::Tri3d2Connectivity;
-use fenris::io::vtk::FiniteElementMeshDataSetBuilder;
 use fenris::mesh::refinement::{refine_uniformly, refine_uniformly_repeat};
-use fenris::mesh::{Mesh, TriangleMesh2d};
+use fenris::mesh::Mesh;
 use insta::assert_debug_snapshot;
 use nalgebra::point;
-use std::path::Path;
-
-fn export_mesh_vtk(test_name: &str, file_stem: &str, mesh: &TriangleMesh2d<f64>) {
-    let output_path = Path::new("data/unit_tests/")
-        .join(test_name)
-        .join(format!("{file_stem}.vtu"));
-    FiniteElementMeshDataSetBuilder::from_mesh(mesh)
-        .try_export(output_path)
-        .expect("Export failure is a test failure")
-}
 
 #[test]
 fn uniform_refinement_tri3d2() {

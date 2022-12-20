@@ -1,0 +1,58 @@
+---
+source: tests/unit_tests/io/msh.rs
+expression: mesh
+---
+Mesh {
+    vertices: [
+        [
+            0.0,
+            0.0,
+        ],
+        [
+            0.5,
+            0.0,
+        ],
+        [
+            0.5,
+            0.5,
+        ],
+        [
+            0.0,
+            0.5,
+        ],
+        [
+            0.25,
+            0.25,
+        ],
+    ],
+    connectivity: [
+        Tri3d2Connectivity(
+            [
+                1,
+                4,
+                0,
+            ],
+        ),
+        Tri3d2Connectivity(
+            [
+                0,
+                4,
+                3,
+            ],
+        ),
+        Tri3d2Connectivity(
+            [
+                2,
+                4,
+                1,
+            ],
+        ),
+        Tri3d2Connectivity(
+            [
+                3,
+                4,
+                2,
+            ],
+        ),
+    ],
+}
