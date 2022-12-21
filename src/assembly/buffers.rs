@@ -93,7 +93,10 @@ impl<T: Real> BasisFunctionBuffer<T> {
     }
 
     pub fn element_values_gradients_mut<D: DimName>(&mut self) -> (&mut [T], MatrixSliceMut<T, D, Dynamic>) {
-        (&mut self.element_basis_values, MatrixSliceMut::from(&mut self.element_basis_gradients))
+        (
+            &mut self.element_basis_values,
+            MatrixSliceMut::from(&mut self.element_basis_gradients),
+        )
     }
 }
 
@@ -287,7 +290,7 @@ impl<T: Real> InterpolationBuffer<T> {
 pub enum BufferUpdate {
     BasisValues,
     BasisGradients,
-    Both
+    Both,
 }
 
 impl<'a, T, Space> InterpolationElementBuffer<'a, T, Space>
@@ -331,7 +334,7 @@ where
     pub fn interpolate_ref_gradient<S>(&self) -> OMatrix<T, Space::ReferenceDim, S>
     where
         S: SmallDim,
-        DefaultAllocator: BiDimAllocator<T, Space::ReferenceDim, S>
+        DefaultAllocator: BiDimAllocator<T, Space::ReferenceDim, S>,
     {
         let gradients: MatrixSlice<T, Space::ReferenceDim, _> = self.basis_buffer.element_gradients();
         let gradients = reshape_to_slice(&gradients, (Dynamic::new(gradients.len()), U1::name()));

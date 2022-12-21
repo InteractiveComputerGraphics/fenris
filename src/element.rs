@@ -2,16 +2,16 @@ use crate::allocators::{BiDimAllocator, DimAllocator};
 use crate::connectivity::Connectivity;
 use crate::nalgebra::MatrixSliceMut;
 use crate::{Real, SmallDim};
+use fenris_geometry::AxisAlignedBoundingBox;
 use fenris_optimize::newton::NewtonSettings;
 use nalgebra::allocator::Allocator;
 use nalgebra::OPoint;
-use nalgebra::{DimName, DVectorSlice, DVectorSliceMut, Dynamic};
+use nalgebra::{DVectorSlice, DVectorSliceMut, DimName, Dynamic};
 use nalgebra::{DefaultAllocator, DimMin, OMatrix, OVector, Scalar, U1};
 use num::Zero;
 use numeric_literals::replace_float_literals;
 use std::error::Error;
 use std::fmt::Debug;
-use fenris_geometry::{AxisAlignedBoundingBox};
 
 mod hexahedron;
 mod quadrilateral;
@@ -475,11 +475,11 @@ impl<T, D> ClosestPoint<T, D>
 where
     T: Scalar,
     D: DimName,
-    DefaultAllocator: Allocator<T, D>
+    DefaultAllocator: Allocator<T, D>,
 {
     pub fn point(&self) -> &OPoint<T, D> {
         match self {
-            ClosestPoint::InElement(point) | ClosestPoint::ClosestPoint(point) => point
+            ClosestPoint::InElement(point) | ClosestPoint::ClosestPoint(point) => point,
         }
     }
 }
@@ -487,7 +487,7 @@ where
 /// A finite element you can query for the closest point to an arbitrary point.
 pub trait ClosestPointInElement<T: Scalar>: FiniteElement<T>
 where
-    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>
+    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
     fn closest_point(&self, p: &OPoint<T, Self::GeometryDim>) -> ClosestPoint<T, Self::ReferenceDim>;
 }
@@ -495,7 +495,7 @@ where
 /// A finite element that can be queried for its bounding box.
 pub trait BoundsForElement<T: Scalar>: FiniteElement<T>
 where
-    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>
+    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
 {
     fn element_bounds(&self) -> AxisAlignedBoundingBox<T, Self::GeometryDim>;
 }

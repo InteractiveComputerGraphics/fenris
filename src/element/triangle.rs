@@ -1,16 +1,19 @@
-use itertools::Itertools;
-use numeric_literals::replace_float_literals;
 use fenris_geometry::predicates::orient2d_inexact;
-use nalgebra::distance_squared;
-use std::cmp::Ordering;
 use fenris_geometry::AxisAlignedBoundingBox;
+use itertools::Itertools;
+use nalgebra::distance_squared;
+use numeric_literals::replace_float_literals;
+use std::cmp::Ordering;
 
 use crate::connectivity::{Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity};
-use crate::element::{BoundsForElement, ClosestPoint, ClosestPointInElement, ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement, SurfaceFiniteElement};
+use crate::element::{
+    BoundsForElement, ClosestPoint, ClosestPointInElement, ElementConnectivity, FiniteElement,
+    FixedNodesReferenceFiniteElement, SurfaceFiniteElement,
+};
 use crate::geometry::{LineSegment2d, Triangle, Triangle2d, Triangle3d};
 use crate::nalgebra::{
     distance, Matrix1x3, Matrix1x6, Matrix2, Matrix2x3, Matrix2x6, Matrix3, Matrix3x2, OPoint, Point2, Point3, Scalar,
-    U2, U3, U6, Vector2, Vector3,
+    Vector2, Vector3, U2, U3, U6,
 };
 use crate::Real;
 
@@ -464,7 +467,8 @@ impl<T: Real> ClosestPointInElement<T> for Tri3d2Element<T> {
 
         // Compute the closest point on each edge and take the point corresponding to the
         // smallest distance (squared)
-        let (idx, t, _) = edges.into_iter()
+        let (idx, t, _) = edges
+            .into_iter()
             .map(|(x1, x2)| LineSegment2d::from_end_points(x1.clone(), x2.clone()))
             .enumerate()
             .map(|(idx, segment)| {
@@ -474,12 +478,15 @@ impl<T: Real> ClosestPointInElement<T> for Tri3d2Element<T> {
                 let dist2 = distance_squared(p, &point);
                 (idx, t, dist2)
             })
-            .min_by(|(_, _, dist2_a), (_, _, dist2_b)| dist2_a.partial_cmp(&dist2_b)
-                // TODO: This is an arbitrary choice. Ideally we'd consistently choose
-                // in such a way that NaNs would be selected as the minimum to
-                // avoid hiding potential bugs, but the RealField trait atm does not seem
-                // to expose something like an "is_nan" method
-                .unwrap_or(Ordering::Less))
+            .min_by(|(_, _, dist2_a), (_, _, dist2_b)| {
+                dist2_a
+                    .partial_cmp(&dist2_b)
+                    // TODO: This is an arbitrary choice. Ideally we'd consistently choose
+                    // in such a way that NaNs would be selected as the minimum to
+                    // avoid hiding potential bugs, but the RealField trait atm does not seem
+                    // to expose something like an "is_nan" method
+                    .unwrap_or(Ordering::Less)
+            })
             .expect("We always have exactly 3 items in the iterator");
 
         // Use parameter representation to transfer result to reference element
@@ -493,7 +500,6 @@ impl<T: Real> ClosestPointInElement<T> for Tri3d2Element<T> {
 
 impl<T: Real> BoundsForElement<T> for Tri3d2Element<T> {
     fn element_bounds(&self) -> AxisAlignedBoundingBox<T, Self::GeometryDim> {
-        AxisAlignedBoundingBox::from_points(self.vertices())
-            .expect("Never fails since we always have > 0 vertices")
+        AxisAlignedBoundingBox::from_points(self.vertices()).expect("Never fails since we always have > 0 vertices")
     }
 }

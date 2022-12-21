@@ -4,10 +4,10 @@ use crate::geometry::Orientation::Counterclockwise;
 use crate::mesh::procedural::create_rectangular_uniform_quad_mesh_2d;
 use crate::mesh::QuadMesh2d;
 use ::proptest::prelude::*;
+use fenris_geometry::proptest::Triangle2dParams;
 use fenris_geometry::{Triangle2d, Triangle3d};
 use nalgebra::{Point2, Point3, Vector2};
 use std::cmp::max;
-use fenris_geometry::proptest::Triangle2dParams;
 
 pub fn point2() -> impl Strategy<Value = Point2<f64>> {
     // Pick a reasonably small range to pick coordinates from,

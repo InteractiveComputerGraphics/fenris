@@ -3,13 +3,16 @@ use crate::allocators::{BiDimAllocator, TriDimAllocator};
 use crate::assembly::global::assemble_scalar;
 use crate::assembly::local::QuadratureTable;
 use crate::element::VolumetricFiniteElement;
-use crate::integrate::{integrate_over_element, integrate_over_volume_element, ElementIntegralAssemblerBuilder, IntegrationWorkspace, UFunction, FnFunction, UGradFunction};
 use crate::integrate::dependency::DependsOnGrad;
+use crate::integrate::{
+    integrate_over_element, integrate_over_volume_element, ElementIntegralAssemblerBuilder, FnFunction,
+    IntegrationWorkspace, UFunction, UGradFunction,
+};
 use crate::nalgebra::DVectorSlice;
 use crate::nalgebra::{DefaultAllocator, OPoint, OVector};
 use crate::space::{InterpolateGradientInSpace, InterpolateInSpace, VolumetricFiniteElementSpace};
 use crate::{Real, SmallDim};
-use nalgebra::{OMatrix, Vector1, U1, Scalar};
+use nalgebra::{OMatrix, Scalar, Vector1, U1};
 
 /// A function $u: \mathbb{R}^d \rightarrow \mathbb{R}^s$ of the form $u(x)$ used to represent a reference solution.
 ///
@@ -21,7 +24,7 @@ where
     T: Scalar,
     GeometryDim: SmallDim,
     SolutionDim: SmallDim,
-    DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>
+    DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>,
 {
     fn evaluate(&self, x: &OPoint<T, GeometryDim>) -> OVector<T, SolutionDim>;
 }
@@ -32,7 +35,7 @@ where
     F: Fn(&OPoint<T, GeometryDim>) -> OVector<T, SolutionDim>,
     GeometryDim: SmallDim,
     SolutionDim: SmallDim,
-    DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>
+    DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>,
 {
     fn evaluate(&self, x: &OPoint<T, GeometryDim>) -> OVector<T, SolutionDim> {
         self(x)
@@ -49,7 +52,7 @@ where
     T: Scalar,
     GeometryDim: SmallDim,
     SolutionDim: SmallDim,
-    DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>
+    DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>,
 {
     fn evaluate_grad(&self, x: &OPoint<T, GeometryDim>) -> OMatrix<T, GeometryDim, SolutionDim>;
 }
@@ -60,7 +63,7 @@ where
     F: Fn(&OPoint<T, GeometryDim>) -> OMatrix<T, GeometryDim, SolutionDim>,
     GeometryDim: SmallDim,
     SolutionDim: SmallDim,
-    DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>
+    DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>,
 {
     fn evaluate_grad(&self, x: &OPoint<T, GeometryDim>) -> OMatrix<T, GeometryDim, SolutionDim> {
         self(x)
@@ -75,26 +78,28 @@ where
 /// then an implementation of [`SolutionGradient`] is also provided.
 pub struct SpaceInterpolationFn<'a, Space, Weights>(pub &'a Space, pub Weights);
 
-impl<'a, T, Space, Weights, SolutionDim> SolutionFunction<T, Space::GeometryDim, SolutionDim> for SpaceInterpolationFn<'a, Space, Weights>
+impl<'a, T, Space, Weights, SolutionDim> SolutionFunction<T, Space::GeometryDim, SolutionDim>
+    for SpaceInterpolationFn<'a, Space, Weights>
 where
     T: Real,
     SolutionDim: SmallDim,
     Space: InterpolateInSpace<T, SolutionDim>,
     Weights: Copy + Into<DVectorSlice<'a, T>>,
-    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>
+    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>,
 {
     fn evaluate(&self, x: &OPoint<T, Space::GeometryDim>) -> OVector<T, SolutionDim> {
         self.0.interpolate_at_point(x, self.1.into())
     }
 }
 
-impl<'a, T, Space, Weights, SolutionDim> SolutionGradient<T, Space::GeometryDim, SolutionDim> for SpaceInterpolationFn<'a, Space, Weights>
+impl<'a, T, Space, Weights, SolutionDim> SolutionGradient<T, Space::GeometryDim, SolutionDim>
+    for SpaceInterpolationFn<'a, Space, Weights>
 where
     T: Real,
     SolutionDim: SmallDim,
     Space: InterpolateGradientInSpace<T, SolutionDim>,
     Weights: Copy + Into<DVectorSlice<'a, T>>,
-    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>
+    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>,
 {
     fn evaluate_grad(&self, x: &OPoint<T, Space::GeometryDim>) -> OMatrix<T, Space::GeometryDim, SolutionDim> {
         self.0.interpolate_gradient_at_point(x, self.1.into())
@@ -242,8 +247,8 @@ where
 
 #[allow(non_snake_case)]
 fn make_L2_error_squared_integrand<'a, T, SolutionDim, GeometryDim>(
-    u: &'a (impl SolutionFunction<T, GeometryDim, SolutionDim> + ?Sized)
-) -> impl 'a + UFunction<T, GeometryDim, SolutionDim, OutputDim=U1>
+    u: &'a (impl SolutionFunction<T, GeometryDim, SolutionDim> + ?Sized),
+) -> impl 'a + UFunction<T, GeometryDim, SolutionDim, OutputDim = U1>
 where
     T: Real,
     SolutionDim: SmallDim,
@@ -260,7 +265,7 @@ where
 
 #[allow(non_snake_case)]
 fn make_H1_seminorm_error_squared_integrand<'a, T, SolutionDim, GeometryDim>(
-    u_grad: &'a impl SolutionGradient<T, GeometryDim, SolutionDim>
+    u_grad: &'a impl SolutionGradient<T, GeometryDim, SolutionDim>,
 ) -> impl 'a + UGradFunction<T, GeometryDim, SolutionDim, OutputDim = U1>
 where
     T: Real,
@@ -268,8 +273,7 @@ where
     GeometryDim: SmallDim,
     DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>,
 {
-    let function = move |x: &OPoint<T, GeometryDim>,
-                         u_h_grad: &OMatrix<T, GeometryDim, SolutionDim>| {
+    let function = move |x: &OPoint<T, GeometryDim>, u_h_grad: &OMatrix<T, GeometryDim, SolutionDim>| {
         let u_grad_at_x = u_grad.evaluate_grad(&x);
         let error = u_h_grad - u_grad_at_x;
         Vector1::new(error.norm_squared())

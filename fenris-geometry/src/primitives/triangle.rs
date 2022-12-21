@@ -1,4 +1,7 @@
-use crate::{AxisAlignedBoundingBox, BoundedGeometry, ConvexPolygon3d, Distance, LineSegment, LineSegment2d, Orientation, OrientationTestResult, SignedDistance, SignedDistanceResult};
+use crate::{
+    AxisAlignedBoundingBox, BoundedGeometry, ConvexPolygon3d, Distance, LineSegment, LineSegment2d, Orientation,
+    OrientationTestResult, SignedDistance, SignedDistanceResult,
+};
 use fenris_traits::Real;
 use nalgebra::allocator::Allocator;
 use nalgebra::Matrix3;

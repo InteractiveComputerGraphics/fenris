@@ -17,8 +17,8 @@ pub use polygon::*;
 pub use polytope::*;
 pub use primitives::*;
 
-pub mod predicates;
 pub mod polymesh;
+pub mod predicates;
 pub mod sdf;
 pub mod util;
 

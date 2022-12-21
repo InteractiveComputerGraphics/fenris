@@ -1,13 +1,18 @@
 use crate::allocators::ElementConnectivityAllocator;
 use crate::connectivity::CellConnectivity;
-use crate::element::{BoundsForElement, ClosestPoint, ClosestPointInElement, ElementConnectivity, FiniteElement, ReferenceFiniteElement};
+use crate::element::{
+    BoundsForElement, ClosestPoint, ClosestPointInElement, ElementConnectivity, FiniteElement, ReferenceFiniteElement,
+};
 use crate::mesh::Mesh;
 use crate::nalgebra::{Dynamic, MatrixSliceMut, OMatrix};
-use crate::space::{BoundsForElementInSpace, ClosestPointInElementInSpace, FiniteElementConnectivity, FiniteElementSpace, GeometricFiniteElementSpace};
+use crate::space::{
+    BoundsForElementInSpace, ClosestPointInElementInSpace, FiniteElementConnectivity, FiniteElementSpace,
+    GeometricFiniteElementSpace,
+};
 use crate::SmallDim;
-use nalgebra::{DefaultAllocator, DimName, OPoint, Scalar};
 use fenris_geometry::AxisAlignedBoundingBox;
 use fenris_traits::allocators::BiDimAllocator;
+use nalgebra::{DefaultAllocator, DimName, OPoint, Scalar};
 
 impl<T, D, C> FiniteElementConnectivity for Mesh<T, D, C>
 where
@@ -151,15 +156,17 @@ impl<T, D, C> ClosestPointInElementInSpace<T> for Mesh<T, D, C>
 where
     T: Scalar,
     D: SmallDim,
-    C: ElementConnectivity<T, GeometryDim=D>,
+    C: ElementConnectivity<T, GeometryDim = D>,
     C::Element: ClosestPointInElement<T>,
     DefaultAllocator: BiDimAllocator<T, C::GeometryDim, C::ReferenceDim>,
 {
-    fn closest_point_in_element(&self, element_index: usize, p: &OPoint<T, Self::GeometryDim>) -> ClosestPoint<T, Self::ReferenceDim> {
+    fn closest_point_in_element(
+        &self,
+        element_index: usize,
+        p: &OPoint<T, Self::GeometryDim>,
+    ) -> ClosestPoint<T, Self::ReferenceDim> {
         let conn = &self.connectivity()[element_index];
-        conn.element(self.vertices())
-            .unwrap()
-            .closest_point(p)
+        conn.element(self.vertices()).unwrap().closest_point(p)
     }
 }
 
@@ -173,8 +180,6 @@ where
 {
     fn bounds_for_element(&self, element_index: usize) -> AxisAlignedBoundingBox<T, Self::GeometryDim> {
         let conn = &self.connectivity()[element_index];
-        conn.element(self.vertices())
-            .unwrap()
-            .element_bounds()
+        conn.element(self.vertices()).unwrap().element_bounds()
     }
 }

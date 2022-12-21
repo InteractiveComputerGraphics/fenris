@@ -256,7 +256,8 @@ fn test_estimate_H1_seminorm_error_on_mesh() {
         Vector2::new(3.0 * x + 2.0 * y * z.powi(3), 4.0 * x.powi(2) + 2.0 * y + z)
     };
     let u_h = flatten_vertically(&mesh.vertices().iter().map(g).collect::<Vec<_>>()).unwrap();
-    let computed_H1_seminorm_error = estimate_H1_seminorm_error(&mesh, &u_vector_grad, &u_h, &quadrature_table).unwrap();
+    let computed_H1_seminorm_error =
+        estimate_H1_seminorm_error(&mesh, &u_vector_grad, &u_h, &quadrature_table).unwrap();
 
     // Compute the error "manually" element-by-element for comparison
     let expected_H1_seminorm_error = {

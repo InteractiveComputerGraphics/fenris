@@ -1,11 +1,11 @@
-use std::array;
-use crate::space::{FindClosestElement, FiniteElementSpace, VolumetricFiniteElementSpace};
-use crate::{Real, SmallDim};
-use nalgebra::{DefaultAllocator, DVectorSlice, OMatrix, OPoint, OVector};
-use davenport::{define_thread_local_workspace, with_thread_local_workspace};
-use itertools::izip;
 use crate::allocators::TriDimAllocator;
 use crate::assembly::buffers::{BufferUpdate, InterpolationBuffer};
+use crate::space::{FindClosestElement, FiniteElementSpace, VolumetricFiniteElementSpace};
+use crate::{Real, SmallDim};
+use davenport::{define_thread_local_workspace, with_thread_local_workspace};
+use itertools::izip;
+use nalgebra::{DVectorSlice, DefaultAllocator, OMatrix, OPoint, OVector};
+use std::array;
 
 /// A finite element space that allows interpolation at arbitrary points.
 pub trait InterpolateInSpace<T: Real, SolutionDim: SmallDim>: FiniteElementSpace<T>
@@ -17,9 +17,10 @@ where
     /// Same as [`interpolate_at_points`], but provided for convenience. Generally speaking,
     /// it will be more efficient to call [`interpolate_at_points`] if you need to interpolate
     /// at more than one point.
-    fn interpolate_at_point(&self,
-                            point: &OPoint<T, Self::GeometryDim>,
-                            interpolation_weights: DVectorSlice<T>
+    fn interpolate_at_point(
+        &self,
+        point: &OPoint<T, Self::GeometryDim>,
+        interpolation_weights: DVectorSlice<T>,
     ) -> OVector<T, SolutionDim> {
         let mut buffer = [OVector::<_, SolutionDim>::zeros()];
         self.interpolate_at_points(array::from_ref(point), interpolation_weights, &mut buffer);
@@ -56,7 +57,7 @@ where
         &self,
         points: &[OPoint<T, Self::GeometryDim>],
         interpolation_weights: DVectorSlice<T>,
-        result_buffer: &mut [OVector<T, SolutionDim>]
+        result_buffer: &mut [OVector<T, SolutionDim>],
     );
 }
 
@@ -111,7 +112,7 @@ where
         &self,
         points: &[OPoint<T, Self::GeometryDim>],
         interpolation_weights: DVectorSlice<T>,
-        result_buffer: &mut [OMatrix<T, Self::GeometryDim, SolutionDim>]
+        result_buffer: &mut [OMatrix<T, Self::GeometryDim, SolutionDim>],
     );
 }
 
@@ -141,13 +142,12 @@ pub fn interpolate_at_points<T, SolutionDim, Space>(
     space: &Space,
     points: &[OPoint<T, Space::GeometryDim>],
     interpolation_weights: DVectorSlice<T>,
-    result_buffer: &mut [OVector<T, SolutionDim>]
-)
-where
+    result_buffer: &mut [OVector<T, SolutionDim>],
+) where
     T: Real,
     SolutionDim: SmallDim,
     Space: FindClosestElement<T>,
-    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>
+    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>,
 {
     assert_eq!(points.len(), result_buffer.len());
     let u = interpolation_weights;
@@ -195,13 +195,12 @@ pub fn interpolate_gradient_at_points<T, SolutionDim, Space>(
     space: &Space,
     points: &[OPoint<T, Space::GeometryDim>],
     interpolation_weights: DVectorSlice<T>,
-    result_buffer: &mut [OMatrix<T, Space::GeometryDim, SolutionDim>]
-)
-where
+    result_buffer: &mut [OMatrix<T, Space::GeometryDim, SolutionDim>],
+) where
     T: Real,
     SolutionDim: SmallDim,
     Space: FindClosestElement<T> + VolumetricFiniteElementSpace<T>,
-    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>
+    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>,
 {
     assert_eq!(points.len(), result_buffer.len());
     let u = interpolation_weights;
@@ -219,9 +218,7 @@ where
                 // so need to transform it by inverse transpose Jacobian matrix
                 let ref_gradient = element_buf.interpolate_ref_gradient();
                 let j = element_buf.element_reference_jacobian();
-                let inv_j_t = j.try_inverse()
-                    .expect("TODO: Fix this")
-                    .transpose();
+                let inv_j_t = j.try_inverse().expect("TODO: Fix this").transpose();
                 *gradient = inv_j_t * ref_gradient;
             } else {
                 // If we can't even find a closest element, then there are no elements in

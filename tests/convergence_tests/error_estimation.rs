@@ -1,13 +1,5 @@
 //! Tests for estimation of L2/H1 seminorm errors approximated by using a higher-resolution
 //! reference solution.
-use std::f64::consts::PI;
-use std::fs::{create_dir_all, File};
-use std::ops::Deref;
-use std::path::{Path, PathBuf};
-use itertools::izip;
-use nalgebra::coordinates::XY;
-use nalgebra::{Point2, U1, vector, Vector1, Vector2};
-use serde::{Serialize, Deserialize};
 use fenris::assembly::local::UniformQuadratureTable;
 use fenris::error::{estimate_H1_seminorm_error, estimate_L2_error, SpaceInterpolationFn};
 use fenris::mesh::procedural::create_unit_square_uniform_tri_mesh_2d;
@@ -15,6 +7,14 @@ use fenris::quadrature;
 use fenris::space::SpatiallyIndexed;
 use fenris::util::global_vector_from_point_fn;
 use fenris_quadrature::polyquad::triangle;
+use itertools::izip;
+use nalgebra::coordinates::XY;
+use nalgebra::{vector, Point2, Vector1, Vector2, U1};
+use serde::{Deserialize, Serialize};
+use std::f64::consts::PI;
+use std::fs::{create_dir_all, File};
+use std::ops::Deref;
+use std::path::{Path, PathBuf};
 
 fn sin(x: f64) -> f64 {
     x.sin()
@@ -35,8 +35,7 @@ fn u_grad_2d(x: &Point2<f64>) -> Vector2<f64> {
     Vector2::new(u_x, u_y)
 }
 
-#[derive(Debug, Default, Clone, PartialEq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct ErrorSample {
     pub coarse_res: usize,
@@ -47,8 +46,7 @@ pub struct ErrorSample {
 }
 
 /// For serializing to JSON for subsequent analysis/plots
-#[derive(Debug, Default, PartialEq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct ErrorSummary {
     pub element_name: String,
@@ -64,15 +62,21 @@ fn export_summary(summary: &ErrorSummary) {
 }
 
 fn load_reference_summary(element_name: &str) -> ErrorSummary {
-    let path = format!("tests/convergence_tests/reference_values/error_estimation_{}_summary.json",
-                       element_name.to_ascii_lowercase());
-    let json_str = std::fs::read_to_string(&path)
-        .expect(&format!("I/O error: Failed to load reference summary for \
-                          element {} at location \"{}\"", element_name, &path));
+    let path = format!(
+        "tests/convergence_tests/reference_values/error_estimation_{}_summary.json",
+        element_name.to_ascii_lowercase()
+    );
+    let json_str = std::fs::read_to_string(&path).expect(&format!(
+        "I/O error: Failed to load reference summary for \
+                          element {} at location \"{}\"",
+        element_name, &path
+    ));
     match serde_json::from_str(&json_str) {
         Ok(summary) => summary,
-        Err(error) => panic!("Failed to deserialize reference summary for element {}. Error: {}",
-                             element_name, error)
+        Err(error) => panic!(
+            "Failed to deserialize reference summary for element {}. Error: {}",
+            element_name, error
+        ),
     }
 }
 
@@ -88,19 +92,31 @@ fn assert_summary_close_to_reference(summary: &ErrorSummary) {
     assert_eq!(summary.samples.len(), reference.samples.len(), "Sample count mismatch");
 
     for (summary_sample, reference_sample) in izip!(&summary.samples, &reference.samples) {
-        assert_eq!(summary_sample.coarse_res, reference_sample.coarse_res,
-            "Coarse resolution mismatch");
-        assert_eq!(summary_sample.fine_res, reference_sample.fine_res,
-            "Fine resolution mismatch");
+        assert_eq!(
+            summary_sample.coarse_res, reference_sample.coarse_res,
+            "Coarse resolution mismatch"
+        );
+        assert_eq!(
+            summary_sample.fine_res, reference_sample.fine_res,
+            "Fine resolution mismatch"
+        );
 
         let L2_rel_error = rel_error(summary_sample.L2_error, reference_sample.L2_error);
         let H1_semi_rel_error = rel_error(summary_sample.H1_semi_error, reference_sample.H1_semi_error);
-        assert!(L2_rel_error <= 0.01,
+        assert!(
+            L2_rel_error <= 0.01,
             "L2 error deviates by more than 1% (summary: {}, reference: {}, rel error: {}",
-            summary_sample.L2_error, reference_sample.L2_error, L2_rel_error);
-        assert!(H1_semi_rel_error <= 0.01,
+            summary_sample.L2_error,
+            reference_sample.L2_error,
+            L2_rel_error
+        );
+        assert!(
+            H1_semi_rel_error <= 0.01,
             "H1 seminorm error deviates by more than 1% (summary: {}, reference: {}, rel error: {}",
-            summary_sample.H1_semi_error, reference_sample.H1_semi_error, H1_semi_rel_error);
+            summary_sample.H1_semi_error,
+            reference_sample.H1_semi_error,
+            H1_semi_rel_error
+        );
     }
 }
 
@@ -128,8 +144,10 @@ fn tri3_error_estimation() {
             // I tried to make SolutionDim an associated type of SolutionFunction/Gradient,
             // but unfortunately then we run into some compiler bugs where rustc gets
             // the types wrong :-(
-            let L2_error_approx = estimate_L2_error::<_, U1, _, _>(&mesh_coarse, &u_fine, &u_weights_coarse, &qtable).unwrap();
-            let H1_semi_error_approx = estimate_H1_seminorm_error::<_, U1, _, _>(&mesh_coarse, &u_fine, &u_weights_coarse, &qtable).unwrap();
+            let L2_error_approx =
+                estimate_L2_error::<_, U1, _, _>(&mesh_coarse, &u_fine, &u_weights_coarse, &qtable).unwrap();
+            let H1_semi_error_approx =
+                estimate_H1_seminorm_error::<_, U1, _, _>(&mesh_coarse, &u_fine, &u_weights_coarse, &qtable).unwrap();
             let sample = ErrorSample {
                 coarse_res,
                 fine_res,
@@ -145,7 +163,8 @@ fn tri3_error_estimation() {
         let mesh_coarse = create_unit_square_uniform_tri_mesh_2d(coarse_res);
         let u_weights_coarse = global_vector_from_point_fn(mesh_coarse.vertices(), u_2d);
         let L2_error = estimate_L2_error::<_, U1, _, _>(&mesh_coarse, &u_2d, &u_weights_coarse, &qtable).unwrap();
-        let H1_semi_error = estimate_H1_seminorm_error::<_, U1, _, _>(&mesh_coarse, &u_grad_2d, &u_weights_coarse, &qtable).unwrap();
+        let H1_semi_error =
+            estimate_H1_seminorm_error::<_, U1, _, _>(&mesh_coarse, &u_grad_2d, &u_weights_coarse, &qtable).unwrap();
         let sample = ErrorSample {
             coarse_res,
             fine_res: 0,

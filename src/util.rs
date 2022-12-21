@@ -1,4 +1,3 @@
-use std::any::TypeId;
 use crate::Real;
 use itertools::izip;
 use itertools::Itertools;
@@ -13,6 +12,7 @@ use nalgebra::{
 use nalgebra_sparse::{CooMatrix, CsrMatrix};
 use num::Zero;
 use numeric_literals::replace_float_literals;
+use std::any::TypeId;
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt::LowerExp;
