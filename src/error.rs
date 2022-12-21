@@ -7,11 +7,15 @@ use crate::integrate::{integrate_over_element, integrate_over_volume_element, El
 use crate::integrate::dependency::DependsOnGrad;
 use crate::nalgebra::DVectorSlice;
 use crate::nalgebra::{DefaultAllocator, OPoint, OVector};
-use crate::space::VolumetricFiniteElementSpace;
+use crate::space::{InterpolateGradientInSpace, InterpolateInSpace, VolumetricFiniteElementSpace};
 use crate::{Real, SmallDim};
 use nalgebra::{OMatrix, Vector1, U1, Scalar};
 
 /// A function $u: \mathbb{R}^d \rightarrow \mathbb{R}^s$ of the form $u(x)$ used to represent a reference solution.
+///
+/// The trait is implemented by closures with the appropriate signature. Finite element
+/// spaces can be used to construct solution functions through the [`SpaceInterpolationFn`]
+/// helper.
 pub trait SolutionFunction<T, GeometryDim, SolutionDim>
 where
     T: Scalar,
@@ -36,6 +40,10 @@ where
 }
 
 /// The gradient $\nabla u$ of a function $u: \mathbb{R}^d \rightarrow \mathbb{R}^s$ of the form $u(x)$ used to represent a reference solution.
+///
+/// The trait is implemented by closures with the appropriate signature. Finite element
+/// spaces can be used to construct solution functions through the [`SpaceInterpolationFn`]
+/// helper.
 pub trait SolutionGradient<T, GeometryDim, SolutionDim>
 where
     T: Scalar,
@@ -56,6 +64,40 @@ where
 {
     fn evaluate_grad(&self, x: &OPoint<T, GeometryDim>) -> OMatrix<T, GeometryDim, SolutionDim> {
         self(x)
+    }
+}
+
+/// Interpret an [interpolating finite element space](crate::space::InterpolateInSpace)
+/// and associated interpolation weights as a [`SolutionFunction`].
+///
+/// If the space also implements
+/// [`InterpolateGradientsInSpace`](crate::space::InterpolateGradientInSpace),
+/// then an implementation of [`SolutionGradient`] is also provided.
+pub struct SpaceInterpolationFn<'a, Space, Weights>(pub &'a Space, pub Weights);
+
+impl<'a, T, Space, Weights, SolutionDim> SolutionFunction<T, Space::GeometryDim, SolutionDim> for SpaceInterpolationFn<'a, Space, Weights>
+where
+    T: Real,
+    SolutionDim: SmallDim,
+    Space: InterpolateInSpace<T, SolutionDim>,
+    Weights: Copy + Into<DVectorSlice<'a, T>>,
+    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>
+{
+    fn evaluate(&self, x: &OPoint<T, Space::GeometryDim>) -> OVector<T, SolutionDim> {
+        self.0.interpolate_at_point(x, self.1.into())
+    }
+}
+
+impl<'a, T, Space, Weights, SolutionDim> SolutionGradient<T, Space::GeometryDim, SolutionDim> for SpaceInterpolationFn<'a, Space, Weights>
+where
+    T: Real,
+    SolutionDim: SmallDim,
+    Space: InterpolateGradientInSpace<T, SolutionDim>,
+    Weights: Copy + Into<DVectorSlice<'a, T>>,
+    DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>
+{
+    fn evaluate_grad(&self, x: &OPoint<T, Space::GeometryDim>) -> OMatrix<T, Space::GeometryDim, SolutionDim> {
+        self.0.interpolate_gradient_at_point(x, self.1.into())
     }
 }
 
@@ -200,7 +242,7 @@ where
 
 #[allow(non_snake_case)]
 fn make_L2_error_squared_integrand<'a, T, SolutionDim, GeometryDim>(
-    u: &'a impl SolutionFunction<T, GeometryDim, SolutionDim>
+    u: &'a (impl SolutionFunction<T, GeometryDim, SolutionDim> + ?Sized)
 ) -> impl 'a + UFunction<T, GeometryDim, SolutionDim, OutputDim=U1>
 where
     T: Real,
@@ -240,7 +282,7 @@ where
 #[allow(non_snake_case)]
 pub fn estimate_L2_error_squared<'a, T, SolutionDim, Space, QTable>(
     space: &Space,
-    u: &impl SolutionFunction<T, Space::GeometryDim, SolutionDim>,
+    u: &(impl SolutionFunction<T, Space::GeometryDim, SolutionDim> + ?Sized),
     u_h: impl Into<DVectorSlice<'a, T>>,
     qtable: &QTable,
 ) -> eyre::Result<T>
@@ -266,7 +308,7 @@ where
 #[allow(non_snake_case)]
 pub fn estimate_L2_error<'a, T, SolutionDim, Space, QTable>(
     space: &Space,
-    u: &impl SolutionFunction<T, Space::GeometryDim, SolutionDim>,
+    u: &(impl SolutionFunction<T, Space::GeometryDim, SolutionDim> + ?Sized),
     u_h: impl Into<DVectorSlice<'a, T>>,
     qtable: &QTable,
 ) -> eyre::Result<T>
