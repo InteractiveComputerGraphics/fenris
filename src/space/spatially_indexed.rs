@@ -14,6 +14,7 @@ use rstar::primitives::GeomWithData;
 use rstar::{Envelope, PointDistance, RTree, RTreeObject, AABB};
 use std::marker::PhantomData;
 
+#[derive(Debug, Clone)]
 struct RTreeAccelerationStructure<D: DimName>
 where
     DefaultAllocator: Allocator<f64, D>,
@@ -75,6 +76,7 @@ where
     }
 }
 
+#[derive(Debug, Clone)]
 struct RTreeAABB<D: DimName>(pub AxisAlignedBoundingBox<f64, D>)
 where
     DefaultAllocator: Allocator<f64, D>;
@@ -145,6 +147,7 @@ where
 /// In addition, `SpatiallyIndexed` provides interpolation of arbitrary points by implementing
 /// the [`InterpolateInSpace`] and [`InterpolateGradientInSpace`] finite element space
 /// traits.
+#[derive(Debug, Clone)]
 pub struct SpatiallyIndexed<T, Space>
 where
     T: Scalar,
