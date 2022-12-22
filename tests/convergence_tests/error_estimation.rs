@@ -6,7 +6,6 @@ use fenris::mesh::procedural::create_unit_square_uniform_tri_mesh_2d;
 use fenris::quadrature;
 use fenris::space::SpatiallyIndexed;
 use fenris::util::global_vector_from_point_fn;
-use fenris_quadrature::polyquad::triangle;
 use itertools::izip;
 use nalgebra::coordinates::XY;
 use nalgebra::{vector, Point2, Vector1, Vector2, U1};
@@ -14,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::f64::consts::PI;
 use std::fs::{create_dir_all, File};
 use std::ops::Deref;
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 
 fn sin(x: f64) -> f64 {
     x.sin()
