@@ -1,7 +1,6 @@
-use fenris_geometry::predicates::orient2d_inexact;
 use fenris_geometry::AxisAlignedBoundingBox;
 use itertools::Itertools;
-use nalgebra::distance_squared;
+use nalgebra::{clamp, distance_squared};
 use numeric_literals::replace_float_literals;
 use std::cmp::Ordering;
 
@@ -444,30 +443,46 @@ where
 }
 
 impl<T: Real> ClosestPointInElement<T> for Tri3d2Element<T> {
+    #[allow(non_snake_case)]
     fn closest_point(&self, p: &Point2<T>) -> ClosestPoint<T, U2> {
         let [a, b, c] = self.vertices();
 
-        let edges = [(a, b), (b, c), (c, a)];
-        let point_in_interior = edges
-            .iter()
-            .map(|(x1, x2)| orient2d_inexact(x1, x2, p))
-            .all(|sign| sign >= T::zero());
+        // This implementation needs to work with (nearly) degenerate triangles. To do so
+        // robustly, we therefore *always* compute the distance to all edges and
+        // try to compute an interior point by inverting the affine map. We always project
+        // (coordinate-wise in this case) the interior point to the reference domain,
+        // since we may otherwise obtain a point arbitrarily far outside the reference domain.
+        // This ensures that, if the affine mapping is ill-conditioned due to near degeneracy,
+        // we always obtain some point on the reference domain.
+        // We obtain the closest point by taking the point corresponding to the smallest
+        // (squared) distance among edge points and the projected interior point.
 
-        if point_in_interior {
+        // TODO: The vast amount of triangular finite elements can be assumed to be
+        // reasonably well-shaped and certainly non-degenerate. It seems it would be
+        // worthwhile to use an appropriate quality measure
+        // (e.g. minimum angle + ensure that area is not super tiny)
+        // to trigger a "fast path" under the assumption that the element is well-shaped
+
+        let xi_interior = {
             // Transformation is affine, so Jacobian is constant:
             //  p = A xi + p0
             // for some p0 which we can determine by evaluating at xi = 0
-            let a = self.reference_jacobian(&Point2::origin());
-            if let Some(a_inv) = a.try_inverse() {
-                let p0 = self.map_reference_coords(&Point2::origin());
-                let xi = a_inv * (p - p0);
-                return ClosestPoint::InElement(xi.into());
-            }
-        }
+            let A = self.reference_jacobian(&Point2::origin());
+            A.try_inverse()
+                .map(|a_inv| {
+                    let p0 = self.map_reference_coords(&Point2::origin());
+                    let mut xi = a_inv * (p - p0);
+                    // Clamp coordinates to reference domain
+                    xi.x = clamp(xi.x, -T::one(), T::one());
+                    xi.y = clamp(xi.y, -T::one(), -xi.x);
+                    Point2::from(xi)
+                })
+        };
 
         // Compute the closest point on each edge and take the point corresponding to the
         // smallest distance (squared)
-        let (idx, t, _) = edges
+        let edges = [(a, b), (b, c), (c, a)];
+        let (idx, t, dist2_edge) = edges
             .into_iter()
             .map(|(x1, x2)| LineSegment2d::from_end_points(x1.clone(), x2.clone()))
             .enumerate()
@@ -493,8 +508,17 @@ impl<T: Real> ClosestPointInElement<T> for Tri3d2Element<T> {
         let reference_element = Tri3d2Element::reference();
         let a = reference_element.vertices()[(idx + 0) % 3];
         let b = reference_element.vertices()[(idx + 1) % 3];
-        let ref_coords = LineSegment2d::from_end_points(a, b).point_from_parameter(t);
-        ClosestPoint::ClosestPoint(ref_coords)
+        let edge_ref_coords = LineSegment2d::from_end_points(a, b).point_from_parameter(t);
+
+        if let Some(xi_interior) = xi_interior {
+            let x_interior = self.map_reference_coords(&xi_interior);
+            let dist2_interior = distance_squared(p, &x_interior);
+            if dist2_interior < dist2_edge {
+                return ClosestPoint::InElement(xi_interior);
+            }
+        }
+
+        ClosestPoint::ClosestPoint(edge_ref_coords)
     }
 }
 
