@@ -983,3 +983,50 @@ fn tri3d2_closest_point_interior_point() {
         tol = 1e-9 * element.diameter()
     );
 }
+
+#[test]
+fn tri3d2_closest_point_degenerate_elements() {
+    // Degenerate to a single point
+    {
+        let v = point![3.0, 3.0];
+        let element = Tri3d2Element::from_vertices([v, v, v]);
+
+        let x = point![2.0, 2.0];
+        let xi = element.closest_point(&x).point().clone();
+        let x_element = element.map_reference_coords(&xi);
+        assert_matrix_eq!(x_element.coords, v.coords, comp = abs, tol = 1e-12);
+    }
+
+    // Degenerate to a line
+    {
+        let vertices = [
+            [1.0, 1.0],
+            [2.0, 1.0],
+            [0.5, 1.0],
+        ].map(Point2::from);
+        let element = Tri3d2Element::from_vertices(vertices);
+
+        let x = point![1.3, 1.5];
+        let xi = element.closest_point(&x).point().clone();
+        let x_element = element.map_reference_coords(&xi);
+
+        assert_matrix_eq!(x_element.coords, point![1.3, 1.0].coords, comp = abs, tol = 1e-12);
+    }
+
+    // *Almost* degenerate to a line
+    {
+        let eps = 1e-15;
+        let vertices = [
+            [1.0, 1.0],
+            [3.0, 2.0],
+            [2.0, 1.5 + eps],
+        ].map(Point2::from);
+        let element = Tri3d2Element::from_vertices(vertices);
+
+        let x = point![2.0, 1.5 + eps / 2.0];
+        let xi = element.closest_point(&x).point().clone();
+        let x_element = element.map_reference_coords(&xi);
+
+        assert_matrix_eq!(x_element.coords, x.coords, comp = abs, tol = 1e-12);
+    }
+}
