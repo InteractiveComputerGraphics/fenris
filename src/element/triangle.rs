@@ -468,15 +468,14 @@ impl<T: Real> ClosestPointInElement<T> for Tri3d2Element<T> {
             //  p = A xi + p0
             // for some p0 which we can determine by evaluating at xi = 0
             let A = self.reference_jacobian(&Point2::origin());
-            A.try_inverse()
-                .map(|a_inv| {
-                    let p0 = self.map_reference_coords(&Point2::origin());
-                    let mut xi = a_inv * (p - p0);
-                    // Clamp coordinates to reference domain
-                    xi.x = clamp(xi.x, -T::one(), T::one());
-                    xi.y = clamp(xi.y, -T::one(), -xi.x);
-                    Point2::from(xi)
-                })
+            A.try_inverse().map(|a_inv| {
+                let p0 = self.map_reference_coords(&Point2::origin());
+                let mut xi = a_inv * (p - p0);
+                // Clamp coordinates to reference domain
+                xi.x = clamp(xi.x, -T::one(), T::one());
+                xi.y = clamp(xi.y, -T::one(), -xi.x);
+                Point2::from(xi)
+            })
         };
 
         // Compute the closest point on each edge and take the point corresponding to the
