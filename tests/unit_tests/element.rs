@@ -1003,11 +1003,7 @@ fn tri3d2_closest_point_degenerate_elements() {
 
     // Degenerate to a line
     {
-        let vertices = [
-            [1.0, 1.0],
-            [2.0, 1.0],
-            [0.5, 1.0],
-        ].map(Point2::from);
+        let vertices = [[1.0, 1.0], [2.0, 1.0], [0.5, 1.0]].map(Point2::from);
         let element = Tri3d2Element::from_vertices(vertices);
 
         let x = point![1.3, 1.5];
@@ -1020,11 +1016,7 @@ fn tri3d2_closest_point_degenerate_elements() {
     // *Almost* degenerate to a line
     {
         let eps = 1e-15;
-        let vertices = [
-            [1.0, 1.0],
-            [3.0, 2.0],
-            [2.0, 1.5 + eps],
-        ].map(Point2::from);
+        let vertices = [[1.0, 1.0], [3.0, 2.0], [2.0, 1.5 + eps]].map(Point2::from);
         let element = Tri3d2Element::from_vertices(vertices);
 
         let x = point![2.0, 1.5 + eps / 2.0];
