@@ -986,6 +986,10 @@ fn tri3d2_closest_point_interior_point() {
 
 #[test]
 fn tri3d2_closest_point_degenerate_elements() {
+    // TODO: These tests are not at all comprehensive. I've tried to generate degenerate
+    // inputs, but it's difficult to find inputs that actually cause serious problems.
+    // I think ultimately such problematic inputs have to come from problematic real problems...
+
     // Degenerate to a single point
     {
         let v = point![3.0, 3.0];
