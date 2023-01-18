@@ -7,3 +7,4 @@ mod io;
 mod mesh;
 mod quadrature;
 mod reorder;
+mod spatially_indexed;
