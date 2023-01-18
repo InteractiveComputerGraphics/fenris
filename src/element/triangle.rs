@@ -1,6 +1,6 @@
 use fenris_geometry::AxisAlignedBoundingBox;
 use itertools::Itertools;
-use nalgebra::{clamp, distance_squared};
+use nalgebra::distance_squared;
 use numeric_literals::replace_float_literals;
 use std::cmp::Ordering;
 
@@ -442,6 +442,12 @@ where
     }
 }
 
+#[replace_float_literals(T::from_f64(literal).unwrap())]
+fn is_likely_in_tri_ref_interior<T: Real>(xi: &Point2<T>) -> bool {
+    let eps = 4.0 * T::default_epsilon();
+    xi.x >= -1.0 + eps && xi.y >= -1.0 + eps && xi.x + xi.y <= eps
+}
+
 impl<T: Real> ClosestPointInElement<T> for Tri3d2Element<T> {
     #[allow(non_snake_case)]
     fn closest_point(&self, p: &Point2<T>) -> ClosestPoint<T, U2> {
@@ -468,14 +474,14 @@ impl<T: Real> ClosestPointInElement<T> for Tri3d2Element<T> {
             //  p = A xi + p0
             // for some p0 which we can determine by evaluating at xi = 0
             let A = self.reference_jacobian(&Point2::origin());
-            A.try_inverse().map(|a_inv| {
-                let p0 = self.map_reference_coords(&Point2::origin());
-                let mut xi = a_inv * (p - p0);
-                // Clamp coordinates to reference domain
-                xi.x = clamp(xi.x, -T::one(), T::one());
-                xi.y = clamp(xi.y, -T::one(), -xi.x);
-                Point2::from(xi)
-            })
+            A.try_inverse()
+                .map(|a_inv| {
+                    let p0 = self.map_reference_coords(&Point2::origin());
+                    Point2::from(a_inv * (p - p0))
+                })
+                // If the inverse transformation doesn't lead to a point clearly inside
+                // the reference domain, we assume that the closest point is on the boundary
+                .filter(is_likely_in_tri_ref_interior)
         };
 
         // Compute the closest point on each edge and take the point corresponding to the
