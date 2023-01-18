@@ -1,12 +1,14 @@
 use fenris::element::{
-    map_physical_coordinates, project_physical_coordinates, ClosestPoint, ClosestPointInElement, FiniteElement,
-    FixedNodesReferenceFiniteElement, Hex20Element, Hex27Element, Hex8Element, Quad4d2Element, Quad9d2Element,
-    Segment2d2Element, Tet10Element, Tet20Element, Tet4Element, Tri3d2Element, Tri6d2Element,
+    map_physical_coordinates, project_physical_coordinates, ClosestPoint, ClosestPointInElement, ElementConnectivity,
+    FiniteElement, FixedNodesReferenceFiniteElement, Hex20Element, Hex27Element, Hex8Element, Quad4d2Element,
+    Quad9d2Element, Segment2d2Element, Tet10Element, Tet20Element, Tet4Element, Tri3d2Element, Tri6d2Element,
 };
 use fenris::error::estimate_element_L2_error;
 use fenris::geometry::proptest::{clockwise_triangle2d_strategy_f64, nondegenerate_convex_quad2d_strategy_f64};
 use fenris::geometry::{LineSegment2d, Quad2d, Triangle, Triangle2d};
 use fenris::integrate::IntegrationWorkspace;
+use fenris::mesh::procedural::create_unit_square_uniform_tri_mesh_2d;
+use fenris::mesh::TriangleMesh2d;
 use fenris::nalgebra::DVector;
 use fenris::quadrature;
 use fenris::util::proptest::point2_f64_strategy;
@@ -1024,5 +1026,31 @@ fn tri3d2_closest_point_degenerate_elements() {
         let x_element = element.map_reference_coords(&xi);
 
         assert_matrix_eq!(x_element.coords, x.coords, comp = abs, tol = 1e-12);
+    }
+}
+
+#[test]
+fn tri3d2_closest_point_boundary_points() {
+    // Map points from the boundary of the reference element
+    // to physical space, then check that the closest point returned by the element
+    // has the same reference coordinates
+    let mesh: TriangleMesh2d<f64> = create_unit_square_uniform_tri_mesh_2d(10);
+    let boundary_points = [
+        [-1.0, -1.0],
+        [1.0, -1.0],
+        [-1.0, 1.0],
+        [-1.0, 0.5],
+        [0.5, -1.0],
+        [0.0, 0.0],
+    ]
+    .map(Point2::from);
+
+    for conn in mesh.connectivity() {
+        let element = conn.element(mesh.vertices()).unwrap();
+        for xi in &boundary_points {
+            let x = element.map_reference_coords(xi);
+            let xi_closest = element.closest_point(&x).point().clone();
+            assert_matrix_eq!(xi_closest.coords, xi.coords, comp = abs, tol = 1e-12);
+        }
     }
 }
