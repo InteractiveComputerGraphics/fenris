@@ -45,9 +45,7 @@ fenris-geometry = { version= "^0.0.5", path = "fenris-geometry", features = [ "p
 fenris-optimize = { version= "0.0.2", path = "fenris-optimize" }
 fenris-quadrature = { version= "0.0.4", path = "fenris-quadrature" }
 mshio = "0.4.2"
-# TODO: Currently using a temporary git-based solution for rstar, since we need
-# Point and Envelope to not have Copy bounds, see https://github.com/georust/rstar/pull/103
-rstar = { git = "https://github.com/Andlon/rstar.git", branch="no-copy-bound" }
+rstar = "0.10"
 
 [dev-dependencies]
 fenris = { path = ".", features = [ "proptest-support" ]}
