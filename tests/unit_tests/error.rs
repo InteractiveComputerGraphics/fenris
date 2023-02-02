@@ -9,7 +9,7 @@ use fenris::error::{
 use fenris::integrate::IntegrationWorkspace;
 use fenris::mesh::procedural::create_unit_box_uniform_hex_mesh_3d;
 use fenris::nalgebra::coordinates::XYZ;
-use fenris::nalgebra::{DVector, DVectorSlice, OVector, Point3, Vector1, Vector2, U3};
+use fenris::nalgebra::{DVector, DVectorView, OVector, Point3, Vector1, Vector2, U3};
 use fenris::quadrature;
 use fenris::quadrature::{Quadrature, QuadraturePair3d};
 use fenris::util::NestedVec;
@@ -66,7 +66,7 @@ fn test_element_L2_error_scalar() {
     let L2_error_computed = estimate_element_L2_error(
         &element,
         &|x: &Point3<_>| Vector1::new(u1_scalar(x)),
-        DVectorSlice::from(&u_h_element),
+        DVectorView::from(&u_h_element),
         &weights,
         &points,
         &mut IntegrationWorkspace::default(),
@@ -96,7 +96,7 @@ fn test_element_L2_error_vector() {
     let L2_error_computed = estimate_element_L2_error(
         &element,
         &u1_vector,
-        DVectorSlice::from(&u_h_element),
+        DVectorView::from(&u_h_element),
         &weights,
         &points,
         &mut IntegrationWorkspace::default(),
@@ -127,7 +127,7 @@ fn test_element_H1_seminorm_error_scalar() {
     let H1_seminorm_computed = estimate_element_H1_seminorm_error(
         &element,
         &u1_scalar_grad,
-        DVectorSlice::from(&u_h_element),
+        DVectorView::from(&u_h_element),
         &weights,
         &points,
         &mut IntegrationWorkspace::default(),
@@ -156,7 +156,7 @@ fn test_element_H1_seminorm_error_vector() {
     let H1_seminorm_computed = estimate_element_H1_seminorm_error(
         &element,
         &u1_vector_grad,
-        DVectorSlice::from(&u_h_element),
+        DVectorView::from(&u_h_element),
         &weights,
         &points,
         &mut IntegrationWorkspace::default(),
@@ -215,7 +215,7 @@ fn test_estimate_L2_error_on_mesh() {
                 estimate_element_L2_error_squared(
                     &element,
                     &u_vector,
-                    DVectorSlice::from(&u_h_element),
+                    DVectorView::from(&u_h_element),
                     weights,
                     points,
                     &mut IntegrationWorkspace::default(),
@@ -273,7 +273,7 @@ fn test_estimate_H1_seminorm_error_on_mesh() {
                 estimate_element_H1_seminorm_error_squared(
                     &element,
                     &u_vector_grad,
-                    DVectorSlice::from(&u_h_element),
+                    DVectorView::from(&u_h_element),
                     weights,
                     points,
                     &mut IntegrationWorkspace::default(),

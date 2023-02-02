@@ -1,7 +1,7 @@
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
 
 use fenris::nalgebra;
-use fenris::nalgebra::{dvector, vector, DMatrix, DMatrixSliceMut, DVectorSlice, Matrix2, Matrix3, SMatrix, SVector};
+use fenris::nalgebra::{dvector, vector, DMatrix, DMatrixViewMut, DVectorView, Matrix2, Matrix3, SMatrix, SVector};
 use fenris_solid::materials::{LameParameters, LinearElasticMaterial, NeoHookeanMaterial, StVKMaterial, YoungPoisson};
 use fenris_solid::HyperelasticMaterial;
 
@@ -208,11 +208,11 @@ macro_rules! test_multi_contraction_consistency {
             // overwrites them
             let mut output = DMatrix::repeat(3 * $dim, 3 * $dim, 3.0);
             material.accumulate_stress_contractions_into(
-                DMatrixSliceMut::from(&mut output),
+                DMatrixViewMut::from(&mut output),
                 alpha,
                 &deformation_gradient,
-                DVectorSlice::from(&a),
-                DVectorSlice::from(&b),
+                DVectorView::from(&a),
+                DVectorView::from(&b),
                 &lame,
             );
 
@@ -221,7 +221,7 @@ macro_rules! test_multi_contraction_consistency {
                 for J in I..N {
                     let a_I = a.fixed_rows::<$dim>($dim * I).clone_owned();
                     let b_J = b.fixed_rows::<$dim>($dim * J).clone_owned();
-                    let C_IJ = output.fixed_slice::<$dim, $dim>($dim * I, $dim * J);
+                    let C_IJ = output.fixed_view::<$dim, $dim>($dim * I, $dim * J);
                     let contraction = material.compute_stress_contraction(&deformation_gradient, &a_I, &b_J, &lame);
 
                     // The offset value was the value in each block matrix entry before accumulation

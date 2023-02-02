@@ -3,7 +3,7 @@ use fenris_traits::Real;
 use nalgebra::base::constraint::AreMultipliable;
 use nalgebra::constraint::{DimEq, ShapeConstraint};
 use nalgebra::storage::Storage;
-use nalgebra::{ClosedAdd, ClosedMul, DVector, DVectorSlice, DVectorSliceMut, Dim, Dynamic, Matrix, Scalar, U1};
+use nalgebra::{ClosedAdd, ClosedMul, DVector, DVectorView, DVectorViewMut, Dim, Dyn, Matrix, Scalar, U1};
 use nalgebra_sparse::ops::serial::spmm_csr_dense;
 use nalgebra_sparse::ops::Op;
 use nalgebra_sparse::CsrMatrix;
@@ -13,7 +13,7 @@ use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
 pub trait LinearOperator<T: Scalar> {
-    fn apply(&self, y: DVectorSliceMut<T>, x: DVectorSlice<T>) -> Result<(), Box<dyn Error>>;
+    fn apply(&self, y: DVectorViewMut<T>, x: DVectorView<T>) -> Result<(), Box<dyn Error>>;
 }
 
 impl<'a, T, A> LinearOperator<T> for &'a A
@@ -21,7 +21,7 @@ where
     T: Scalar,
     A: ?Sized + LinearOperator<T>,
 {
-    fn apply(&self, y: DVectorSliceMut<T>, x: DVectorSlice<T>) -> Result<(), Box<dyn Error>> {
+    fn apply(&self, y: DVectorViewMut<T>, x: DVectorView<T>) -> Result<(), Box<dyn Error>> {
         <A as LinearOperator<T>>::apply(self, y, x)
     }
 }
@@ -32,9 +32,9 @@ where
     R: Dim,
     C: Dim,
     S: Storage<T, R, C>,
-    ShapeConstraint: DimEq<Dynamic, R> + DimEq<C, Dynamic> + AreMultipliable<R, C, Dynamic, U1>,
+    ShapeConstraint: DimEq<Dyn, R> + DimEq<C, Dyn> + AreMultipliable<R, C, Dyn, U1>,
 {
-    fn apply(&self, mut y: DVectorSliceMut<T>, x: DVectorSlice<T>) -> Result<(), Box<dyn Error>> {
+    fn apply(&self, mut y: DVectorViewMut<T>, x: DVectorView<T>) -> Result<(), Box<dyn Error>> {
         y.gemv(T::one(), self, &x, T::zero());
         Ok(())
     }
@@ -44,7 +44,7 @@ impl<T> LinearOperator<T> for CsrMatrix<T>
 where
     T: Scalar + Zero + One + ClosedMul + ClosedAdd,
 {
-    fn apply(&self, mut y: DVectorSliceMut<T>, x: DVectorSlice<T>) -> Result<(), Box<dyn Error>> {
+    fn apply(&self, mut y: DVectorViewMut<T>, x: DVectorView<T>) -> Result<(), Box<dyn Error>> {
         spmm_csr_dense(T::zero(), &mut y, T::one(), Op::NoOp(self), Op::NoOp(&x));
         Ok(())
     }
@@ -53,7 +53,7 @@ where
 pub struct IdentityOperator;
 
 impl<T: Scalar> LinearOperator<T> for IdentityOperator {
-    fn apply(&self, mut y: DVectorSliceMut<T>, x: DVectorSlice<T>) -> Result<(), Box<dyn Error>> {
+    fn apply(&self, mut y: DVectorViewMut<T>, x: DVectorView<T>) -> Result<(), Box<dyn Error>> {
         y.copy_from(&x);
         Ok(())
     }
@@ -61,16 +61,16 @@ impl<T: Scalar> LinearOperator<T> for IdentityOperator {
 
 pub trait CgStoppingCriterion<T: Scalar> {
     /// Called by CG at the start of a new solve.
-    fn reset(&self, _a: &dyn LinearOperator<T>, _x: DVectorSlice<T>, _b: DVectorSlice<T>) {}
+    fn reset(&self, _a: &dyn LinearOperator<T>, _x: DVectorView<T>, _b: DVectorView<T>) {}
 
     fn has_converged(
         &self,
         a: &dyn LinearOperator<T>,
-        x: DVectorSlice<T>,
-        b: DVectorSlice<T>,
+        x: DVectorView<T>,
+        b: DVectorView<T>,
         b_norm: T,
         iteration: usize,
-        approx_residual: DVectorSlice<T>,
+        approx_residual: DVectorView<T>,
     ) -> Result<bool, SolveErrorKind>;
 }
 
@@ -111,11 +111,11 @@ where
     fn has_converged(
         &self,
         _a: &dyn LinearOperator<T>,
-        _x: DVectorSlice<T>,
-        _b: DVectorSlice<T>,
+        _x: DVectorView<T>,
+        _b: DVectorView<T>,
         b_norm: T,
         _iteration: usize,
-        approx_residual: DVectorSlice<T>,
+        approx_residual: DVectorView<T>,
     ) -> Result<bool, SolveErrorKind> {
         let r_approx_norm = approx_residual.norm();
         let converged = r_approx_norm <= self.tol * b_norm;
@@ -333,9 +333,9 @@ impl<T: fmt::Debug> std::error::Error for SolveError<T> {}
 
 /// y = Ax
 fn apply_operator<'a, T, A>(
-    y: impl Into<DVectorSliceMut<'a, T>>,
+    y: impl Into<DVectorViewMut<'a, T>>,
     a: &'a A,
-    x: impl Into<DVectorSlice<'a, T>>,
+    x: impl Into<DVectorView<'a, T>>,
 ) -> Result<(), Box<dyn Error>>
 where
     T: Scalar,
@@ -363,18 +363,14 @@ where
 {
     pub fn solve_with_guess<'b>(
         &mut self,
-        b: impl Into<DVectorSlice<'b, T>>,
-        x: impl Into<DVectorSliceMut<'b, T>>,
+        b: impl Into<DVectorView<'b, T>>,
+        x: impl Into<DVectorViewMut<'b, T>>,
     ) -> Result<CgOutput<T>, SolveError<T>> {
         self.solve_with_guess_(b.into(), x.into())
     }
 
     #[allow(non_snake_case)]
-    fn solve_with_guess_(
-        &mut self,
-        b: DVectorSlice<T>,
-        mut x: DVectorSliceMut<T>,
-    ) -> Result<CgOutput<T>, SolveError<T>> {
+    fn solve_with_guess_(&mut self, b: DVectorView<T>, mut x: DVectorViewMut<T>) -> Result<CgOutput<T>, SolveError<T>> {
         use SolveErrorKind::*;
         assert_eq!(b.len(), x.len());
 

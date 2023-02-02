@@ -5,9 +5,9 @@ use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{DimEq, ShapeConstraint};
 use nalgebra::storage::{Storage, StorageMut};
 use nalgebra::{
-    DMatrixSlice, DVector, DVectorSlice, DefaultAllocator, Dim, DimDiff, DimMin, DimMul, DimName, DimProd, DimSub,
-    Matrix, Matrix3, MatrixSlice, MatrixSliceMut, OMatrix, OPoint, OVector, Quaternion, Scalar, SliceStorage,
-    SliceStorageMut, SquareMatrix, UnitQuaternion, Vector, Vector3, U1,
+    DMatrixView, DVector, DVectorView, DefaultAllocator, Dim, DimDiff, DimMin, DimMul, DimName, DimProd, DimSub,
+    Matrix, Matrix3, MatrixView, MatrixViewMut, OMatrix, OPoint, OVector, Quaternion, Scalar, SquareMatrix,
+    UnitQuaternion, Vector, Vector3, ViewStorage, ViewStorageMut, U1,
 };
 use nalgebra_sparse::{CooMatrix, CsrMatrix};
 use num::Zero;
@@ -28,7 +28,7 @@ use crate::allocators::{BiDimAllocator, DimAllocator};
 use crate::assembly::global::CsrParAssembler;
 use crate::connectivity::Connectivity;
 use crate::mesh::Mesh;
-use crate::nalgebra::Dynamic;
+use crate::nalgebra::Dyn;
 use crate::SmallDim;
 
 /// Clones the upper triangle entries into the lower triangle entries.
@@ -54,7 +54,7 @@ where
 pub(crate) fn reshape_to_slice<T, R, C, S, R2, C2>(
     matrix: &Matrix<T, R, C, S>,
     shape: (R2, C2),
-) -> MatrixSlice<T, R2, C2, U1, R2>
+) -> MatrixView<T, R2, C2, U1, R2>
 where
     T: Scalar,
     R: DimMul<C>,
@@ -71,7 +71,7 @@ where
         "Cannot reshape with different number of elements"
     );
     let strides = (U1::name(), r2);
-    let storage = unsafe { SliceStorage::from_raw_parts(matrix.data.ptr(), shape, strides) };
+    let storage = unsafe { ViewStorage::from_raw_parts(matrix.data.ptr(), shape, strides) };
     Matrix::from_data(storage)
 }
 
@@ -82,7 +82,7 @@ pub fn coerce_col_major_slice<T, R, C, S, RSlice, CSlice>(
     matrix: &Matrix<T, R, C, S>,
     slice_rows: RSlice,
     slice_cols: CSlice,
-) -> MatrixSlice<T, RSlice, CSlice, U1, RSlice>
+) -> MatrixView<T, RSlice, CSlice, U1, RSlice>
 where
     T: Scalar,
     R: Dim,
@@ -101,7 +101,7 @@ where
     );
 
     unsafe {
-        let data = SliceStorage::new_with_strides_unchecked(
+        let data = ViewStorage::new_with_strides_unchecked(
             &matrix.data,
             (0, 0),
             (slice_rows, slice_cols),
@@ -267,7 +267,7 @@ pub fn coerce_col_major_slice_mut<T, R, C, S, RSlice, CSlice>(
     matrix: &mut Matrix<T, R, C, S>,
     slice_rows: RSlice,
     slice_cols: CSlice,
-) -> MatrixSliceMut<T, RSlice, CSlice, U1, RSlice>
+) -> MatrixViewMut<T, RSlice, CSlice, U1, RSlice>
 where
     T: Scalar,
     R: Dim,
@@ -286,7 +286,7 @@ where
     );
 
     unsafe {
-        let data = SliceStorageMut::new_with_strides_unchecked(
+        let data = ViewStorageMut::new_with_strides_unchecked(
             &mut matrix.data,
             (0, 0),
             (slice_rows, slice_cols),
@@ -326,7 +326,7 @@ pub fn cross_product_matrix<T: Real>(x: &Vector3<T>) -> Matrix3<T> {
 
 pub fn dump_matrix_to_file<'a, T: Scalar + Display>(
     path: impl AsRef<Path>,
-    matrix: impl Into<DMatrixSlice<'a, T>>,
+    matrix: impl Into<DMatrixView<'a, T>>,
 ) -> Result<(), Box<dyn Error + Sync + Send>> {
     let file = File::create(path.as_ref())?;
     let mut writer = BufWriter::new(file);
@@ -429,7 +429,7 @@ where
     T: Scalar + Copy + Zero,
     D: DimName,
 {
-    let u = DVectorSlice::from(u);
+    let u = DVectorView::from(u);
     let mut extracted = DVector::zeros(D::dim() * node_indices.len());
     for (i_local, &i_global) in node_indices.iter().enumerate() {
         let ui = u.rows_generic(D::dim() * i_global, D::name());
@@ -674,8 +674,8 @@ pub mod proptest {
 /// TODO: This is not directly tested at the moment
 // TODO: Move elsewhere
 pub fn compute_interpolation<'a, 'b, T, SolutionDim>(
-    u: impl Into<DVectorSlice<'a, T>>,
-    basis: impl Into<DVectorSlice<'b, T>>,
+    u: impl Into<DVectorView<'a, T>>,
+    basis: impl Into<DVectorView<'b, T>>,
 ) -> OVector<T, SolutionDim>
 where
     T: Real,
@@ -685,7 +685,7 @@ where
     compute_interpolation_(u.into(), basis.into())
 }
 
-fn compute_interpolation_<T, SolutionDim>(u: DVectorSlice<T>, basis: DVectorSlice<T>) -> OVector<T, SolutionDim>
+fn compute_interpolation_<T, SolutionDim>(u: DVectorView<T>, basis: DVectorView<T>) -> OVector<T, SolutionDim>
 where
     T: Real,
     SolutionDim: SmallDim,
@@ -699,7 +699,7 @@ where
     // Reshape u as the matrix
     //  [u1 u2 .. un ]
     // for vectors u1, u2, ... associated with each basis function value
-    let u = reshape_to_slice(&u, (SolutionDim::name(), Dynamic::new(n)));
+    let u = reshape_to_slice(&u, (SolutionDim::name(), Dyn(n)));
     u * basis
 }
 
@@ -735,8 +735,8 @@ where
 ///
 /// TODO: This is not directly tested at the moment
 pub fn compute_interpolation_gradient<'a, T, SolutionDim, GeometryDim>(
-    u: impl Into<DVectorSlice<'a, T>>,
-    basis_gradients: impl Into<DVectorSlice<'a, T>>,
+    u: impl Into<DVectorView<'a, T>>,
+    basis_gradients: impl Into<DVectorView<'a, T>>,
 ) -> OMatrix<T, GeometryDim, SolutionDim>
 where
     T: Real,
@@ -748,8 +748,8 @@ where
 }
 
 fn compute_interpolation_gradient_<T, SolutionDim, GeometryDim>(
-    u: DVectorSlice<T>,
-    basis_gradients: DVectorSlice<T>,
+    u: DVectorView<T>,
+    basis_gradients: DVectorView<T>,
 ) -> OMatrix<T, GeometryDim, SolutionDim>
 where
     T: Real,
@@ -766,11 +766,11 @@ where
     // Reshape u as the matrix
     //  [u1 u2 .. un ]
     // for vectors u1, u2, ... associated with each basis function value
-    let u = reshape_to_slice(&u, (SolutionDim::name(), Dynamic::new(n)));
+    let u = reshape_to_slice(&u, (SolutionDim::name(), Dyn(n)));
 
     // Reshape gradients g as the matrix
     //  [g1 g2 ... gn]
-    let g = reshape_to_slice(&basis_gradients, (GeometryDim::name(), Dynamic::new(n)));
+    let g = reshape_to_slice(&basis_gradients, (GeometryDim::name(), Dyn(n)));
 
     let mut u_grad = OMatrix::<T, GeometryDim, SolutionDim>::zeros();
     for (u_i, g_i) in izip!(u.column_iter(), g.column_iter()) {

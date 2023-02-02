@@ -1,6 +1,6 @@
 use crate::allocators::BiDimAllocator;
 use crate::nalgebra::allocator::Allocator;
-use crate::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, OMatrix, OVector, Scalar};
+use crate::nalgebra::{DMatrixViewMut, DVectorView, DefaultAllocator, DimName, OMatrix, OVector, Scalar};
 use crate::{Real, SmallDim, Symmetry};
 
 mod laplace;
@@ -133,11 +133,11 @@ where
     #[allow(non_snake_case)]
     fn accumulate_contractions_into(
         &self,
-        mut output: DMatrixSliceMut<T>,
+        mut output: DMatrixViewMut<T>,
         alpha: T,
         gradient: &OMatrix<T, GeometryDim, Self::SolutionDim>,
-        a: DVectorSlice<T>,
-        b: DVectorSlice<T>,
+        a: DVectorView<T>,
+        b: DVectorView<T>,
         parameters: &Self::Parameters,
     ) {
         let d = GeometryDim::dim();
@@ -169,7 +169,7 @@ where
             for I in 0..row_range {
                 let a_I = a.rows_generic(d * I, GeometryDim::name()).clone_owned();
                 let b_J = b.rows_generic(d * J, GeometryDim::name()).clone_owned();
-                let mut c_IJ = output.generic_slice_mut((s * I, s * J), s_times_s);
+                let mut c_IJ = output.generic_view_mut((s * I, s * J), s_times_s);
                 let contraction = self.contract(gradient, &a_I, &b_J, parameters);
                 c_IJ += contraction * alpha;
             }

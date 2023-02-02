@@ -7,7 +7,7 @@ use fenris::quadrature::{
 use fenris_optimize::calculus::{approximate_jacobian, VectorFunctionBuilder};
 use fenris_solid::materials::{LinearElasticMaterial, YoungPoisson};
 use fenris_solid::{ElasticityModel, ElasticityModelParallel};
-use nalgebra::{DVector, DVectorSlice, DVectorSliceMut};
+use nalgebra::{DVector, DVectorView, DVectorViewMut};
 
 use fenris::mesh::Tet4Mesh;
 use fenris::procedural::{
@@ -124,12 +124,12 @@ fn tet4_elastic_forces_sequential_and_parallel_agree() {
         (0..10).map(|i| i as f64).cycle().take(model.ndof()),
     );
 
-    let f_seq = model.assemble_elastic_pseudo_forces(DVectorSlice::from(&u), &material);
+    let f_seq = model.assemble_elastic_pseudo_forces(DVectorView::from(&u), &material);
 
     let mut f_par = DVector::zeros(model.ndof());
     model.assemble_elastic_pseudo_forces_into_par(
-        DVectorSliceMut::from(&mut f_par),
-        DVectorSlice::from(&u),
+        DVectorViewMut::from(&mut f_par),
+        DVectorView::from(&u),
         &material,
     );
 

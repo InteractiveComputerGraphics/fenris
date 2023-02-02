@@ -4,7 +4,7 @@ use crate::assembly::local::{ElementConnectivityAssembler, ElementVectorAssemble
 use crate::assembly::operators::Operator;
 use crate::element::{ReferenceFiniteElement, VolumetricFiniteElement};
 use crate::nalgebra::{
-    DVectorSliceMut, DefaultAllocator, DimName, Dynamic, MatrixSlice, MatrixSliceMutMN, OPoint, OVector, Scalar, U1,
+    DVectorViewMut, DefaultAllocator, DimName, Dyn, MatrixView, MatrixViewMut, OPoint, OVector, Scalar, U1,
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
 use crate::{Real, SmallDim};
@@ -164,7 +164,7 @@ where
     QTable: QuadratureTable<T, Space::ReferenceDim, Data = Source::Parameters>,
     DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, Source::SolutionDim>,
 {
-    fn assemble_element_vector_into(&self, element_index: usize, output: DVectorSliceMut<T>) -> eyre::Result<()> {
+    fn assemble_element_vector_into(&self, element_index: usize, output: DVectorViewMut<T>) -> eyre::Result<()> {
         with_thread_local_workspace(
             &SOURCE_WORKSPACE,
             |ws: &mut SourceTermWorkspace<T, Space::ReferenceDim, Source::Parameters>| {
@@ -215,7 +215,7 @@ where
 ///
 /// The basis values buffer must have size `n`.
 pub fn assemble_element_source_vector<T, Element, Source>(
-    mut output: DVectorSliceMut<T>,
+    mut output: DVectorViewMut<T>,
     element: &Element,
     source: &Source,
     quadrature_weights: &[T],
@@ -253,8 +253,7 @@ pub fn assemble_element_source_vector<T, Element, Source>(
         n * Source::SolutionDim::dim(),
         "Length of output vector must be consistent with number of nodes and solution dim"
     );
-    let mut output =
-        MatrixSliceMutMN::from_slice_generic(output.as_mut_slice(), Source::SolutionDim::name(), Dynamic::new(n));
+    let mut output = MatrixViewMut::from_slice_generic(output.as_mut_slice(), Source::SolutionDim::name(), Dyn(n));
 
     output.fill(T::zero());
 
@@ -273,7 +272,7 @@ pub fn assemble_element_source_vector<T, Element, Source>(
         // Then the contribution is given by
         //  w * |det J| * [ f * phi_1, f * phi_2, ... ] = w * |det J| * f * phi,
         // where phi is a row vector of basis values
-        let phi = MatrixSlice::from_slice_generic(&*basis_values_buffer, U1::name(), Dynamic::new(n));
+        let phi = MatrixView::from_slice_generic(&*basis_values_buffer, U1::name(), Dyn(n));
         output.gemm(*weight * j.determinant().abs(), &f, &phi, T::one());
     }
 }

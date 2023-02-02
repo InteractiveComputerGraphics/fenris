@@ -9,7 +9,7 @@ use fenris_geometry::AxisAlignedBoundingBox;
 use fenris_traits::allocators::{BiDimAllocator, DimAllocator, TriDimAllocator};
 use fenris_traits::Real;
 use nalgebra::allocator::Allocator;
-use nalgebra::{DVectorSlice, DefaultAllocator, DimName, Dynamic, MatrixSliceMut, OMatrix, OPoint, OVector, Scalar};
+use nalgebra::{DVectorView, DefaultAllocator, DimName, Dyn, MatrixViewMut, OMatrix, OPoint, OVector, Scalar};
 use rstar::primitives::GeomWithData;
 use rstar::{Envelope, PointDistance, RTree, RTreeObject, AABB};
 use std::marker::PhantomData;
@@ -232,7 +232,7 @@ where
     fn populate_element_gradients(
         &self,
         element_index: usize,
-        gradients: MatrixSliceMut<T, Self::ReferenceDim, Dynamic>,
+        gradients: MatrixViewMut<T, Self::ReferenceDim, Dyn>,
         reference_coords: &OPoint<T, Self::ReferenceDim>,
     ) {
         self.space
@@ -340,7 +340,7 @@ where
     fn interpolate_at_points(
         &self,
         points: &[OPoint<T, Self::GeometryDim>],
-        interpolation_weights: DVectorSlice<T>,
+        interpolation_weights: DVectorView<T>,
         result_buffer: &mut [OVector<T, SolutionDim>],
     ) {
         interpolate_at_points(self, points, interpolation_weights, result_buffer)
@@ -357,7 +357,7 @@ where
     fn interpolate_gradient_at_points(
         &self,
         points: &[OPoint<T, Self::GeometryDim>],
-        interpolation_weights: DVectorSlice<T>,
+        interpolation_weights: DVectorView<T>,
         result_buffer: &mut [OMatrix<T, Self::GeometryDim, SolutionDim>],
     ) {
         interpolate_gradient_at_points(self, points, interpolation_weights, result_buffer)

@@ -1,6 +1,6 @@
 use nalgebra::constraint::{SameNumberOfColumns, SameNumberOfRows, ShapeConstraint};
 use nalgebra::storage::{Storage, StorageMut};
-use nalgebra::{Dim, Dynamic, Matrix, OMatrix, Scalar};
+use nalgebra::{Dim, Dyn, Matrix, OMatrix, Scalar};
 use num::Zero;
 
 /// Poor man's approx assertion for matrices
@@ -46,7 +46,7 @@ pub fn flatten_vertically_into<T, R1, C1, S1, R2, C2, S2>(
     R2: Dim,
     C2: Dim,
     S2: StorageMut<T, R2, C2>,
-    ShapeConstraint: SameNumberOfColumns<C2, C1> + SameNumberOfRows<Dynamic, R1>,
+    ShapeConstraint: SameNumberOfColumns<C2, C1> + SameNumberOfRows<Dyn, R1>,
 {
     if let Some(first) = matrices.first() {
         let cols = first.ncols();
@@ -71,17 +71,17 @@ pub fn flatten_vertically_into<T, R1, C1, S1, R2, C2, S2>(
     }
 }
 
-pub fn flatten_vertically<T, R, C, S>(matrices: &[Matrix<T, R, C, S>]) -> Option<OMatrix<T, Dynamic, C>>
+pub fn flatten_vertically<T, R, C, S>(matrices: &[Matrix<T, R, C, S>]) -> Option<OMatrix<T, Dyn, C>>
 where
     T: Scalar + Zero,
     R: Dim,
     C: Dim,
     S: Storage<T, R, C>,
-    ShapeConstraint: SameNumberOfRows<Dynamic, R>,
+    ShapeConstraint: SameNumberOfRows<Dyn, R>,
 {
     if let Some(first) = matrices.first() {
         let rows = matrices.iter().map(Matrix::nrows).sum();
-        let mut output = OMatrix::zeros_generic(Dynamic::new(rows), first.data.shape().1);
+        let mut output = OMatrix::zeros_generic(Dyn(rows), first.data.shape().1);
         flatten_vertically_into(&mut output, matrices);
         Some(output)
     } else {

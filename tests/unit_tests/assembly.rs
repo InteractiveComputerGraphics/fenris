@@ -75,10 +75,10 @@ mod local;
 //
 //     let elliptic_operator = MaterialEllipticOperator(&material);
 //     let mut f_e = DMatrix::zeros(2, 4);
-//     assemble_generalized_element_elliptic_term(MatrixSliceMut::from(&mut f_e),
+//     assemble_generalized_element_elliptic_term(MatrixViewMut::from(&mut f_e),
 //                                                &quad,
 //                                                &elliptic_operator,
-//                                                &MatrixSlice::from(&u),
+//                                                &MatrixView::from(&u),
 //                                                &quadrature);
 //     assert!(f_e.norm() < 1e-14);
 // }
@@ -102,10 +102,10 @@ mod local;
 //
 //     let elliptic_operator = MaterialEllipticOperator(&material);
 //     let mut f_e = DMatrix::zeros(2, 4);
-//     assemble_generalized_element_elliptic_term(MatrixSliceMut::from(&mut f_e),
+//     assemble_generalized_element_elliptic_term(MatrixViewMut::from(&mut f_e),
 //                                                &quad,
 //                                                &elliptic_operator,
-//                                                &MatrixSlice::from(&u),
+//                                                &MatrixView::from(&u),
 //                                                &quadrature);
 //     assert!(f_e.norm() < 1e-14);
 // }
@@ -119,10 +119,10 @@ mod local;
 //
 //     let elliptic_operator = MaterialEllipticOperator(&material);
 //     let mut f_e = DMatrix::zeros(2, 4);
-//     assemble_generalized_element_elliptic_term(MatrixSliceMut::from(&mut f_e),
+//     assemble_generalized_element_elliptic_term(MatrixViewMut::from(&mut f_e),
 //                                                &quad,
 //                                                &elliptic_operator,
-//                                                &MatrixSlice::from(&u),
+//                                                &MatrixView::from(&u),
 //                                                &quadrature);
 //     #[rustfmt::skip]
 //     let expected = Matrix2x4::new(1.0, -1.0, -1.0,  1.0,
@@ -142,10 +142,10 @@ mod local;
 //
 //     let elliptic_operator = MaterialEllipticOperator(&material);
 //     let mut a = DMatrix::zeros(8, 8);
-//     assemble_generalized_element_stiffness(DMatrixSliceMut::from(&mut a),
+//     assemble_generalized_element_stiffness(DMatrixViewMut::from(&mut a),
 //                                            &quad,
 //                                            &elliptic_operator,
-//                                            MatrixSlice::from(&u),
+//                                            MatrixView::from(&u),
 //                                            &quadrature);
 //
 //     // For the given mock material, the contraction yields tr(B) I,
@@ -289,10 +289,10 @@ mod local;
 //         let u_element: OMatrix<f64, Connectivity::GeometryDim, Dynamic> = indices.element_variables(u);
 //         let elliptic_operator = MaterialEllipticOperator(&material);
 //         assemble_generalized_element_elliptic_term(
-//             MatrixSliceMut::from(&mut f_element),
+//             MatrixViewMut::from(&mut f_element),
 //             element,
 //             &elliptic_operator,
-//             &MatrixSlice::from(&u_element),
+//             &MatrixView::from(&u_element),
 //             &quadrature,
 //         );
 //         f.copy_from_slice(f_element.as_slice());
@@ -323,10 +323,10 @@ mod local;
 //     let u_element: OMatrix<_, U2, Dynamic> = quad_indices.element_variables(&u);
 //     let elliptic_operator = MaterialEllipticOperator(&material);
 //     let mut a = DMatrix::zeros(8, 8);
-//     assemble_generalized_element_stiffness(DMatrixSliceMut::from(&mut a),
+//     assemble_generalized_element_stiffness(DMatrixViewMut::from(&mut a),
 //                                            &quad,
 //                                            &elliptic_operator,
-//                                            MatrixSlice::from(&u_element),
+//                                            MatrixView::from(&u_element),
 //                                            &quadrature);
 //
 //     let func = create_single_element_elastic_force_vector_function(
@@ -367,10 +367,10 @@ mod local;
 //     let u_element: OMatrix<_, U3, Dynamic> = tet_conn.element_variables(&u);
 //     let elliptic_operator = MaterialEllipticOperator(&material);
 //     let mut a = DMatrix::zeros(12, 12);
-//     assemble_generalized_element_stiffness(DMatrixSliceMut::from(&mut a),
+//     assemble_generalized_element_stiffness(DMatrixViewMut::from(&mut a),
 //                                            &tet,
 //                                            &elliptic_operator,
-//                                            MatrixSlice::from(&u_element),
+//                                            MatrixView::from(&u_element),
 //                                            &quadrature);
 //
 //     let func = create_single_element_elastic_force_vector_function(
@@ -411,10 +411,10 @@ mod local;
 //     let elliptic_operator = MaterialEllipticOperator(&material);
 //
 //     let mut a = DMatrix::zeros(8, 8);
-//     assemble_generalized_element_stiffness(DMatrixSliceMut::from(&mut a),
+//     assemble_generalized_element_stiffness(DMatrixViewMut::from(&mut a),
 //                                            &quad,
 //                                            &elliptic_operator,
-//                                            MatrixSlice::from(&u_element),
+//                                            MatrixView::from(&u_element),
 //                                            &quadrature);
 //
 //     let func = create_single_element_elastic_force_vector_function(
@@ -466,10 +466,10 @@ mod local;
 //     let u_element: OMatrix<_, U2, _> = quad_indices.element_variables(&u);
 //     let elliptic_operator = MaterialEllipticOperator(&material);
 //     let mut a = DMatrix::zeros(8, 8);
-//     assemble_generalized_element_stiffness(DMatrixSliceMut::from(&mut a),
+//     assemble_generalized_element_stiffness(DMatrixViewMut::from(&mut a),
 //                                            &quad,
 //                                            &elliptic_operator,
-//                                            MatrixSlice::from(&u_element),
+//                                            MatrixView::from(&u_element),
 //                                            &quadrature);
 //
 //     let func = create_single_element_elastic_force_vector_function(

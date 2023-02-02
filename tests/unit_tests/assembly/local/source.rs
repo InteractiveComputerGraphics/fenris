@@ -9,7 +9,7 @@ use fenris::element::{ElementConnectivity, FiniteElement, ReferenceFiniteElement
 use fenris::mesh::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::mesh::QuadMesh2d;
 use fenris::nalgebra::base::coordinates::XYZ;
-use fenris::nalgebra::{DVector, DVectorSliceMut, OPoint, Point2, Point3, Vector2, U2, U3};
+use fenris::nalgebra::{DVector, DVectorViewMut, OPoint, Point2, Point3, Vector2, U2, U3};
 use fenris::quadrature;
 use fenris::quadrature::Quadrature;
 use fenris_nested_vec::NestedVec;
@@ -87,7 +87,7 @@ fn element_source_vector_reproduces_inner_product() {
     let mut basis_buffer = vec![0.0; element.num_nodes()];
     let mut f_element = DVector::repeat(u_element.len(), 2.0);
     assemble_element_source_vector(
-        DVectorSliceMut::from(&mut f_element),
+        DVectorViewMut::from(&mut f_element),
         &element,
         &MockSourceFunction,
         &weights,
@@ -175,7 +175,7 @@ fn source_vector_assembler_matches_individual_element_assembly() {
     let mut basis_values_buffer = vec![2.0; 4];
     for (i, conn) in mesh.connectivity().iter().enumerate() {
         vector_assembler
-            .assemble_element_vector_into(i, DVectorSliceMut::from(&mut element_vector))
+            .assemble_element_vector_into(i, DVectorViewMut::from(&mut element_vector))
             .unwrap();
 
         // Compute expected element matrix for this element
@@ -185,7 +185,7 @@ fn source_vector_assembler_matches_individual_element_assembly() {
             let points = &points[i];
             let data = &params[i];
             assemble_element_source_vector(
-                DVectorSliceMut::from(&mut element_vector_expected),
+                DVectorViewMut::from(&mut element_vector_expected),
                 &element,
                 &MockSource,
                 weights,

@@ -12,7 +12,7 @@ use fenris::element::ElementConnectivity;
 use fenris::error::{estimate_H1_seminorm_error, estimate_L2_error};
 use fenris::io::vtk::{FiniteElementMeshDataSetBuilder, VtkCellConnectivity};
 use fenris::mesh::Mesh;
-use fenris::nalgebra::{DVector, DefaultAllocator, DimName, Dynamic, OPoint, UniformNorm, Vector1, U1};
+use fenris::nalgebra::{DVector, DefaultAllocator, DimName, Dyn, OPoint, UniformNorm, Vector1, U1};
 use fenris::nalgebra_sparse::CsrMatrix;
 use fenris::quadrature::QuadraturePair;
 use fenris::SmallDim;
@@ -148,7 +148,7 @@ pub fn solve_linear_system(matrix: &CsrMatrix<f64>, rhs: &DVector<f64>) -> eyre:
     // any kind of matrix, especially vectors (DVector in particular)!
     // Need to make a PR for this
     let u = cholesky.solve(rhs);
-    Ok(u.reshape_generic(Dynamic::new(rhs.len()), U1::name()))
+    Ok(u.reshape_generic(Dyn(rhs.len()), U1::name()))
 }
 
 #[allow(non_snake_case)]

@@ -1,6 +1,6 @@
 use crate::{compute_batch_contraction, HyperelasticMaterial};
 use fenris::allocators::DimAllocator;
-use fenris::nalgebra::{DMatrixSliceMut, DVectorSlice, DefaultAllocator, DimName, OMatrix, OVector};
+use fenris::nalgebra::{DMatrixViewMut, DVectorView, DefaultAllocator, DimName, OMatrix, OVector};
 use fenris::{Real, SmallDim};
 use numeric_literals::replace_float_literals;
 use serde::{Deserialize, Serialize};
@@ -313,11 +313,11 @@ where
 
     fn accumulate_stress_contractions_into(
         &self,
-        output: DMatrixSliceMut<T>,
+        output: DMatrixViewMut<T>,
         alpha: T,
         deformation_gradient: &OMatrix<T, D, D>,
-        a: DVectorSlice<T>,
-        b: DVectorSlice<T>,
+        a: DVectorView<T>,
+        b: DVectorView<T>,
         parameters: &Self::Parameters,
     ) {
         let LameParameters { mu, lambda } = parameters.clone();
@@ -436,11 +436,11 @@ where
 
     fn accumulate_stress_contractions_into(
         &self,
-        output: DMatrixSliceMut<T>,
+        output: DMatrixViewMut<T>,
         alpha: T,
         deformation_gradient: &OMatrix<T, D, D>,
-        a: DVectorSlice<T>,
-        b: DVectorSlice<T>,
+        a: DVectorView<T>,
+        b: DVectorView<T>,
         parameters: &Self::Parameters,
     ) {
         let &LameParameters { mu, lambda } = parameters;

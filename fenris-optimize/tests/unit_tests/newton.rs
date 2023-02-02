@@ -1,6 +1,6 @@
 use fenris_optimize::calculus::{DifferentiableVectorFunction, VectorFunction};
 use fenris_optimize::newton::*;
-use nalgebra::{DVector, DVectorSlice, DVectorSliceMut, Matrix3, Vector3};
+use nalgebra::{DVector, DVectorView, DVectorViewMut, Matrix3, Vector3};
 use numeric_literals::replace_numeric_literals;
 use std::error::Error;
 
@@ -12,7 +12,7 @@ impl VectorFunction<f64> for MockLinearVectorFunction {
     }
 
     #[replace_numeric_literals(f64::from(literal))]
-    fn eval_into(&mut self, f: &mut DVectorSliceMut<f64>, x: &DVectorSlice<f64>) {
+    fn eval_into(&mut self, f: &mut DVectorViewMut<f64>, x: &DVectorView<f64>) {
         let a = Matrix3::new(5, 1, 2, 1, 4, 2, 2, 2, 4);
         let b = Vector3::new(1, 2, 3);
         let r = a * x - b;
@@ -24,9 +24,9 @@ impl DifferentiableVectorFunction<f64> for MockLinearVectorFunction {
     #[replace_numeric_literals(f64::from(literal))]
     fn solve_jacobian_system(
         &mut self,
-        sol: &mut DVectorSliceMut<f64>,
-        _x: &DVectorSlice<f64>,
-        rhs: &DVectorSlice<f64>,
+        sol: &mut DVectorViewMut<f64>,
+        _x: &DVectorView<f64>,
+        rhs: &DVectorView<f64>,
     ) -> Result<(), Box<dyn Error>> {
         let a = Matrix3::new(5, 1, 2, 1, 4, 2, 2, 2, 4);
         let a_inv = a.try_inverse().unwrap();

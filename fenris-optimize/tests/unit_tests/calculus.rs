@@ -1,6 +1,6 @@
 use fenris_optimize::calculus::*;
 use matrixcompare::assert_matrix_eq;
-use nalgebra::{DMatrix, DVector, DVectorSlice, DVectorSliceMut, RowDVector};
+use nalgebra::{DMatrix, DVector, DVectorView, DVectorViewMut, RowDVector};
 
 #[test]
 fn approximate_jacobian_simple_function() {
@@ -13,7 +13,7 @@ fn approximate_jacobian_simple_function() {
             2
         }
 
-        fn eval_into(&mut self, f: &mut DVectorSliceMut<f64>, x: &DVectorSlice<f64>) {
+        fn eval_into(&mut self, f: &mut DVectorViewMut<f64>, x: &DVectorView<f64>) {
             assert_eq!(x.len(), 2);
             assert_eq!(f.len(), x.len());
             let x1 = x[0];
@@ -42,11 +42,11 @@ fn approximate_jacobian_simple_function() {
 #[test]
 fn test_approximate_gradient_fd() {
     // Define some function f and its gradient
-    let f = |x: DVectorSlice<f64>| {
+    let f = |x: DVectorView<f64>| {
         let (x, y, z) = (x[0], x[1], x[2]);
         3.0 * x * x * x + 3.0 * x * y - 5.0 * z * z + 2.0
     };
-    let f_grad = |x: DVectorSlice<f64>| {
+    let f_grad = |x: DVectorView<f64>| {
         let (x, y, z) = (x[0], x[1], x[2]);
         DVector::from_column_slice(&[9.0 * x * x + 3.0 * y, 3.0 * x, -10.0 * z])
     };
@@ -57,20 +57,20 @@ fn test_approximate_gradient_fd() {
     // Check that x vector was left exactly unchanged
     assert_matrix_eq!(x, x_input);
 
-    assert_matrix_eq!(f_grad_fd, f_grad(DVectorSlice::from(&x)), comp = abs, tol = 1e-6);
+    assert_matrix_eq!(f_grad_fd, f_grad(DVectorView::from(&x)), comp = abs, tol = 1e-6);
 }
 
 #[test]
 fn test_approximate_jacobian_fd() {
     // Define some vector function f: R^3 -> R^2 and its 2x3 Jacobian
-    let f = |x: DVectorSlice<f64>, mut f: DVectorSliceMut<f64>| {
+    let f = |x: DVectorView<f64>, mut f: DVectorViewMut<f64>| {
         let (x, y, z) = (x[0], x[1], x[2]);
         let f1 = 9.0 * x * x + 3.0 * y * x - 3.0 * z * z * z * y;
         let f2 = 2.0 * x * y * y - 10.0 * z;
         f[0] = f1;
         f[1] = f2;
     };
-    let j = |x: DVectorSlice<f64>| {
+    let j = |x: DVectorView<f64>| {
         let (x, y, z) = (x[0], x[1], x[2]);
         // Compute gradients for each component of f and stack them row-by-row
         let df1_dx = RowDVector::from_row_slice(&[18.0 * x + 3.0 * y, 3.0 * x - 3.0 * z * z * z, -9.0 * z * z * y]);
@@ -84,5 +84,5 @@ fn test_approximate_jacobian_fd() {
     // Check that x vector was left exactly unchanged
     assert_matrix_eq!(x, x_input);
 
-    assert_matrix_eq!(j_fd, j(DVectorSlice::from(&x)), comp = abs, tol = 1e-6);
+    assert_matrix_eq!(j_fd, j(DVectorView::from(&x)), comp = abs, tol = 1e-6);
 }

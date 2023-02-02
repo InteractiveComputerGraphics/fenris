@@ -21,8 +21,8 @@ default = [ ]
 proptest-support = [ "proptest", "fenris-geometry/proptest-support", "nalgebra/proptest-support" ]
 
 [dependencies]
-nalgebra = { version = "0.31", features = [ "serde-serialize" ] }
-nalgebra-sparse = { version = "0.7", features = ["compare"] }
+nalgebra = { workspace = true, features = [ "serde-serialize" ] }
+nalgebra-sparse = { workspace = true, features = ["compare"] }
 davenport = "0.1.1"
 vtkio = "0.6"
 num = "0.4"
@@ -49,7 +49,7 @@ rstar = "0.10"
 
 [dev-dependencies]
 fenris = { path = ".", features = [ "proptest-support" ]}
-nalgebra = { version = "0.31", features = [ "serde-serialize", "compare" ] }
+nalgebra = { workspace = true, features = [ "serde-serialize", "compare" ] }
 proptest = "1.0"
 matrixcompare = { version="0.3", features = ["proptest-support"] }
 util = { path = "util" }
@@ -70,3 +70,7 @@ members = [
     "fenris-nested-vec",
     "fenris-paradis",
     "polyquad-parse" ]
+
+[workspace.dependencies]
+nalgebra = { version = "0.32.1", features = [ "serde-serialize" ] }
+nalgebra-sparse = { version = "0.9.0", features = ["compare"] }

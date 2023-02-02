@@ -4,7 +4,7 @@ use crate::element::{
     BoundsForElement, ClosestPoint, ClosestPointInElement, ElementConnectivity, FiniteElement, ReferenceFiniteElement,
 };
 use crate::mesh::Mesh;
-use crate::nalgebra::{Dynamic, MatrixSliceMut, OMatrix};
+use crate::nalgebra::{Dyn, MatrixViewMut, OMatrix};
 use crate::space::{
     BoundsForElementInSpace, ClosestPointInElementInSpace, FiniteElementConnectivity, FiniteElementSpace,
     GeometricFiniteElementSpace,
@@ -95,7 +95,7 @@ where
     fn populate_element_gradients(
         &self,
         element_index: usize,
-        gradients: MatrixSliceMut<T, Self::ReferenceDim, Dynamic>,
+        gradients: MatrixViewMut<T, Self::ReferenceDim, Dyn>,
         reference_coords: &OPoint<T, Self::ReferenceDim>,
     ) {
         let element = self
