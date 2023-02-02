@@ -3,6 +3,7 @@ mod geometry;
 mod polygon;
 mod polymesh;
 mod polytope;
+mod predicates;
 mod primitives;
 mod util;
 

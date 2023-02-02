@@ -88,28 +88,28 @@ fn winding_order() {
 
     use Orientation::{Clockwise, Counterclockwise};
 
-    assert_eq!(Triangle([a, b, c]).orientation(), Clockwise);
-    assert_eq!(Triangle([b, c, a]).orientation(), Clockwise);
-    assert_eq!(Triangle([c, a, b]).orientation(), Clockwise);
-    assert_eq!(Triangle([a, c, b]).orientation(), Counterclockwise);
-    assert_eq!(Triangle([b, a, c]).orientation(), Counterclockwise);
-    assert_eq!(Triangle([c, b, a]).orientation(), Counterclockwise);
+    assert_eq!(Triangle([a, b, c]).orientation(), Counterclockwise);
+    assert_eq!(Triangle([b, c, a]).orientation(), Counterclockwise);
+    assert_eq!(Triangle([c, a, b]).orientation(), Counterclockwise);
+    assert_eq!(Triangle([a, c, b]).orientation(), Clockwise);
+    assert_eq!(Triangle([b, a, c]).orientation(), Clockwise);
+    assert_eq!(Triangle([c, b, a]).orientation(), Clockwise);
 
     let mut triangle = Triangle([a, b, c]);
     triangle.swap_vertices(0, 1);
-    assert_eq!(triangle.orientation(), Counterclockwise);
-    triangle.swap_vertices(2, 1);
     assert_eq!(triangle.orientation(), Clockwise);
-    triangle.swap_vertices(2, 0);
+    triangle.swap_vertices(2, 1);
     assert_eq!(triangle.orientation(), Counterclockwise);
+    triangle.swap_vertices(2, 0);
+    assert_eq!(triangle.orientation(), Clockwise);
 
     // No-op swaps don't change winding
     triangle.swap_vertices(0, 0);
-    assert_eq!(triangle.orientation(), Counterclockwise);
+    assert_eq!(triangle.orientation(), Clockwise);
     triangle.swap_vertices(1, 1);
-    assert_eq!(triangle.orientation(), Counterclockwise);
+    assert_eq!(triangle.orientation(), Clockwise);
     triangle.swap_vertices(2, 2);
-    assert_eq!(triangle.orientation(), Counterclockwise);
+    assert_eq!(triangle.orientation(), Clockwise);
 }
 
 fn verify_connected_poly_mesh<T, D, C>(original_mesh: &Mesh<T, D, C>, poly_mesh: &PolyMesh<T, D>)

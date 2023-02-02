@@ -1,8 +1,14 @@
+use fenris_geometry::AxisAlignedBoundingBox;
 use itertools::Itertools;
+use nalgebra::distance_squared;
 use numeric_literals::replace_float_literals;
+use std::cmp::Ordering;
 
 use crate::connectivity::{Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity};
-use crate::element::{ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement, SurfaceFiniteElement};
+use crate::element::{
+    BoundsForElement, ClosestPoint, ClosestPointInElement, ElementConnectivity, FiniteElement,
+    FixedNodesReferenceFiniteElement, SurfaceFiniteElement,
+};
 use crate::geometry::{LineSegment2d, Triangle, Triangle2d, Triangle3d};
 use crate::nalgebra::{
     distance, Matrix1x3, Matrix1x6, Matrix2, Matrix2x3, Matrix2x6, Matrix3, Matrix3x2, OPoint, Point2, Point3, Scalar,
@@ -433,5 +439,96 @@ where
             lookup_vertex(1)?,
             lookup_vertex(2)?,
         ])))
+    }
+}
+
+#[replace_float_literals(T::from_f64(literal).unwrap())]
+fn is_likely_in_tri_ref_interior<T: Real>(xi: &Point2<T>) -> bool {
+    let eps = 4.0 * T::default_epsilon();
+    xi.x >= -1.0 + eps && xi.y >= -1.0 + eps && xi.x + xi.y <= eps
+}
+
+impl<T: Real> ClosestPointInElement<T> for Tri3d2Element<T> {
+    #[allow(non_snake_case)]
+    fn closest_point(&self, p: &Point2<T>) -> ClosestPoint<T, U2> {
+        let [a, b, c] = self.vertices();
+
+        // This implementation needs to work with (nearly) degenerate triangles. To do so
+        // robustly, we therefore *always* compute the distance to all edges and
+        // try to compute an interior point by inverting the affine map. We always project
+        // (coordinate-wise in this case) the interior point to the reference domain,
+        // since we may otherwise obtain a point arbitrarily far outside the reference domain.
+        // This ensures that, if the affine mapping is ill-conditioned due to near degeneracy,
+        // we always obtain some point on the reference domain.
+        // We obtain the closest point by taking the point corresponding to the smallest
+        // (squared) distance among edge points and the projected interior point.
+
+        // TODO: The vast amount of triangular finite elements can be assumed to be
+        // reasonably well-shaped and certainly non-degenerate. It seems it would be
+        // worthwhile to use an appropriate quality measure
+        // (e.g. minimum angle + ensure that area is not super tiny)
+        // to trigger a "fast path" under the assumption that the element is well-shaped
+
+        let xi_interior = {
+            // Transformation is affine, so Jacobian is constant:
+            //  p = A xi + p0
+            // for some p0 which we can determine by evaluating at xi = 0
+            let A = self.reference_jacobian(&Point2::origin());
+            A.try_inverse()
+                .map(|a_inv| {
+                    let p0 = self.map_reference_coords(&Point2::origin());
+                    Point2::from(a_inv * (p - p0))
+                })
+                // If the inverse transformation doesn't lead to a point clearly inside
+                // the reference domain, we assume that the closest point is on the boundary
+                .filter(is_likely_in_tri_ref_interior)
+        };
+
+        // Compute the closest point on each edge and take the point corresponding to the
+        // smallest distance (squared)
+        let edges = [(a, b), (b, c), (c, a)];
+        let (idx, t, dist2_edge) = edges
+            .into_iter()
+            .map(|(x1, x2)| LineSegment2d::from_end_points(x1.clone(), x2.clone()))
+            .enumerate()
+            .map(|(idx, segment)| {
+                // Parameter is [0, 1]
+                let t = segment.closest_point_parametric(p);
+                let point = segment.point_from_parameter(t);
+                let dist2 = distance_squared(p, &point);
+                (idx, t, dist2)
+            })
+            .min_by(|(_, _, dist2_a), (_, _, dist2_b)| {
+                dist2_a
+                    .partial_cmp(&dist2_b)
+                    // TODO: This is an arbitrary choice. Ideally we'd consistently choose
+                    // in such a way that NaNs would be selected as the minimum to
+                    // avoid hiding potential bugs, but the RealField trait atm does not seem
+                    // to expose something like an "is_nan" method
+                    .unwrap_or(Ordering::Less)
+            })
+            .expect("We always have exactly 3 items in the iterator");
+
+        // Use parameter representation to transfer result to reference element
+        let reference_element = Tri3d2Element::reference();
+        let a = reference_element.vertices()[(idx + 0) % 3];
+        let b = reference_element.vertices()[(idx + 1) % 3];
+        let edge_ref_coords = LineSegment2d::from_end_points(a, b).point_from_parameter(t);
+
+        if let Some(xi_interior) = xi_interior {
+            let x_interior = self.map_reference_coords(&xi_interior);
+            let dist2_interior = distance_squared(p, &x_interior);
+            if dist2_interior < dist2_edge {
+                return ClosestPoint::InElement(xi_interior);
+            }
+        }
+
+        ClosestPoint::ClosestPoint(edge_ref_coords)
+    }
+}
+
+impl<T: Real> BoundsForElement<T> for Tri3d2Element<T> {
+    fn element_bounds(&self) -> AxisAlignedBoundingBox<T, Self::GeometryDim> {
+        AxisAlignedBoundingBox::from_points(self.vertices()).expect("Never fails since we always have > 0 vertices")
     }
 }

@@ -1,5 +1,5 @@
 use crate::{
-    AxisAlignedBoundingBox, BoundedGeometry, ConvexPolygon3d, Distance, LineSegment2d, Orientation,
+    AxisAlignedBoundingBox, BoundedGeometry, ConvexPolygon3d, Distance, LineSegment, LineSegment2d, Orientation,
     OrientationTestResult, SignedDistance, SignedDistanceResult,
 };
 use fenris_traits::Real;
@@ -47,6 +47,13 @@ where
     pub fn swap_vertices(&mut self, i: usize, j: usize) {
         self.0.swap(i, j);
     }
+
+    pub fn edge(&self, index: usize) -> LineSegment<T, D> {
+        assert!(index < 3);
+        let a = self.0[(index + 0) % 3].clone();
+        let b = self.0[(index + 1) % 3].clone();
+        LineSegment::from_end_points(a, b)
+    }
 }
 
 impl<T, D> Triangle<T, D>
@@ -78,9 +85,9 @@ where
 {
     pub fn orientation(&self) -> Orientation {
         if self.signed_area() >= T::zero() {
-            Orientation::Clockwise
-        } else {
             Orientation::Counterclockwise
+        } else {
+            Orientation::Clockwise
         }
     }
 

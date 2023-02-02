@@ -3,7 +3,7 @@ use itertools::izip;
 use itertools::Itertools;
 use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{DimEq, ShapeConstraint};
-use nalgebra::storage::{IsContiguous, Storage, StorageMut};
+use nalgebra::storage::{Storage, StorageMut};
 use nalgebra::{
     DMatrixSlice, DVector, DVectorSlice, DefaultAllocator, Dim, DimDiff, DimMin, DimMul, DimName, DimProd, DimSub,
     Matrix, Matrix3, MatrixSlice, MatrixSliceMut, OMatrix, OPoint, OVector, Quaternion, Scalar, SliceStorage,
@@ -12,11 +12,13 @@ use nalgebra::{
 use nalgebra_sparse::{CooMatrix, CsrMatrix};
 use num::Zero;
 use numeric_literals::replace_float_literals;
+use std::any::TypeId;
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt::LowerExp;
 use std::fs::File;
 use std::io::{BufWriter, Write};
+use std::mem::transmute;
 use std::path::Path;
 
 pub use fenris_geometry::util::compute_orthonormal_vectors_3d;
@@ -59,7 +61,7 @@ where
     C: Dim,
     R2: DimMul<C2>,
     C2: Dim,
-    S: Storage<T, R, C> + IsContiguous,
+    S: Storage<T, R, C>,
     ShapeConstraint: DimEq<DimProd<R, C>, DimProd<R2, C2>>,
 {
     let (r2, c2) = shape;
@@ -68,8 +70,9 @@ where
         r2.value() * c2.value(),
         "Cannot reshape with different number of elements"
     );
-    let data_slice = matrix.as_slice();
-    MatrixSlice::from_slice_generic(data_slice, r2, c2)
+    let strides = (U1::name(), r2);
+    let storage = unsafe { SliceStorage::from_raw_parts(matrix.data.ptr(), shape, strides) };
+    Matrix::from_data(storage)
 }
 
 /// Creates a column-major slice from the given matrix.
@@ -293,9 +296,15 @@ where
     }
 }
 
+pub fn try_transmute_slice<T: 'static, U: 'static>(e: &[T]) -> Option<&[U]> {
+    if TypeId::of::<T>() == TypeId::of::<U>() {
+        Some(unsafe { transmute(e) })
+    } else {
+        None
+    }
+}
+
 pub fn try_transmute_ref<T: 'static, U: 'static>(e: &T) -> Option<&U> {
-    use std::any::TypeId;
-    use std::mem::transmute;
     if TypeId::of::<T>() == TypeId::of::<U>() {
         Some(unsafe { transmute(e) })
     } else {
@@ -304,8 +313,6 @@ pub fn try_transmute_ref<T: 'static, U: 'static>(e: &T) -> Option<&U> {
 }
 
 pub fn try_transmute_ref_mut<T: 'static, U: 'static>(e: &mut T) -> Option<&mut U> {
-    use std::any::TypeId;
-    use std::mem::transmute;
     if TypeId::of::<T>() == TypeId::of::<U>() {
         Some(unsafe { transmute(e) })
     } else {

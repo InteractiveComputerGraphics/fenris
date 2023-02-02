@@ -384,11 +384,7 @@ where
         }
     }
 
-    /// Adds the given attribute data as vector point attributes.
-    ///
-    /// The number of components per vector is inferred from the length of the attribute array.
-    /// For example, if the mesh has 10 points and there are 20 attribute entries, we assign
-    /// 2 scalars per point.
+    /// Adds the given attribute data as scalar point attributes.
     ///
     /// # Panics
     /// Panics if the number of entries in the attribute vector is not equal to the
@@ -412,6 +408,38 @@ where
             .expect("Number of components is ridiculously huge, stop it!");
         let data_array = DataArray::scalars(name, num_comp).with_data(attributes.to_vec());
         attribs.point.push(Attribute::DataArray(data_array));
+
+        Self {
+            mesh: self.mesh,
+            attributes: attribs,
+            title: self.title,
+        }
+    }
+
+    /// Adds the given attribute data as scalar cell attributes.
+    ///
+    /// # Panics
+    /// Panics if the number of entries in the attribute vector is not equal to the
+    /// product of the cell count in the mesh and the number of components.
+    pub fn with_cell_scalar_attributes<S: Scalar + ToPrimitive>(
+        self,
+        name: impl Into<String>,
+        num_components: usize,
+        attributes: &[S],
+    ) -> Self {
+        let num_cells = self.mesh.connectivity().len();
+        assert_eq!(
+            attributes.len(),
+            num_components * num_cells,
+            "Number of attribute entries incompatible with mesh and number of components."
+        );
+
+        let mut attribs = self.attributes;
+        let num_comp = num_components
+            .try_into()
+            .expect("Number of components is ridiculously huge, stop it!");
+        let data_array = DataArray::scalars(name, num_comp).with_data(attributes.to_vec());
+        attribs.cell.push(Attribute::DataArray(data_array));
 
         Self {
             mesh: self.mesh,

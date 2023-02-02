@@ -135,6 +135,9 @@ where
     /// Returns a vector normal to the line segment, in the direction consistent with a
     /// counter-clockwise winding order when the edge is part of a polygon.
     ///
+    /// In other words, the normal direction points "to the right" when following the segment
+    /// from its first endpoint to its second.
+    ///
     /// Note that the vector is **not** normalized.
     pub fn normal_dir(&self) -> Vector2<T> {
         let tangent = self.tangent_dir();

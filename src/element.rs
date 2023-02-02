@@ -2,6 +2,7 @@ use crate::allocators::{BiDimAllocator, DimAllocator};
 use crate::connectivity::Connectivity;
 use crate::nalgebra::MatrixSliceMut;
 use crate::{Real, SmallDim};
+use fenris_geometry::AxisAlignedBoundingBox;
 use fenris_optimize::newton::NewtonSettings;
 use nalgebra::allocator::Allocator;
 use nalgebra::OPoint;
@@ -181,7 +182,7 @@ where
     /// Returns the finite element associated with this connectivity.
     ///
     /// The vertices passed in should be the collection of *all* vertices in the mesh.
-    fn element(&self, vertices: &[OPoint<T, Self::GeometryDim>]) -> Option<Self::Element>;
+    fn element(&self, all_vertices: &[OPoint<T, Self::GeometryDim>]) -> Option<Self::Element>;
 
     /// TODO: Move this out of the trait itself?
     fn populate_element_variables<'a, SolutionDim>(
@@ -454,4 +455,47 @@ where
     }
 
     Ok(OPoint::from(xi))
+}
+
+/// The result of a [`ClosestPointInElement`] query.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ClosestPoint<T, D>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>,
+{
+    /// The point is inside the element.
+    InElement(OPoint<T, D>),
+    /// The closest point in the element to the query point.
+    ClosestPoint(OPoint<T, D>),
+}
+
+impl<T, D> ClosestPoint<T, D>
+where
+    T: Scalar,
+    D: DimName,
+    DefaultAllocator: Allocator<T, D>,
+{
+    pub fn point(&self) -> &OPoint<T, D> {
+        match self {
+            ClosestPoint::InElement(point) | ClosestPoint::ClosestPoint(point) => point,
+        }
+    }
+}
+
+/// A finite element you can query for the closest point to an arbitrary point.
+pub trait ClosestPointInElement<T: Scalar>: FiniteElement<T>
+where
+    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
+{
+    fn closest_point(&self, p: &OPoint<T, Self::GeometryDim>) -> ClosestPoint<T, Self::ReferenceDim>;
+}
+
+/// A finite element that can be queried for its bounding box.
+pub trait BoundsForElement<T: Scalar>: FiniteElement<T>
+where
+    DefaultAllocator: BiDimAllocator<T, Self::GeometryDim, Self::ReferenceDim>,
+{
+    fn element_bounds(&self) -> AxisAlignedBoundingBox<T, Self::GeometryDim>;
 }

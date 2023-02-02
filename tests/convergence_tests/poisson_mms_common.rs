@@ -173,7 +173,7 @@ where
     Source: SourceFunction<f64, D, SolutionDim = U1, Parameters = ()> + Sync,
     // TODO: We should technically only require DimAllocator<_, D>, but Rust gets type
     // inference wrong without this bound...
-    DefaultAllocator: TriDimAllocator<f64, U1, D, D>,
+    DefaultAllocator: TriDimAllocator<f64, D, D, U1>,
     <DefaultAllocator as Allocator<f64, D>>::Buffer: Sync,
 {
     let (a, b) = assemble_linear_system(&mesh, quadrature, poisson_source_function).unwrap();
@@ -182,14 +182,15 @@ where
     // Use a relatively high order quadrature for error computations
     let (weights, points) = error_quadrature;
     let error_quadrature = UniformQuadratureTable::from_points_and_weights(points, weights);
+
     let L2_error = estimate_L2_error(
         mesh,
-        |x: &OPoint<f64, D>| Vector1::repeat(u_exact(x)),
+        &(|x: &OPoint<f64, D>| Vector1::repeat(u_exact(x))),
         &u_h,
         &error_quadrature,
     )
     .unwrap();
-    let H1_seminorm_error = estimate_H1_seminorm_error(mesh, u_exact_grad, &u_h, &error_quadrature).unwrap();
+    let H1_seminorm_error = estimate_H1_seminorm_error(mesh, &u_exact_grad, &u_h, &error_quadrature).unwrap();
 
     PoissonSolveResult {
         u_h,
