@@ -1,8 +1,8 @@
 use crate::connectivity::Connectivity;
 use crate::mesh::Mesh;
 use crate::nalgebra::allocator::Allocator;
-use crate::nalgebra::{DMatrix, DVector, DVectorSliceMut};
-use crate::nalgebra::{DMatrixSliceMut, DefaultAllocator, DimName, Scalar};
+use crate::nalgebra::{DMatrix, DVector, DVectorViewMut};
+use crate::nalgebra::{DMatrixViewMut, DefaultAllocator, DimName, Scalar};
 use crate::Real;
 
 mod elliptic;
@@ -75,7 +75,7 @@ where
 }
 
 pub trait ElementMatrixAssembler<T: Scalar>: ElementConnectivityAssembler {
-    fn assemble_element_matrix_into(&self, element_index: usize, output: DMatrixSliceMut<T>) -> eyre::Result<()>;
+    fn assemble_element_matrix_into(&self, element_index: usize, output: DMatrixViewMut<T>) -> eyre::Result<()>;
 
     fn assemble_element_matrix(&self, element_index: usize) -> eyre::Result<DMatrix<T>>
     where
@@ -83,7 +83,7 @@ pub trait ElementMatrixAssembler<T: Scalar>: ElementConnectivityAssembler {
     {
         let ndof = self.solution_dim() * self.element_node_count(element_index);
         let mut output = DMatrix::zeros(ndof, ndof);
-        self.assemble_element_matrix_into(element_index, DMatrixSliceMut::from(&mut output))?;
+        self.assemble_element_matrix_into(element_index, DMatrixViewMut::from(&mut output))?;
         Ok(output)
     }
 
@@ -93,7 +93,7 @@ pub trait ElementMatrixAssembler<T: Scalar>: ElementConnectivityAssembler {
     ) -> TransformElementMatrix<Self, Transformation>
     where
         Self: Sized,
-        Transformation: Fn(DMatrixSliceMut<T>) -> eyre::Result<()>,
+        Transformation: Fn(DMatrixViewMut<T>) -> eyre::Result<()>,
     {
         TransformElementMatrix {
             assembler: self,
@@ -103,7 +103,7 @@ pub trait ElementMatrixAssembler<T: Scalar>: ElementConnectivityAssembler {
 }
 
 pub trait ElementVectorAssembler<T: Scalar>: ElementConnectivityAssembler {
-    fn assemble_element_vector_into(&self, element_index: usize, output: DVectorSliceMut<T>) -> eyre::Result<()>;
+    fn assemble_element_vector_into(&self, element_index: usize, output: DVectorViewMut<T>) -> eyre::Result<()>;
 
     fn assemble_element_vector(&self, element_index: usize) -> eyre::Result<DVector<T>>
     where
@@ -111,7 +111,7 @@ pub trait ElementVectorAssembler<T: Scalar>: ElementConnectivityAssembler {
     {
         let ndof = self.solution_dim() * self.element_node_count(element_index);
         let mut output = DVector::zeros(ndof);
-        self.assemble_element_vector_into(element_index, DVectorSliceMut::from(&mut output))?;
+        self.assemble_element_vector_into(element_index, DVectorViewMut::from(&mut output))?;
         Ok(output)
     }
 
@@ -121,7 +121,7 @@ pub trait ElementVectorAssembler<T: Scalar>: ElementConnectivityAssembler {
     ) -> TransformElementVector<Self, Transformation>
     where
         Self: Sized,
-        Transformation: Fn(DVectorSliceMut<T>) -> eyre::Result<()>,
+        Transformation: Fn(DVectorViewMut<T>) -> eyre::Result<()>,
     {
         TransformElementVector {
             assembler: self,
@@ -258,7 +258,7 @@ where
     fn assemble_element_vector_into(
         &self,
         aggregate_element_index: usize,
-        output: DVectorSliceMut<T>,
+        output: DVectorViewMut<T>,
     ) -> eyre::Result<()> {
         let (assembler, element_offset) = self.find_assembler_and_offset_for_element_index(aggregate_element_index);
         assembler.assemble_element_vector_into(aggregate_element_index - element_offset, output)
@@ -273,7 +273,7 @@ where
     fn assemble_element_matrix_into(
         &self,
         aggregate_element_index: usize,
-        output: DMatrixSliceMut<T>,
+        output: DMatrixViewMut<T>,
     ) -> eyre::Result<()> {
         let (assembler, element_offset) = self.find_assembler_and_offset_for_element_index(aggregate_element_index);
         assembler.assemble_element_matrix_into(aggregate_element_index - element_offset, output)
@@ -394,7 +394,7 @@ macro_rules! delegate {
             fn assemble_element_vector_into(
                 &$self,
                 element_index: usize,
-                output: DVectorSliceMut<$scalar>)
+                output: DVectorViewMut<$scalar>)
             -> eyre::Result<()> {
                 $self.$delegate_var.assemble_element_vector_into(element_index, output)
             }
@@ -413,7 +413,7 @@ macro_rules! delegate {
             fn assemble_element_matrix_into(
                 &$self,
                 element_index: usize,
-                output: DMatrixSliceMut<$scalar>)
+                output: DMatrixViewMut<$scalar>)
             -> eyre::Result<()> {
                 $self.$delegate_var.assemble_element_matrix_into(element_index, output)
             }
@@ -495,11 +495,11 @@ impl<T, Transformed, Transformer> ElementVectorAssembler<T> for TransformElement
 where
     T: Scalar,
     Transformed: ElementVectorAssembler<T>,
-    Transformer: Fn(DVectorSliceMut<T>) -> eyre::Result<()>,
+    Transformer: Fn(DVectorViewMut<T>) -> eyre::Result<()>,
 {
-    fn assemble_element_vector_into(&self, element_index: usize, mut output: DVectorSliceMut<T>) -> eyre::Result<()> {
+    fn assemble_element_vector_into(&self, element_index: usize, mut output: DVectorViewMut<T>) -> eyre::Result<()> {
         self.assembler
-            .assemble_element_vector_into(element_index, DVectorSliceMut::from(&mut output))?;
+            .assemble_element_vector_into(element_index, DVectorViewMut::from(&mut output))?;
         (self.function)(output)
     }
 }
@@ -508,11 +508,11 @@ impl<T, Transformed, Transformer> ElementMatrixAssembler<T> for TransformElement
 where
     T: Scalar,
     Transformed: ElementMatrixAssembler<T>,
-    Transformer: Fn(DMatrixSliceMut<T>) -> eyre::Result<()>,
+    Transformer: Fn(DMatrixViewMut<T>) -> eyre::Result<()>,
 {
-    fn assemble_element_matrix_into(&self, element_index: usize, mut output: DMatrixSliceMut<T>) -> eyre::Result<()> {
+    fn assemble_element_matrix_into(&self, element_index: usize, mut output: DMatrixViewMut<T>) -> eyre::Result<()> {
         self.assembler
-            .assemble_element_matrix_into(element_index, DMatrixSliceMut::from(&mut output))?;
+            .assemble_element_matrix_into(element_index, DMatrixViewMut::from(&mut output))?;
         (self.function)(output)
     }
 }

@@ -5,7 +5,7 @@ use fenris::assembly::local::{
 use fenris::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator};
 use fenris::nalgebra;
 use fenris::nalgebra::{
-    vector, DMatrix, DVector, DVectorSlice, DVectorSliceMut, DimName, Dynamic, Matrix2, Matrix3, MatrixSliceMut,
+    vector, DMatrix, DVector, DVectorView, DVectorViewMut, DimName, Dyn, Matrix2, Matrix3, MatrixViewMut,
     OMatrix, U3,
 };
 use fenris::quadrature;
@@ -93,37 +93,37 @@ fn material_elliptic_operator_vector_matrix_assembly_tet10() {
     let (weights, points) = quadrature::total_order::tetrahedron(2).unwrap();
     let parameters: Vec<_> = std::iter::repeat(lame).take(points.len()).collect();
 
-    let mut gradient_buffer = OMatrix::zeros_generic(U3::name(), Dynamic::new(10));
+    let mut gradient_buffer = OMatrix::zeros_generic(U3::name(), Dyn(10));
     let mut element_vector = DVector::zeros(30);
     assemble_element_elliptic_vector(
-        DVectorSliceMut::from(&mut element_vector),
+        DVectorViewMut::from(&mut element_vector),
         &element,
         &operator,
-        DVectorSlice::from(&u_element),
+        DVectorView::from(&u_element),
         &weights,
         &points,
         &parameters,
-        MatrixSliceMut::from(&mut gradient_buffer),
+        MatrixViewMut::from(&mut gradient_buffer),
     )
     .unwrap();
 
     let mut element_matrix = DMatrix::zeros(30, 30);
     assemble_element_elliptic_matrix(
-        MatrixSliceMut::from(&mut element_matrix),
+        MatrixViewMut::from(&mut element_matrix),
         &element,
         &operator,
-        DVectorSlice::from(&u_element),
+        DVectorView::from(&u_element),
         &weights,
         &points,
         &parameters,
-        MatrixSliceMut::from(&mut gradient_buffer),
+        MatrixViewMut::from(&mut gradient_buffer),
     )
     .unwrap();
 
     let mut u_h = u_element.clone();
     let approx_element_vector = approximate_gradient_fd(
         |u| {
-            let mut gradient_buffer = OMatrix::zeros_generic(U3::name(), Dynamic::new(10));
+            let mut gradient_buffer = OMatrix::zeros_generic(U3::name(), Dyn(10));
             compute_element_elliptic_energy(
                 &element,
                 &operator,
@@ -131,7 +131,7 @@ fn material_elliptic_operator_vector_matrix_assembly_tet10() {
                 &weights,
                 &points,
                 &parameters,
-                MatrixSliceMut::from(&mut gradient_buffer),
+                MatrixViewMut::from(&mut gradient_buffer),
             )
             .unwrap()
         },
@@ -142,7 +142,7 @@ fn material_elliptic_operator_vector_matrix_assembly_tet10() {
     let approx_element_matrix = approximate_jacobian_fd(
         30,
         |u, f_grad| {
-            let mut gradient_buffer = OMatrix::zeros_generic(U3::name(), Dynamic::new(10));
+            let mut gradient_buffer = OMatrix::zeros_generic(U3::name(), Dyn(10));
             assemble_element_elliptic_vector(
                 f_grad,
                 &element,
@@ -151,7 +151,7 @@ fn material_elliptic_operator_vector_matrix_assembly_tet10() {
                 &weights,
                 &points,
                 &parameters,
-                MatrixSliceMut::from(&mut gradient_buffer),
+                MatrixViewMut::from(&mut gradient_buffer),
             )
             .unwrap();
         },

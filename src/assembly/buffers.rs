@@ -2,13 +2,13 @@ use crate::allocators::{BiDimAllocator, DimAllocator};
 use crate::assembly::global::gather_global_to_local;
 use crate::assembly::local::QuadratureTable;
 use crate::nalgebra::allocator::Allocator;
-use crate::nalgebra::{DMatrix, DefaultAllocator, DimName, Dynamic, MatrixSlice, MatrixSliceMut, OPoint, Scalar};
+use crate::nalgebra::{DMatrix, DefaultAllocator, DimName, Dyn, MatrixView, MatrixViewMut, OPoint, Scalar};
 use crate::quadrature::Quadrature;
 use crate::space::FiniteElementSpace;
 use crate::util::{compute_interpolation, compute_interpolation_gradient, reshape_to_slice};
 use crate::{Real, SmallDim};
 use itertools::izip;
-use nalgebra::{DVector, DVectorSlice, OMatrix, OVector, U1};
+use nalgebra::{DVector, DVectorView, OMatrix, OVector, U1};
 
 #[derive(Debug)]
 pub struct BasisFunctionBuffer<T: Scalar> {
@@ -67,7 +67,7 @@ impl<T: Real> BasisFunctionBuffer<T> {
     {
         space.populate_element_gradients(
             element_index,
-            MatrixSliceMut::from(&mut self.element_basis_gradients),
+            MatrixViewMut::from(&mut self.element_basis_gradients),
             reference_coords,
         );
     }
@@ -84,18 +84,18 @@ impl<T: Real> BasisFunctionBuffer<T> {
         &mut self.element_basis_values
     }
 
-    pub fn element_gradients<D: DimName>(&self) -> MatrixSlice<T, D, Dynamic> {
-        MatrixSlice::from(&self.element_basis_gradients)
+    pub fn element_gradients<D: DimName>(&self) -> MatrixView<T, D, Dyn> {
+        MatrixView::from(&self.element_basis_gradients)
     }
 
-    pub fn element_gradients_mut<D: DimName>(&mut self) -> MatrixSliceMut<T, D, Dynamic> {
-        MatrixSliceMut::from(&mut self.element_basis_gradients)
+    pub fn element_gradients_mut<D: DimName>(&mut self) -> MatrixViewMut<T, D, Dyn> {
+        MatrixViewMut::from(&mut self.element_basis_gradients)
     }
 
-    pub fn element_values_gradients_mut<D: DimName>(&mut self) -> (&mut [T], MatrixSliceMut<T, D, Dynamic>) {
+    pub fn element_values_gradients_mut<D: DimName>(&mut self) -> (&mut [T], MatrixViewMut<T, D, Dyn>) {
         (
             &mut self.element_basis_values,
-            MatrixSliceMut::from(&mut self.element_basis_gradients),
+            MatrixViewMut::from(&mut self.element_basis_gradients),
         )
     }
 }
@@ -244,7 +244,7 @@ where
     DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
 {
     basis_buffer: &'a mut BasisFunctionBuffer<T>,
-    u_local: DVectorSlice<'a, T>,
+    u_local: DVectorView<'a, T>,
     space: &'a Space,
     reference_point: OPoint<T, Space::ReferenceDim>,
     element_index: usize,
@@ -255,7 +255,7 @@ impl<T: Real> InterpolationBuffer<T> {
         &'a mut self,
         element_index: usize,
         space: &'a Space,
-        u_global: impl Into<DVectorSlice<'a, T>>,
+        u_global: impl Into<DVectorView<'a, T>>,
         solution_dim: usize,
     ) -> InterpolationElementBuffer<'a, T, Space>
     where
@@ -270,7 +270,7 @@ impl<T: Real> InterpolationBuffer<T> {
         self.u_local
             .resize_vertically_mut(solution_dim * node_count, T::zero());
         gather_global_to_local(
-            DVectorSlice::from(u_global.into()),
+            DVectorView::from(u_global.into()),
             &mut self.u_local,
             self.basis_buffer.element_nodes(),
             solution_dim,
@@ -278,7 +278,7 @@ impl<T: Real> InterpolationBuffer<T> {
 
         InterpolationElementBuffer {
             basis_buffer: &mut self.basis_buffer,
-            u_local: DVectorSlice::from(&self.u_local),
+            u_local: DVectorView::from(&self.u_local),
             space,
             reference_point: OPoint::origin(),
             element_index,
@@ -336,8 +336,8 @@ where
         S: SmallDim,
         DefaultAllocator: BiDimAllocator<T, Space::ReferenceDim, S>,
     {
-        let gradients: MatrixSlice<T, Space::ReferenceDim, _> = self.basis_buffer.element_gradients();
-        let gradients = reshape_to_slice(&gradients, (Dynamic::new(gradients.len()), U1::name()));
+        let gradients: MatrixView<T, Space::ReferenceDim, _> = self.basis_buffer.element_gradients();
+        let gradients = reshape_to_slice(&gradients, (Dyn(gradients.len()), U1::name()));
         compute_interpolation_gradient(self.u_local, gradients)
     }
 

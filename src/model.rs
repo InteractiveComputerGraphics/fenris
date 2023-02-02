@@ -72,7 +72,7 @@ where
             result[i].fill(T::zero());
 
             for (v, j) in &self.node_values[i_support_start..i_support_end] {
-                let u_j = u.generic_slice((SolutionDim::dim() * j, 0), (SolutionDim::name(), U1::name()));
+                let u_j = u.generic_view((SolutionDim::dim() * j, 0), (SolutionDim::name(), U1::name()));
                 result[i] += u_j * v.clone();
             }
         }
@@ -128,7 +128,7 @@ impl<T> FiniteElementInterpolator<T> {
         //             .map_err(|_| "Failed to map physical coordinates to reference coordinates.")?;
         //
         //         basis_buffer.resize_horizontally_mut(element.num_nodes(), T::zero());
-        //         element.populate_basis(MatrixSliceMut::from(&mut basis_buffer), &xi.coords);
+        //         element.populate_basis(MatrixViewMut::from(&mut basis_buffer), &xi.coords);
         //         for (index, v) in izip!(conn.vertex_indices(), basis_buffer.iter()) {
         //             node_values.push((v.clone(), index.clone()));
         //         }

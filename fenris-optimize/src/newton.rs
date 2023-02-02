@@ -2,7 +2,7 @@ use crate::calculus::{DifferentiableVectorFunction, VectorFunction};
 use fenris_traits::Real;
 use itertools::iterate;
 use log::debug;
-use nalgebra::{DVector, DVectorSlice, DVectorSliceMut, Scalar};
+use nalgebra::{DVector, DVectorView, DVectorViewMut, Scalar};
 use numeric_literals::replace_float_literals;
 use std::error::Error;
 use std::fmt;
@@ -60,9 +60,9 @@ impl Error for NewtonError {}
 #[replace_float_literals(T::from_f64(literal).unwrap())]
 pub fn newton<'a, T, F>(
     function: F,
-    x: impl Into<DVectorSliceMut<'a, T>>,
-    f: impl Into<DVectorSliceMut<'a, T>>,
-    dx: impl Into<DVectorSliceMut<'a, T>>,
+    x: impl Into<DVectorViewMut<'a, T>>,
+    f: impl Into<DVectorViewMut<'a, T>>,
+    dx: impl Into<DVectorViewMut<'a, T>>,
     settings: NewtonSettings<T>,
 ) -> Result<usize, NewtonError>
 where
@@ -76,9 +76,9 @@ where
 #[replace_float_literals(T::from_f64(literal).unwrap())]
 pub fn newton_line_search<'a, T, F>(
     mut function: F,
-    x: impl Into<DVectorSliceMut<'a, T>>,
-    f: impl Into<DVectorSliceMut<'a, T>>,
-    dx: impl Into<DVectorSliceMut<'a, T>>,
+    x: impl Into<DVectorViewMut<'a, T>>,
+    f: impl Into<DVectorViewMut<'a, T>>,
+    dx: impl Into<DVectorViewMut<'a, T>>,
     settings: NewtonSettings<T>,
     line_search: &mut impl LineSearch<T, F>,
 ) -> Result<usize, NewtonError>
@@ -93,7 +93,7 @@ where
     assert_eq!(x.nrows(), f.nrows());
     assert_eq!(minus_dx.nrows(), f.nrows());
 
-    function.eval_into(&mut f, &DVectorSlice::from(&x));
+    function.eval_into(&mut f, &DVectorView::from(&x));
 
     let mut iter = 0;
 
@@ -107,7 +107,7 @@ where
         }
 
         // Solve the system J dx = -f   <=>   J (-dx) = f
-        let j_result = function.solve_jacobian_system(&mut minus_dx, &DVectorSlice::from(&x), &DVectorSlice::from(&f));
+        let j_result = function.solve_jacobian_system(&mut minus_dx, &DVectorView::from(&x), &DVectorView::from(&f));
         if let Err(err) = j_result {
             return Err(NewtonError::JacobianError(err));
         }
@@ -119,9 +119,9 @@ where
         let step_length = line_search
             .step(
                 &mut function,
-                DVectorSliceMut::from(&mut f),
-                DVectorSliceMut::from(&mut x),
-                DVectorSlice::from(dx),
+                DVectorViewMut::from(&mut f),
+                DVectorViewMut::from(&mut x),
+                DVectorView::from(dx),
             )
             .map_err(|err| NewtonError::LineSearchError(err))?;
         debug!("Newton step length at iter {}: {}", iter, step_length);
@@ -135,9 +135,9 @@ pub trait LineSearch<T: Scalar, F: VectorFunction<T>> {
     fn step(
         &mut self,
         function: &mut F,
-        f: DVectorSliceMut<T>,
-        x: DVectorSliceMut<T>,
-        direction: DVectorSlice<T>,
+        f: DVectorViewMut<T>,
+        x: DVectorViewMut<T>,
+        direction: DVectorView<T>,
     ) -> Result<T, Box<dyn Error>>;
 }
 
@@ -154,13 +154,13 @@ where
     fn step(
         &mut self,
         function: &mut F,
-        mut f: DVectorSliceMut<T>,
-        mut x: DVectorSliceMut<T>,
-        direction: DVectorSlice<T>,
+        mut f: DVectorViewMut<T>,
+        mut x: DVectorViewMut<T>,
+        direction: DVectorView<T>,
     ) -> Result<T, Box<dyn Error>> {
         let p = direction;
         x.axpy(T::one(), &p, T::one());
-        function.eval_into(&mut f, &DVectorSlice::from(&x));
+        function.eval_into(&mut f, &DVectorView::from(&x));
         Ok(T::one())
     }
 }
@@ -180,9 +180,9 @@ where
     fn step(
         &mut self,
         function: &mut F,
-        mut f: DVectorSliceMut<T>,
-        mut x: DVectorSliceMut<T>,
-        direction: DVectorSlice<T>,
+        mut f: DVectorViewMut<T>,
+        mut x: DVectorViewMut<T>,
+        direction: DVectorView<T>,
     ) -> Result<T, Box<dyn Error>> {
         // We seek to solve
         //  F(x) = 0
@@ -227,7 +227,7 @@ where
             //  x^{k + 1} = x^k + (alpha^k - alpha^{k - 1}) * p,
             // which is far more amenable to computation
             x.axpy(delta_alpha, &p, T::one());
-            function.eval_into(&mut f, &DVectorSlice::from(&x));
+            function.eval_into(&mut f, &DVectorView::from(&x));
 
             let g = 0.5 * f.magnitude_squared();
             if g <= (1.0 - c * alpha) * g_initial {

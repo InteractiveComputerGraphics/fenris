@@ -1,12 +1,12 @@
 use crate::allocators::{BiDimAllocator, DimAllocator};
 use crate::connectivity::Connectivity;
-use crate::nalgebra::MatrixSliceMut;
+use crate::nalgebra::MatrixViewMut;
 use crate::{Real, SmallDim};
 use fenris_geometry::AxisAlignedBoundingBox;
 use fenris_optimize::newton::NewtonSettings;
 use nalgebra::allocator::Allocator;
 use nalgebra::OPoint;
-use nalgebra::{DVectorSlice, DVectorSliceMut, DimName, Dynamic};
+use nalgebra::{DVectorView, DVectorViewMut, DimName, Dyn};
 use nalgebra::{DefaultAllocator, DimMin, OMatrix, OVector, Scalar, U1};
 use num::Zero;
 use numeric_literals::replace_float_literals;
@@ -45,7 +45,7 @@ where
     /// gradients of each shape function in the element.
     fn populate_basis_gradients(
         &self,
-        basis_gradients: MatrixSliceMut<T, Self::ReferenceDim, Dynamic>,
+        basis_gradients: MatrixViewMut<T, Self::ReferenceDim, Dyn>,
         reference_coords: &OPoint<T, Self::ReferenceDim>,
     );
 }
@@ -118,7 +118,7 @@ macro_rules! impl_reference_finite_element_for_fixed {
 
             fn populate_basis_gradients(
                 &self,
-                mut result: nalgebra::MatrixSliceMut<T, Self::ReferenceDim, nalgebra::Dynamic>,
+                mut result: nalgebra::MatrixViewMut<T, Self::ReferenceDim, nalgebra::Dyn>,
                 reference_coords: &OPoint<T, Self::ReferenceDim>,
             ) {
                 let gradients =
@@ -187,8 +187,8 @@ where
     /// TODO: Move this out of the trait itself?
     fn populate_element_variables<'a, SolutionDim>(
         &self,
-        mut u_local: MatrixSliceMut<T, SolutionDim, Dynamic>,
-        u_global: impl Into<DVectorSlice<'a, T>>,
+        mut u_local: MatrixViewMut<T, SolutionDim, Dyn>,
+        u_global: impl Into<DVectorView<'a, T>>,
     ) where
         T: Zero,
         SolutionDim: DimName,
@@ -317,15 +317,15 @@ where
         .with_function(|f, xi| {
             // Need to create stack-allocated xi
             let xi = OPoint::from(
-                xi.generic_slice((0, 0), (GeometryDim::name(), U1::name()))
+                xi.generic_view((0, 0), (GeometryDim::name(), U1::name()))
                     .clone_owned(),
             );
             f.copy_from(&(element.map_reference_coords(&xi).coords - &x.coords));
         })
         .with_jacobian_solver(
-            |sol: &mut DVectorSliceMut<T>, xi: &DVectorSlice<T>, rhs: &DVectorSlice<T>| {
+            |sol: &mut DVectorViewMut<T>, xi: &DVectorView<T>, rhs: &DVectorView<T>| {
                 let xi = OPoint::from(
-                    xi.generic_slice((0, 0), (GeometryDim::name(), U1::name()))
+                    xi.generic_view((0, 0), (GeometryDim::name(), U1::name()))
                         .clone_owned(),
                 );
                 let j = element.reference_jacobian(&xi);
@@ -368,11 +368,11 @@ where
     // Because we cannot prove to the compiler that the strides of `OVector<T, GeometryDim>`
     // are compatible (in a `DimEq` sense) without nasty additional trait bounds,
     // we first take slices of the vectors so that the stride is dynamic. At this point,
-    // it is known that `DimEq<Dynamic, U1>` works, so we can use it with `newton`,
-    // `which expects `Into<DMatrixSliceMut<T>>`.
+    // it is known that `DimEq<Dyn, U1>` works, so we can use it with `newton`,
+    // `which expects `Into<DMatrixViewMut<T>>`.
     macro_rules! slice {
         ($e:expr) => {
-            $e.generic_slice_with_steps_mut((0, 0), (GeometryDim::name(), U1::name()), (0, 0))
+            $e.generic_view_with_steps_mut((0, 0), (GeometryDim::name(), U1::name()), (0, 0))
         };
     }
 

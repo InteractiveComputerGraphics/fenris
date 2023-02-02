@@ -8,7 +8,7 @@ use crate::integrate::{
     integrate_over_element, integrate_over_volume_element, ElementIntegralAssemblerBuilder, FnFunction,
     IntegrationWorkspace, UFunction, UGradFunction,
 };
-use crate::nalgebra::DVectorSlice;
+use crate::nalgebra::DVectorView;
 use crate::nalgebra::{DefaultAllocator, OPoint, OVector};
 use crate::space::{InterpolateGradientInSpace, InterpolateInSpace, VolumetricFiniteElementSpace};
 use crate::{Real, SmallDim};
@@ -84,7 +84,7 @@ where
     T: Real,
     SolutionDim: SmallDim,
     Space: InterpolateInSpace<T, SolutionDim>,
-    Weights: Copy + Into<DVectorSlice<'a, T>>,
+    Weights: Copy + Into<DVectorView<'a, T>>,
     DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>,
 {
     fn evaluate(&self, x: &OPoint<T, Space::GeometryDim>) -> OVector<T, SolutionDim> {
@@ -98,7 +98,7 @@ where
     T: Real,
     SolutionDim: SmallDim,
     Space: InterpolateGradientInSpace<T, SolutionDim>,
-    Weights: Copy + Into<DVectorSlice<'a, T>>,
+    Weights: Copy + Into<DVectorView<'a, T>>,
     DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>,
 {
     fn evaluate_grad(&self, x: &OPoint<T, Space::GeometryDim>) -> OMatrix<T, Space::GeometryDim, SolutionDim> {
@@ -117,7 +117,7 @@ where
 pub fn estimate_element_L2_error_squared<T, Element, SolutionDim>(
     element: &Element,
     u: &impl SolutionFunction<T, Element::GeometryDim, SolutionDim>,
-    u_h_element: DVectorSlice<T>,
+    u_h_element: DVectorView<T>,
     quadrature_weights: &[T],
     quadrature_points: &[OPoint<T, Element::ReferenceDim>],
     workspace: &mut IntegrationWorkspace<T>,
@@ -153,7 +153,7 @@ where
 pub fn estimate_element_H1_seminorm_error_squared<T, Element, SolutionDim>(
     element: &Element,
     u_grad: &impl SolutionGradient<T, Element::GeometryDim, SolutionDim>,
-    u_h_element: DVectorSlice<T>,
+    u_h_element: DVectorView<T>,
     quadrature_weights: &[T],
     quadrature_points: &[OPoint<T, Element::ReferenceDim>],
     workspace: &mut IntegrationWorkspace<T>,
@@ -190,7 +190,7 @@ where
 pub fn estimate_element_H1_seminorm_error<T, Element, SolutionDim>(
     element: &Element,
     u_grad: &impl SolutionGradient<T, Element::GeometryDim, SolutionDim>,
-    u_h_element: DVectorSlice<T>,
+    u_h_element: DVectorView<T>,
     quadrature_weights: &[T],
     quadrature_points: &[OPoint<T, Element::ReferenceDim>],
     workspace: &mut IntegrationWorkspace<T>,
@@ -223,7 +223,7 @@ where
 pub fn estimate_element_L2_error<T, Element, SolutionDim>(
     element: &Element,
     u: &impl SolutionFunction<T, Element::GeometryDim, SolutionDim>,
-    u_h_element: DVectorSlice<T>,
+    u_h_element: DVectorView<T>,
     quadrature_weights: &[T],
     quadrature_points: &[OPoint<T, Element::ReferenceDim>],
     workspace: &mut IntegrationWorkspace<T>,
@@ -287,7 +287,7 @@ where
 pub fn estimate_L2_error_squared<'a, T, SolutionDim, Space, QTable>(
     space: &Space,
     u: &(impl SolutionFunction<T, Space::GeometryDim, SolutionDim> + ?Sized),
-    u_h: impl Into<DVectorSlice<'a, T>>,
+    u_h: impl Into<DVectorView<'a, T>>,
     qtable: &QTable,
 ) -> eyre::Result<T>
 where
@@ -313,7 +313,7 @@ where
 pub fn estimate_L2_error<'a, T, SolutionDim, Space, QTable>(
     space: &Space,
     u: &(impl SolutionFunction<T, Space::GeometryDim, SolutionDim> + ?Sized),
-    u_h: impl Into<DVectorSlice<'a, T>>,
+    u_h: impl Into<DVectorView<'a, T>>,
     qtable: &QTable,
 ) -> eyre::Result<T>
 where
@@ -332,7 +332,7 @@ where
 pub fn estimate_H1_seminorm_error_squared<'a, T, SolutionDim, Space, QTable>(
     space: &Space,
     u_grad: &impl SolutionGradient<T, Space::GeometryDim, SolutionDim>,
-    u_h: impl Into<DVectorSlice<'a, T>>,
+    u_h: impl Into<DVectorView<'a, T>>,
     qtable: &QTable,
 ) -> eyre::Result<T>
 where
@@ -358,7 +358,7 @@ where
 pub fn estimate_H1_seminorm_error<'a, T, SolutionDim, Space, QTable>(
     space: &Space,
     u_grad: &impl SolutionGradient<T, Space::GeometryDim, SolutionDim>,
-    u_h: impl Into<DVectorSlice<'a, T>>,
+    u_h: impl Into<DVectorView<'a, T>>,
     qtable: &QTable,
 ) -> eyre::Result<T>
 where

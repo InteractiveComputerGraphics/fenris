@@ -2,7 +2,7 @@ use fenris::allocators::BiDimAllocator;
 use fenris::assembly::local::{assemble_element_elliptic_matrix, assemble_element_mass_matrix};
 use fenris::assembly::operators::LaplaceOperator;
 use fenris::element::*;
-use fenris::nalgebra::{DefaultAllocator, Dynamic};
+use fenris::nalgebra::{DefaultAllocator, Dyn};
 use fenris::quadrature;
 use fenris::quadrature::{
     CanonicalMassQuadrature, CanonicalStiffnessQuadrature, Quadrature, QuadraturePair2d, QuadraturePair3d,
@@ -10,7 +10,7 @@ use fenris::quadrature::{
 use fenris::Real;
 use matrixcompare::comparators::FloatElementwiseComparator;
 use matrixcompare::{assert_matrix_eq, compare_matrices};
-use nalgebra::{DMatrix, DMatrixSliceMut, DVector, DVectorSlice, MatrixSliceMut, OMatrix, U2, U3};
+use nalgebra::{DMatrix, DMatrixViewMut, DVector, DVectorView, MatrixViewMut, OMatrix, U2, U3};
 use paste::paste;
 
 fn assemble_mass_for_element<T, Element>(
@@ -53,14 +53,14 @@ where
     let u_element = DVector::zeros(n);
     let operator = LaplaceOperator;
     assemble_element_elliptic_matrix::<T, Element, LaplaceOperator>(
-        DMatrixSliceMut::from(&mut output),
+        DMatrixViewMut::from(&mut output),
         element,
         &operator,
-        DVectorSlice::from(&u_element),
+        DVectorView::from(&u_element),
         quadrature.weights(),
         quadrature.points(),
         &dummy_data,
-        MatrixSliceMut::from(&mut OMatrix::<T, Element::ReferenceDim, Dynamic>::zeros(n)),
+        MatrixViewMut::from(&mut OMatrix::<T, Element::ReferenceDim, Dyn>::zeros(n)),
     )
     .unwrap();
     output

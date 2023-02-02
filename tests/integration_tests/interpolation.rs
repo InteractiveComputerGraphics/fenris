@@ -11,7 +11,7 @@ use fenris::{quadrature, SmallDim};
 use fenris_traits::allocators::{BiDimAllocator, TriDimAllocator};
 use itertools::{izip, Itertools};
 use matrixcompare::assert_matrix_eq;
-use nalgebra::{vector, DVectorSlice, DefaultAllocator, OMatrix, OVector, Point2, Vector1, Vector2, U1, U2};
+use nalgebra::{vector, DVectorView, DefaultAllocator, OMatrix, OVector, Point2, Vector1, Vector2, U1, U2};
 use util::flatten_vertically;
 
 fn u_scalar(p: &Point2<f64>) -> Vector1<f64> {
@@ -41,7 +41,7 @@ where
 fn compute_expected_interpolation_test_values<'a, Space, SolutionDim>(
     space: &Space,
     quadrature_points: &[Point2<f64>],
-    u_vec: impl Into<DVectorSlice<'a, f64>>,
+    u_vec: impl Into<DVectorView<'a, f64>>,
 ) -> ExpectedInterpolationTestValues<SolutionDim>
 where
     SolutionDim: SmallDim,
@@ -78,8 +78,8 @@ where
 
     let mut u_interpolated = vec![OVector::<_, SolutionDim>::zeros(); x_expected.len()];
     let mut grad_u_interpolated = vec![OMatrix::<_, U2, SolutionDim>::zeros(); x_expected.len()];
-    space.interpolate_at_points(&x_expected, DVectorSlice::from(&u_vec), &mut u_interpolated);
-    space.interpolate_gradient_at_points(&x_expected, DVectorSlice::from(&u_vec), &mut grad_u_interpolated);
+    space.interpolate_at_points(&x_expected, DVectorView::from(&u_vec), &mut u_interpolated);
+    space.interpolate_gradient_at_points(&x_expected, DVectorView::from(&u_vec), &mut grad_u_interpolated);
 
     ExpectedInterpolationTestValues {
         u_expected,
@@ -246,7 +246,7 @@ fn basic_extrapolation() {
     let mut u_outer = vec![Vector1::zeros(); outer_mesh.vertices().len()];
     SpatiallyIndexed::from_space(base_mesh).interpolate_at_points(
         outer_mesh.vertices(),
-        DVectorSlice::from(&u_base),
+        DVectorView::from(&u_base),
         &mut u_outer,
     );
 

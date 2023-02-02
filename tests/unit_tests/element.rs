@@ -15,7 +15,7 @@ use fenris::util::proptest::point2_f64_strategy;
 use fenris_optimize::calculus::{approximate_jacobian, VectorFunctionBuilder};
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq, prop_assert_matrix_eq};
 use nalgebra::{
-    point, DVectorSlice, DimName, Dynamic, MatrixSlice, OMatrix, OPoint, Point1, Point2, Point3, Vector1, Vector2,
+    point, DVectorView, DimName, Dyn, MatrixView, OMatrix, OPoint, Point1, Point2, Point3, Vector1, Vector2,
     Vector3, U1, U10, U2, U20, U27, U3, U4, U6, U8, U9,
 };
 use proptest::prelude::*;
@@ -277,7 +277,7 @@ fn quad4_bilinear_function_exact_error() {
     let error = estimate_element_L2_error(
         &element,
         &|x: &Point2<_>| Vector1::new(u_exact(x)),
-        MatrixSlice::from(&u_weights),
+        MatrixView::from(&u_weights),
         &weights,
         &points,
         &mut IntegrationWorkspace::default(),
@@ -317,7 +317,7 @@ fn hex27_triquadratic_function_exact_error() {
     let error = estimate_element_L2_error(
         &element,
         &|x: &Point3<_>| Vector1::new(u_exact(x)),
-        MatrixSlice::from(&u_weights),
+        MatrixView::from(&u_weights),
         &weights,
         &points,
         &mut IntegrationWorkspace::default(),
@@ -353,7 +353,7 @@ fn hex20_quadratic_function_exact_error() {
     let error = estimate_element_L2_error(
         &element,
         &|x: &Point3<_>| Vector1::new(u_exact(x)),
-        DVectorSlice::from(&u_weights),
+        DVectorView::from(&u_weights),
         &weights,
         &points,
         &mut IntegrationWorkspace::default(),
@@ -515,7 +515,7 @@ proptest! {
         let error = estimate_element_L2_error(
             &element,
             &|x: &Point2<_>| Vector1::new(u_exact(x)),
-            DVectorSlice::from(&u_weights),
+            DVectorView::from(&u_weights),
             &weights,
             &points,
             &mut IntegrationWorkspace::default());
@@ -537,7 +537,7 @@ proptest! {
         let error = estimate_element_L2_error(
             &element,
             &|x: &Point2<_>| Vector1::new(u_exact(x)),
-            DVectorSlice::from(&u_weights),
+            DVectorView::from(&u_weights),
             &weights,
             &points,
             &mut IntegrationWorkspace::default());
@@ -559,7 +559,7 @@ proptest! {
         let error = estimate_element_L2_error(
             &element,
             &|x: &Point2<_>| Vector1::new(u_exact(x)),
-            DVectorSlice::from(&u_weights),
+            DVectorView::from(&u_weights),
             &weights,
             &points,
             &mut IntegrationWorkspace::default());
@@ -591,7 +591,7 @@ proptest! {
         let error = estimate_element_L2_error(
             &element,
             &|x: &Point2<_>| Vector1::new(u_exact(x)),
-            MatrixSlice::from(&u_weights),
+            MatrixView::from(&u_weights),
             &weights,
             &points,
             &mut IntegrationWorkspace::default());
@@ -731,7 +731,7 @@ proptest! {
         let (weights, points) = quadrature::total_order::tetrahedron(10).unwrap();
         let error = estimate_element_L2_error(
             &element, &|x: &Point3<_>| Vector1::new(u_exact(x)),
-            MatrixSlice::from(&u_weights),
+            MatrixView::from(&u_weights),
             &weights,
             &points,
             &mut IntegrationWorkspace::default());
@@ -751,12 +751,12 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(3).with_function(move |x, xi| {
-            let xi = OPoint::from(xi.generic_slice((0, 0), (U2::name(), U1::name())).clone_owned());
+            let xi = OPoint::from(xi.generic_view((0, 0), (U2::name(), U1::name())).clone_owned());
             x.copy_from(&elem.evaluate_basis(&xi).transpose());
         });
 
         let grad = elem.gradients(&xi);
-        let grad_approx = approximate_jacobian(f, &DVectorSlice::<_, Dynamic>::from(&xi.coords).clone_owned(), &h).transpose();
+        let grad_approx = approximate_jacobian(f, &DVectorView::<_, Dyn>::from(&xi.coords).clone_owned(), &h).transpose();
 
         assert_approx_matrix_eq!(grad, &grad_approx, abstol=1e-5);
     }
@@ -773,12 +773,12 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(6).with_function(move |x, xi| {
-            let xi = OPoint::from(xi.generic_slice((0, 0), (U2::name(), U1::name())).clone_owned());
+            let xi = OPoint::from(xi.generic_view((0, 0), (U2::name(), U1::name())).clone_owned());
             x.copy_from(&elem.evaluate_basis(&xi).transpose());
         });
 
         let grad = elem.gradients(&xi);
-        let grad_approx = approximate_jacobian(f, &DVectorSlice::<_, Dynamic>::from(&xi.coords).clone_owned(), &h).transpose();
+        let grad_approx = approximate_jacobian(f, &DVectorView::<_, Dyn>::from(&xi.coords).clone_owned(), &h).transpose();
 
         assert_approx_matrix_eq!(grad, &grad_approx, abstol=1e-5);
     }
@@ -792,12 +792,12 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(4).with_function(move |x, xi| {
-            let xi = OPoint::from(xi.generic_slice((0, 0), (U3::name(), U1::name())).clone_owned());
+            let xi = OPoint::from(xi.generic_view((0, 0), (U3::name(), U1::name())).clone_owned());
             x.copy_from(&tet.evaluate_basis(&xi).transpose());
         });
 
         let grad = tet.gradients(&xi);
-        let grad_approx = approximate_jacobian(f, &DVectorSlice::<_, Dynamic>::from(&xi.coords).clone_owned(), &h).transpose();
+        let grad_approx = approximate_jacobian(f, &DVectorView::<_, Dyn>::from(&xi.coords).clone_owned(), &h).transpose();
 
         assert_approx_matrix_eq!(grad, &grad_approx, abstol=1e-5);
     }
@@ -812,12 +812,12 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(10).with_function(move |x, xi| {
-            let xi = OPoint::from(xi.generic_slice((0, 0), (U3::name(), U1::name())).clone_owned());
+            let xi = OPoint::from(xi.generic_view((0, 0), (U3::name(), U1::name())).clone_owned());
             x.copy_from(&tet.evaluate_basis(&xi).transpose());
         });
 
         let grad = tet.gradients(&xi);
-        let grad_approx = approximate_jacobian(f, &DVectorSlice::<_, Dynamic>::from(&xi.coords).clone_owned(), &h).transpose();
+        let grad_approx = approximate_jacobian(f, &DVectorView::<_, Dyn>::from(&xi.coords).clone_owned(), &h).transpose();
 
         assert_approx_matrix_eq!(grad, &grad_approx, abstol=1e-5);
     }
@@ -832,12 +832,12 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(20).with_function(move |x, xi| {
-            let xi = OPoint::from(xi.generic_slice((0, 0), (U3::name(), U1::name())).clone_owned());
+            let xi = OPoint::from(xi.generic_view((0, 0), (U3::name(), U1::name())).clone_owned());
             x.copy_from(&tet.evaluate_basis(&xi).transpose());
         });
 
         let grad = tet.gradients(&xi);
-        let grad_approx = approximate_jacobian(f, &DVectorSlice::<_, Dynamic>::from(&xi.coords).clone_owned(), &h).transpose();
+        let grad_approx = approximate_jacobian(f, &DVectorView::<_, Dyn>::from(&xi.coords).clone_owned(), &h).transpose();
 
         assert_approx_matrix_eq!(grad, &grad_approx, abstol=1e-5);
     }
@@ -852,12 +852,12 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(27).with_function(move |x, xi| {
-            let xi = OPoint::from(xi.generic_slice((0, 0), (U3::name(), U1::name())).clone_owned());
+            let xi = OPoint::from(xi.generic_view((0, 0), (U3::name(), U1::name())).clone_owned());
             x.copy_from(&hex.evaluate_basis(&xi).transpose());
         });
 
         let grad = hex.gradients(&xi);
-        let xi = DVectorSlice::<_, Dynamic>::from(&xi.coords).clone_owned();
+        let xi = DVectorView::<_, Dyn>::from(&xi.coords).clone_owned();
         let grad_approx = approximate_jacobian(f, &xi, &h).transpose();
 
         assert_approx_matrix_eq!(grad, &grad_approx, abstol=1e-5);
@@ -873,12 +873,12 @@ proptest! {
         // Note: Function values are given as row vectors, so we transpose to get the result,
         // and we must also transpose the end result
         let f = VectorFunctionBuilder::with_dimension(20).with_function(move |x, xi| {
-            let xi = OPoint::from(xi.generic_slice((0, 0), (U3::name(), U1::name())).clone_owned());
+            let xi = OPoint::from(xi.generic_view((0, 0), (U3::name(), U1::name())).clone_owned());
             x.copy_from(&hex.evaluate_basis(&xi).transpose());
         });
 
         let grad = hex.gradients(&xi);
-        let xi = DVectorSlice::<_, Dynamic>::from(&xi.coords).clone_owned();
+        let xi = DVectorView::<_, Dyn>::from(&xi.coords).clone_owned();
         let grad_approx = approximate_jacobian(f, &xi, &h).transpose();
 
         assert_approx_matrix_eq!(grad, &grad_approx, abstol=1e-5);
@@ -892,12 +892,12 @@ proptest! {
         let h = 1e-6;
         // Function is x = f(xi)
         let f = VectorFunctionBuilder::with_dimension(3).with_function(move |x, xi| {
-            let xi = OPoint::from(xi.generic_slice((0, 0), (U3::name(), U1::name())).clone_owned());
+            let xi = OPoint::from(xi.generic_view((0, 0), (U3::name(), U1::name())).clone_owned());
             x.copy_from(&tet.map_reference_coords(&xi).coords);
         });
 
         let j = tet.reference_jacobian(&xi);
-        let j_approx = approximate_jacobian(f, &DVectorSlice::<_, Dynamic>::from(&xi.coords).clone_owned(), &h);
+        let j_approx = approximate_jacobian(f, &DVectorView::<_, Dyn>::from(&xi.coords).clone_owned(), &h);
         assert_approx_matrix_eq!(j, &j_approx, abstol=1e-5);
     }
 

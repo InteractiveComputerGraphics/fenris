@@ -4,7 +4,7 @@ use crate::space::{FindClosestElement, FiniteElementSpace, VolumetricFiniteEleme
 use crate::{Real, SmallDim};
 use davenport::{define_thread_local_workspace, with_thread_local_workspace};
 use itertools::izip;
-use nalgebra::{DVectorSlice, DefaultAllocator, OMatrix, OPoint, OVector};
+use nalgebra::{DVectorView, DefaultAllocator, OMatrix, OPoint, OVector};
 use std::array;
 
 /// A finite element space that allows interpolation at arbitrary points.
@@ -20,7 +20,7 @@ where
     fn interpolate_at_point(
         &self,
         point: &OPoint<T, Self::GeometryDim>,
-        interpolation_weights: DVectorSlice<T>,
+        interpolation_weights: DVectorView<T>,
     ) -> OVector<T, SolutionDim> {
         let mut buffer = [OVector::<_, SolutionDim>::zeros()];
         self.interpolate_at_points(array::from_ref(point), interpolation_weights, &mut buffer);
@@ -56,7 +56,7 @@ where
     fn interpolate_at_points(
         &self,
         points: &[OPoint<T, Self::GeometryDim>],
-        interpolation_weights: DVectorSlice<T>,
+        interpolation_weights: DVectorView<T>,
         result_buffer: &mut [OVector<T, SolutionDim>],
     );
 }
@@ -75,7 +75,7 @@ where
     fn interpolate_gradient_at_point(
         &self,
         point: &OPoint<T, Self::GeometryDim>,
-        interpolation_weights: DVectorSlice<T>,
+        interpolation_weights: DVectorView<T>,
     ) -> OMatrix<T, Self::GeometryDim, SolutionDim> {
         let mut buffer = [OMatrix::<_, Self::GeometryDim, SolutionDim>::zeros()];
         self.interpolate_gradient_at_points(array::from_ref(point), interpolation_weights, &mut buffer);
@@ -111,7 +111,7 @@ where
     fn interpolate_gradient_at_points(
         &self,
         points: &[OPoint<T, Self::GeometryDim>],
-        interpolation_weights: DVectorSlice<T>,
+        interpolation_weights: DVectorView<T>,
         result_buffer: &mut [OMatrix<T, Self::GeometryDim, SolutionDim>],
     );
 }
@@ -141,7 +141,7 @@ define_thread_local_workspace!(INTERPOLATE_WORKSPACE);
 pub fn interpolate_at_points<T, SolutionDim, Space>(
     space: &Space,
     points: &[OPoint<T, Space::GeometryDim>],
-    interpolation_weights: DVectorSlice<T>,
+    interpolation_weights: DVectorView<T>,
     result_buffer: &mut [OVector<T, SolutionDim>],
 ) where
     T: Real,
@@ -194,7 +194,7 @@ pub fn interpolate_at_points<T, SolutionDim, Space>(
 pub fn interpolate_gradient_at_points<T, SolutionDim, Space>(
     space: &Space,
     points: &[OPoint<T, Space::GeometryDim>],
-    interpolation_weights: DVectorSlice<T>,
+    interpolation_weights: DVectorView<T>,
     result_buffer: &mut [OMatrix<T, Space::GeometryDim, SolutionDim>],
 ) where
     T: Real,

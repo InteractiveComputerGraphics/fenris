@@ -5,11 +5,11 @@ use fenris::error::{estimate_L2_error_squared, estimate_element_L2_error_squared
 use fenris::integrate::IntegrationWorkspace;
 use fenris::mesh::procedural::create_unit_box_uniform_tet_mesh_3d;
 use fenris::mesh::Tet10Mesh;
-use fenris::nalgebra::{DMatrix, DVector, DVectorSlice};
+use fenris::nalgebra::{DMatrix, DVector, DVectorView};
 use fenris::quadrature;
 use fenris::quadrature::Quadrature;
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
-use nalgebra::{Matrix2, Matrix3, MatrixSliceMut, Point3, Vector1};
+use nalgebra::{Matrix2, Matrix3, MatrixViewMut, Point3, Vector1};
 use std::iter::repeat;
 
 #[test]
@@ -63,7 +63,7 @@ fn squared_norm_agrees_with_element_mass_matrix_quadratic_form_tet20() {
     let g_h_squared_norm = estimate_element_L2_error_squared(
         &element,
         &|_: &Point3<_>| Vector1::zeros(),
-        DVectorSlice::from(&g_h),
+        DVectorView::from(&g_h),
         quadrature.weights(),
         quadrature.points(),
         &mut workspace,
@@ -71,7 +71,7 @@ fn squared_norm_agrees_with_element_mass_matrix_quadratic_form_tet20() {
 
     let mut M = DMatrix::zeros(20, 20);
     assemble_element_mass_matrix(
-        MatrixSliceMut::from(&mut M),
+        MatrixViewMut::from(&mut M),
         &element,
         quadrature.weights(),
         quadrature.points(),
@@ -93,7 +93,7 @@ fn squared_norm_agrees_with_element_mass_matrix_quadratic_form_tet20() {
     {
         let mut M2 = DMatrix::zeros(40, 40);
         assemble_element_mass_matrix(
-            MatrixSliceMut::from(&mut M2),
+            MatrixViewMut::from(&mut M2),
             &element,
             quadrature.weights(),
             quadrature.points(),
@@ -108,7 +108,7 @@ fn squared_norm_agrees_with_element_mass_matrix_quadratic_form_tet20() {
     {
         let mut M3 = DMatrix::zeros(60, 60);
         assemble_element_mass_matrix(
-            MatrixSliceMut::from(&mut M3),
+            MatrixViewMut::from(&mut M3),
             &element,
             quadrature.weights(),
             quadrature.points(),

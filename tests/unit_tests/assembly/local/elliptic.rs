@@ -15,8 +15,8 @@ use fenris::element::{
 };
 use fenris::nalgebra::base::coordinates::{XY, XYZ};
 use fenris::nalgebra::{
-    DMatrix, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, DimName, Dynamic, Matrix2, Matrix3x2,
-    MatrixSlice, MatrixSliceMut, OMatrix, OPoint, OVector, Point2, Point3, Vector1, Vector2, Vector3, U1, U2, U3,
+    DMatrix, DVector, DVectorView, DVectorViewMut, DefaultAllocator, DimName, Dyn, Matrix2, Matrix3x2,
+    MatrixView, MatrixViewMut, OMatrix, OPoint, OVector, Point2, Point3, Vector1, Vector2, Vector3, U1, U2, U3,
 };
 use fenris::quadrature::{Quadrature, QuadraturePair};
 use fenris::{quadrature, Symmetry};
@@ -29,7 +29,7 @@ use fenris::connectivity::Connectivity;
 use fenris::mesh::procedural::create_unit_square_uniform_quad_mesh_2d;
 use fenris::mesh::QuadMesh2d;
 use fenris_nested_vec::NestedVec;
-use nalgebra::DMatrixSliceMut;
+use nalgebra::DMatrixViewMut;
 
 struct MockScalarEllipticEnergy;
 
@@ -89,7 +89,7 @@ fn compute_element_energy_scalar_quad4() {
         let integral_computed = compute_energy_integral(
             &element,
             &MockScalarEllipticEnergy,
-            DVectorSlice::from(&u_element),
+            DVectorView::from(&u_element),
             &quadrature,
             &quadrature_params,
         );
@@ -122,7 +122,7 @@ fn compute_element_energy_scalar_quad4() {
         let integral_computed = compute_energy_integral(
             &element,
             &MockScalarEllipticEnergy,
-            DVectorSlice::from(&u_element),
+            DVectorView::from(&u_element),
             &quadrature,
             &quadrature_params,
         );
@@ -260,7 +260,7 @@ fn compute_element_energy_vector_tet10() {
         let integral_computed = compute_energy_integral(
             &element,
             &MockVectorEllipticEnergy,
-            DVectorSlice::from(&u_element),
+            DVectorView::from(&u_element),
             &quadrature,
             &quadrature_params,
         );
@@ -299,7 +299,7 @@ fn elliptic_element_vector_is_gradient_of_energy_tet10() {
     let finite_diff_result = {
         let quadrature = quadrature::total_order::tetrahedron(8).unwrap();
         let quadrature_params = local::evaluate_density_at_quadrature_points(&element, &quadrature.1, local::density);
-        let f = |u: DVectorSlice<f64>| {
+        let f = |u: DVectorView<f64>| {
             compute_energy_integral(&element, &MockVectorEllipticEnergy, u, &quadrature, &quadrature_params)
         };
         // TODO: What to use as h?
@@ -311,16 +311,16 @@ fn elliptic_element_vector_is_gradient_of_energy_tet10() {
     let quadrature_data = local::evaluate_density_at_quadrature_points(&element, &points, local::density);
     let mut output = DVector::repeat(2 * element.num_nodes(), 3.0);
     let mut gradient_buffer =
-        DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3::name(), Dynamic::new(element.num_nodes()));
+        DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3::name(), Dyn(element.num_nodes()));
     assemble_element_elliptic_vector(
-        MatrixSliceMut::from(&mut output),
+        MatrixViewMut::from(&mut output),
         &element,
         &MockVectorEllipticEnergy,
-        MatrixSlice::from(&u_element),
+        MatrixView::from(&u_element),
         &weights,
         &points,
         &quadrature_data,
-        MatrixSliceMut::from(&mut gradient_buffer),
+        MatrixViewMut::from(&mut gradient_buffer),
     )
     .unwrap();
 
@@ -351,9 +351,9 @@ fn elliptic_element_matrix_is_jacobian_of_vector_tet10() {
         let quadrature_data = local::evaluate_density_at_quadrature_points(&element, &points, local::density);
 
         // Set up a function f = f(u) that corresponds to the element vector given state u
-        let f = |u: DVectorSlice<f64>, output: DVectorSliceMut<f64>| {
+        let f = |u: DVectorView<f64>, output: DVectorViewMut<f64>| {
             let mut gradient_buffer = DMatrix::repeat(3, element.num_nodes(), 3.0)
-                .reshape_generic(U3::name(), Dynamic::new(element.num_nodes()));
+                .reshape_generic(U3::name(), Dyn(element.num_nodes()));
             assemble_element_elliptic_vector(
                 output,
                 &element,
@@ -362,7 +362,7 @@ fn elliptic_element_matrix_is_jacobian_of_vector_tet10() {
                 &weights,
                 &points,
                 &quadrature_data,
-                MatrixSliceMut::from(&mut gradient_buffer),
+                MatrixViewMut::from(&mut gradient_buffer),
             )
             .unwrap();
         };
@@ -375,16 +375,16 @@ fn elliptic_element_matrix_is_jacobian_of_vector_tet10() {
     let quadrature_data = local::evaluate_density_at_quadrature_points(&element, &points, local::density);
     let mut output = DMatrix::repeat(2 * element.num_nodes(), 2 * element.num_nodes(), 3.0);
     let mut gradient_buffer =
-        DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3::name(), Dynamic::new(element.num_nodes()));
+        DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3::name(), Dyn(element.num_nodes()));
     assemble_element_elliptic_matrix(
-        MatrixSliceMut::from(&mut output),
+        MatrixViewMut::from(&mut output),
         &element,
         &MockVectorEllipticEnergy,
-        MatrixSlice::from(&u_element),
+        MatrixView::from(&u_element),
         &weights,
         &points,
         &quadrature_data,
-        MatrixSliceMut::from(&mut gradient_buffer),
+        MatrixViewMut::from(&mut gradient_buffer),
     )
     .unwrap();
 
@@ -414,9 +414,9 @@ fn symmetric_elliptic_element_matrix_is_jacobian_of_vector_tet10() {
         let quadrature_data = local::evaluate_density_at_quadrature_points(&element, &points, local::density);
 
         // Set up a function f = f(u) that corresponds to the element vector given state u
-        let f = |u: DVectorSlice<f64>, output: DVectorSliceMut<f64>| {
+        let f = |u: DVectorView<f64>, output: DVectorViewMut<f64>| {
             let mut gradient_buffer = DMatrix::repeat(3, element.num_nodes(), 3.0)
-                .reshape_generic(U3::name(), Dynamic::new(element.num_nodes()));
+                .reshape_generic(U3::name(), Dyn(element.num_nodes()));
             assemble_element_elliptic_vector(
                 output,
                 &element,
@@ -425,7 +425,7 @@ fn symmetric_elliptic_element_matrix_is_jacobian_of_vector_tet10() {
                 &weights,
                 &points,
                 &quadrature_data,
-                MatrixSliceMut::from(&mut gradient_buffer),
+                MatrixViewMut::from(&mut gradient_buffer),
             )
             .unwrap();
         };
@@ -438,16 +438,16 @@ fn symmetric_elliptic_element_matrix_is_jacobian_of_vector_tet10() {
     let quadrature_data = local::evaluate_density_at_quadrature_points(&element, &points, local::density);
     let mut output = DMatrix::repeat(2 * element.num_nodes(), 2 * element.num_nodes(), 3.0);
     let mut gradient_buffer =
-        DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3::name(), Dynamic::new(element.num_nodes()));
+        DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3::name(), Dyn(element.num_nodes()));
     assemble_element_elliptic_matrix(
-        MatrixSliceMut::from(&mut output),
+        MatrixViewMut::from(&mut output),
         &element,
         &MockVectorSymmetricEllipticEnergy,
-        MatrixSlice::from(&u_element),
+        MatrixView::from(&u_element),
         &weights,
         &points,
         &quadrature_data,
-        MatrixSliceMut::from(&mut gradient_buffer),
+        MatrixViewMut::from(&mut gradient_buffer),
     )
     .unwrap();
 
@@ -541,14 +541,14 @@ fn elliptic_element_assembler_matches_individual_element_assembly() {
     let mut element_vector_expected = DVector::repeat(8, 4.0);
     let mut element_matrix_expected = DMatrix::repeat(8, 8, 4.0);
     let mut u_element = DVector::repeat(8, 5.0);
-    let mut basis_gradients_buffer = DMatrix::repeat(2, 4, 6.0).reshape_generic(U2::name(), Dynamic::new(4));
+    let mut basis_gradients_buffer = DMatrix::repeat(2, 4, 6.0).reshape_generic(U2::name(), Dyn(4));
     for (i, conn) in mesh.connectivity().iter().enumerate() {
         assembler
-            .assemble_element_vector_into(i, DVectorSliceMut::from(&mut element_vector))
+            .assemble_element_vector_into(i, DVectorViewMut::from(&mut element_vector))
             .unwrap();
 
         assembler
-            .assemble_element_matrix_into(i, DMatrixSliceMut::from(&mut element_matrix))
+            .assemble_element_matrix_into(i, DMatrixViewMut::from(&mut element_matrix))
             .unwrap();
 
         let element_scalar = assembler.assemble_element_scalar(i).unwrap();
@@ -564,34 +564,34 @@ fn elliptic_element_assembler_matches_individual_element_assembly() {
             element_scalar_expected = compute_element_elliptic_energy(
                 &element,
                 &MockEllipticOperator,
-                DVectorSlice::from(&u_element),
+                DVectorView::from(&u_element),
                 weights,
                 points,
                 &data,
-                MatrixSliceMut::from(&mut basis_gradients_buffer),
+                MatrixViewMut::from(&mut basis_gradients_buffer),
             )
             .unwrap();
 
             assemble_element_elliptic_vector(
-                DVectorSliceMut::from(&mut element_vector_expected),
+                DVectorViewMut::from(&mut element_vector_expected),
                 &element,
                 &MockEllipticOperator,
-                DVectorSlice::from(&u_element),
+                DVectorView::from(&u_element),
                 weights,
                 points,
                 &data,
-                MatrixSliceMut::from(&mut basis_gradients_buffer),
+                MatrixViewMut::from(&mut basis_gradients_buffer),
             )
             .unwrap();
             assemble_element_elliptic_matrix(
-                DMatrixSliceMut::from(&mut element_matrix_expected),
+                DMatrixViewMut::from(&mut element_matrix_expected),
                 &element,
                 &MockEllipticOperator,
-                DVectorSlice::from(&u_element),
+                DVectorView::from(&u_element),
                 weights,
                 points,
                 &data,
-                MatrixSliceMut::from(&mut basis_gradients_buffer),
+                MatrixViewMut::from(&mut basis_gradients_buffer),
             )
             .unwrap();
         }
@@ -605,7 +605,7 @@ fn elliptic_element_assembler_matches_individual_element_assembly() {
 fn compute_energy_integral<Element, Energy>(
     element: &Element,
     energy: &Energy,
-    u_element: DVectorSlice<f64>,
+    u_element: DVectorView<f64>,
     quadrature: &QuadraturePair<f64, Element::GeometryDim>,
     quadrature_params: &[Energy::Parameters],
 ) -> f64
@@ -619,7 +619,7 @@ where
     let d = Element::GeometryDim::dim();
     let mut gradient_buffer = OMatrix::from_vec_generic(
         Element::GeometryDim::name(),
-        Dynamic::new(element.num_nodes()),
+        Dyn(element.num_nodes()),
         // Fill buffer with something non-zero to check that the implementation isn't
         // somehow dependent on this
         vec![3.0; d * element.num_nodes()],
@@ -627,11 +627,11 @@ where
     compute_element_elliptic_energy(
         element,
         energy,
-        DVectorSlice::from(u_element),
+        DVectorView::from(u_element),
         &weights,
         &points,
         quadrature_params,
-        MatrixSliceMut::from(&mut gradient_buffer),
+        MatrixViewMut::from(&mut gradient_buffer),
     )
     .unwrap()
 }

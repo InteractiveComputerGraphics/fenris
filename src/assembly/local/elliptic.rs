@@ -9,8 +9,8 @@ use crate::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOp
 use crate::element::VolumetricFiniteElement;
 use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{
-    DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DefaultAllocator, Dim, DimName, Dynamic, MatrixSlice,
-    MatrixSliceMut, MatrixSliceMutMN, OMatrix, OPoint, Scalar, U1,
+    DMatrixViewMut, DVector, DVectorView, DVectorViewMut, DefaultAllocator, Dim, DimName, Dyn, MatrixView,
+    MatrixViewMut, OMatrix, OPoint, Scalar, U1,
 };
 use crate::space::{ElementInSpace, VolumetricFiniteElementSpace};
 use crate::util::{clone_upper_to_lower, reshape_to_slice};
@@ -24,8 +24,8 @@ use itertools::izip;
 #[allow(non_snake_case)]
 pub(crate) fn compute_volume_u_grad<'a, T, GeometryDim, SolutionDim>(
     jacobian_inv_t: &OMatrix<T, GeometryDim, GeometryDim>,
-    phi_grad_ref: impl Into<MatrixSlice<'a, T, GeometryDim, Dynamic>>,
-    u: impl Into<MatrixSlice<'a, T, SolutionDim, Dynamic>>,
+    phi_grad_ref: impl Into<MatrixView<'a, T, GeometryDim, Dyn>>,
+    u: impl Into<MatrixView<'a, T, SolutionDim, Dyn>>,
 ) -> OMatrix<T, GeometryDim, SolutionDim>
 where
     T: Real,
@@ -120,8 +120,8 @@ impl<Space, Op, U> ElementEllipticAssemblerBuilder<Space, Op, (), U> {
 impl<Space, Op, QTable> ElementEllipticAssemblerBuilder<Space, Op, QTable, ()> {
     pub fn with_u<'a, T>(
         self,
-        u: impl Into<DVectorSlice<'a, T>>,
-    ) -> ElementEllipticAssemblerBuilder<Space, Op, QTable, DVectorSlice<'a, T>>
+        u: impl Into<DVectorView<'a, T>>,
+    ) -> ElementEllipticAssemblerBuilder<Space, Op, QTable, DVectorView<'a, T>>
     where
         T: Scalar,
     {
@@ -134,7 +134,7 @@ impl<Space, Op, QTable> ElementEllipticAssemblerBuilder<Space, Op, QTable, ()> {
     }
 }
 
-impl<'a, T, Space, Op, QTable> ElementEllipticAssemblerBuilder<&'a Space, &'a Op, &'a QTable, DVectorSlice<'a, T>>
+impl<'a, T, Space, Op, QTable> ElementEllipticAssemblerBuilder<&'a Space, &'a Op, &'a QTable, DVectorView<'a, T>>
 where
     T: Scalar,
     QTable: ?Sized,
@@ -154,7 +154,7 @@ pub struct ElementEllipticAssembler<'a, T: Scalar, Space, Op, QTable: ?Sized> {
     space: &'a Space,
     op: &'a Op,
     qtable: &'a QTable,
-    u: DVectorSlice<'a, T>,
+    u: DVectorView<'a, T>,
 }
 
 impl<'a, T, Space, Op, QTable> ElementConnectivityAssembler for ElementEllipticAssembler<'a, T, Space, Op, QTable>
@@ -243,7 +243,7 @@ where
                 compute_element_elliptic_energy(
                     &element,
                     self.op,
-                    DVectorSlice::from(&ws.u_element),
+                    DVectorView::from(&ws.u_element),
                     ws.quadrature_buffer.weights(),
                     ws.quadrature_buffer.points(),
                     ws.quadrature_buffer.data(),
@@ -263,7 +263,7 @@ where
     DefaultAllocator: TriDimAllocator<T, Op::SolutionDim, Space::GeometryDim, Space::ReferenceDim>,
 {
     #[allow(non_snake_case)]
-    fn assemble_element_vector_into(&self, element_index: usize, output: DVectorSliceMut<T>) -> eyre::Result<()> {
+    fn assemble_element_vector_into(&self, element_index: usize, output: DVectorViewMut<T>) -> eyre::Result<()> {
         let s = self.solution_dim();
         let n = self.element_node_count(element_index);
         assert_eq!(output.len(), s * n, "Output vector dimension mismatch");
@@ -285,7 +285,7 @@ where
                     output,
                     &element,
                     self.op,
-                    DVectorSlice::from(&ws.u_element),
+                    DVectorView::from(&ws.u_element),
                     ws.quadrature_buffer.weights(),
                     ws.quadrature_buffer.points(),
                     ws.quadrature_buffer.data(),
@@ -305,7 +305,7 @@ where
     DefaultAllocator: TriDimAllocator<T, Op::SolutionDim, Space::GeometryDim, Space::ReferenceDim>,
 {
     #[allow(non_snake_case)]
-    fn assemble_element_matrix_into(&self, element_index: usize, output: DMatrixSliceMut<T>) -> eyre::Result<()> {
+    fn assemble_element_matrix_into(&self, element_index: usize, output: DMatrixViewMut<T>) -> eyre::Result<()> {
         let s = self.solution_dim();
         let n = self.element_node_count(element_index);
         assert_eq!(output.nrows(), s * n, "Output matrix dimension mismatch");
@@ -328,7 +328,7 @@ where
                     output,
                     &element,
                     self.op,
-                    DVectorSlice::from(&ws.u_element),
+                    DVectorView::from(&ws.u_element),
                     ws.quadrature_buffer.weights(),
                     ws.quadrature_buffer.points(),
                     ws.quadrature_buffer.data(),
@@ -359,14 +359,14 @@ where
 /// Panics if the number of columns in the gradient buffer is not equal to the number of nodes
 /// in the element.
 pub fn assemble_element_elliptic_matrix<T, Element, Contraction>(
-    mut output: DMatrixSliceMut<T>,
+    mut output: DMatrixViewMut<T>,
     element: &Element,
     operator: &Contraction,
-    u_element: DVectorSlice<T>,
+    u_element: DVectorView<T>,
     quadrature_weights: &[T],
     quadrature_points: &[OPoint<T, Element::ReferenceDim>],
     quadrature_data: &[Contraction::Parameters],
-    basis_gradients_buffer: MatrixSliceMutMN<T, Element::ReferenceDim, Dynamic>,
+    basis_gradients_buffer: MatrixViewMut<T, Element::ReferenceDim, Dyn>,
 ) -> eyre::Result<()>
 where
     T: Real,
@@ -405,10 +405,10 @@ where
         let j_inv_t = j_inv.transpose();
 
         // First populate gradients with respect to reference coords
-        element.populate_basis_gradients(MatrixSliceMut::from(&mut phi_grad), &point);
+        element.populate_basis_gradients(MatrixViewMut::from(&mut phi_grad), &point);
 
         // We currently have to compute u_grad by providing reference gradients
-        let u_element = reshape_to_slice(&u_element, (s, Dynamic::new(n)));
+        let u_element = reshape_to_slice(&u_element, (s, Dyn(n)));
         let u_grad = compute_volume_u_grad(&j_inv_t, &phi_grad, u_element);
 
         // Transform reference gradients to gradients with respect to physical coords
@@ -420,9 +420,9 @@ where
         // Note: We need to multiply the contraction result by a scale factor to account for the
         // quadrature weight and jacobian determinant
         let scale = weight * j_det.abs();
-        let phi_grad = reshape_to_slice(&phi_grad, (Dynamic::new(d * n), U1::name()));
+        let phi_grad = reshape_to_slice(&phi_grad, (Dyn(d * n), U1::name()));
         operator.accumulate_contractions_into(
-            DMatrixSliceMut::from(&mut output),
+            DMatrixViewMut::from(&mut output),
             scale,
             &u_grad,
             phi_grad.clone(),
@@ -455,14 +455,14 @@ where
 /// Panics if the number of columns in the gradient buffer is not equal to the number of nodes
 /// in the element.
 pub fn assemble_element_elliptic_vector<T, Element, Operator>(
-    mut output: DVectorSliceMut<T>,
+    mut output: DVectorViewMut<T>,
     element: &Element,
     operator: &Operator,
-    u_element: DVectorSlice<T>,
+    u_element: DVectorView<T>,
     quadrature_weights: &[T],
     quadrature_points: &[OPoint<T, Element::ReferenceDim>],
     quadrature_data: &[Operator::Parameters],
-    basis_gradients_buffer: MatrixSliceMutMN<T, Element::ReferenceDim, Dynamic>,
+    basis_gradients_buffer: MatrixViewMut<T, Element::ReferenceDim, Dyn>,
 ) -> eyre::Result<()>
 where
     T: Real,
@@ -499,10 +499,10 @@ where
         let j_inv_t = j_inv.transpose();
 
         // First populate gradients with respect to reference coords
-        element.populate_basis_gradients(MatrixSliceMut::from(&mut phi_grad_ref), &point);
+        element.populate_basis_gradients(MatrixViewMut::from(&mut phi_grad_ref), &point);
 
         let u_element =
-            MatrixSlice::from_slice_generic(u_element.as_slice(), Operator::SolutionDim::name(), Dynamic::new(n));
+            MatrixView::from_slice_generic(u_element.as_slice(), Operator::SolutionDim::name(), Dyn(n));
         let u_grad = compute_volume_u_grad(&j_inv_t, &phi_grad_ref, u_element);
 
         // We want to compute the vector
@@ -522,7 +522,7 @@ where
         // Hence we may compute (g^T J^{-T}) P_0
 
         let mut output =
-            MatrixSliceMutMN::from_slice_generic(output.as_mut_slice(), Operator::SolutionDim::name(), Dynamic::new(n));
+            MatrixViewMut::from_slice_generic(output.as_mut_slice(), Operator::SolutionDim::name(), Dyn(n));
         let g = operator.compute_elliptic_operator(&u_grad, data);
         let g_t_j_inv_t = g.transpose() * j_inv_t;
         output.gemm(weight * j_det.abs(), &g_t_j_inv_t, &phi_grad_ref, T::one());
@@ -552,11 +552,11 @@ where
 pub fn compute_element_elliptic_energy<T, Element, Operator>(
     element: &Element,
     operator: &Operator,
-    u_element: DVectorSlice<T>,
+    u_element: DVectorView<T>,
     quadrature_weights: &[T],
     quadrature_points: &[OPoint<T, Element::ReferenceDim>],
     quadrature_data: &[Operator::Parameters],
-    basis_gradients_buffer: MatrixSliceMutMN<T, Element::ReferenceDim, Dynamic>,
+    basis_gradients_buffer: MatrixViewMut<T, Element::ReferenceDim, Dyn>,
 ) -> eyre::Result<T>
 where
     T: Real,
@@ -592,10 +592,10 @@ where
         let j_inv_t = j_inv.transpose();
 
         // First populate gradients with respect to reference coords
-        element.populate_basis_gradients(MatrixSliceMut::from(&mut phi_grad_ref), &point);
+        element.populate_basis_gradients(MatrixViewMut::from(&mut phi_grad_ref), &point);
 
         let u_element =
-            MatrixSlice::from_slice_generic(u_element.as_slice(), Operator::SolutionDim::name(), Dynamic::new(n));
+            MatrixView::from_slice_generic(u_element.as_slice(), Operator::SolutionDim::name(), Dyn(n));
         let u_grad = compute_volume_u_grad(&j_inv_t, &phi_grad_ref, u_element);
 
         let psi = operator.compute_energy(&u_grad, data);

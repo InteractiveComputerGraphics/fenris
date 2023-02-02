@@ -9,7 +9,7 @@ description = "Optimization functionality used by fenris"
 
 [dependencies]
 fenris-traits = { version="0.0.1", path = "../fenris-traits" }
-nalgebra = { version = "0.31", features = ["compare"] }
+nalgebra = { workspace = true, features = ["compare"] }
 numeric_literals = "0.2.0"
 itertools = "0.10.5"
 log = "0.4"

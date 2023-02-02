@@ -2,7 +2,7 @@ use crate::allocators::DimAllocator;
 use crate::assembly::buffers::{BasisFunctionBuffer, QuadratureBuffer};
 use crate::assembly::local::{ElementConnectivityAssembler, ElementMatrixAssembler, QuadratureTable};
 use crate::element::{ReferenceFiniteElement, VolumetricFiniteElement};
-use crate::nalgebra::{DMatrixSliceMut, DefaultAllocator, DimName, OPoint};
+use crate::nalgebra::{DMatrixViewMut, DefaultAllocator, DimName, OPoint};
 use crate::space::{ElementInSpace, FiniteElementConnectivity, VolumetricFiniteElementSpace};
 use crate::util::clone_upper_to_lower;
 use crate::Real;
@@ -135,7 +135,7 @@ where
     QTable: QuadratureTable<T, Space::GeometryDim, Data = Density<T>>,
     DefaultAllocator: DimAllocator<T, Space::GeometryDim>,
 {
-    fn assemble_element_matrix_into(&self, element_index: usize, output: DMatrixSliceMut<T>) -> eyre::Result<()> {
+    fn assemble_element_matrix_into(&self, element_index: usize, output: DMatrixViewMut<T>) -> eyre::Result<()> {
         with_thread_local_workspace(&WORKSPACE, |ws: &mut MassAssemblerWorkspace<T, Space::GeometryDim>| {
             let element = ElementInSpace::from_space_and_element_index(self.space, element_index);
             ws.basis_buffer
@@ -189,7 +189,7 @@ where
 /// in the element.
 #[allow(non_snake_case)]
 pub fn assemble_element_mass_matrix<'a, T, Element>(
-    output: impl Into<DMatrixSliceMut<'a, T>>,
+    output: impl Into<DMatrixViewMut<'a, T>>,
     element: &Element,
     quadrature_weights: &[T],
     quadrature_points: &[OPoint<T, Element::ReferenceDim>],
@@ -216,7 +216,7 @@ where
 
 #[allow(non_snake_case)]
 fn assemble_element_mass_matrix_<T, Element>(
-    mut output: DMatrixSliceMut<T>,
+    mut output: DMatrixViewMut<T>,
     element: &Element,
     quadrature_weights: &[T],
     quadrature_points: &[OPoint<T, Element::ReferenceDim>],
@@ -271,7 +271,7 @@ where
                 let m_IJ_contrib = scale * phi[I] * phi[J];
 
                 // Block contribution: update diagonal entries belonging to M_IJ
-                let mut M_IJ = output.slice_mut((s * I, s * J), (s, s));
+                let mut M_IJ = output.view_mut((s * I, s * J), (s, s));
                 for i in 0..s {
                     M_IJ[(i, i)] += m_IJ_contrib;
                 }

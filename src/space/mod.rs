@@ -3,7 +3,7 @@
 use crate::allocators::BiDimAllocator;
 use crate::element::{ClosestPoint, FiniteElement, ReferenceFiniteElement};
 use crate::geometry::GeometryCollection;
-use crate::nalgebra::{Dynamic, MatrixSliceMut, OMatrix};
+use crate::nalgebra::{Dyn, MatrixViewMut, OMatrix};
 use crate::SmallDim;
 use fenris_geometry::AxisAlignedBoundingBox;
 use nalgebra::{DefaultAllocator, OPoint, Scalar};
@@ -47,7 +47,7 @@ where
     fn populate_element_gradients(
         &self,
         element_index: usize,
-        gradients: MatrixSliceMut<T, Self::ReferenceDim, Dynamic>,
+        gradients: MatrixViewMut<T, Self::ReferenceDim, Dyn>,
         reference_coords: &OPoint<T, Self::ReferenceDim>,
     );
 
@@ -137,7 +137,7 @@ where
 
     fn populate_basis_gradients(
         &self,
-        basis_gradients: MatrixSliceMut<T, Self::ReferenceDim, Dynamic>,
+        basis_gradients: MatrixViewMut<T, Self::ReferenceDim, Dyn>,
         reference_coords: &OPoint<T, Self::ReferenceDim>,
     ) {
         self.space

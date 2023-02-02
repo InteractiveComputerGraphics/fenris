@@ -79,7 +79,7 @@ use std::slice;
 //     })
 // }
 
-// pub fn from_diagonal<'a>(diagonal: impl Into<DVectorSlice<'a, T>>) -> Self
+// pub fn from_diagonal<'a>(diagonal: impl Into<DVectorView<'a, T>>) -> Self
 // where
 //     T: Scalar,
 // {
@@ -282,13 +282,13 @@ unsafe impl<'a, T: 'a + Sync + Send> ParallelIndexedCollection<'a> for ParallelC
 // where
 //     T: Real,
 // {
-//     pub fn scale_rows<'a>(&mut self, diagonal_matrix: impl Into<DVectorSlice<'a, T>>) {
+//     pub fn scale_rows<'a>(&mut self, diagonal_matrix: impl Into<DVectorView<'a, T>>) {
 //         let diag = diagonal_matrix.into();
 //         assert_eq!(diag.len(), self.nrows());
 //         self.transform_values(|i, _, v| *v *= diag[i]);
 //     }
 //
-//     pub fn scale_cols<'a>(&mut self, diagonal_matrix: impl Into<DVectorSlice<'a, T>>) {
+//     pub fn scale_cols<'a>(&mut self, diagonal_matrix: impl Into<DVectorView<'a, T>>) {
 //         let diag = diagonal_matrix.into();
 //         assert_eq!(diag.len(), self.ncols());
 //         self.transform_values(|_, j, v| *v *= diag[j]);

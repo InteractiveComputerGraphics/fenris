@@ -16,7 +16,7 @@ use fenris::quadrature::QuadraturePair;
 use fenris::Real;
 use itertools::izip;
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq};
-use nalgebra::{DMatrixSliceMut, Matrix2};
+use nalgebra::{DMatrixViewMut, Matrix2};
 use std::iter::repeat;
 
 mod elliptic;
@@ -48,7 +48,7 @@ fn analytic_comparison_of_element_mass_matrix_for_reference_element() {
 
     let mut buffer = vec![3.0; 4];
     assemble_element_mass_matrix(
-        DMatrixSliceMut::from(&mut m),
+        DMatrixViewMut::from(&mut m),
         &quad,
         &weights,
         &points,

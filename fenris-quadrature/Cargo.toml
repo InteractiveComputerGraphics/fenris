@@ -15,7 +15,7 @@ embed-doc-image = { version="0.1.4", optional = true }
 
 [dev-dependencies]
 matrixcompare = "0.3.0"
-nalgebra = "0.31"
+nalgebra = { workspace = true }
 
 [build-dependencies]
 polyquad-parse = { path = "../polyquad-parse", version = "0.1" }

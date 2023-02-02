@@ -11,7 +11,7 @@ use crate::util::{reshape_to_slice, try_transmute_ref};
 use crate::{Real, SmallDim};
 use davenport::{define_thread_local_workspace, with_thread_local_workspace};
 use eyre::eyre;
-use nalgebra::{DVectorSlice, Dynamic, MatrixSliceMut, OVector};
+use nalgebra::{DVectorView, Dyn, MatrixViewMut, OVector};
 use std::marker::PhantomData;
 
 /// Computes the Riemannian volume form for the given dimensions.
@@ -597,7 +597,7 @@ pub fn integrate_over_element<'a, T, F, Element, SolutionDim>(
     integrand: &F,
     element: &Element,
     quadrature: impl Quadrature<T, Element::ReferenceDim>,
-    interpolation_weights: impl Into<DVectorSlice<'a, T>>,
+    interpolation_weights: impl Into<DVectorView<'a, T>>,
     workspace: &mut IntegrationWorkspace<T>,
 ) -> OVector<T, F::OutputDim>
 where
@@ -624,7 +624,7 @@ where
             element.populate_basis(basis_buffer.element_basis_values_mut(), p_ref);
             crate::util::compute_interpolation(
                 interpolation_weights,
-                DVectorSlice::from_slice(basis_buffer.element_basis_values(), n),
+                DVectorView::from_slice(basis_buffer.element_basis_values(), n),
             )
         };
         let x = element.map_reference_coords(p_ref);
@@ -648,7 +648,7 @@ pub fn integrate_over_volume_element<'a, T, Element, F, SolutionDim>(
     function: &F,
     element: &Element,
     quadrature: impl Quadrature<T, Element::ReferenceDim>,
-    interpolation_weights: impl Into<DVectorSlice<'a, T>>,
+    interpolation_weights: impl Into<DVectorView<'a, T>>,
     workspace: &mut IntegrationWorkspace<T>,
 ) -> Result<OVector<T, F::OutputDim>, IntegrationFailure>
 where
@@ -674,22 +674,22 @@ where
             .try_inverse()
             .ok_or_else(|| IntegrationFailure::SingularJacobian)?;
 
-        let (values_buffer, mut gradients_buffer): (_, MatrixSliceMut<_, Element::ReferenceDim, _>) =
+        let (values_buffer, mut gradients_buffer): (_, MatrixViewMut<_, Element::ReferenceDim, _>) =
             basis_buffer.element_values_gradients_mut();
 
         // First we compute u_h
         let u_h = || {
             element.populate_basis(values_buffer, p_ref);
-            crate::util::compute_interpolation(interpolation_weights, DVectorSlice::from_slice(values_buffer, n))
+            crate::util::compute_interpolation(interpolation_weights, DVectorView::from_slice(values_buffer, n))
         };
 
         // Then we compute u_h_grad. To do so we first compute the gradient with respect to *reference element coords*,
         // then we transform this to physical coordinates by the inverse transposed Jacobian
         let u_h_grad = || {
-            element.populate_basis_gradients(MatrixSliceMut::from(&mut gradients_buffer), p_ref);
+            element.populate_basis_gradients(MatrixViewMut::from(&mut gradients_buffer), p_ref);
             let reference_gradients = gradients_buffer;
             // let reference_gradients = basis_buffer.element_gradients::<Element::ReferenceDim>();
-            let reference_gradients = reshape_to_slice(&reference_gradients, (Dynamic::new(r * n), U1::name()));
+            let reference_gradients = reshape_to_slice(&reference_gradients, (Dyn(r * n), U1::name()));
             let u_h_ref_grad: OMatrix<T, Element::ReferenceDim, SolutionDim> =
                 crate::util::compute_interpolation_gradient(interpolation_weights, &reference_gradients);
             let u_h_grad = jacobian_inv_t * u_h_ref_grad;
@@ -710,7 +710,7 @@ where
     T: Scalar,
 {
     space: &'a Space,
-    u: DVectorSlice<'a, T>,
+    u: DVectorView<'a, T>,
     integrand: F,
     qtable: &'a QTable,
     marker: PhantomData<SolutionDim>,
@@ -721,7 +721,7 @@ where
     T: Scalar,
 {
     space: &'a Space,
-    u: DVectorSlice<'a, T>,
+    u: DVectorView<'a, T>,
     integrand: F,
     qtable: &'a QTable,
     marker: PhantomData<SolutionDim>,
@@ -732,7 +732,7 @@ where
     T: Scalar,
 {
     space: Option<&'a Space>,
-    u: Option<DVectorSlice<'a, T>>,
+    u: Option<DVectorView<'a, T>>,
     integrand: Option<F>,
     qtable: Option<&'a QTable>,
     marker: PhantomData<SolutionDim>,
@@ -767,7 +767,7 @@ where
         }
     }
 
-    pub fn with_interpolation_weights(self, u: impl Into<DVectorSlice<'a, T>>) -> Self {
+    pub fn with_interpolation_weights(self, u: impl Into<DVectorView<'a, T>>) -> Self {
         Self {
             u: Some(u.into()),
             ..self

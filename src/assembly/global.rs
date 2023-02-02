@@ -10,7 +10,7 @@ use fenris_paradis::DisjointSubsets;
 use fenris_sparse::ParallelCsrRowCollection;
 use nalgebra::base::storage::Storage;
 use nalgebra::{
-    DMatrix, DMatrixSliceMut, DVector, DVectorSlice, DVectorSliceMut, DimName, Dynamic, Matrix, Scalar, U1,
+    DMatrix, DMatrixViewMut, DVector, DVectorView, DVectorViewMut, DimName, Dyn, Matrix, Scalar, U1,
 };
 use nalgebra_sparse::{pattern::SparsityPattern, CsrMatrix};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
@@ -138,7 +138,7 @@ impl<T: Real> CsrAssembler<T> {
             element_global_nodes.resize(element_node_count, 0);
             element_matrix.resize_mut(element_matrix_dim, element_matrix_dim, T::zero());
 
-            let matrix_slice = DMatrixSliceMut::from(&mut *element_matrix);
+            let matrix_slice = DMatrixViewMut::from(&mut *element_matrix);
             element_assembler.assemble_element_matrix_into(i, matrix_slice)?;
             element_assembler.populate_element_nodes(element_global_nodes, i);
 
@@ -302,7 +302,7 @@ impl<T: Real + Send> CsrParAssembler<T> {
                     ws.element_matrix
                         .resize_mut(element_matrix_dim, element_matrix_dim, T::zero());
 
-                    let matrix_slice = DMatrixSliceMut::from(&mut ws.element_matrix);
+                    let matrix_slice = DMatrixViewMut::from(&mut ws.element_matrix);
                     element_assembler.assemble_element_matrix_into(element_index, matrix_slice)?;
                     element_assembler.populate_element_nodes(&mut ws.element_global_nodes, element_index);
                     debug_assert_eq!(subset.global_indices(), ws.element_global_nodes.as_slice());
@@ -444,7 +444,7 @@ where
 }
 
 pub fn apply_homogeneous_dirichlet_bc_rhs<'a, T>(
-    rhs: impl Into<DVectorSliceMut<'a, T>>,
+    rhs: impl Into<DVectorViewMut<'a, T>>,
     nodes: &[usize],
     solution_dim: usize,
 ) where
@@ -474,10 +474,10 @@ fn add_element_row_to_csr_row<T, S>(
     node_connectivity: &[usize],
     sorted_permutation: &[usize],
     dim: usize,
-    local_row: &Matrix<T, U1, Dynamic, S>,
+    local_row: &Matrix<T, U1, Dyn, S>,
 ) where
     T: Real,
-    S: Storage<T, U1, Dynamic>,
+    S: Storage<T, U1, Dyn>,
 {
     assert_eq!(node_connectivity.len(), sorted_permutation.len());
     assert_eq!(node_connectivity.len() * dim, local_row.ncols());
@@ -548,7 +548,7 @@ impl<T: Real> Default for VectorAssembler<T> {
 impl<T: Real> VectorAssembler<T> {
     pub fn assemble_vector_into<'a>(
         &self,
-        output: impl Into<DVectorSliceMut<'a, T>>,
+        output: impl Into<DVectorViewMut<'a, T>>,
         element_assembler: &impl ElementVectorAssembler<T>,
     ) -> eyre::Result<()> {
         // TODO: Move impl into _ method to remove the impl Into<> compilation overhead
@@ -609,7 +609,7 @@ impl<T: Real> VectorParAssembler<T> {
 
     pub fn assemble_vector_into<'a>(
         &self,
-        output: impl Into<DVectorSliceMut<'a, T>>,
+        output: impl Into<DVectorViewMut<'a, T>>,
         colors: &[DisjointSubsets],
         element_assembler: &(impl ElementVectorAssembler<T> + ?Sized + Sync),
     ) -> eyre::Result<()> {
@@ -707,8 +707,8 @@ where
 
 // TODO: Maybe move to some other module?
 pub fn gather_global_to_local<'a, T: Scalar>(
-    global: impl Into<DVectorSlice<'a, T>>,
-    local: impl Into<DVectorSliceMut<'a, T>>,
+    global: impl Into<DVectorView<'a, T>>,
+    local: impl Into<DVectorViewMut<'a, T>>,
     indices: &[usize],
     solution_dim: usize,
 ) {
@@ -716,8 +716,8 @@ pub fn gather_global_to_local<'a, T: Scalar>(
 }
 
 fn gather_global_to_local_<T: Scalar>(
-    global: DVectorSlice<T>,
-    mut local: DVectorSliceMut<T>,
+    global: DVectorView<T>,
+    mut local: DVectorViewMut<T>,
     indices: &[usize],
     solution_dim: usize,
 ) {
@@ -735,8 +735,8 @@ fn gather_global_to_local_<T: Scalar>(
 }
 
 pub fn add_local_to_global<'a, T: Real>(
-    local: impl Into<DVectorSlice<'a, T>>,
-    global: impl Into<DVectorSliceMut<'a, T>>,
+    local: impl Into<DVectorView<'a, T>>,
+    global: impl Into<DVectorViewMut<'a, T>>,
     indices: &[usize],
     solution_dim: usize,
 ) {
@@ -744,8 +744,8 @@ pub fn add_local_to_global<'a, T: Real>(
 }
 
 fn add_local_to_global_<'a, T: Real>(
-    local: DVectorSlice<'a, T>,
-    mut global: DVectorSliceMut<'a, T>,
+    local: DVectorView<'a, T>,
+    mut global: DVectorViewMut<'a, T>,
     indices: &[usize],
     solution_dim: usize,
 ) {
