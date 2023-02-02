@@ -1,11 +1,11 @@
 [package]
 name = "fenris-geometry"
 version = "0.0.5"
-authors = ["Andreas Longva <longva@cs.rwth-aachen.de>"]
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/InteractiveComputerGraphics/fenris"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 description = "Geometry functionality for fenris"
-edition = "2021"
 
 [features]
 proptest-support = [ "proptest", "nalgebra/proptest-support" ]
