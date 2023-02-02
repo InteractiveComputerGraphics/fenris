@@ -1,7 +1,7 @@
 [package]
 name = "fenris"
 description = "A library for advanced finite element computations in Rust"
-version = "0.0.23"
+version.workspace = true
 authors = ["Andreas Longva <longva@cs.rwth-aachen.de>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -71,6 +71,17 @@ members = [
     "fenris-paradis",
     "polyquad-parse" ]
 
+[workspace.package]
+# Currently only fenris-solid inherits this version. The rule of thumbs is that anything that depends *on* fenris
+# as part of the workspace should share the same version (and be released at the same time)
+version = "0.0.24"
+# Other sub-packages also inherit this stuff
+authors = ["Andreas Longva <andreas.b.longva@gmail.com>"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/InteractiveComputerGraphics/fenris"
+
 [workspace.dependencies]
 nalgebra = { version = "0.32.1", features = [ "serde-serialize" ] }
 nalgebra-sparse = { version = "0.9.0", features = ["compare"] }
+fenris = { version = "0.0.24", path = "." }

@@ -1,10 +1,10 @@
 [package]
 name = "fenris-quadrature"
 version = "0.0.4"
-authors = ["Andreas Longva"]
-edition = "2021"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/InteractiveComputerGraphics/fenris"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 description = "Quadrature rules for finite element applications"
 
 [features]
