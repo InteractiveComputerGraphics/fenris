@@ -9,9 +9,7 @@ use fenris_paradis::coloring::sequential_greedy_coloring;
 use fenris_paradis::DisjointSubsets;
 use fenris_sparse::ParallelCsrRowCollection;
 use nalgebra::base::storage::Storage;
-use nalgebra::{
-    DMatrix, DMatrixViewMut, DVector, DVectorView, DVectorViewMut, DimName, Dyn, Matrix, Scalar, U1,
-};
+use nalgebra::{DMatrix, DMatrixViewMut, DVector, DVectorView, DVectorViewMut, DimName, Dyn, Matrix, Scalar, U1};
 use nalgebra_sparse::{pattern::SparsityPattern, CsrMatrix};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;

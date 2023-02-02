@@ -6,8 +6,8 @@ use nalgebra::constraint::{DimEq, ShapeConstraint};
 use nalgebra::storage::{Storage, StorageMut};
 use nalgebra::{
     DMatrixView, DVector, DVectorView, DefaultAllocator, Dim, DimDiff, DimMin, DimMul, DimName, DimProd, DimSub,
-    Matrix, Matrix3, MatrixView, MatrixViewMut, OMatrix, OPoint, OVector, Quaternion, Scalar, ViewStorage,
-    ViewStorageMut, SquareMatrix, UnitQuaternion, Vector, Vector3, U1,
+    Matrix, Matrix3, MatrixView, MatrixViewMut, OMatrix, OPoint, OVector, Quaternion, Scalar, SquareMatrix,
+    UnitQuaternion, Vector, Vector3, ViewStorage, ViewStorageMut, U1,
 };
 use nalgebra_sparse::{CooMatrix, CsrMatrix};
 use num::Zero;

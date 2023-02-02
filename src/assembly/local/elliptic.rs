@@ -501,8 +501,7 @@ where
         // First populate gradients with respect to reference coords
         element.populate_basis_gradients(MatrixViewMut::from(&mut phi_grad_ref), &point);
 
-        let u_element =
-            MatrixView::from_slice_generic(u_element.as_slice(), Operator::SolutionDim::name(), Dyn(n));
+        let u_element = MatrixView::from_slice_generic(u_element.as_slice(), Operator::SolutionDim::name(), Dyn(n));
         let u_grad = compute_volume_u_grad(&j_inv_t, &phi_grad_ref, u_element);
 
         // We want to compute the vector
@@ -594,8 +593,7 @@ where
         // First populate gradients with respect to reference coords
         element.populate_basis_gradients(MatrixViewMut::from(&mut phi_grad_ref), &point);
 
-        let u_element =
-            MatrixView::from_slice_generic(u_element.as_slice(), Operator::SolutionDim::name(), Dyn(n));
+        let u_element = MatrixView::from_slice_generic(u_element.as_slice(), Operator::SolutionDim::name(), Dyn(n));
         let u_grad = compute_volume_u_grad(&j_inv_t, &phi_grad_ref, u_element);
 
         let psi = operator.compute_energy(&u_grad, data);

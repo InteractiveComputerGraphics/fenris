@@ -370,11 +370,7 @@ where
     }
 
     #[allow(non_snake_case)]
-    fn solve_with_guess_(
-        &mut self,
-        b: DVectorView<T>,
-        mut x: DVectorViewMut<T>,
-    ) -> Result<CgOutput<T>, SolveError<T>> {
+    fn solve_with_guess_(&mut self, b: DVectorView<T>, mut x: DVectorViewMut<T>) -> Result<CgOutput<T>, SolveError<T>> {
         use SolveErrorKind::*;
         assert_eq!(b.len(), x.len());
 

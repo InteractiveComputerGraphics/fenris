@@ -15,8 +15,8 @@ use fenris::element::{
 };
 use fenris::nalgebra::base::coordinates::{XY, XYZ};
 use fenris::nalgebra::{
-    DMatrix, DVector, DVectorView, DVectorViewMut, DefaultAllocator, DimName, Dyn, Matrix2, Matrix3x2,
-    MatrixView, MatrixViewMut, OMatrix, OPoint, OVector, Point2, Point3, Vector1, Vector2, Vector3, U1, U2, U3,
+    DMatrix, DVector, DVectorView, DVectorViewMut, DefaultAllocator, DimName, Dyn, Matrix2, Matrix3x2, MatrixView,
+    MatrixViewMut, OMatrix, OPoint, OVector, Point2, Point3, Vector1, Vector2, Vector3, U1, U2, U3,
 };
 use fenris::quadrature::{Quadrature, QuadraturePair};
 use fenris::{quadrature, Symmetry};
@@ -352,8 +352,8 @@ fn elliptic_element_matrix_is_jacobian_of_vector_tet10() {
 
         // Set up a function f = f(u) that corresponds to the element vector given state u
         let f = |u: DVectorView<f64>, output: DVectorViewMut<f64>| {
-            let mut gradient_buffer = DMatrix::repeat(3, element.num_nodes(), 3.0)
-                .reshape_generic(U3::name(), Dyn(element.num_nodes()));
+            let mut gradient_buffer =
+                DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3::name(), Dyn(element.num_nodes()));
             assemble_element_elliptic_vector(
                 output,
                 &element,
@@ -415,8 +415,8 @@ fn symmetric_elliptic_element_matrix_is_jacobian_of_vector_tet10() {
 
         // Set up a function f = f(u) that corresponds to the element vector given state u
         let f = |u: DVectorView<f64>, output: DVectorViewMut<f64>| {
-            let mut gradient_buffer = DMatrix::repeat(3, element.num_nodes(), 3.0)
-                .reshape_generic(U3::name(), Dyn(element.num_nodes()));
+            let mut gradient_buffer =
+                DMatrix::repeat(3, element.num_nodes(), 3.0).reshape_generic(U3::name(), Dyn(element.num_nodes()));
             assemble_element_elliptic_vector(
                 output,
                 &element,

@@ -15,8 +15,8 @@ use fenris::util::proptest::point2_f64_strategy;
 use fenris_optimize::calculus::{approximate_jacobian, VectorFunctionBuilder};
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq, prop_assert_matrix_eq};
 use nalgebra::{
-    point, DVectorView, DimName, Dyn, MatrixView, OMatrix, OPoint, Point1, Point2, Point3, Vector1, Vector2,
-    Vector3, U1, U10, U2, U20, U27, U3, U4, U6, U8, U9,
+    point, DVectorView, DimName, Dyn, MatrixView, OMatrix, OPoint, Point1, Point2, Point3, Vector1, Vector2, Vector3,
+    U1, U10, U2, U20, U27, U3, U4, U6, U8, U9,
 };
 use proptest::prelude::*;
 use util::assert_approx_matrix_eq;

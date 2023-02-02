@@ -1,7 +1,5 @@
 use fenris_traits::Real;
-use nalgebra::{
-    DMatrix, DMatrixViewMut, DVector, DVectorView, DVectorViewMut, Dim, DimName, Dyn, Scalar, Vector, U1,
-};
+use nalgebra::{DMatrix, DMatrixViewMut, DVector, DVectorView, DVectorViewMut, Dim, DimName, Dyn, Scalar, Vector, U1};
 
 use nalgebra::base::storage::{Storage, StorageMut};
 use numeric_literals::replace_float_literals;

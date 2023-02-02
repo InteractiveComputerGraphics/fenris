@@ -253,8 +253,7 @@ pub fn assemble_element_source_vector<T, Element, Source>(
         n * Source::SolutionDim::dim(),
         "Length of output vector must be consistent with number of nodes and solution dim"
     );
-    let mut output =
-        MatrixViewMut::from_slice_generic(output.as_mut_slice(), Source::SolutionDim::name(), Dyn(n));
+    let mut output = MatrixViewMut::from_slice_generic(output.as_mut_slice(), Source::SolutionDim::name(), Dyn(n));
 
     output.fill(T::zero());
 

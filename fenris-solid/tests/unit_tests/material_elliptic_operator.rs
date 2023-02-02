@@ -5,8 +5,7 @@ use fenris::assembly::local::{
 use fenris::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator};
 use fenris::nalgebra;
 use fenris::nalgebra::{
-    vector, DMatrix, DVector, DVectorView, DVectorViewMut, DimName, Dyn, Matrix2, Matrix3, MatrixViewMut,
-    OMatrix, U3,
+    vector, DMatrix, DVector, DVectorView, DVectorViewMut, DimName, Dyn, Matrix2, Matrix3, MatrixViewMut, OMatrix, U3,
 };
 use fenris::quadrature;
 use fenris_optimize::calculus::{approximate_gradient_fd, approximate_jacobian_fd};
