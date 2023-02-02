@@ -1,6 +1,6 @@
 [package]
 name = "fenris-optimize"
-version = "0.0.2"
+version = "0.0.3"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,8 +8,8 @@ repository.workspace = true
 description = "Optimization functionality used by fenris"
 
 [dependencies]
-fenris-traits = { version="0.0.1", path = "../fenris-traits" }
-nalgebra = { workspace = true, features = ["compare"] }
+fenris-traits = { version="0.0.2", path = "../fenris-traits" }
+nalgebra = { workspace = true, features = ["compare", "std"] }
 numeric_literals = "0.2.0"
 itertools = "0.10.5"
 log = "0.4"
