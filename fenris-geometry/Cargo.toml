@@ -1,6 +1,6 @@
 [package]
 name = "fenris-geometry"
-version = "0.0.5"
+version = "0.0.6"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -12,16 +12,16 @@ proptest-support = [ "proptest", "nalgebra/proptest-support" ]
 
 [dependencies]
 itertools = "0.10.5"
-nalgebra = { workspace = true }
+nalgebra = { workspace = true, features = [ "macros" ] }
 serde = { version="1.0", features = [ "derive" ] }
 numeric_literals = "0.2.0"
 fenris-nested-vec = { version = "0.0.1", path="../fenris-nested-vec" }
 proptest = { version="1.0", optional = true }
-fenris-traits = { version = "0.0.1", path = "../fenris-traits" }
+fenris-traits = { version = "0.0.2", path = "../fenris-traits" }
 
 [dev-dependencies]
 fenris-geometry = { path = ".", features = [ "proptest-support" ] }
-nalgebra = { workspace = true, features = [ "compare", "rand" ]}
+nalgebra = { workspace = true, default-features = true, features = [ "compare", "rand" ]}
 matrixcompare = { version="0.3", features = ["proptest-support"] }
 util = { path="../util" }
 fenris = { path = ".." }
