@@ -329,7 +329,7 @@ where
         Self {
             mesh: self.mesh,
             title: Some(title.into()),
-            attributes: Attributes::new(),
+            attributes: self.attributes,
         }
     }
 
