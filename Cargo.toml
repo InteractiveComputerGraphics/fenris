@@ -47,6 +47,7 @@ fenris-optimize = { version= "0.0.3", path = "fenris-optimize" }
 fenris-quadrature = { version= "0.0.4", path = "fenris-quadrature" }
 mshio = "0.4.2"
 rstar = "0.10"
+fxhash = "0.2.1"
 
 [dev-dependencies]
 fenris = { path = ".", features = [ "proptest-support" ]}

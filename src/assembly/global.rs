@@ -14,7 +14,7 @@ use nalgebra_sparse::{pattern::SparsityPattern, CsrMatrix};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
 use std::cell::RefCell;
-use std::collections::BTreeSet;
+use fxhash::FxHashSet as HashSet;
 use std::ops::AddAssign;
 use thread_local::ThreadLocal;
 
@@ -56,52 +56,56 @@ impl<T: Scalar> Default for CsrAssemblerWorkspace<T> {
 impl<T: Scalar> CsrAssembler<T> {
     // TODO: Test this method!
     pub fn assemble_pattern(&self, element_assembler: &impl ElementConnectivityAssembler) -> SparsityPattern {
-        // Here we optimize for memory usage rather than performance: by collecting into a
-        // BTreeSet we store each matrix entry exactly once. This is important, because depending
-        // on the mesh, there may be a relatively large number of duplicate entries which would
-        // need to be combined.
         let sdim = element_assembler.solution_dim();
-        let mut matrix_entries = BTreeSet::new();
+        let num_nodes = element_assembler.num_nodes();
+        let num_rows = sdim * num_nodes;
+        let mut node_sets: Vec<HashSet<usize>> = vec![HashSet::default(); num_nodes];
         let mut element_global_nodes = Vec::new();
         for i in 0..element_assembler.num_elements() {
             let element_node_count = element_assembler.element_node_count(i);
             element_global_nodes.resize(element_node_count, usize::MAX);
             element_assembler.populate_element_nodes(&mut element_global_nodes, i);
 
-            for node_i in &element_global_nodes {
-                for node_j in &element_global_nodes {
-                    for s_i in 0..sdim {
-                        for s_j in 0..sdim {
-                            let idx_i = sdim * node_i + s_i;
-                            let idx_j = sdim * node_j + s_j;
-                            matrix_entries.insert((idx_i, idx_j));
-                        }
-                    }
+            for &node_i in &element_global_nodes {
+                for &node_j in &element_global_nodes {
+                    node_sets[node_i].insert(node_j);
                 }
             }
         }
 
-        let num_rows = sdim * element_assembler.num_nodes();
-        let mut offsets = Vec::with_capacity(num_rows + 1);
-        let mut column_indices = Vec::with_capacity(matrix_entries.len());
-
+        let mut offsets = Vec::with_capacity(num_rows);
         offsets.push(0);
-        for (i, j) in matrix_entries {
-            while i + 1 > offsets.len() {
-                // This condition indicates that we have reached a new row. We need to run this
-                // in a while loop to correctly handle consecutive empty rows
-                offsets.push(column_indices.len());
+        let mut current_offset = 0;
+        for node_set in &node_sets {
+            for _ in 0 .. sdim {
+                let count = sdim * node_set.len();
+                offsets.push(current_offset + count);
+                current_offset += count;
             }
-            column_indices.push(j);
+        }
+        assert_eq!(offsets.len(), num_rows + 1);
+
+        let mut col_indices = Vec::with_capacity(*offsets.last().unwrap());
+        let mut node_buffer: Vec<usize> = Vec::new();
+        for node_set in &node_sets {
+            node_buffer.clear();
+            node_buffer.extend(node_set);
+            node_buffer.sort_unstable();
+            // We have sdim identical rows (in terms of pattern)
+            for _ in 0 .. sdim {
+                for node_j in &node_buffer {
+                        for j in 0 .. sdim {
+                            let col_idx = sdim * node_j + j;
+                            col_indices.push(col_idx);
+                        }
+                }
+            }
         }
 
-        // Make sure we fill out the remaining offsets if the last rows are empty
-        while offsets.len() < (num_rows + 1) {
-            offsets.push(column_indices.len());
-        }
+        assert_eq!(*offsets.last().unwrap(), col_indices.len());
 
         // TODO: Avoid validation?
-        SparsityPattern::try_from_offsets_and_indices(num_rows, num_rows, offsets, column_indices)
+        SparsityPattern::try_from_offsets_and_indices(num_rows, num_rows, offsets, col_indices)
             .expect("Pattern data must be valid")
     }
 }
