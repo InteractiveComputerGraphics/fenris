@@ -14,8 +14,8 @@ use nalgebra_sparse::{pattern::SparsityPattern, CsrMatrix};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
 use std::cell::RefCell;
-use fxhash::FxHashSet as HashSet;
 use std::ops::AddAssign;
+use rustc_hash::FxHashSet;
 use thread_local::ThreadLocal;
 
 /// An assembler for CSR matrices.
@@ -59,7 +59,7 @@ impl<T: Scalar> CsrAssembler<T> {
         let sdim = element_assembler.solution_dim();
         let num_nodes = element_assembler.num_nodes();
         let num_rows = sdim * num_nodes;
-        let mut node_sets: Vec<HashSet<usize>> = vec![HashSet::default(); num_nodes];
+        let mut node_sets: Vec<FxHashSet<usize>> = vec![FxHashSet::default(); num_nodes];
         let mut element_global_nodes = Vec::new();
         for i in 0..element_assembler.num_elements() {
             let element_node_count = element_assembler.element_node_count(i);
