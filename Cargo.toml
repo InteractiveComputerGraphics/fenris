@@ -50,6 +50,7 @@ rstar = "0.10"
 
 [dev-dependencies]
 fenris = { path = ".", features = [ "proptest-support" ]}
+fenris-solid = { path = "fenris-solid" }
 nalgebra = { workspace = true, features = [ "serde-serialize", "compare" ] }
 proptest = "1.0"
 matrixcompare = { version="0.3", features = ["proptest-support"] }
