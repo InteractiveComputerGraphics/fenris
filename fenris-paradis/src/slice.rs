@@ -1,10 +1,28 @@
 use crate::{ParallelIndexedAccess, ParallelIndexedCollection};
 use std::marker::PhantomData;
+use std::ops::Range;
 
 #[derive(Copy)]
 pub struct ParallelSliceAccess<'a, T> {
     ptr: *mut T,
     marker: PhantomData<&'a mut T>,
+}
+
+impl<'a, T> ParallelSliceAccess<'a, T> {
+    /// Construct a subslice for the given range.
+    ///
+    /// # Safety
+    ///
+    /// The range must be valid for the slice.
+    ///
+    /// Multiple threads must not call this function with overlapping ranges without synchronization.
+    pub unsafe fn subslice_mut(&self, range: Range<usize>) -> &'a mut [T] {
+        let Range { start, end } = range;
+        debug_assert!(end >= start);
+        let ptr = self.ptr.add(start);
+        let len = end - start;
+        std::slice::from_raw_parts_mut(ptr, len)
+    }
 }
 
 impl<'a, T> Clone for ParallelSliceAccess<'a, T> {
