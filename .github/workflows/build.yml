@@ -37,11 +37,11 @@ jobs:
           key: ${{ runner.os }}-cargo-check-${{ hashFiles('**/Cargo.toml') }}
       - uses: dtolnay/rust-toolchain@stable
       - name: Check
-        run: cargo check --verbose
+        run: cargo check --workspace --all-targets --verbose
       - name: Check tests
-        run: cargo check --tests --verbose
+        run: cargo check --workspace --tests --verbose
       - name: Check examples
-        run: cargo check --examples --verbose
+        run: cargo check --workspace --examples --verbose
 
   cargo-doc:
     
@@ -83,9 +83,11 @@ jobs:
       - name: Build tests, release (cargo build --tests --workspace --all-targets --release)
         run: cargo build --tests --workspace --all-targets --release
       - name: Run tests without convergence tests
-        run: cargo test --workspace --all-targets -- --skip "convergence_tests::"
+        run: cargo test --workspace --tests -- --skip "convergence_tests::"
       - name: Run tests without convergence tests, release
-        run: cargo test --workspace --all-targets --release -- --skip "convergence_tests::"
+        run: cargo test --workspace --tests --release -- --skip "convergence_tests::"
+      - name: Run benchmarks as tests
+        run: cargo test --workspace --all-targets --benches
 
   cargo-test-convergence:
     
@@ -103,9 +105,5 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.toml') }}
       - uses: dtolnay/rust-toolchain@stable
-      - name: Build all tests (cargo build --tests --workspace --all-targets)
-        run: cargo build --tests --workspace --all-targets
-      - name: Build tests, release (cargo build --tests --workspace --all-targets --release)
-        run: cargo build --tests --workspace --all-targets --release
       - name: Run convergence tests, release
         run: cargo test --workspace --release --test convergence
