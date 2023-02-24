@@ -6,16 +6,20 @@ use crate::Real;
 use fenris_nested_vec::NestedVec;
 use fenris_paradis::adapter::BlockAdapter;
 use fenris_paradis::coloring::sequential_greedy_coloring;
-use fenris_paradis::DisjointSubsets;
+use fenris_paradis::{DisjointSubsets, ParallelIndexedCollection};
 use fenris_sparse::ParallelCsrRowCollection;
+use itertools::{enumerate, izip};
 use nalgebra::base::storage::Storage;
 use nalgebra::{DMatrix, DMatrixViewMut, DVector, DVectorView, DVectorViewMut, DimName, Dyn, Matrix, Scalar, U1};
 use nalgebra_sparse::{pattern::SparsityPattern, CsrMatrix};
+use num::integer::div_ceil;
+use parking_lot::Mutex;
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
+use rustc_hash::FxHashSet;
 use std::cell::RefCell;
-use std::collections::BTreeSet;
-use std::ops::AddAssign;
+use std::cmp::min;
+use std::ops::{AddAssign, IndexMut};
 use thread_local::ThreadLocal;
 
 /// An assembler for CSR matrices.
@@ -54,55 +58,65 @@ impl<T: Scalar> Default for CsrAssemblerWorkspace<T> {
 }
 
 impl<T: Scalar> CsrAssembler<T> {
-    // TODO: Test this method!
+    /// Assembles the sparsity pattern associated with the given element assembler.
+    ///
+    /// The implementation explicitly avoids storing duplicate entries in order to prevent
+    /// excessive memory costs.
     pub fn assemble_pattern(&self, element_assembler: &impl ElementConnectivityAssembler) -> SparsityPattern {
-        // Here we optimize for memory usage rather than performance: by collecting into a
-        // BTreeSet we store each matrix entry exactly once. This is important, because depending
-        // on the mesh, there may be a relatively large number of duplicate entries which would
-        // need to be combined.
         let sdim = element_assembler.solution_dim();
-        let mut matrix_entries = BTreeSet::new();
+        let num_nodes = element_assembler.num_nodes();
+        let num_rows = sdim * num_nodes;
+        let mut node_sets: Vec<FxHashSet<usize>> = vec![FxHashSet::default(); num_nodes];
         let mut element_global_nodes = Vec::new();
         for i in 0..element_assembler.num_elements() {
             let element_node_count = element_assembler.element_node_count(i);
             element_global_nodes.resize(element_node_count, usize::MAX);
             element_assembler.populate_element_nodes(&mut element_global_nodes, i);
 
-            for node_i in &element_global_nodes {
-                for node_j in &element_global_nodes {
-                    for s_i in 0..sdim {
-                        for s_j in 0..sdim {
-                            let idx_i = sdim * node_i + s_i;
-                            let idx_j = sdim * node_j + s_j;
-                            matrix_entries.insert((idx_i, idx_j));
-                        }
+            for &node_i in &element_global_nodes {
+                for &node_j in &element_global_nodes {
+                    node_sets[node_i].insert(node_j);
+                }
+            }
+        }
+
+        let mut offsets = Vec::with_capacity(num_rows);
+        offsets.push(0);
+        let mut current_offset = 0;
+        for node_set in &node_sets {
+            for _ in 0..sdim {
+                let count = sdim * node_set.len();
+                offsets.push(current_offset + count);
+                current_offset += count;
+            }
+        }
+        assert_eq!(offsets.len(), num_rows + 1);
+
+        let mut col_indices = Vec::with_capacity(*offsets.last().unwrap());
+        let mut node_buffer: Vec<usize> = Vec::new();
+        for node_set in &node_sets {
+            node_buffer.clear();
+            node_buffer.extend(node_set);
+            node_buffer.sort_unstable();
+            // We have sdim identical rows (in terms of pattern)
+            for _ in 0..sdim {
+                for node_j in &node_buffer {
+                    for j in 0..sdim {
+                        let col_idx = sdim * node_j + j;
+                        col_indices.push(col_idx);
                     }
                 }
             }
         }
 
-        let num_rows = sdim * element_assembler.num_nodes();
-        let mut offsets = Vec::with_capacity(num_rows + 1);
-        let mut column_indices = Vec::with_capacity(matrix_entries.len());
+        assert_eq!(*offsets.last().unwrap(), col_indices.len());
 
-        offsets.push(0);
-        for (i, j) in matrix_entries {
-            while i + 1 > offsets.len() {
-                // This condition indicates that we have reached a new row. We need to run this
-                // in a while loop to correctly handle consecutive empty rows
-                offsets.push(column_indices.len());
-            }
-            column_indices.push(j);
-        }
-
-        // Make sure we fill out the remaining offsets if the last rows are empty
-        while offsets.len() < (num_rows + 1) {
-            offsets.push(column_indices.len());
-        }
-
-        // TODO: Avoid validation?
-        SparsityPattern::try_from_offsets_and_indices(num_rows, num_rows, offsets, column_indices)
-            .expect("Pattern data must be valid")
+        debug_assert!(
+            SparsityPattern::try_from_offsets_and_indices(num_rows, num_rows, offsets.clone(), col_indices.clone())
+                .is_ok(),
+            "Internal error: constructed sparsity pattern is not valid. This is a bug!"
+        );
+        unsafe { SparsityPattern::from_offset_and_indices_unchecked(num_rows, num_rows, offsets, col_indices) }
     }
 }
 
@@ -185,80 +199,101 @@ impl<T: Scalar + Send> Default for CsrParAssembler<T> {
 }
 
 impl<T: Scalar + Send> CsrParAssembler<T> {
+    /// Assembles the sparsity pattern associated with the given element assembler.
+    ///
+    /// The implementation explicitly avoids storing duplicate entries in order to prevent
+    /// excessive memory costs.
     pub fn assemble_pattern(&self, element_assembler: &(impl Sync + ElementConnectivityAssembler)) -> SparsityPattern {
         let sdim = element_assembler.solution_dim();
+        let num_nodes = element_assembler.num_nodes();
+        let num_elements = element_assembler.num_elements();
+        let num_rows = sdim * num_nodes;
+        // We store a HashSet (with a fast hash) for each node,
+        // eventually containing the set of (unique) neighbors for that node
+        let mut node_sets: Vec<Mutex<FxHashSet<usize>>> = (0..num_nodes)
+            .map(|_| Mutex::new(FxHashSet::default()))
+            .collect();
+        let node_buffer: ThreadLocal<RefCell<Vec<usize>>> = ThreadLocal::new();
 
-        // Count number of (including duplicate) triplets
-        let num_total_triplets = (0..element_assembler.num_elements())
-            .into_par_iter()
-            .with_min_len(50)
-            .map(|element_idx| {
-                let num_entries = sdim * element_assembler.element_node_count(element_idx);
-                num_entries * num_entries
-            })
-            .sum();
+        // Batch computation in order to make each Rayon unit of work larger
+        let batch_size = 10;
+        let num_batches = div_ceil(num_elements, batch_size);
+        (0..num_batches).into_par_iter().for_each(|batch_index| {
+            let batch_start = batch_size * batch_index;
+            let batch_end = min(num_elements, batch_start + batch_size);
+            assert!(batch_end >= batch_start);
+            let mut node_buffer = node_buffer.get_or_default().borrow_mut();
+            for i in batch_start..batch_end {
+                let element_node_count = element_assembler.element_node_count(i);
+                node_buffer.resize(element_node_count, usize::MAX);
+                element_assembler.populate_element_nodes(&mut node_buffer, i);
 
-        // TODO: Can we do this next stage in parallel somehow?
-        // (it is however entirely memory bound, but a single thread
-        // probably cannot exhaust that on its own)
-        let mut coordinates = Vec::with_capacity(num_total_triplets);
-        let mut index_workspace = Vec::new();
-        for element_idx in 0..element_assembler.num_elements() {
-            let node_count = element_assembler.element_node_count(element_idx);
-            index_workspace.resize(node_count, 0);
-            element_assembler.populate_element_nodes(&mut index_workspace, element_idx);
-
-            for node_i in &index_workspace {
-                for node_j in &index_workspace {
-                    for i in 0..sdim {
-                        for j in 0..sdim {
-                            coordinates.push((sdim * node_i + i, sdim * node_j + j));
-                        }
+                for &node_i in &*node_buffer {
+                    let mut node_set = node_sets[node_i].lock();
+                    for &node_j in &*node_buffer {
+                        node_set.insert(node_j);
                     }
                 }
             }
-        }
+        });
 
-        coordinates.par_sort_unstable();
-
-        // TODO: Can we parallelize the final part?
-        // TODO: move this into something like SparsityPattern::from_coordinates ?
-        // But then we'd probably also have to deal with the case in which
-        // the coordinates are perhaps not sorted (either error out or
-        // deal with it on the fly)
-        let num_rows = sdim * element_assembler.num_nodes();
-        let mut row_offsets = Vec::with_capacity(num_rows);
-        let mut column_indices = Vec::new();
-        row_offsets.push(0);
-
-        let mut coord_iter = coordinates.into_iter();
-        let mut current_row = 0;
-        let mut prev_col = None;
-
-        while let Some((i, j)) = coord_iter.next() {
-            assert!(i < num_rows, "Coordinates must be in bounds");
-
-            while i > current_row {
-                row_offsets.push(column_indices.len());
-                current_row += 1;
-                prev_col = None;
-            }
-
-            // Only add column if it is not a duplicate
-            if Some(j) != prev_col {
-                column_indices.push(j);
-                prev_col = Some(j);
+        // TODO: Parallelize offset computation
+        // (only takes up relatively small proportion of time though, not worth spending much effort atm)
+        let mut offsets = Vec::with_capacity(num_rows);
+        offsets.push(0);
+        let mut current_offset = 0;
+        for node_set in &node_sets {
+            for _ in 0..sdim {
+                let count = sdim * node_set.lock().len();
+                offsets.push(current_offset + count);
+                current_offset += count;
             }
         }
 
-        // Fill out offsets for remaining empty rows
-        for _ in current_row..num_rows {
-            row_offsets.push(column_indices.len());
-        }
+        let nnz = current_offset;
+        assert_eq!(offsets.len(), num_rows + 1);
 
-        // TODO: Avoid validation?
-        SparsityPattern::try_from_offsets_and_indices(num_rows, num_rows, row_offsets, column_indices)
-            .expect("Pattern data must be valid by definition")
+        let mut col_indices = vec![0; nnz];
+        let col_indices_access = unsafe { col_indices.create_access() };
+
+        // Note: We use the same batch size, but before we were batching over *elements*,
+        // now we're batching over *rows*
+        node_sets
+            .par_chunks_mut(batch_size)
+            .enumerate()
+            .for_each(|(batch_index, locked_node_sets)| {
+                let batch_start = batch_size * batch_index;
+                let batch_end = min(num_nodes, batch_start + batch_size);
+                assert!(batch_end >= batch_start);
+                let mut node_buffer = node_buffer.get_or_default().borrow_mut();
+
+                for (i, locked_node_set) in izip!(batch_start..batch_end, locked_node_sets) {
+                    let node_set = locked_node_set.get_mut();
+                    node_buffer.clear();
+                    node_buffer.extend(node_set.iter());
+                    node_buffer.sort_unstable();
+
+                    for s_i in 0..sdim {
+                        let begin = offsets[sdim * i + s_i];
+                        let end = offsets[sdim * i + s_i + 1];
+                        let subslice = unsafe { col_indices_access.subslice_mut(begin..end) };
+                        for (i, node_j) in enumerate(node_buffer.iter()) {
+                            let block = subslice.index_mut(sdim * i..(sdim * (i + 1)));
+                            for (j, col_idx) in enumerate(block) {
+                                *col_idx = sdim * node_j + j;
+                            }
+                        }
+                    }
+                }
+            });
+
+        assert_eq!(*offsets.last().unwrap(), col_indices.len());
+        debug_assert!(
+            SparsityPattern::try_from_offsets_and_indices(num_rows, num_rows, offsets.clone(), col_indices.clone())
+                .is_ok(),
+            "Internal error: constructed sparsity pattern is not valid. This is a bug!"
+        );
+        unsafe { SparsityPattern::from_offset_and_indices_unchecked(num_rows, num_rows, offsets, col_indices) }
     }
 }
 

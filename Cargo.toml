@@ -31,7 +31,7 @@ numeric_literals = "0.2.0"
 itertools = "0.10.5"
 ordered-float = "1.0"
 proptest = { version = "1.0", optional = true }
-rayon = "1.3"
+rayon = "1.6.1"
 # TODO: Make serde optional
 serde = { version="1.0", features = [ "derive" ] }
 log = "0.4"
@@ -47,15 +47,19 @@ fenris-optimize = { version= "0.0.3", path = "fenris-optimize" }
 fenris-quadrature = { version= "0.0.4", path = "fenris-quadrature" }
 mshio = "0.4.2"
 rstar = "0.10"
+fxhash = "0.2.1"
+parking_lot = "0.12.1"
 
 [dev-dependencies]
 fenris = { path = ".", features = [ "proptest-support" ]}
+fenris-solid = { path = "fenris-solid" }
 nalgebra = { workspace = true, features = [ "serde-serialize", "compare" ] }
 proptest = "1.0"
 matrixcompare = { version="0.3", features = ["proptest-support"] }
 util = { path = "util" }
 paste = "1.0.6"
 insta = "1.21.0"
+criterion = "0.4.0"
 
 # For outputting e.g. convergence test results for later analysis
 serde_json = "1.0.64"
@@ -86,3 +90,7 @@ repository = "https://github.com/InteractiveComputerGraphics/fenris"
 nalgebra = { version = "0.32.1", default-features = false }
 nalgebra-sparse = { version = "0.9.0", default-features = false }
 fenris = { version = "0.0.24", path = "." }
+
+[[bench]]
+name = "assembly"
+harness = false
