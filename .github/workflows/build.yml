@@ -83,7 +83,7 @@ jobs:
       - name: Run tests without convergence tests, release
         run: cargo test --workspace --tests --release -- --skip "convergence_tests::"
       - name: Run benchmarks as tests
-        run: cargo test --workspace --all-targets --benches
+        run: cargo test --workspace --benches
 
   cargo-test-convergence:
     
