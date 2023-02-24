@@ -123,7 +123,7 @@ fn csr_assemble_mock_pattern() {
             num_nodes: 6,
             element_connectivities: vec![vec![0, 1, 2], vec![2, 3], vec![], vec![3, 4, 4, 4, 4, 4, 4]],
         };
-        let csr_assembler = CsrParAssembler::<i32>::default();
+        let csr_assembler = CsrAssembler::<i32>::default();
         let pattern = csr_assembler.assemble_pattern(&element_assembler);
         let expected_pattern = SparsityPattern::try_from_offsets_and_indices(
             12,
