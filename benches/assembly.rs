@@ -11,7 +11,7 @@ use fenris_solid::materials::{LameParameters, LinearElasticMaterial};
 use fenris_solid::MaterialEllipticOperator;
 use fenris_traits::allocators::DimAllocator;
 use nalgebra::allocator::Allocator;
-use nalgebra::{DVector, DVectorSlice, DefaultAllocator};
+use nalgebra::{DVector, DVectorView, DefaultAllocator};
 use nalgebra_sparse::pattern::SparsityPattern;
 use nalgebra_sparse::CsrMatrix;
 use std::hint::black_box;
@@ -19,7 +19,7 @@ use std::hint::black_box;
 fn assemble_poisson_into_serial<D, C>(
     matrix: &mut CsrMatrix<f64>,
     assembler: &CsrAssembler<f64>,
-    u: DVectorSlice<f64>,
+    u: DVectorView<f64>,
     qtable: &impl QuadratureTable<f64, D, Data = ()>,
     mesh: &Mesh<f64, D, C>,
 ) -> eyre::Result<()>
@@ -39,7 +39,7 @@ where
 
 fn assemble_poisson_pattern_serial<D, C>(
     assembler: &CsrAssembler<f64>,
-    u: DVectorSlice<f64>,
+    u: DVectorView<f64>,
     qtable: &impl QuadratureTable<f64, D, Data = ()>,
     mesh: &Mesh<f64, D, C>,
 ) -> SparsityPattern
@@ -59,7 +59,7 @@ where
 
 fn assemble_poisson_pattern_par<D, C>(
     assembler: &CsrParAssembler<f64>,
-    u: DVectorSlice<f64>,
+    u: DVectorView<f64>,
     qtable: &(impl QuadratureTable<f64, D, Data = ()> + Sync),
     mesh: &Mesh<f64, D, C>,
 ) -> SparsityPattern
@@ -80,7 +80,7 @@ where
 
 fn assemble_elasticity_pattern_serial<D, C>(
     assembler: &CsrAssembler<f64>,
-    u: DVectorSlice<f64>,
+    u: DVectorView<f64>,
     qtable: &impl QuadratureTable<f64, D, Data = LameParameters<f64>>,
     mesh: &Mesh<f64, D, C>,
 ) -> SparsityPattern
@@ -102,7 +102,7 @@ where
 
 fn assemble_elasticity_pattern_par<D, C>(
     assembler: &CsrParAssembler<f64>,
-    u: DVectorSlice<f64>,
+    u: DVectorView<f64>,
     qtable: &(impl QuadratureTable<f64, D, Data = LameParameters<f64>> + Sync),
     mesh: &Mesh<f64, D, C>,
 ) -> SparsityPattern
@@ -137,7 +137,7 @@ pub fn poisson_assembly_serial(c: &mut Criterion) {
             &format!("serial assembly poisson stiffness matrix tet4 (res={res})"),
             |b| {
                 b.iter(|| {
-                    assemble_poisson_into_serial(&mut matrix, &assembler, DVectorSlice::from(&u), &qtable, &tet4_mesh)
+                    assemble_poisson_into_serial(&mut matrix, &assembler, DVectorView::from(&u), &qtable, &tet4_mesh)
                 })
             },
         );
@@ -157,7 +157,7 @@ pub fn poisson_pattern_assembly_serial(c: &mut Criterion) {
                 b.iter(|| {
                     black_box(assemble_poisson_pattern_serial(
                         &assembler,
-                        DVectorSlice::from(&u),
+                        DVectorView::from(&u),
                         &qtable,
                         &tet4_mesh,
                     ))
@@ -180,7 +180,7 @@ pub fn poisson_pattern_assembly_parallel(c: &mut Criterion) {
                 b.iter(|| {
                     black_box(assemble_poisson_pattern_par(
                         &assembler,
-                        DVectorSlice::from(&u),
+                        DVectorView::from(&u),
                         &qtable,
                         &tet4_mesh,
                     ))
@@ -205,7 +205,7 @@ pub fn elasticity_3d_pattern_assembly_serial(c: &mut Criterion) {
                 b.iter(|| {
                     black_box(assemble_elasticity_pattern_serial(
                         &assembler,
-                        DVectorSlice::from(&u),
+                        DVectorView::from(&u),
                         &qtable,
                         &tet4_mesh,
                     ))
@@ -230,7 +230,7 @@ pub fn elasticity_3d_pattern_assembly_parallel(c: &mut Criterion) {
                 b.iter(|| {
                     black_box(assemble_elasticity_pattern_par(
                         &assembler,
-                        DVectorSlice::from(&u),
+                        DVectorView::from(&u),
                         &qtable,
                         &tet4_mesh,
                     ))
