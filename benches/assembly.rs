@@ -7,14 +7,14 @@ use fenris::mesh::procedural::create_unit_box_uniform_tet_mesh_3d;
 use fenris::mesh::Mesh;
 use fenris::quadrature::CanonicalStiffnessQuadrature;
 use fenris::SmallDim;
+use fenris_solid::materials::{LameParameters, LinearElasticMaterial};
+use fenris_solid::MaterialEllipticOperator;
 use fenris_traits::allocators::DimAllocator;
+use nalgebra::allocator::Allocator;
 use nalgebra::{DVector, DVectorSlice, DefaultAllocator};
 use nalgebra_sparse::pattern::SparsityPattern;
 use nalgebra_sparse::CsrMatrix;
 use std::hint::black_box;
-use nalgebra::allocator::Allocator;
-use fenris_solid::MaterialEllipticOperator;
-use fenris_solid::materials::{LameParameters, LinearElasticMaterial};
 
 fn assemble_poisson_into_serial<D, C>(
     matrix: &mut CsrMatrix<f64>,
@@ -84,10 +84,10 @@ fn assemble_elasticity_pattern_serial<D, C>(
     qtable: &impl QuadratureTable<f64, D, Data = LameParameters<f64>>,
     mesh: &Mesh<f64, D, C>,
 ) -> SparsityPattern
-    where
-        D: SmallDim,
-        C: ElementConnectivity<f64, GeometryDim = D, ReferenceDim = D>,
-        DefaultAllocator: DimAllocator<f64, D>,
+where
+    D: SmallDim,
+    C: ElementConnectivity<f64, GeometryDim = D, ReferenceDim = D>,
+    DefaultAllocator: DimAllocator<f64, D>,
 {
     let material = LinearElasticMaterial;
     let operator = MaterialEllipticOperator::new(&material);
@@ -106,11 +106,11 @@ fn assemble_elasticity_pattern_par<D, C>(
     qtable: &(impl QuadratureTable<f64, D, Data = LameParameters<f64>> + Sync),
     mesh: &Mesh<f64, D, C>,
 ) -> SparsityPattern
-    where
-        D: SmallDim,
-        C: ElementConnectivity<f64, GeometryDim = D, ReferenceDim = D> + Sync,
-        DefaultAllocator: DimAllocator<f64, D>,
-        <DefaultAllocator as Allocator<f64, D>>::Buffer: Sync,
+where
+    D: SmallDim,
+    C: ElementConnectivity<f64, GeometryDim = D, ReferenceDim = D> + Sync,
+    DefaultAllocator: DimAllocator<f64, D>,
+    <DefaultAllocator as Allocator<f64, D>>::Buffer: Sync,
 {
     let material = LinearElasticMaterial;
     let operator = MaterialEllipticOperator::new(&material);
@@ -196,7 +196,8 @@ pub fn elasticity_3d_pattern_assembly_serial(c: &mut Criterion) {
     for res in resolutions {
         let tet4_mesh = create_unit_box_uniform_tet_mesh_3d(res);
         let u = DVector::repeat(tet4_mesh.vertices().len(), 0.0);
-        let qtable = tet4_mesh.canonical_stiffness_quadrature()
+        let qtable = tet4_mesh
+            .canonical_stiffness_quadrature()
             .with_uniform_data(LameParameters::default());
         c.bench_function(
             &format!("serial pattern assembly elasticity stiffness matrix tet4 (res={res})"),
@@ -220,7 +221,8 @@ pub fn elasticity_3d_pattern_assembly_parallel(c: &mut Criterion) {
     for res in resolutions {
         let tet4_mesh = create_unit_box_uniform_tet_mesh_3d(res);
         let u = DVector::repeat(tet4_mesh.vertices().len(), 0.0);
-        let qtable = tet4_mesh.canonical_stiffness_quadrature()
+        let qtable = tet4_mesh
+            .canonical_stiffness_quadrature()
             .with_uniform_data(LameParameters::default());
         c.bench_function(
             &format!("parallel pattern assembly elasticity stiffness matrix tet4 (res={res})"),
