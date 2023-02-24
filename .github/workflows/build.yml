@@ -36,12 +36,8 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-check-${{ hashFiles('**/Cargo.toml') }}
       - uses: dtolnay/rust-toolchain@stable
-      - name: Check
+      - name: Check all targets
         run: cargo check --workspace --all-targets --verbose
-      - name: Check tests
-        run: cargo check --workspace --tests --verbose
-      - name: Check examples
-        run: cargo check --workspace --examples --verbose
 
   cargo-doc:
     
