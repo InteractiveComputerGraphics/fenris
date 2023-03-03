@@ -276,6 +276,24 @@ where
     }
 }
 
+/// Creates a rectangular uniform tetrahedral mesh.
+///
+/// Currently the same as [`create_rectangular_uniform_hex_mesh`], except that the hexahedral
+/// mesh is tetrahedralized.
+pub fn create_rectangular_uniform_tet_mesh<T>(
+    unit_length: T,
+    units_x: usize,
+    units_y: usize,
+    units_z: usize,
+    cells_per_unit: usize,
+) -> Tet4Mesh<T>
+where
+    T: Real,
+{
+    let hex_mesh = create_rectangular_uniform_hex_mesh(unit_length, units_x, units_y, units_z, cells_per_unit);
+    Tet4Mesh::from(&hex_mesh)
+}
+
 pub fn create_simple_stupid_sphere(center: &Point3<f64>, radius: f64, num_sweeps: usize) -> PolyMesh3d<f64> {
     assert!(num_sweeps > 0);
 
