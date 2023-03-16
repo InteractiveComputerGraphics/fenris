@@ -529,7 +529,7 @@ where
             .extension()
             .map(|os_str| os_str.to_string_lossy().to_ascii_lowercase());
         let version = match extension.as_ref().map(|s| s.as_str()) {
-            Some("vtu") => Version { major: 2, minor: 2 },
+            Some("vtu") => Version { major: 1, minor: 0 },
             Some("vtk") | _ => Version { major: 4, minor: 1 },
         };
 
