@@ -1,15 +1,61 @@
 //! Solid mechanics functionality for `fenris`.
 use fenris::allocators::DimAllocator;
 use fenris::assembly::operators::{EllipticContraction, EllipticEnergy, EllipticOperator, Operator};
-use fenris::nalgebra::{DMatrixViewMut, DVectorView, DefaultAllocator, DimName, OMatrix, OVector};
+use fenris::nalgebra::{
+    DMatrixViewMut, DVectorView, DefaultAllocator, DimName, OMatrix, OVector, RealField, U1, U2, U3,
+};
 use fenris::{Real, SmallDim, Symmetry};
 use std::cmp::min;
 
 pub mod materials;
 
+mod logdet;
+pub use logdet::log_det_F;
+
 mod gravity_source;
 pub use gravity_source::GravitySource;
 
+/// Compute the deformation gradient $\vec F$ given the displacement gradient $\nabla \vec u$.
+#[allow(non_snake_case)]
+pub fn deformation_gradient<T, D>(u_grad: &OMatrix<T, D, D>) -> OMatrix<T, D, D>
+where
+    T: RealField,
+    D: DimName,
+    DefaultAllocator: DimAllocator<T, D>,
+{
+    let I = OMatrix::<T, D, D>::identity();
+    let F = I + u_grad.transpose();
+    F
+}
+
+/// Compute the displacement gradient $\nabla \vec u$ given the deformation gradient $\vec F$.
+#[allow(non_snake_case)]
+pub fn u_grad_from_F<T, D>(F: &OMatrix<T, D, D>) -> OMatrix<T, D, D>
+where
+    T: RealField,
+    D: DimName,
+    DefaultAllocator: DimAllocator<T, D>,
+{
+    let I = OMatrix::<T, D, D>::identity();
+    (F - I).transpose()
+}
+
+/// A hyperelastic material defined by its energy density $\psi(\vec F)$.
+///
+/// Although hyperelastic materials in literature are defined in terms of the deformation gradient
+/// $\vec F$, computing $\vec F = \vec I + \nabla \vec u^T$ incurs a significant loss in accuracy
+/// if $\nabla \vec u$ is very small (such as for stiff materials). Therefore, in addition
+/// to the required methods that work with $\vec F$, such as
+/// [`compute_energy_density`](Self::compute_energy_density), there are additional methods with the
+/// `_du` suffix which refer to a variant of the method where the input is the displacement
+/// gradient $\nabla \vec u$ instead of $\vec F$. These methods have default impls which rely
+/// on computing $\vec F$, but can be overridden by individual materials for more accurate results.
+///
+/// See the [libCEED documentation](https://libceed.org/en/latest/examples/solids) for a discussion
+/// of the numerical problems associated with forming $\vec F$ and derived quantities such as
+/// $\log \det \vec F$.
+///
+/// In the future, the trait may be changed to always work with $\nabla \vec u$ instead of $\vec F$.
 pub trait HyperelasticMaterial<T, GeometryDim>
 where
     T: Real,
@@ -25,12 +71,37 @@ where
         parameters: &Self::Parameters,
     ) -> T;
 
+    /// Compute the energy density $\psi = \psi(\vec F)$ associated with the material.
+    ///
+    /// Takes as input the displacement gradient $\nabla \vec u$ instead of the deformation
+    /// gradient $\vec F$. See [the trait docs](Self) for more information.
+    fn compute_energy_density_du(
+        &self,
+        u_grad: &OMatrix<T, GeometryDim, GeometryDim>,
+        parameters: &Self::Parameters,
+    ) -> T {
+        self.compute_energy_density(&deformation_gradient(u_grad), parameters)
+    }
+
     /// Compute the First Piola-Kirchhoff stress tensor $\vec P = \vec P(\vec F)$.
     fn compute_stress_tensor(
         &self,
         deformation_gradient: &OMatrix<T, GeometryDim, GeometryDim>,
         parameters: &Self::Parameters,
     ) -> OMatrix<T, GeometryDim, GeometryDim>;
+
+    /// Compute the First Piola-Kirchhoff stress tensor $\vec P = \vec P(\vec F)$.
+    ///
+    /// Takes as input the displacement gradient $\nabla \vec u$ instead of the deformation
+    /// gradient $\vec F$. See [the trait docs](Self) for more information.
+    #[allow(non_snake_case)]
+    fn compute_stress_tensor_du(
+        &self,
+        u_grad: &OMatrix<T, GeometryDim, GeometryDim>,
+        parameters: &Self::Parameters,
+    ) -> OMatrix<T, GeometryDim, GeometryDim> {
+        self.compute_stress_tensor(&deformation_gradient(u_grad), parameters)
+    }
 
     /// Compute the stress contraction operator $\\mathcal{C}\_{\vec P}(\vec F, \vec a, \vec b)$ with the given
     /// material parameters.
@@ -47,6 +118,21 @@ where
         b: &OVector<T, GeometryDim>,
         parameters: &Self::Parameters,
     ) -> OMatrix<T, GeometryDim, GeometryDim>;
+
+    /// Compute the stress contraction operator $\\mathcal{C}\_{\vec P}(\vec F, \vec a, \vec b)$ with the given
+    /// material parameters.
+    ///
+    /// Takes as input the displacement gradient $\nabla \vec u$ instead of the deformation
+    /// gradient $\vec F$. See [the trait docs](Self) for more information.
+    fn compute_stress_contraction_du(
+        &self,
+        u_grad: &OMatrix<T, GeometryDim, GeometryDim>,
+        a: &OVector<T, GeometryDim>,
+        b: &OVector<T, GeometryDim>,
+        parameters: &Self::Parameters,
+    ) -> OMatrix<T, GeometryDim, GeometryDim> {
+        self.compute_stress_contraction(&deformation_gradient(u_grad), a, b, parameters)
+    }
 
     /// Compute the contraction for a number of vectors at the same time, with the given
     /// parameters.
@@ -128,7 +214,131 @@ where
             self.compute_stress_contraction(deformation_gradient, a_I, b_J, parameters)
         })
     }
+
+    /// Compute the contraction for a number of vectors at the same time, with the given
+    /// parameters.
+    ///
+    /// Takes as input the displacement gradient $\nabla \vec u$ instead of the deformation
+    /// gradient $\vec F$. See [the trait docs](Self) for more information.
+    #[allow(non_snake_case)]
+    fn accumulate_stress_contractions_du_into(
+        &self,
+        output: DMatrixViewMut<T>,
+        alpha: T,
+        u_grad: &OMatrix<T, GeometryDim, GeometryDim>,
+        a: DVectorView<T>,
+        b: DVectorView<T>,
+        parameters: &Self::Parameters,
+    ) {
+        compute_batch_contraction(output, alpha, a, b, |a_I, b_J| {
+            self.compute_stress_contraction_du(&u_grad, a_I, b_J, parameters)
+        })
+    }
 }
+
+// TODO: Remove this or develop it further. The idea is to be able to
+// easily implement materials only in terms of du/dX and have some mechanism for automatically
+// producing the whole HyperelasticMaterial trait. An alternative, simpler direction,
+// would be to simply have the HyperelasticMaterial trait only work directly with u_grad.
+
+// pub trait HyperelasticMaterialDu<T, GeometryDim>
+// where
+//     T: Real,
+//     GeometryDim: DimName,
+//     DefaultAllocator: DimAllocator<T, GeometryDim>,
+// {
+//     type Parameters: Clone + Default + 'static;
+//
+//     /// TODO: Docs
+//     fn compute_energy_density_du(
+//         &self,
+//         u_grad: &OMatrix<T, GeometryDim, GeometryDim>,
+//         parameters: &Self::Parameters,
+//     ) -> T;
+//
+//     /// TODO: Docs
+//     fn compute_stress_tensor_du(
+//         &self,
+//         u_grad: &OMatrix<T, GeometryDim, GeometryDim>,
+//         parameters: &Self::Parameters,
+//     ) -> OMatrix<T, GeometryDim, GeometryDim>;
+//
+//     /// TODO: Docs
+//     fn compute_stress_contraction_du(
+//         &self,
+//         u_grad: &OMatrix<T, GeometryDim, GeometryDim>,
+//         a: &OVector<T, GeometryDim>,
+//         b: &OVector<T, GeometryDim>,
+//         parameters: &Self::Parameters,
+//     ) -> OMatrix<T, GeometryDim, GeometryDim>;
+//
+//     /// TODO: Docs
+//     #[allow(non_snake_case)]
+//     fn accumulate_stress_contractions_du_into(
+//         &self,
+//         output: DMatrixViewMut<T>,
+//         alpha: T,
+//         u_grad: &OMatrix<T, GeometryDim, GeometryDim>,
+//         a: DVectorView<T>,
+//         b: DVectorView<T>,
+//         parameters: &Self::Parameters,
+//     ) {
+//         compute_batch_contraction(output, alpha, a, b, |a_I, b_J| {
+//             self.compute_stress_contraction_du(&u_grad, a_I, b_J, parameters)
+//         })
+//     }
+// }
+
+// #[macro_export]
+// macro_rules! impl_hyperelastic_from_du_impl {
+//     ($material:ty) => {
+//         impl<T, D> HyperelasticMaterial<T, D> for $material
+//         where
+//             T: Real,
+//             D: DimName,
+//             $material: HyperelasticMaterialDu<T, D>,
+//             DefaultAllocator: DimAllocator<T, D>,
+//         {
+//             type Parameters = <$material as HyperelasticMaterialDu<T, D>>::Parameters;
+//
+//             fn compute_energy_density(&self, deformation_gradient: &OMatrix<T, D, D>, parameters: &Self::Parameters) -> T {
+//                 let u_grad = crate::u_grad_from_F(deformation_gradient);
+//                 <Self as HyperelasticMaterialDu<T, D>>::compute_energy_density_du(self, &u_grad, parameters)
+//             }
+//
+//             fn compute_energy_density_du(&self, u_grad: &OMatrix<T, D, D>, parameters: &Self::Parameters) -> T {
+//                 <Self as HyperelasticMaterialDu<T, D>>::compute_energy_density_du(self, u_grad, parameters)
+//             }
+//
+//             fn compute_stress_tensor(&self, deformation_gradient: &OMatrix<T, D, D>, parameters: &Self::Parameters) -> OMatrix<T, D, D> {
+//                 let u_grad = crate::u_grad_from_F(deformation_gradient);
+//                 <Self as HyperelasticMaterialDu<T, D>>::compute_stress_tensor_du(self, &u_grad, parameters)
+//             }
+//
+//             fn compute_stress_tensor_du(&self, u_grad: &OMatrix<T, D, D>, parameters: &Self::Parameters) -> OMatrix<T, D, D> {
+//                 <Self as HyperelasticMaterialDu<T, D>>::compute_stress_tensor_du(self, u_grad, parameters)
+//             }
+//
+//             fn compute_stress_contraction(&self, deformation_gradient: &OMatrix<T, D, D>, a: &OVector<T, D>, b: &OVector<T, D>, parameters: &Self::Parameters) -> OMatrix<T, D, D> {
+//                 let u_grad = crate::u_grad_from_F(deformation_gradient);
+//                 <Self as HyperelasticMaterialDu<T, D>>::compute_stress_contraction_du(self, &u_grad, a, b, parameters)
+//             }
+//
+//             fn compute_stress_contraction_du(&self, u_grad: &OMatrix<T, D, D>, a: &OVector<T, D>, b: &OVector<T, D>, parameters: &Self::Parameters) -> OMatrix<T, D, D> {
+//                 <Self as HyperelasticMaterialDu<T, D>>::compute_stress_contraction_du(self, u_grad, a, b, parameters)
+//             }
+//
+//             fn accumulate_stress_contractions_into(&self, output: DMatrixViewMut<T>, alpha: T, deformation_gradient: &OMatrix<T, D, D>, a: DVectorView<T>, b: DVectorView<T>, parameters: &Self::Parameters) {
+//                 let u_grad = crate::u_grad_from_F(deformation_gradient);
+//                 <Self as HyperelasticMaterialDu<T, D>>::accumulate_stress_contractions_du_into(self, output, alpha, &u_grad, a, b, parameters)
+//             }
+//
+//             fn accumulate_stress_contractions_du_into(&self, output: DMatrixViewMut<T>, alpha: T, u_grad: &OMatrix<T, D, D>, a: DVectorView<T>, b: DVectorView<T>, parameters: &Self::Parameters) {
+//                 <Self as HyperelasticMaterialDu<T, D>>::accumulate_stress_contractions_du_into(self, output, alpha, u_grad, a, b, parameters)
+//             }
+//         }
+//     }
+// }
 
 /// Helper function to ease implementation of [`HyperelasticMaterial::accumulate_stress_contractions_into`].
 ///
@@ -226,8 +436,7 @@ where
     DefaultAllocator: DimAllocator<T, GeometryDim>,
 {
     fn compute_energy(&self, u_grad: &OMatrix<T, GeometryDim, GeometryDim>, parameters: &Self::Parameters) -> T {
-        let f = u_grad.transpose() + OMatrix::<T, GeometryDim, GeometryDim>::identity();
-        self.0.compute_energy_density(&f, parameters)
+        self.0.compute_energy_density_du(u_grad, parameters)
     }
 }
 
@@ -243,9 +452,21 @@ where
         u_grad: &OMatrix<T, GeometryDim, GeometryDim>,
         parameters: &Self::Parameters,
     ) -> OMatrix<T, GeometryDim, Self::SolutionDim> {
-        let f = u_grad.transpose() + OMatrix::<T, GeometryDim, GeometryDim>::identity();
-        let p = self.0.compute_stress_tensor(&f, parameters);
-        p.transpose()
+        // The material operator g is related to the stress tensor P by g = P^T,
+        // so it's more convenient to implement the transpose opereation g^T = P,
+        // which is anyway what is called by the assembler
+        self.compute_elliptic_operator_transpose(u_grad, parameters)
+            .transpose()
+    }
+
+    fn compute_elliptic_operator_transpose(
+        &self,
+        u_grad: &OMatrix<T, GeometryDim, Self::SolutionDim>,
+        parameters: &Self::Parameters,
+    ) -> OMatrix<T, Self::SolutionDim, GeometryDim> {
+        // We avoid forming the deformation gradient here so that we can avoid
+        // the loss of accuracy implied by forming `F = I + grad u` for small `grad u`
+        self.0.compute_stress_tensor_du(u_grad, parameters)
     }
 }
 
@@ -263,8 +484,8 @@ where
         b: &OVector<T, GeometryDim>,
         parameters: &Self::Parameters,
     ) -> OMatrix<T, Self::SolutionDim, Self::SolutionDim> {
-        let f = u_grad.transpose() + OMatrix::<T, GeometryDim, GeometryDim>::identity();
-        self.0.compute_stress_contraction(&f, a, b, parameters)
+        self.0
+            .compute_stress_contraction_du(u_grad, a, b, parameters)
     }
 
     fn symmetry(&self) -> Symmetry {
@@ -281,8 +502,29 @@ where
         b: DVectorView<T>,
         parameters: &Self::Parameters,
     ) {
-        let f = u_grad.transpose() + OMatrix::<T, GeometryDim, GeometryDim>::identity();
         self.0
-            .accumulate_stress_contractions_into(output, alpha, &f, a, b, parameters)
+            .accumulate_stress_contractions_du_into(output, alpha, u_grad, a, b, parameters)
     }
 }
+
+mod internal {
+    use fenris::nalgebra::{U1, U2, U3};
+
+    pub trait Sealed {}
+
+    impl Sealed for U1 {}
+    impl Sealed for U2 {}
+    impl Sealed for U3 {}
+}
+
+/// A fixed-size dimension corresponding to physical space.
+///
+/// Physical dimensions are comprised of the dimensions $1$, $2$ and $3$. The primary utility
+/// of this trait is to support writing generic code that needs to evaluate functions
+/// whose implementation differs from dimension to dimension, and that might not have an easily
+/// accessible n-dimensional variant.
+pub trait PhysicalDim: internal::Sealed + SmallDim {}
+
+impl PhysicalDim for U1 {}
+impl PhysicalDim for U2 {}
+impl PhysicalDim for U3 {}
