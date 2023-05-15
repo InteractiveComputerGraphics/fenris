@@ -1,5 +1,4 @@
 use crate::allocators::BiDimAllocator;
-use crate::nalgebra::allocator::Allocator;
 use crate::nalgebra::{DMatrixViewMut, DVectorView, DefaultAllocator, DimName, OMatrix, OVector, Scalar};
 use crate::{Real, SmallDim, Symmetry};
 
@@ -22,7 +21,7 @@ pub trait EllipticOperator<T, GeometryDim>: Operator<T, GeometryDim>
 where
     T: Scalar,
     GeometryDim: SmallDim,
-    DefaultAllocator: Allocator<T, GeometryDim, Self::SolutionDim>,
+    DefaultAllocator: BiDimAllocator<T, GeometryDim, Self::SolutionDim>,
 {
     /// Compute the elliptic operator $g = g(\nabla u)$ with the provided
     /// [operator parameters](Operator::Parameters).
@@ -31,6 +30,19 @@ where
         gradient: &OMatrix<T, GeometryDim, Self::SolutionDim>,
         parameters: &Self::Parameters,
     ) -> OMatrix<T, GeometryDim, Self::SolutionDim>;
+
+    /// Compute the transpose $g^T$ of the elliptic operator $g$.
+    ///
+    /// See [`compute_elliptic_operator`](Self::compute_elliptic_operator). Implementing
+    /// this function can often avoid unnecessary transposition in consumers.
+    fn compute_elliptic_operator_transpose(
+        &self,
+        gradient: &OMatrix<T, GeometryDim, Self::SolutionDim>,
+        parameters: &Self::Parameters,
+    ) -> OMatrix<T, Self::SolutionDim, GeometryDim> {
+        self.compute_elliptic_operator(gradient, parameters)
+            .transpose()
+    }
 }
 
 /// A contraction operator encoding derivative information for an elliptic operator.

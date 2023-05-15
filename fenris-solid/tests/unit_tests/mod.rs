@@ -4,6 +4,7 @@ use fenris::nalgebra::{matrix, Matrix2, Matrix3, Point3};
 use fenris_solid::materials::LameParameters;
 
 mod gravity_source;
+mod logdet;
 mod material_elliptic_operator;
 mod materials;
 

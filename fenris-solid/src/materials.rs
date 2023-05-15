@@ -1,7 +1,7 @@
-use crate::{compute_batch_contraction, HyperelasticMaterial};
+use crate::{compute_batch_contraction, log_det_F, u_grad_from_F, HyperelasticMaterial, PhysicalDim};
 use fenris::allocators::DimAllocator;
 use fenris::nalgebra::{DMatrixViewMut, DVectorView, DefaultAllocator, DimName, OMatrix, OVector};
-use fenris::{Real, SmallDim};
+use fenris::Real;
 use numeric_literals::replace_float_literals;
 use serde::{Deserialize, Serialize};
 
@@ -236,25 +236,28 @@ pub struct NeoHookeanMaterial;
 impl<T, D> HyperelasticMaterial<T, D> for NeoHookeanMaterial
 where
     T: Real,
-    D: SmallDim,
+    D: PhysicalDim,
     DefaultAllocator: DimAllocator<T, D>,
 {
     type Parameters = LameParameters<T>;
 
     fn compute_energy_density(&self, deformation_gradient: &OMatrix<T, D, D>, parameters: &Self::Parameters) -> T {
-        let LameParameters { mu, lambda } = parameters.clone();
-        let F = deformation_gradient;
-        let J = F.determinant();
+        let u_grad = u_grad_from_F(deformation_gradient);
+        self.compute_energy_density_du(&u_grad, parameters)
+    }
 
-        if J <= T::zero() {
-            T::from_f64(f64::INFINITY).expect("T must be able to represent infinity")
+    fn compute_energy_density_du(&self, u_grad: &OMatrix<T, D, D>, parameters: &Self::Parameters) -> T {
+        let LameParameters { mu, lambda } = parameters.clone();
+        let du_dX = u_grad.transpose();
+        if let Some(logJ) = log_det_F(&du_dX) {
+            // Original expression
+            //  0.5 * mu * (I_C - d) - mu * logJ + (0.5 * lambda) * (logJ.powi(2))
+            // We have that
+            //  I_C - d = tr(C) - d = tr(C - I) = 2 tr(E)
+            let tr_E = du_dX.trace() + 0.5 * du_dX.norm_squared();
+            mu * tr_E - mu * logJ + (0.5 * lambda) * (logJ.powi(2))
         } else {
-            let C = F.transpose() * F;
-            let I_C = C.trace();
-            let logJ = J.ln();
-            // Note: 2D/3D need different constants to ensure rest state has zero energy
-            let d = T::from_usize(D::dim()).unwrap();
-            mu / 2.0 * (I_C - d) - mu * logJ + (lambda / 2.0) * (logJ.powi(2))
+            T::from_f64(f64::INFINITY).expect("T must be able to represent infinity")
         }
     }
 

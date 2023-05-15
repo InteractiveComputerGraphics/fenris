@@ -522,8 +522,8 @@ where
 
         let mut output =
             MatrixViewMut::from_slice_generic(output.as_mut_slice(), Operator::SolutionDim::name(), Dyn(n));
-        let g = operator.compute_elliptic_operator(&u_grad, data);
-        let g_t_j_inv_t = g.transpose() * j_inv_t;
+        let g_t = operator.compute_elliptic_operator_transpose(&u_grad, data);
+        let g_t_j_inv_t = g_t * j_inv_t;
         output.gemm(weight * j_det.abs(), &g_t_j_inv_t, &phi_grad_ref, T::one());
     }
 
