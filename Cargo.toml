@@ -29,7 +29,7 @@ vtkio = "0.6"
 num = "0.4"
 numeric_literals = "0.2.0"
 itertools = "0.10.5"
-ordered-float = "1.0"
+ordered-float = "3.7"
 proptest = { version = "1.0", optional = true }
 rayon = "1.6.1"
 # TODO: Make serde optional
