@@ -1,6 +1,9 @@
+use std::cmp::max;
 use crate::DisjointSubsets;
 use fenris_nested_vec::NestedVec;
 use std::collections::BTreeSet;
+use std::f32::consts::PI;
+use std::mem;
 
 #[derive(Debug)]
 struct Color {
@@ -45,7 +48,7 @@ impl Color {
     }
 }
 
-pub fn sequential_greedy_coloring(subsets: &NestedVec<usize>) -> Vec<DisjointSubsets> {
+fn sequential_greedy_coloring_old(subsets: &NestedVec<usize>) -> Vec<DisjointSubsets> {
     let mut colors = Vec::<Color>::new();
     let mut workspace_set = BTreeSet::new();
 
@@ -69,6 +72,69 @@ pub fn sequential_greedy_coloring(subsets: &NestedVec<usize>) -> Vec<DisjointSub
             unsafe { DisjointSubsets::from_disjoint_subsets_unchecked(color.subsets, color.labels, max_index) }
         })
         .collect()
+}
+
+pub fn sequential_greedy_coloring(subsets: &NestedVec<usize>) -> Vec<DisjointSubsets> {
+    let mut colors = Vec::new();
+    let mut postponed_subset_indices = Vec::new();
+    let mut current_subset_indices: Vec<_> = (0 .. subsets.len()).collect();
+
+    // Keep a table of the index of the last color to visit any given node.
+    // Since we don't know how many nodes we have, we dynamically resize the table
+    // as we run into new indices that are out of bounds.
+    let mut last_visited_color = vec![-1i32; 0];
+
+    let mut color_idx = 0i32;
+    while !current_subset_indices.is_empty() {
+        let mut color_subsets = NestedVec::new();
+        let mut color_subset_indices = Vec::new();
+        let mut max_node_idx = 0usize;
+        for &subset_idx in &current_subset_indices {
+            let subset = subsets.get(subset_idx).unwrap();
+            let is_blocked = subset.iter().any(|node_idx| last_visited_color
+                .get(*node_idx)
+                .map(|&idx_of_last_visitor| idx_of_last_visitor == color_idx)
+                .unwrap_or(false));
+            if is_blocked {
+                postponed_subset_indices.push(subset_idx);
+            } else {
+                for node_idx in subset {
+                    max_node_idx = max(*node_idx, max_node_idx);
+                    // Update table of visitors
+                    if let Some(current_visitor) = last_visited_color.get_mut(*node_idx) {
+                        *current_visitor = color_idx;
+                    } else {
+                        // Try to amortize resizes by creating a larger table than we need right now
+                        // (otherwise we might perform many small resizes in succession)
+                        last_visited_color.resize(2 * node_idx + 1, -1);
+                        last_visited_color[*node_idx] = color_idx;
+                    }
+                }
+                color_subsets.push(subset);
+                color_subset_indices.push(subset_idx);
+            }
+        }
+
+        // We perform some expensive consistency checks in debug builds.
+        debug_assert!(DisjointSubsets::try_from_disjoint_subsets(
+            color_subsets.clone(),
+            color_subset_indices.clone()).is_ok());
+
+        // Subsets must be disjoint by construction, so skip checks
+        let color = unsafe { DisjointSubsets::from_disjoint_subsets_unchecked(
+            color_subsets,
+            color_subset_indices,
+            Some(max_node_idx)
+        ) };
+        colors.push(color);
+        mem::swap(&mut postponed_subset_indices, &mut current_subset_indices);
+        postponed_subset_indices.clear();
+        color_idx = color_idx.checked_add(1)
+            .expect("Number of colors exceeded i32::MAX.\
+                     Please file an issue with your use case if you actually need that many colors.");
+    }
+
+    colors
 }
 
 #[cfg(test)]
