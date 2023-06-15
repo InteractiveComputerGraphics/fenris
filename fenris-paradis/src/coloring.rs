@@ -1,12 +1,12 @@
 use crate::DisjointSubsets;
 use fenris_nested_vec::NestedVec;
-use std::mem;
 use std::cmp::max;
+use std::mem;
 
 pub fn sequential_greedy_coloring(subsets: &NestedVec<usize>) -> Vec<DisjointSubsets> {
     let mut colors = Vec::new();
     let mut postponed_subset_indices = Vec::new();
-    let mut current_subset_indices: Vec<_> = (0 .. subsets.len()).collect();
+    let mut current_subset_indices: Vec<_> = (0..subsets.len()).collect();
 
     // Keep a table of the index of the last color to visit any given node.
     // Since we don't know how many nodes we have, we dynamically resize the table
@@ -20,10 +20,12 @@ pub fn sequential_greedy_coloring(subsets: &NestedVec<usize>) -> Vec<DisjointSub
         let mut max_node_idx = 0usize;
         for &subset_idx in &current_subset_indices {
             let subset = subsets.get(subset_idx).unwrap();
-            let is_blocked = subset.iter().any(|node_idx| last_visited_color
-                .get(*node_idx)
-                .map(|&idx_of_last_visitor| idx_of_last_visitor == color_idx)
-                .unwrap_or(false));
+            let is_blocked = subset.iter().any(|node_idx| {
+                last_visited_color
+                    .get(*node_idx)
+                    .map(|&idx_of_last_visitor| idx_of_last_visitor == color_idx)
+                    .unwrap_or(false)
+            });
             if is_blocked {
                 postponed_subset_indices.push(subset_idx);
             } else {
@@ -45,22 +47,21 @@ pub fn sequential_greedy_coloring(subsets: &NestedVec<usize>) -> Vec<DisjointSub
         }
 
         // We perform some expensive consistency checks in debug builds.
-        debug_assert!(DisjointSubsets::try_from_disjoint_subsets(
-            color_subsets.clone(),
-            color_subset_indices.clone()).is_ok());
+        debug_assert!(
+            DisjointSubsets::try_from_disjoint_subsets(color_subsets.clone(), color_subset_indices.clone()).is_ok()
+        );
 
         // Subsets must be disjoint by construction, so skip checks
-        let color = unsafe { DisjointSubsets::from_disjoint_subsets_unchecked(
-            color_subsets,
-            color_subset_indices,
-            Some(max_node_idx)
-        ) };
+        let color = unsafe {
+            DisjointSubsets::from_disjoint_subsets_unchecked(color_subsets, color_subset_indices, Some(max_node_idx))
+        };
         colors.push(color);
         mem::swap(&mut postponed_subset_indices, &mut current_subset_indices);
         postponed_subset_indices.clear();
-        color_idx = color_idx.checked_add(1)
-            .expect("Number of colors exceeded i32::MAX.\
-                     Please file an issue with your use case if you actually need that many colors.");
+        color_idx = color_idx.checked_add(1).expect(
+            "Number of colors exceeded i32::MAX.\
+                     Please file an issue with your use case if you actually need that many colors.",
+        );
     }
 
     colors
