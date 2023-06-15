@@ -17,7 +17,7 @@ pub fn sequential_greedy_coloring(subsets: &NestedVec<usize>) -> Vec<DisjointSub
     while !current_subset_indices.is_empty() {
         let mut color_subsets = NestedVec::new();
         let mut color_subset_indices = Vec::new();
-        let mut max_node_idx = 0usize;
+        let mut max_node_idx = None;
         for &subset_idx in &current_subset_indices {
             let subset = subsets.get(subset_idx).unwrap();
             let is_blocked = subset.iter().any(|node_idx| {
@@ -29,16 +29,18 @@ pub fn sequential_greedy_coloring(subsets: &NestedVec<usize>) -> Vec<DisjointSub
             if is_blocked {
                 postponed_subset_indices.push(subset_idx);
             } else {
-                for node_idx in subset {
-                    max_node_idx = max(*node_idx, max_node_idx);
+                for &node_idx in subset {
+                    max_node_idx = max_node_idx
+                        .map(|max_node_idx| max(node_idx, max_node_idx))
+                        .or(Some(node_idx));
                     // Update table of visitors
-                    if let Some(current_visitor) = last_visited_color.get_mut(*node_idx) {
+                    if let Some(current_visitor) = last_visited_color.get_mut(node_idx) {
                         *current_visitor = color_idx;
                     } else {
                         // Try to amortize resizes by creating a larger table than we need right now
                         // (otherwise we might perform many small resizes in succession)
                         last_visited_color.resize(2 * node_idx + 1, -1);
-                        last_visited_color[*node_idx] = color_idx;
+                        last_visited_color[node_idx] = color_idx;
                     }
                 }
                 color_subsets.push(subset);
@@ -53,7 +55,7 @@ pub fn sequential_greedy_coloring(subsets: &NestedVec<usize>) -> Vec<DisjointSub
 
         // Subsets must be disjoint by construction, so skip checks
         let color = unsafe {
-            DisjointSubsets::from_disjoint_subsets_unchecked(color_subsets, color_subset_indices, Some(max_node_idx))
+            DisjointSubsets::from_disjoint_subsets_unchecked(color_subsets, color_subset_indices, max_node_idx)
         };
         colors.push(color);
         mem::swap(&mut postponed_subset_indices, &mut current_subset_indices);
