@@ -1,78 +1,7 @@
-use std::cmp::max;
 use crate::DisjointSubsets;
 use fenris_nested_vec::NestedVec;
-use std::collections::BTreeSet;
-use std::f32::consts::PI;
 use std::mem;
-
-#[derive(Debug)]
-struct Color {
-    subsets: NestedVec<usize>,
-    labels: Vec<usize>,
-    indices: BTreeSet<usize>,
-}
-
-impl Color {
-    fn new_with_subset(subset: &[usize], label: usize) -> Self {
-        let mut subsets = NestedVec::new();
-        subsets.push(subset);
-        Self {
-            subsets,
-            labels: vec![label],
-            indices: subset.iter().copied().collect(),
-        }
-    }
-
-    fn try_add_subset(&mut self, subset: &[usize], label: usize, local_workspace_set: &mut BTreeSet<usize>) -> bool {
-        local_workspace_set.clear();
-        for idx in subset {
-            local_workspace_set.insert(*idx);
-        }
-
-        if self.indices.is_disjoint(&local_workspace_set) {
-            self.subsets.push(subset);
-            self.labels.push(label);
-
-            for &idx in local_workspace_set.iter() {
-                self.indices.insert(idx);
-            }
-            true
-        } else {
-            false
-        }
-    }
-
-    fn max_index(&self) -> Option<usize> {
-        // Use the fact that the last element in a BTreeSet is the largest value in the set
-        self.indices.iter().copied().last()
-    }
-}
-
-fn sequential_greedy_coloring_old(subsets: &NestedVec<usize>) -> Vec<DisjointSubsets> {
-    let mut colors = Vec::<Color>::new();
-    let mut workspace_set = BTreeSet::new();
-
-    'subset_loop: for (label, subset) in subsets.iter().enumerate() {
-        for color in &mut colors {
-            if color.try_add_subset(subset, label, &mut workspace_set) {
-                continue 'subset_loop;
-            }
-        }
-
-        // We did not succeed in adding the subset to an existing color,
-        // so create a new one instead
-        colors.push(Color::new_with_subset(subset, label));
-    }
-
-    colors
-        .into_iter()
-        .map(|color| {
-            let max_index = color.max_index();
-            // Subsets must be disjoint by construction, so skip checks
-            unsafe { DisjointSubsets::from_disjoint_subsets_unchecked(color.subsets, color.labels, max_index) }
-        })
-        .collect()
-}
+use std::cmp::max;
 
 pub fn sequential_greedy_coloring(subsets: &NestedVec<usize>) -> Vec<DisjointSubsets> {
     let mut colors = Vec::new();
