@@ -39,7 +39,7 @@ rustc-hash = "1.1.0"
 thread_local = "1.1.2"
 eyre = "0.6"
 fenris-traits = { version="0.0.2", path = "fenris-traits" }
-fenris-paradis = { version="0.0.2", path = "fenris-paradis" }
+fenris-paradis = { version="0.0.3", path = "fenris-paradis" }
 fenris-nested-vec = { version="0.0.1", path = "fenris-nested-vec" }
 fenris-sparse = { version= "0.0.4", path = "fenris-sparse" }
 fenris-geometry = { version= "0.0.6", path = "fenris-geometry", features = [ "proptest" ] }

@@ -13,7 +13,7 @@ nalgebra = { workspace = true }
 nalgebra-sparse = { workspace = true }
 rayon = "1.6.1"
 num = "0.4"
-fenris-paradis = { version = "0.0.2", path = "../fenris-paradis" }
+fenris-paradis = { version = "0.0.3", path = "../fenris-paradis" }
 
 [dev-dependencies]
 proptest = "1.0"
