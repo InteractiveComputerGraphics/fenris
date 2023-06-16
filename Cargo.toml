@@ -41,7 +41,7 @@ eyre = "0.6"
 fenris-traits = { version="0.0.2", path = "fenris-traits" }
 fenris-paradis = { version="0.0.3", path = "fenris-paradis" }
 fenris-nested-vec = { version="0.0.1", path = "fenris-nested-vec" }
-fenris-sparse = { version= "0.0.4", path = "fenris-sparse" }
+fenris-sparse = { version= "0.0.5", path = "fenris-sparse" }
 fenris-geometry = { version= "0.0.6", path = "fenris-geometry", features = [ "proptest" ] }
 fenris-optimize = { version= "0.0.3", path = "fenris-optimize" }
 fenris-quadrature = { version= "0.0.4", path = "fenris-quadrature" }
