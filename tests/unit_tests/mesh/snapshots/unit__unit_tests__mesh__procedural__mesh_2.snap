@@ -185,8 +185,8 @@ Mesh {
             [
                 27,
                 28,
-                1,
-                4,
+                13,
+                10,
             ],
         ),
         Tet4Connectivity(
@@ -201,8 +201,8 @@ Mesh {
             [
                 27,
                 28,
-                13,
-                10,
+                1,
+                4,
             ],
         ),
         Tet4Connectivity(
@@ -215,16 +215,64 @@ Mesh {
         ),
         Tet4Connectivity(
             [
-                9,
+                0,
+                3,
                 12,
+                27,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                0,
+                12,
+                9,
+                27,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                27,
+                29,
+                4,
                 3,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                27,
+                29,
+                13,
+                4,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                27,
+                29,
+                12,
+                13,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                27,
+                29,
+                3,
+                12,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                9,
+                10,
+                1,
                 27,
             ],
         ),
         Tet4Connectivity(
             [
                 9,
-                3,
+                1,
                 0,
                 27,
             ],
@@ -232,23 +280,7 @@ Mesh {
         Tet4Connectivity(
             [
                 27,
-                29,
-                3,
-                4,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                27,
-                29,
-                4,
-                13,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                27,
-                29,
+                31,
                 13,
                 12,
             ],
@@ -256,88 +288,56 @@ Mesh {
         Tet4Connectivity(
             [
                 27,
-                29,
-                12,
-                3,
+                31,
+                10,
+                13,
             ],
         ),
         Tet4Connectivity(
             [
+                27,
+                31,
                 9,
                 10,
-                1,
-                27,
             ],
         ),
         Tet4Connectivity(
             [
+                27,
+                31,
+                12,
                 9,
-                1,
+            ],
+        ),
+        Tet4Connectivity(
+            [
                 0,
-                27,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                27,
-                31,
-                9,
-                10,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                27,
-                31,
-                10,
-                13,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                27,
-                31,
-                13,
-                12,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                27,
-                31,
-                12,
-                9,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                3,
+                1,
                 4,
-                1,
                 27,
             ],
         ),
         Tet4Connectivity(
             [
-                3,
-                1,
                 0,
+                4,
+                3,
                 27,
             ],
         ),
         Tet4Connectivity(
             [
+                11,
+                14,
                 2,
-                5,
-                11,
                 28,
             ],
         ),
         Tet4Connectivity(
             [
-                5,
                 14,
-                11,
+                5,
+                2,
                 28,
             ],
         ),
@@ -345,16 +345,8 @@ Mesh {
             [
                 28,
                 30,
+                5,
                 4,
-                5,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                28,
-                30,
-                5,
-                14,
             ],
         ),
         Tet4Connectivity(
@@ -362,7 +354,7 @@ Mesh {
                 28,
                 30,
                 14,
-                13,
+                5,
             ],
         ),
         Tet4Connectivity(
@@ -370,7 +362,15 @@ Mesh {
                 28,
                 30,
                 13,
+                14,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                28,
+                30,
                 4,
+                13,
             ],
         ),
         Tet4Connectivity(
@@ -393,8 +393,8 @@ Mesh {
             [
                 28,
                 32,
-                10,
-                11,
+                14,
+                13,
             ],
         ),
         Tet4Connectivity(
@@ -409,8 +409,8 @@ Mesh {
             [
                 28,
                 32,
-                14,
-                13,
+                10,
+                11,
             ],
         ),
         Tet4Connectivity(
@@ -423,17 +423,17 @@ Mesh {
         ),
         Tet4Connectivity(
             [
-                4,
-                5,
                 1,
-                28,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                5,
                 2,
-                1,
+                4,
+                28,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                2,
+                5,
+                4,
                 28,
             ],
         ),
@@ -441,22 +441,6 @@ Mesh {
             [
                 29,
                 30,
-                4,
-                7,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                29,
-                30,
-                7,
-                16,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                29,
-                30,
                 16,
                 13,
             ],
@@ -465,23 +449,39 @@ Mesh {
             [
                 29,
                 30,
+                7,
+                16,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                29,
+                30,
+                4,
+                7,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                29,
+                30,
                 13,
                 4,
             ],
         ),
         Tet4Connectivity(
             [
-                12,
-                15,
                 3,
+                6,
+                12,
                 29,
             ],
         ),
         Tet4Connectivity(
             [
-                15,
                 6,
-                3,
+                15,
+                12,
                 29,
             ],
         ),
@@ -499,6 +499,22 @@ Mesh {
                 16,
                 15,
                 29,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                29,
+                33,
+                16,
+                15,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                29,
+                33,
+                13,
+                16,
             ],
         ),
         Tet4Connectivity(
@@ -513,109 +529,37 @@ Mesh {
             [
                 29,
                 33,
-                13,
-                16,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                29,
-                33,
-                16,
-                15,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                29,
-                33,
                 15,
                 12,
             ],
         ),
         Tet4Connectivity(
             [
-                6,
-                7,
                 3,
-                29,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                7,
                 4,
-                3,
+                6,
                 29,
             ],
         ),
         Tet4Connectivity(
             [
-                5,
+                4,
+                7,
+                6,
+                29,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                14,
+                17,
                 8,
-                17,
                 30,
             ],
         ),
         Tet4Connectivity(
             [
-                5,
-                17,
                 14,
-                30,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                7,
-                8,
-                17,
-                30,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                7,
-                17,
-                16,
-                30,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                30,
-                34,
-                13,
-                14,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                30,
-                34,
-                14,
-                17,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                30,
-                34,
-                17,
-                16,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                30,
-                34,
-                16,
-                13,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                7,
                 8,
                 5,
                 30,
@@ -624,8 +568,64 @@ Mesh {
         Tet4Connectivity(
             [
                 7,
-                5,
+                8,
+                17,
+                30,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                7,
+                17,
+                16,
+                30,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                30,
+                34,
+                17,
+                16,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                30,
+                34,
+                14,
+                17,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                30,
+                34,
+                13,
+                14,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                30,
+                34,
+                16,
+                13,
+            ],
+        ),
+        Tet4Connectivity(
+            [
                 4,
+                5,
+                8,
+                30,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                4,
+                8,
+                7,
                 30,
             ],
         ),
@@ -633,22 +633,6 @@ Mesh {
             [
                 31,
                 32,
-                10,
-                13,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                31,
-                32,
-                13,
-                22,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                31,
-                32,
                 22,
                 19,
             ],
@@ -657,38 +641,6 @@ Mesh {
             [
                 31,
                 32,
-                19,
-                10,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                18,
-                21,
-                9,
-                31,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                21,
-                12,
-                9,
-                31,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                31,
-                33,
-                12,
-                13,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                31,
-                33,
                 13,
                 22,
             ],
@@ -696,9 +648,49 @@ Mesh {
         Tet4Connectivity(
             [
                 31,
+                32,
+                10,
+                13,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                31,
+                32,
+                19,
+                10,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                9,
+                12,
+                18,
+                31,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                12,
+                21,
+                18,
+                31,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                31,
+                33,
+                13,
+                12,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                31,
                 33,
                 22,
-                21,
+                13,
             ],
         ),
         Tet4Connectivity(
@@ -706,7 +698,15 @@ Mesh {
                 31,
                 33,
                 21,
+                22,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                31,
+                33,
                 12,
+                21,
             ],
         ),
         Tet4Connectivity(
@@ -727,31 +727,87 @@ Mesh {
         ),
         Tet4Connectivity(
             [
-                18,
-                19,
                 21,
-                31,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                19,
                 22,
-                21,
+                18,
                 31,
             ],
         ),
         Tet4Connectivity(
             [
-                11,
-                14,
+                22,
+                19,
+                18,
+                31,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                20,
                 23,
+                14,
                 32,
             ],
         ),
         Tet4Connectivity(
             [
+                20,
+                14,
                 11,
+                32,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                32,
+                34,
+                14,
+                13,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                32,
+                34,
+                23,
+                14,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                32,
+                34,
+                22,
+                23,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                32,
+                34,
+                13,
+                22,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                19,
+                20,
+                11,
+                32,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                19,
+                11,
+                10,
+                32,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                22,
                 23,
                 20,
                 32,
@@ -759,82 +815,10 @@ Mesh {
         ),
         Tet4Connectivity(
             [
-                32,
-                34,
-                13,
-                14,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                32,
-                34,
-                14,
-                23,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                32,
-                34,
-                23,
                 22,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                32,
-                34,
-                22,
-                13,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                19,
                 20,
-                11,
-                32,
-            ],
-        ),
-        Tet4Connectivity(
-            [
                 19,
-                11,
-                10,
                 32,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                19,
-                20,
-                23,
-                32,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                19,
-                23,
-                22,
-                32,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                33,
-                34,
-                13,
-                16,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                33,
-                34,
-                16,
-                25,
             ],
         ),
         Tet4Connectivity(
@@ -849,23 +833,39 @@ Mesh {
             [
                 33,
                 34,
+                16,
+                25,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                33,
+                34,
+                13,
+                16,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                33,
+                34,
                 22,
                 13,
             ],
         ),
         Tet4Connectivity(
             [
-                21,
-                24,
-                15,
-                33,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                21,
-                15,
                 12,
+                15,
+                24,
+                33,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                12,
+                24,
+                21,
                 33,
             ],
         ),
@@ -887,33 +887,33 @@ Mesh {
         ),
         Tet4Connectivity(
             [
-                21,
-                22,
-                25,
-                33,
-            ],
-        ),
-        Tet4Connectivity(
-            [
-                21,
-                25,
                 24,
+                25,
+                22,
                 33,
             ],
         ),
         Tet4Connectivity(
             [
+                24,
+                22,
+                21,
+                33,
+            ],
+        ),
+        Tet4Connectivity(
+            [
+                23,
+                26,
                 14,
-                17,
-                23,
                 34,
             ],
         ),
         Tet4Connectivity(
             [
-                17,
                 26,
-                23,
+                17,
+                14,
                 34,
             ],
         ),
@@ -935,17 +935,17 @@ Mesh {
         ),
         Tet4Connectivity(
             [
-                22,
-                23,
                 25,
+                26,
+                22,
                 34,
             ],
         ),
         Tet4Connectivity(
             [
-                23,
                 26,
-                25,
+                23,
+                22,
                 34,
             ],
         ),
