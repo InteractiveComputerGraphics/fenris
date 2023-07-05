@@ -242,7 +242,8 @@ pub fn solve_and_produce_output<C, D, Source>(
         );
 
         // We use the maximum diameter as a measure of resolution
-        let h = mesh.connectivity()
+        let h = mesh
+            .connectivity()
             .iter()
             .map(|conn| conn.element(mesh.vertices()).unwrap())
             .map(|element| element.diameter())
