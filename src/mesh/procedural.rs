@@ -38,8 +38,7 @@ pub fn create_unit_box_uniform_tet_mesh_3d<T>(cells_per_dim: usize) -> Tet4Mesh<
 where
     T: Real,
 {
-    let hex_mesh = create_unit_box_uniform_hex_mesh_3d(cells_per_dim);
-    Tet4Mesh::from(&hex_mesh)
+    create_rectangular_uniform_tet_mesh(T::one(), 1, 1, 1, cells_per_dim)
 }
 
 /// Generates an axis-aligned rectangular uniform mesh given a unit length,
