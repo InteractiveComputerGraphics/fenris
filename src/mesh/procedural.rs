@@ -1,11 +1,12 @@
 //! Basic procedural mesh generation routines.
-use crate::connectivity::{Hex8Connectivity, Quad4d2Connectivity};
+use crate::connectivity::{Hex8Connectivity, Quad4d2Connectivity, Tet4Connectivity};
 use crate::geometry::polymesh::PolyMesh3d;
 use crate::geometry::sdf::BoundedSdf;
 use crate::geometry::{AxisAlignedBoundingBox2d, HalfSpace};
 use crate::mesh::{HexMesh, Mesh, QuadMesh2d, Tet4Mesh, TriangleMesh2d};
 use crate::Real;
-use nalgebra::{convert, try_convert, Point2, Point3, Unit, Vector2, Vector3};
+use itertools::{iproduct, Itertools};
+use nalgebra::{convert, point, try_convert, vector, Point2, Point3, Unit, Vector2, Vector3};
 use numeric_literals::replace_float_literals;
 use ordered_float::NotNan;
 use std::cmp::min;
@@ -37,8 +38,7 @@ pub fn create_unit_box_uniform_tet_mesh_3d<T>(cells_per_dim: usize) -> Tet4Mesh<
 where
     T: Real,
 {
-    let hex_mesh = create_unit_box_uniform_hex_mesh_3d(cells_per_dim);
-    Tet4Mesh::from(&hex_mesh)
+    create_rectangular_uniform_tet_mesh(T::one(), 1, 1, 1, cells_per_dim)
 }
 
 /// Generates an axis-aligned rectangular uniform mesh given a unit length,
@@ -278,8 +278,11 @@ where
 
 /// Creates a rectangular uniform tetrahedral mesh.
 ///
-/// Currently the same as [`create_rectangular_uniform_hex_mesh`], except that the hexahedral
-/// mesh is tetrahedralized.
+/// The implementation uses a BCC lattice, where each pair of adjacent cell centers
+/// along each coordinate direction is connected by an octahedron, which is further subdivided
+/// into four tetrahedra along the edge between the two cell centers. The boundaries of the
+/// cuboidal domain are finally filled with pyramids that are subdivided into two tetrahedra.
+#[replace_float_literals(T::from_f64(literal).unwrap())]
 pub fn create_rectangular_uniform_tet_mesh<T>(
     unit_length: T,
     units_x: usize,
@@ -290,8 +293,113 @@ pub fn create_rectangular_uniform_tet_mesh<T>(
 where
     T: Real,
 {
-    let hex_mesh = create_rectangular_uniform_hex_mesh(unit_length, units_x, units_y, units_z, cells_per_unit);
-    Tet4Mesh::from(&hex_mesh)
+    if units_x == 0 || units_y == 0 || units_z == 0 || cells_per_unit == 0 {
+        return Mesh::from_vertices_and_connectivity(vec![], vec![]);
+    }
+
+    let cell_size = unit_length / T::from_usize(cells_per_unit).unwrap();
+    // Cell, vertex counts along each dimension
+    let [cx, cy, cz] = [units_x, units_y, units_z].map(|units| units * cells_per_unit);
+    let [vx, vy, vz] = [cx, cy, cz].map(|num_cells| num_cells + 1);
+
+    // Construct all vertices first: first all vertices of the (implicit) uniform hex mesh,
+    // then all vertices that correspond to cell centers.
+    let mut vertices = Vec::new();
+    for (k, j, i) in iproduct!(0..vz, 0..vy, 0..vx) {
+        vertices.push(point![
+            cell_size * T::from_usize(i).unwrap(),
+            cell_size * T::from_usize(j).unwrap(),
+            cell_size * T::from_usize(k).unwrap()
+        ]);
+    }
+    let cell_center_offset = vertices.len();
+    for (k, j, i) in iproduct!(0..cz, 0..cy, 0..cx) {
+        vertices.push(point![
+            cell_size * (0.5 + T::from_usize(i).unwrap()),
+            cell_size * (0.5 + T::from_usize(j).unwrap()),
+            cell_size * (0.5 + T::from_usize(k).unwrap())
+        ])
+    }
+
+    let vertex_to_global_idx = |[i, j, k]: [usize; 3]| (vx * vy) * k + vx * j + i;
+    let cell_to_global_midpoint_idx = |[i, j, k]: [usize; 3]| (cx * cy) * k + cx * j + i + cell_center_offset;
+
+    let mut connectivity = Vec::new();
+
+    // Offsets to [i, j, k] coordinates to obtain the vertices of the face connecting [i, j, k] and
+    // its neighbor in the positive direction along each axis 0, 1, 2
+    let positive_face_deltas_for_each_axis = [
+        [[1, 0, 1], [1, 1, 1], [1, 1, 0], [1, 0, 0]].map(Vector3::from),
+        [[0, 1, 0], [1, 1, 0], [1, 1, 1], [0, 1, 1]].map(Vector3::from),
+        [[0, 1, 1], [1, 1, 1], [1, 0, 1], [0, 0, 1]].map(Vector3::from),
+    ];
+
+    let connect_centers_with_tets = |connectivity: &mut Vec<_>, [i, j, k]: [usize; 3], axis: usize| {
+        // Make four tets connecting (i, j, k) and (i + di, j + dj, k + dk).
+        // The octahedron formed by the two cell centers and the common face vertices
+        // is split into four tetrahedra along the edge between the cell centers.
+        let cell = Vector3::from([i, j, k]);
+        let cell_delta = Vector3::from_fn(|idx, _| (idx == axis) as usize);
+
+        let shared_face_vertices = positive_face_deltas_for_each_axis[axis]
+            .map(|delta| cell + delta)
+            .map(|v| vertex_to_global_idx(v.into()));
+        let c1 = cell_to_global_midpoint_idx([i, j, k]);
+        let c2 = cell_to_global_midpoint_idx((cell + cell_delta).into());
+        for (v1, v2) in shared_face_vertices
+            .into_iter()
+            .cycle()
+            .take(5)
+            .tuple_windows()
+        {
+            connectivity.push(Tet4Connectivity([c1, c2, v2, v1]));
+        }
+    };
+
+    let make_pyramid = |connectivity: &mut Vec<_>, [i, j, k]: [usize; 3], axis: usize, positive_dir: bool| {
+        let positive_face_deltas = positive_face_deltas_for_each_axis[axis];
+        let mut face_vertices = positive_face_deltas.map(|delta_coord| delta_coord + vector![i, j, k]);
+        if !positive_dir {
+            // Face vertices are oriented such that they are only correct for the positive
+            // direction, need to flip otherwise.
+            face_vertices.reverse();
+            // Pick the faces one coordinate unit lower
+            for coord in &mut face_vertices {
+                coord[axis] -= 1;
+            }
+        }
+
+        let [a, b, c, d] = face_vertices.map(|v| vertex_to_global_idx(v.into()));
+        let center = cell_to_global_midpoint_idx([i, j, k]);
+
+        // Ensure that the diagonal choice alternates along the boundary,
+        // to prevent excessive diagonal bias along the surface
+        if (i + j + k) % 2 == 0 {
+            connectivity.push(Tet4Connectivity([a, b, c, center]));
+            connectivity.push(Tet4Connectivity([a, c, d, center]));
+        } else {
+            connectivity.push(Tet4Connectivity([a, b, d, center]));
+            connectivity.push(Tet4Connectivity([b, c, d, center]));
+        }
+    };
+
+    for (k, j, i) in iproduct!(0..cz, 0..cy, 0..cx) {
+        let cell = [i, j, k];
+        let num_cells = [cx, cy, cz];
+        for axis in [0, 1, 2] {
+            if cell[axis] + 1 < num_cells[axis] {
+                connect_centers_with_tets(&mut connectivity, cell, axis);
+            }
+            if cell[axis] == 0 {
+                make_pyramid(&mut connectivity, cell, axis, false);
+            }
+            if cell[axis] + 1 == num_cells[axis] {
+                make_pyramid(&mut connectivity, cell, axis, true);
+            }
+        }
+    }
+
+    Mesh::from_vertices_and_connectivity(vertices, connectivity)
 }
 
 pub fn create_simple_stupid_sphere(center: &Point3<f64>, radius: f64, num_sweeps: usize) -> PolyMesh3d<f64> {

@@ -8,7 +8,7 @@ use fenris::assembly::local::{
     ElementEllipticAssemblerBuilder, ElementSourceAssemblerBuilder, SourceFunction, UniformQuadratureTable,
 };
 use fenris::assembly::operators::LaplaceOperator;
-use fenris::element::ElementConnectivity;
+use fenris::element::{ElementConnectivity, FiniteElement};
 use fenris::error::{estimate_H1_seminorm_error, estimate_L2_error};
 use fenris::io::vtk::{FiniteElementMeshDataSetBuilder, VtkCellConnectivity};
 use fenris::mesh::Mesh;
@@ -241,9 +241,14 @@ pub fn solve_and_produce_output<C, D, Source>(
             &u_exact_grad,
         );
 
-        // Resolution measures number of cells per unit-length, and the unit square is one unit
-        // long.
-        let h = 1.0 / resolution as f64;
+        // We use the maximum diameter as a measure of resolution
+        let h = mesh
+            .connectivity()
+            .iter()
+            .map(|conn| conn.element(mesh.vertices()).unwrap())
+            .map(|element| element.diameter())
+            .max_by(f64::total_cmp)
+            .unwrap();
         summary.resolutions.push(h);
         summary.L2_errors.push(result.L2_error);
         summary.H1_seminorm_errors.push(result.H1_seminorm_error);
