@@ -585,7 +585,10 @@ impl<T: Real> ClosestPointInElement<T> for Tri3d3Element<T> {
             let x_interior = self.map_reference_coords(&xi_interior);
             let dist2_interior = distance_squared(p, &x_interior);
             if dist2_interior < dist2_edge {
-                return ClosestPoint::InElement(xi_interior);
+                // We will essentially never find a point that's "inside" the element, since
+                // we here have a 2D element embedded in 3D, and with floating point it's hardly
+                // meaningful to talk about being "in the element" in this case
+                return ClosestPoint::ClosestPoint(xi_interior);
             }
         }
 

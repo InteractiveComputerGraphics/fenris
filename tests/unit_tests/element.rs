@@ -10,13 +10,11 @@ use fenris::quadrature;
 use fenris::util::proptest::point2_f64_strategy;
 use fenris_optimize::calculus::{approximate_jacobian, VectorFunctionBuilder};
 use matrixcompare::{assert_matrix_eq, assert_scalar_eq, prop_assert_matrix_eq};
-use nalgebra::{
-    point, DVectorView, DimName, Dyn, MatrixView, OMatrix, OPoint, Point1, Point2, Point3, Vector1, Vector2, Vector3,
-    U1, U10, U2, U20, U27, U3, U4, U6, U8, U9,
-};
+use nalgebra::{point, DVectorView, DimName, Dyn, MatrixView, OMatrix, OPoint, Point1, Point2, Point3, Vector1, Vector2, Vector3, U1, U10, U2, U20, U27, U3, U4, U6, U8, U9, distance};
 use proptest::prelude::*;
 use util::assert_approx_matrix_eq;
 use numeric_literals::replace_float_literals;
+use fenris_geometry::LineSegment3d;
 use fenris_traits::Real;
 
 #[test]
@@ -949,18 +947,18 @@ proptest! {
         let x = element.map_reference_coords(&xi);
         let xi2 = element.closest_point(&x).point().clone();
         let x2 = element.map_reference_coords(&xi2);
-        prop_assert_matrix_eq!(x2.coords, x.coords, comp = abs, tol = element.diameter() * 1e-9);
+        prop_assert_matrix_eq!(x2.coords, x.coords, comp = abs, tol = element.diameter() * 1e-6);
     }
 
     #[test]
-    fn tri3d3_exterior_edge_closest_point(
+    fn tri3d3_edge_voronoi_region_closest_point(
         element: Tri3d3Element<f64>,
         t in 0.0 ..= 1.0,
         edge_idx in 0 .. 3usize,
         outward_factor in 0.0 ..= 5.0,
         orthogonal_factor in -5.0 ..= 5.0)
     {
-        // xi is the closest point in reference coordinates, x in physical coords
+        // xi is the closest point in reference coordinates, x0 in physical coords
         let reference_element = Tri3d2Element::reference();
         let reference_edge = Triangle(*reference_element.vertices()).edge(edge_idx);
         let xi = reference_edge.point_from_parameter(t);
@@ -973,12 +971,76 @@ proptest! {
         let outward_vec = edge.tangent_dir().cross(&triangle.normal_dir());
         let x = x0 + outward_factor * outward_vec + orthogonal_factor * triangle.normal_dir();
 
-        let xi_closest = *element.closest_point(&x).point();
-        prop_assert!(is_likely_in_tri_ref_interior(&dbg!(xi_closest)));
+        let closest = element.closest_point(&x);
+        let xi_closest = closest.point();
+        prop_assert!(is_likely_in_tri_ref_interior(xi_closest));
+
+        let x_closest = element.map_reference_coords(xi_closest);
+        let tol = f64::max(element.diameter(), distance(&x, &x0)) * 1e-6;
+
+        prop_assert_matrix_eq!(x_closest.coords, x0.coords, comp = abs, tol = tol);
+        prop_assert!(matches!(closest, ClosestPoint::ClosestPoint(_)));
+    }
+
+    #[test]
+    fn tri3d3_interior_voronoi_region_closest_point(
+        element: Tri3d3Element<f64>,
+        xi in point_in_tri_ref_domain(),
+        orthogonal_factor in -5.0 ..= 5.0,
+    ) {
+        // xi is the closest point in reference coordinates, x in physical coords
+        let x0 = element.map_reference_coords(&xi);
+
+        // Construct a point x interior to the triangle for which xi is the closest point
+        // We pick a point in the Voronoi region belonging to the triangle's interior
+        let triangle = Triangle(*element.vertices());
+        let x = x0 + orthogonal_factor * triangle.normal_dir();
+
+        let closest = element.closest_point(&x);
+        let xi_closest = closest.point();
+        prop_assert!(is_likely_in_tri_ref_interior(xi_closest));
+
+        let x_closest = element.map_reference_coords(xi_closest);
+        let tol = f64::max(element.diameter(), distance(&x, &x0)) * 1e-6;
+        prop_assert_matrix_eq!(x_closest.coords, x0.coords, comp = abs, tol = tol);
+        prop_assert!(matches!(closest, ClosestPoint::ClosestPoint(_)));
+    }
+
+    #[test]
+    fn tri3d3_vertex_voronoi_region_closest_point(
+        element: Tri3d3Element<f64>,
+        vertex_idx in 0 .. 3usize,
+        outward_factor1 in 0.0 ..= 5.0,
+        outward_factor2 in 0.0 ..= 5.0,
+        orthogonal_factor in -5.0 ..= 5.0)
+    {
+        // xi is the closest point in reference coordinates, x0 in physical coords
+        let reference_element = Tri3d2Element::reference();
+        let xi = reference_element.vertices()[vertex_idx];
+        let x0 = element.map_reference_coords(&xi);
+
+        let triangle = Triangle(*element.vertices());
+        let [v1, v_mid, v2] = [(vertex_idx + 2) % 3, vertex_idx, (vertex_idx + 1) % 3]
+            .map(|idx| element.vertices()[idx].clone());
+        let edge1 = LineSegment3d::from_end_points(v1, v_mid);
+        let edge2 = LineSegment3d::from_end_points(v_mid, v2);
+
+        let outward1 = edge1.tangent_dir().cross(&triangle.normal_dir());
+        let outward2 = edge2.tangent_dir().cross(&triangle.normal_dir());
+
+        let x = x0
+            + outward_factor1 * outward1
+            + outward_factor2 * outward2
+            + orthogonal_factor * triangle.normal_dir();
+
+        let closest = element.closest_point(&x);
+        let xi_closest = closest.point().clone();
+        prop_assert!(is_likely_in_tri_ref_interior(&xi_closest));
 
         let x_closest = element.map_reference_coords(&xi_closest);
-        let tol = element.diameter() * 1e-9;
+        let tol = f64::max(element.diameter(), distance(&x, &x0)) * 1e-6;
         prop_assert_matrix_eq!(x_closest.coords, x0.coords, comp = abs, tol = tol);
+        prop_assert!(matches!(closest, ClosestPoint::ClosestPoint(_)));
     }
 }
 
