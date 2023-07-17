@@ -1,8 +1,3 @@
-use fenris_geometry::{AxisAlignedBoundingBox, LineSegment3d};
-use itertools::Itertools;
-use nalgebra::distance_squared;
-use numeric_literals::replace_float_literals;
-use std::cmp::Ordering;
 use crate::connectivity::{Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity};
 use crate::element::{
     BoundsForElement, ClosestPoint, ClosestPointInElement, ElementConnectivity, FiniteElement,
@@ -14,6 +9,11 @@ use crate::nalgebra::{
     Vector2, Vector3, U2, U3, U6,
 };
 use crate::Real;
+use fenris_geometry::{AxisAlignedBoundingBox, LineSegment3d};
+use itertools::Itertools;
+use nalgebra::distance_squared;
+use numeric_literals::replace_float_literals;
+use std::cmp::Ordering;
 
 /// A finite element representing linear basis functions on a triangle, in two dimensions.
 ///
@@ -598,7 +598,6 @@ impl<T: Real> ClosestPointInElement<T> for Tri3d3Element<T> {
 
 impl<T: Real> BoundsForElement<T> for Tri3d3Element<T> {
     fn element_bounds(&self) -> AxisAlignedBoundingBox<T, Self::GeometryDim> {
-        AxisAlignedBoundingBox::from_points(self.vertices())
-            .expect("AABB is always well defined")
+        AxisAlignedBoundingBox::from_points(self.vertices()).expect("AABB is always well defined")
     }
 }
