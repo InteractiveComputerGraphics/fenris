@@ -1,8 +1,4 @@
-use fenris::element::{
-    map_physical_coordinates, project_physical_coordinates, ClosestPoint, ClosestPointInElement, ElementConnectivity,
-    FiniteElement, FixedNodesReferenceFiniteElement, Hex20Element, Hex27Element, Hex8Element, Quad4d2Element,
-    Quad9d2Element, Segment2d2Element, Tet10Element, Tet20Element, Tet4Element, Tri3d2Element, Tri6d2Element,
-};
+use fenris::element::{map_physical_coordinates, project_physical_coordinates, ClosestPoint, ClosestPointInElement, ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement, Hex20Element, Hex27Element, Hex8Element, Quad4d2Element, Quad9d2Element, Segment2d2Element, Tet10Element, Tet20Element, Tet4Element, Tri3d2Element, Tri6d2Element, Tri3d3Element};
 use fenris::error::estimate_element_L2_error;
 use fenris::geometry::proptest::{clockwise_triangle2d_strategy_f64, nondegenerate_convex_quad2d_strategy_f64};
 use fenris::geometry::{LineSegment2d, Quad2d, Triangle, Triangle2d};
@@ -20,6 +16,8 @@ use nalgebra::{
 };
 use proptest::prelude::*;
 use util::assert_approx_matrix_eq;
+use numeric_literals::replace_float_literals;
+use fenris_traits::Real;
 
 #[test]
 fn map_reference_coords_quad2d() {
@@ -942,6 +940,54 @@ proptest! {
         prop_assert_matrix_eq!(mapped_result.coords, x0.coords,
                                comp = abs, tol = element.diameter() * 1e-9);
     }
+
+    #[test]
+    fn tri3d3_closest_point_on_triangle_is_identity(element: Tri3d3Element<f64>, xi in point_in_tri_ref_domain()) {
+        // We cannot compare the reference coordinates directly, because the element
+        // may be degenerate. So instead we check that the closest point in reference coords
+        // maps back to the same point in physical space
+        let x = element.map_reference_coords(&xi);
+        let xi2 = element.closest_point(&x).point().clone();
+        let x2 = element.map_reference_coords(&xi2);
+        prop_assert_matrix_eq!(x2.coords, x.coords, comp = abs, tol = element.diameter() * 1e-9);
+    }
+
+    #[test]
+    fn tri3d3_exterior_edge_closest_point(
+        element: Tri3d3Element<f64>,
+        t in 0.0 ..= 1.0,
+        edge_idx in 0 .. 3usize,
+        outward_factor in 0.0 ..= 5.0,
+        orthogonal_factor in -5.0 ..= 5.0)
+    {
+        // xi is the closest point in reference coordinates, x in physical coords
+        let reference_element = Tri3d2Element::reference();
+        let reference_edge = Triangle(*reference_element.vertices()).edge(edge_idx);
+        let xi = reference_edge.point_from_parameter(t);
+        let x0 = element.map_reference_coords(&xi);
+
+        // Construct a point x exterior to the triangle for which xi is the closest point
+        // We pick a point in the Voronoi region belonging to the given edge
+        let triangle = Triangle(*element.vertices());
+        let edge = triangle.edge(edge_idx);
+        let outward_vec = edge.tangent_dir().cross(&triangle.normal_dir());
+        let x = x0 + outward_factor * outward_vec + orthogonal_factor * triangle.normal_dir();
+
+        let xi_closest = *element.closest_point(&x).point();
+        prop_assert!(is_likely_in_tri_ref_interior(&dbg!(xi_closest)));
+
+        let x_closest = element.map_reference_coords(&xi_closest);
+        let tol = element.diameter() * 1e-9;
+        prop_assert_matrix_eq!(x_closest.coords, x0.coords, comp = abs, tol = tol);
+    }
+}
+
+// TODO: This is copied from fenris code base. Don't want to make it part of public API,
+// but it's unfortunate to duplicate it
+#[replace_float_literals(T::from_f64(literal).unwrap())]
+fn is_likely_in_tri_ref_interior<T: Real>(xi: &Point2<T>) -> bool {
+    let eps = 4.0 * T::default_epsilon();
+    xi.x >= -1.0 - eps && xi.y >= -1.0 - eps && xi.x + xi.y <= eps
 }
 
 #[test]

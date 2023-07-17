@@ -1,9 +1,8 @@
-use fenris_geometry::AxisAlignedBoundingBox;
+use fenris_geometry::{AxisAlignedBoundingBox, LineSegment3d};
 use itertools::Itertools;
 use nalgebra::distance_squared;
 use numeric_literals::replace_float_literals;
 use std::cmp::Ordering;
-
 use crate::connectivity::{Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity};
 use crate::element::{
     BoundsForElement, ClosestPoint, ClosestPointInElement, ElementConnectivity, FiniteElement,
@@ -445,7 +444,7 @@ where
 #[replace_float_literals(T::from_f64(literal).unwrap())]
 fn is_likely_in_tri_ref_interior<T: Real>(xi: &Point2<T>) -> bool {
     let eps = 4.0 * T::default_epsilon();
-    xi.x >= -1.0 + eps && xi.y >= -1.0 + eps && xi.x + xi.y <= eps
+    xi.x >= -1.0 - eps && xi.y >= -1.0 - eps && xi.x + xi.y <= eps
 }
 
 impl<T: Real> ClosestPointInElement<T> for Tri3d2Element<T> {
@@ -530,5 +529,73 @@ impl<T: Real> ClosestPointInElement<T> for Tri3d2Element<T> {
 impl<T: Real> BoundsForElement<T> for Tri3d2Element<T> {
     fn element_bounds(&self) -> AxisAlignedBoundingBox<T, Self::GeometryDim> {
         AxisAlignedBoundingBox::from_points(self.vertices()).expect("Never fails since we always have > 0 vertices")
+    }
+}
+
+#[allow(non_snake_case)]
+impl<T: Real> ClosestPointInElement<T> for Tri3d3Element<T> {
+    fn closest_point(&self, p: &OPoint<T, Self::GeometryDim>) -> ClosestPoint<T, Self::ReferenceDim> {
+        // This follows the same idea as for the implementation for Tri3d2Element,
+        // except that we need to project the point into the triangle of the plane rather
+        // than directly inverting the mapping
+        let xi_interior = {
+            // Want to project the point into the plane by solving
+            //  min_xi 0.5 * ||A xi + p0 - p||^2,
+            // with solution
+            //  A^TA xi = A^T (p - p0)
+            let ref A = self.reference_jacobian(&Point2::origin());
+            let p0 = self.map_reference_coords(&Point2::origin());
+            let ATA = A.transpose() * A;
+            ATA.try_inverse()
+                .map(|ATA_inv| ATA_inv * (A.transpose() * (p - p0)))
+                .map(Point2::from)
+                .filter(is_likely_in_tri_ref_interior)
+        };
+
+        // Compute the closest point on each edge and take the point corresponding to the
+        // smallest distance (squared)
+        let [a, b, c] = self.vertices();
+        let edges = [(a, b), (b, c), (c, a)];
+        let (idx, t, dist2_edge) = edges
+            .into_iter()
+            .map(|(x1, x2)| LineSegment3d::from_end_points(x1.clone(), x2.clone()))
+            .enumerate()
+            .map(|(idx, segment)| {
+                // Parameter is [0, 1]
+                let t = segment.closest_point_parametric(p);
+                let point = segment.point_from_parameter(t);
+                let dist2 = distance_squared(p, &point);
+                (idx, t, dist2)
+            })
+            .min_by(|(_, _, dist2_a), (_, _, dist2_b)| {
+                dist2_a
+                    .partial_cmp(&dist2_b)
+                    // TODO: This is an arbitrary choice, see comment in 2D tri element impl
+                    .unwrap_or(Ordering::Less)
+            })
+            .expect("We always have exactly 3 items in the iterator");
+
+        // Use parameter representation to transfer result to 2D reference element
+        let reference_element = Tri3d2Element::reference();
+        let a = reference_element.vertices()[(idx + 0) % 3];
+        let b = reference_element.vertices()[(idx + 1) % 3];
+        let edge_ref_coords = LineSegment2d::from_end_points(a, b).point_from_parameter(t);
+
+        if let Some(xi_interior) = xi_interior {
+            let x_interior = self.map_reference_coords(&xi_interior);
+            let dist2_interior = distance_squared(p, &x_interior);
+            if dist2_interior < dist2_edge {
+                return ClosestPoint::InElement(xi_interior);
+            }
+        }
+
+        ClosestPoint::ClosestPoint(edge_ref_coords)
+    }
+}
+
+impl<T: Real> BoundsForElement<T> for Tri3d3Element<T> {
+    fn element_bounds(&self) -> AxisAlignedBoundingBox<T, Self::GeometryDim> {
+        AxisAlignedBoundingBox::from_points(self.vertices())
+            .expect("AABB is always well defined")
     }
 }

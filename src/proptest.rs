@@ -1,4 +1,4 @@
-use crate::element::{Tet4Element, Tri3d2Element};
+use crate::element::{Tet4Element, Tri3d2Element, Tri3d3Element};
 use crate::geometry::proptest::Triangle3dParams;
 use crate::geometry::Orientation::Counterclockwise;
 use crate::mesh::procedural::create_rectangular_uniform_quad_mesh_2d;
@@ -32,6 +32,18 @@ impl Arbitrary for Tri3d2Element<f64> {
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         any_with::<Triangle2d<f64>>(Triangle2dParams::default().with_orientation(Counterclockwise))
             .prop_map(|triangle| Self::from(triangle))
+            .boxed()
+    }
+}
+
+impl Arbitrary for Tri3d3Element<f64> {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        let vertices: [_; 3] = std::array::from_fn(|_| point3());
+        vertices
+            .prop_map(|vertices| Tri3d3Element::from_vertices(vertices))
             .boxed()
     }
 }
