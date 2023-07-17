@@ -1,21 +1,26 @@
-use fenris::element::{FiniteElement, FixedNodesReferenceFiniteElement, Tet10Element, Tet20Element, Tet4Element, ClosestPointInElement, ClosestPoint, ElementConnectivity};
+use crate::unit_tests::element::{point_in_tet_ref_domain, point_in_tri_ref_domain};
+use fenris::connectivity::{Connectivity, Tet4Connectivity};
+use fenris::element::{
+    ClosestPoint, ClosestPointInElement, ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement,
+    Tet10Element, Tet20Element, Tet4Element,
+};
 use fenris::error::estimate_element_L2_error;
 use fenris::integrate::IntegrationWorkspace;
 use fenris::nalgebra::DVector;
 use fenris::quadrature;
-use fenris_optimize::calculus::{approximate_jacobian, VectorFunctionBuilder};
-use matrixcompare::{assert_scalar_eq, prop_assert_matrix_eq};
-use nalgebra::{DVectorView, DimName, Dyn, MatrixView, OMatrix, OPoint, Point3, Vector1, Vector3, U1, U10, U20, U3, U4, distance};
-use numeric_literals::replace_float_literals;
-use crate::unit_tests::element::{point_in_tet_ref_domain, point_in_tri_ref_domain};
-use proptest::prelude::*;
-use fenris::connectivity::{Connectivity, Tet4Connectivity};
 use fenris_geometry::Triangle;
+use fenris_optimize::calculus::{approximate_jacobian, VectorFunctionBuilder};
 use fenris_traits::Real;
-use util::assert_approx_matrix_eq;
-use std::array;
 use itertools::izip;
+use matrixcompare::{assert_scalar_eq, prop_assert_matrix_eq};
+use nalgebra::{
+    distance, DVectorView, DimName, Dyn, MatrixView, OMatrix, OPoint, Point3, Vector1, Vector3, U1, U10, U20, U3, U4,
+};
+use numeric_literals::replace_float_literals;
 use proptest::array::uniform3;
+use proptest::prelude::*;
+use std::array;
+use util::assert_approx_matrix_eq;
 
 #[test]
 fn tet4_lagrange_property() {
@@ -340,17 +345,11 @@ proptest! {
 #[replace_float_literals(T::from_f64(literal).unwrap())]
 fn is_likely_in_tet_ref_interior<T: Real>(xi: &Point3<T>) -> bool {
     let eps = 4.0 * T::default_epsilon();
-    xi.x >= -1.0 - eps
-        && xi.y >= -1.0 - eps
-        && xi.z >= -1.0 - eps
-        && xi.x + xi.y + xi.z <= eps
+    xi.x >= -1.0 - eps && xi.y >= -1.0 - eps && xi.z >= -1.0 - eps && xi.x + xi.y + xi.z <= eps
 }
 
 #[replace_float_literals(T::from_f64(literal).unwrap())]
 fn is_definitely_in_tet_ref_interior<T: Real>(xi: &Point3<T>) -> bool {
     let eps = T::default_epsilon().sqrt();
-    xi.x >= -1.0 + eps
-        && xi.y >= -1.0 + eps
-        && xi.z >= -1.0 + eps
-        && xi.x + xi.y + xi.z <= -eps
+    xi.x >= -1.0 + eps && xi.y >= -1.0 + eps && xi.z >= -1.0 + eps && xi.x + xi.y + xi.z <= -eps
 }

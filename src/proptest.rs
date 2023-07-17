@@ -4,7 +4,7 @@ use crate::mesh::procedural::create_rectangular_uniform_quad_mesh_2d;
 use crate::mesh::QuadMesh2d;
 use ::proptest::prelude::*;
 use fenris_geometry::proptest::Triangle2dParams;
-use fenris_geometry::{Triangle2d};
+use fenris_geometry::Triangle2d;
 use nalgebra::{Point2, Point3, Vector2};
 use std::cmp::max;
 
@@ -54,7 +54,7 @@ impl Arbitrary for Tet4Element<f64> {
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         let l = 5.0;
-        (Tri3d3Element::arbitrary(), -l .. l, -l .. l, 0.0 .. l)
+        (Tri3d3Element::arbitrary(), -l..l, -l..l, 0.0..l)
             .prop_map(|(tri_element, t1_scale, t2_scale, n_scale)| {
                 let [a, b, c] = tri_element.vertices().clone();
                 let t1 = b - a;
@@ -62,7 +62,8 @@ impl Arbitrary for Tet4Element<f64> {
                 let n = t1.cross(&t2);
                 let d = a + t1_scale * t1 + t2_scale * t2 + n_scale * n;
                 Tet4Element::from_vertices([a, b, c, d])
-            }).boxed()
+            })
+            .boxed()
     }
 }
 

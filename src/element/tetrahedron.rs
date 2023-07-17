@@ -1,15 +1,18 @@
-use std::cmp::Ordering;
 use numeric_literals::replace_float_literals;
+use std::cmp::Ordering;
 
 use crate::connectivity::{Connectivity, Tet10Connectivity, Tet20Connectivity, Tet4Connectivity};
-use crate::element::{BoundsForElement, ClosestPoint, ClosestPointInElement, ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement};
+use crate::element::{
+    BoundsForElement, ClosestPoint, ClosestPointInElement, ElementConnectivity, FiniteElement,
+    FixedNodesReferenceFiniteElement,
+};
 use crate::nalgebra::{
     distance, Matrix1x4, Matrix3, Matrix3x4, OMatrix, OPoint, Point3, Scalar, Vector3, U1, U10, U20, U3, U4,
 };
 use crate::Real;
+use fenris_geometry::AxisAlignedBoundingBox;
 use itertools::Itertools;
 use nalgebra::distance_squared;
-use fenris_geometry::AxisAlignedBoundingBox;
 
 impl<T> ElementConnectivity<T> for Tet4Connectivity
 where
@@ -568,10 +571,7 @@ where
 #[replace_float_literals(T::from_f64(literal).unwrap())]
 fn is_likely_in_tet_ref_interior<T: Real>(xi: &Point3<T>) -> bool {
     let eps = 4.0 * T::default_epsilon();
-    xi.x >= -1.0 - eps
-        && xi.y >= -1.0 - eps
-        && xi.z >= -1.0 - eps
-        && xi.x + xi.y + xi.z <= eps
+    xi.x >= -1.0 - eps && xi.y >= -1.0 - eps && xi.z >= -1.0 - eps && xi.x + xi.y + xi.z <= eps
 }
 
 impl<T> FiniteElement<T> for Tet4Element<T>
@@ -632,7 +632,7 @@ impl<T: Real> ClosestPointInElement<T> for Tet4Element<T> {
         };
 
         let conn = Tet4Connectivity([0, 1, 2, 3]);
-        let face_elements_iter = (0 .. 4)
+        let face_elements_iter = (0..4)
             .map(|face_idx| conn.get_face_connectivity(face_idx).unwrap())
             .map(|face_conn| face_conn.element(self.vertices()).unwrap());
 
@@ -662,8 +662,10 @@ impl<T: Real> ClosestPointInElement<T> for Tet4Element<T> {
         // be the reference coordinates that we need
         let reference_element = Self::reference();
         let xi = conn
-            .get_face_connectivity(face_idx).unwrap()
-            .element(reference_element.vertices()).unwrap()
+            .get_face_connectivity(face_idx)
+            .unwrap()
+            .element(reference_element.vertices())
+            .unwrap()
             .map_reference_coords(&xi_face);
         ClosestPoint::ClosestPoint(xi)
     }
