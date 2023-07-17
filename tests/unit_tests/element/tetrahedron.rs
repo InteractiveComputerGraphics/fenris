@@ -1,21 +1,21 @@
-use fenris::element::{FiniteElement, FixedNodesReferenceFiniteElement, Tet10Element, Tet20Element, Tet4Element};
+use fenris::element::{FiniteElement, FixedNodesReferenceFiniteElement, Tet10Element, Tet20Element, Tet4Element, ClosestPointInElement, ClosestPoint, ElementConnectivity};
 use fenris::error::estimate_element_L2_error;
-
 use fenris::integrate::IntegrationWorkspace;
-
 use fenris::nalgebra::DVector;
 use fenris::quadrature;
-
 use fenris_optimize::calculus::{approximate_jacobian, VectorFunctionBuilder};
-
-use matrixcompare::assert_scalar_eq;
-use nalgebra::{
-    DVectorView, DimName, Dyn, MatrixView, OMatrix, OPoint, Point3, Vector1, Vector3, U1, U10, U20, U3, U4,
-};
-
-use crate::unit_tests::element::point_in_tet_ref_domain;
+use matrixcompare::{assert_scalar_eq, prop_assert_matrix_eq};
+use nalgebra::{DVectorView, DimName, Dyn, MatrixView, OMatrix, OPoint, Point3, Vector1, Vector3, U1, U10, U20, U3, U4, distance};
+use numeric_literals::replace_float_literals;
+use crate::unit_tests::element::{point_in_tet_ref_domain, point_in_tri_ref_domain};
 use proptest::prelude::*;
+use fenris::connectivity::{Connectivity, Tet4Connectivity};
+use fenris_geometry::Triangle;
+use fenris_traits::Real;
 use util::assert_approx_matrix_eq;
+use std::array;
+use itertools::izip;
+use proptest::array::uniform3;
 
 #[test]
 fn tet4_lagrange_property() {
@@ -237,4 +237,120 @@ proptest! {
         let j = tet.reference_jacobian(&xi);
         prop_assert!(j.determinant() >= 0.0);
     }
+
+    #[test]
+    fn tet4_interior_voronoi_region_closest_point(
+        element: Tet4Element<f64>,
+        xi in point_in_tet_ref_domain(),
+    ) {
+        let x = element.map_reference_coords(&xi);
+        let closest = element.closest_point(&x);
+        let xi_closest = closest.point();
+        let x_closest = element.map_reference_coords(&xi_closest);
+
+        let tol = 1e-6 * element.diameter();
+        prop_assert_matrix_eq!(x_closest.coords, x.coords, comp = abs, tol = tol);
+
+        if is_definitely_in_tet_ref_interior(&xi) {
+            prop_assert!(matches!(closest, ClosestPoint::InElement(_)));
+        }
+    }
+
+    #[test]
+    fn tet4_face_voronoi_region_closest_point(
+        tet_element: Tet4Element<f64>,
+        xi_face in point_in_tri_ref_domain(),
+        face_idx in 0 .. 4usize,
+        normal_factor in 0.0 ..= 5.0)
+    {
+        let face_conn = Tet4Connectivity([0, 1, 2, 3]).get_face_connectivity(face_idx).unwrap();
+
+        let tet_reference = Tet4Element::reference();
+        let xi = face_conn
+            .element(tet_reference.vertices())
+            .unwrap()
+            .map_reference_coords(&xi_face);
+        let x0 = tet_element.map_reference_coords(&xi);
+
+        let face_element = face_conn.element(tet_element.vertices()).unwrap();
+        let triangle = Triangle(face_element.vertices().clone());
+
+        let x = x0 + normal_factor * triangle.normal_dir();
+
+        let closest = tet_element.closest_point(&x);
+        let xi_closest = closest.point();
+        prop_assert!(is_likely_in_tet_ref_interior(xi_closest));
+
+        let x_closest = tet_element.map_reference_coords(&xi_closest);
+        let tol = f64::max(tet_element.diameter(), distance(&x, &x0)) * 1e-6;
+        prop_assert_matrix_eq!(x_closest.coords, x0.coords, comp = abs, tol = tol);
+
+        if distance(&x, &x0) > 1e-6 * tet_element.diameter() {
+            // Only if we are sufficiently far away do we check that the classification is correct,
+            // since on or very close to the boundary, the point could be classified as interior
+            // due to floating point shenanigans
+            prop_assert!(matches!(closest, ClosestPoint::ClosestPoint(_)));
+        }
+    }
+
+    #[test]
+    fn tet4_vertex_voronoi_region_closest_point(
+        tet_element: Tet4Element<f64>,
+        vertex_idx in 0 .. 4usize,
+        normal_factors in uniform3(0.0 .. 5.0))
+    {
+        let face_connectivities = [0, 1, 2, 3]
+            .map(|face_idx| Tet4Connectivity([0, 1, 2, 3]).get_face_connectivity(face_idx).unwrap());
+
+        let tet_reference = Tet4Element::<f64>::reference();
+        let xi = tet_reference.vertices()[vertex_idx];
+        let x0 = tet_element.map_reference_coords(&xi);
+
+        let neighboring_faces: Vec<_> = face_connectivities
+            .iter()
+            .filter(|conn| conn.vertex_indices().contains(&vertex_idx))
+            .map(|conn| conn.element(tet_element.vertices()).unwrap())
+            .map(|tri_element| Triangle(tri_element.vertices().clone()))
+            .collect();
+        assert_eq!(neighboring_faces.len(), 3);
+
+        let mut x = x0.clone();
+        for (triangle, normal_factor) in izip!(neighboring_faces, normal_factors) {
+            x += normal_factor * triangle.normal_dir();
+        }
+
+        let closest = tet_element.closest_point(&x);
+        let xi_closest = closest.point();
+        prop_assert!(is_likely_in_tet_ref_interior(&xi_closest));
+
+        let x_closest = tet_element.map_reference_coords(&xi_closest);
+        let tol = f64::max(tet_element.diameter(), distance(&x, &x0)) * 1e-6;
+        prop_assert_matrix_eq!(x_closest.coords, x0.coords, comp = abs, tol = tol);
+
+        if distance(&x, &x0) > 1e-6 * tet_element.diameter() {
+            // Only if we are sufficiently far away do we check that the classification is correct,
+            // since on or very close to the boundary, the point could be classified as interior
+            // due to floating point shenanigans
+            prop_assert!(matches!(closest, ClosestPoint::ClosestPoint(_)));
+        }
+    }
+}
+
+// This is copied from fenris source in order to prevent having this in the public API
+#[replace_float_literals(T::from_f64(literal).unwrap())]
+fn is_likely_in_tet_ref_interior<T: Real>(xi: &Point3<T>) -> bool {
+    let eps = 4.0 * T::default_epsilon();
+    xi.x >= -1.0 - eps
+        && xi.y >= -1.0 - eps
+        && xi.z >= -1.0 - eps
+        && xi.x + xi.y + xi.z <= eps
+}
+
+#[replace_float_literals(T::from_f64(literal).unwrap())]
+fn is_definitely_in_tet_ref_interior<T: Real>(xi: &Point3<T>) -> bool {
+    let eps = T::default_epsilon().sqrt();
+    xi.x >= -1.0 + eps
+        && xi.y >= -1.0 + eps
+        && xi.z >= -1.0 + eps
+        && xi.x + xi.y + xi.z <= -eps
 }

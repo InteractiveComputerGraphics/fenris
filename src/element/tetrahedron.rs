@@ -631,10 +631,6 @@ impl<T: Real> ClosestPointInElement<T> for Tet4Element<T> {
                 .filter(is_likely_in_tet_ref_interior)
         };
 
-        if !p.coords.norm_squared().is_finite() {
-            panic!("p not finite");
-        }
-
         let conn = Tet4Connectivity([0, 1, 2, 3]);
         let face_elements_iter = (0 .. 4)
             .map(|face_idx| conn.get_face_connectivity(face_idx).unwrap())
@@ -646,10 +642,6 @@ impl<T: Real> ClosestPointInElement<T> for Tet4Element<T> {
                 let xi_closest = tri_element.closest_point(p).point().clone();
                 let x_closest = tri_element.map_reference_coords(&xi_closest);
                 let dist2 = distance_squared(&x_closest, p);
-                if !dist2.is_finite() {
-                    panic!("not finite");
-                }
-
                 (face_idx, tri_element, xi_closest, dist2)
             })
             .min_by(|(_, _, _, d1), (_, _, _, d2)| d1.partial_cmp(d2).unwrap_or(Ordering::Less))
