@@ -1,6 +1,12 @@
-use itertools::{Itertools, izip};
-use fenris::element::{FixedNodesReferenceFiniteElement, Hex20Element, Hex27Element, Quad4d2Element, Quad9d2Element, Tet4Element, Tri3d2Element, Tri6d2Element};
+use crate::export_mesh_vtk;
+use fenris::connectivity::Tet4Connectivity;
+use fenris::element::{
+    FixedNodesReferenceFiniteElement, Hex20Element, Hex27Element, Quad4d2Element, Quad9d2Element, Tet4Element,
+    Tri3d2Element, Tri6d2Element,
+};
+use fenris::mesh::Tet4Mesh;
 use fenris_traits::Real;
+use itertools::{izip, Itertools};
 use nalgebra::{Point2, Point3, Vector3};
 use num::clamp;
 use numeric_literals::replace_float_literals;
@@ -8,10 +14,7 @@ use proptest::array::uniform4;
 use proptest::prelude::*;
 use proptest::strategy::ValueTree;
 use proptest::test_runner::TestRunner;
-use fenris::connectivity::Tet4Connectivity;
-use fenris::mesh::Tet4Mesh;
 use util::assert_approx_matrix_eq;
-use crate::export_mesh_vtk;
 
 mod hexahedron;
 mod quadrilateral;
@@ -40,7 +43,7 @@ fn point_in_hex_ref_domain() -> impl Strategy<Value = Point3<f64>> {
 }
 
 fn point_in_tet_ref_domain() -> impl Strategy<Value = Point3<f64>> {
-    uniform4(0.0 ..= 1.0f64)
+    uniform4(0.0..=1.0f64)
         .prop_map(|mut barycentric_coords| {
             let mut sum = 0.0;
             for lambda_i in &mut barycentric_coords {
@@ -61,7 +64,9 @@ fn point_in_tet_ref_domain() -> impl Strategy<Value = Point3<f64>> {
             if cfg!(debug_assertions) {
                 let sum = barycentric_coords.iter().sum();
                 debug_assert!(1.0 - 1e-12 <= sum && sum <= 1.0 + 1e-12);
-                debug_assert!(barycentric_coords.iter().all(|&lambda_i| 0.0 <= lambda_i && lambda_i <= 1.0));
+                debug_assert!(barycentric_coords
+                    .iter()
+                    .all(|&lambda_i| 0.0 <= lambda_i && lambda_i <= 1.0));
             }
             barycentric_coords
         })
@@ -100,8 +105,14 @@ proptest! {
 fn sample_points_in_tet_ref_domain() {
     let mut runner = TestRunner::deterministic();
     let tet_point_strategy = point_in_tet_ref_domain();
-    let points: Vec<_> = (0 .. 1000)
-        .map(|_| tet_point_strategy.new_tree(&mut runner).unwrap().current().clone())
+    let points: Vec<_> = (0..1000)
+        .map(|_| {
+            tet_point_strategy
+                .new_tree(&mut runner)
+                .unwrap()
+                .current()
+                .clone()
+        })
         .collect();
 
     // TODO: Actually export a point cloud and not a "fake" tet mesh
@@ -111,7 +122,8 @@ fn sample_points_in_tet_ref_domain() {
     let reference_tet = Tet4Element::reference();
     let reference_tet_mesh = Tet4Mesh::from_vertices_and_connectivity(
         reference_tet.vertices().to_vec(),
-        vec![Tet4Connectivity([0, 1, 2, 3])]);
+        vec![Tet4Connectivity([0, 1, 2, 3])],
+    );
     export_mesh_vtk("sample_points_in_tet_ref_domain", "reference_tet", &reference_tet_mesh);
 }
 

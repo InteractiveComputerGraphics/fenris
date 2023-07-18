@@ -1,4 +1,6 @@
-use crate::unit_tests::element::{is_definitely_in_tet_ref_interior, is_likely_in_tet_ref_interior, point_in_tet_ref_domain, point_in_tri_ref_domain};
+use crate::unit_tests::element::{
+    is_definitely_in_tet_ref_interior, is_likely_in_tet_ref_interior, point_in_tet_ref_domain, point_in_tri_ref_domain,
+};
 use fenris::connectivity::{Connectivity, Tet4Connectivity};
 use fenris::element::{
     ClosestPoint, ClosestPointInElement, ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement,
@@ -12,7 +14,10 @@ use fenris_geometry::Triangle;
 use fenris_optimize::calculus::{approximate_jacobian, VectorFunctionBuilder};
 use itertools::izip;
 use matrixcompare::{assert_scalar_eq, prop_assert_matrix_eq};
-use nalgebra::{distance, DVectorView, DimName, Dyn, MatrixView, OMatrix, OPoint, Point3, Vector1, Vector3, U1, U10, U20, U3, U4, point};
+use nalgebra::{
+    distance, point, DVectorView, DimName, Dyn, MatrixView, OMatrix, OPoint, Point3, Vector1, Vector3, U1, U10, U20,
+    U3, U4,
+};
 use proptest::array::uniform3;
 use proptest::prelude::*;
 use util::assert_approx_matrix_eq;
@@ -70,8 +75,7 @@ fn tet20_lagrange_property() {
 
 #[test]
 fn tet4_closest_point_failure_case() {
-    let vertices = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.5, 0.5, 0.5]]
-        .map(Point3::from);
+    let vertices = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.5, 0.5, 0.5]].map(Point3::from);
     let element = Tet4Element::from_vertices(vertices);
     let p = point![0.875, 0.375, 0.375];
     let closest = element.closest_point(&p);
@@ -79,7 +83,6 @@ fn tet4_closest_point_failure_case() {
     let xi_closest = closest.point();
     let x_closest = element.map_reference_coords(&xi_closest);
     assert_ne!(x_closest, p);
-
 }
 
 proptest! {

@@ -1,18 +1,24 @@
 use crate::integration_tests::data_output_path;
 use fenris::assembly::buffers::{BufferUpdate, InterpolationBuffer};
-use fenris::connectivity::{Tri3d2Connectivity};
+use fenris::connectivity::Tri3d2Connectivity;
 use fenris::io::vtk::FiniteElementMeshDataSetBuilder;
 use fenris::mesh::procedural::{create_unit_box_uniform_tet_mesh_3d, create_unit_square_uniform_tri_mesh_2d};
 use fenris::mesh::refinement::refine_uniformly_repeat;
 use fenris::mesh::{Mesh, Tet4Mesh, TriangleMesh2d};
-use fenris::space::{FindClosestElement, FiniteElementConnectivity, FiniteElementSpace, InterpolateGradientInSpace, InterpolateInSpace, SpatiallyIndexed};
+use fenris::quadrature::Quadrature;
+use fenris::space::{
+    FindClosestElement, FiniteElementConnectivity, FiniteElementSpace, InterpolateGradientInSpace, InterpolateInSpace,
+    SpatiallyIndexed,
+};
 use fenris::util::global_vector_from_point_fn;
 use fenris::{quadrature, SmallDim};
 use fenris_traits::allocators::{BiDimAllocator, TriDimAllocator};
 use itertools::{izip, Itertools};
 use matrixcompare::assert_matrix_eq;
-use nalgebra::{vector, DVectorView, DefaultAllocator, OMatrix, OVector, Point2, Vector1, Vector2, U1, U2, Point3, Vector3, OPoint, U3};
-use fenris::quadrature::Quadrature;
+use nalgebra::{
+    vector, DVectorView, DefaultAllocator, OMatrix, OPoint, OVector, Point2, Point3, Vector1, Vector2, Vector3, U1, U2,
+    U3,
+};
 use util::flatten_vertically;
 
 fn u_scalar_2d(p: &Point2<f64>) -> Vector1<f64> {
@@ -145,7 +151,8 @@ fn spatially_indexed_interpolation_trimesh() {
     // space), so that we already know the correct answer.
     {
         // For interior quadrature points, we check both values and gradients of the scalar function
-        let values = compute_expected_interpolation_test_values::<_, U1, _>(&space, &interior_points, &u_weights_scalar);
+        let values =
+            compute_expected_interpolation_test_values::<_, U1, _>(&space, &interior_points, &u_weights_scalar);
         let iter = izip!(
             values.u_interpolated,
             values.grad_u_interpolated,
@@ -161,7 +168,8 @@ fn spatially_indexed_interpolation_trimesh() {
     {
         // For boundary points, we only check values since gradients are discontinuous
         // at element interfaces
-        let values = compute_expected_interpolation_test_values::<_, U1, _>(&space, &interface_points, &u_weights_scalar);
+        let values =
+            compute_expected_interpolation_test_values::<_, U1, _>(&space, &interface_points, &u_weights_scalar);
         let iter = izip!(values.u_interpolated, values.u_expected);
         for (u, u_expected) in iter {
             assert_matrix_eq!(u, u_expected, comp = abs, tol = 1e-12);
@@ -170,7 +178,8 @@ fn spatially_indexed_interpolation_trimesh() {
 
     {
         // Repeat interior quadrature points for vector function
-        let values = compute_expected_interpolation_test_values::<_, U2, _>(&space, &interior_points, &u_weights_vector);
+        let values =
+            compute_expected_interpolation_test_values::<_, U2, _>(&space, &interior_points, &u_weights_vector);
         let iter = izip!(
             values.u_interpolated,
             values.grad_u_interpolated,
@@ -185,7 +194,8 @@ fn spatially_indexed_interpolation_trimesh() {
 
     {
         // Repeat interface quadrature points for vector function
-        let values = compute_expected_interpolation_test_values::<_, U2, _>(&space, &interface_points, &u_weights_vector);
+        let values =
+            compute_expected_interpolation_test_values::<_, U2, _>(&space, &interface_points, &u_weights_vector);
         let iter = izip!(values.u_interpolated, values.u_expected);
         for (u, u_expected) in iter {
             assert_matrix_eq!(u, u_expected, comp = abs, tol = 1e-12);
@@ -301,7 +311,7 @@ fn spatially_indexed_interpolation_tet4() {
         [-1.0, -1.0, 1.0],
         [-(1.0 / 3.0), -(1.0 / 3.0), -(1.0 / 3.0)],
     ]
-        .map(Point3::from);
+    .map(Point3::from);
 
     // For debugging
     FiniteElementMeshDataSetBuilder::from_mesh(space.space())
@@ -313,7 +323,8 @@ fn spatially_indexed_interpolation_tet4() {
     // space), so that we already know the correct answer.
     {
         // For interior quadrature points, we check both values and gradients of the scalar function
-        let values = compute_expected_interpolation_test_values::<_, U1, _>(&space, &interior_points, &u_weights_scalar);
+        let values =
+            compute_expected_interpolation_test_values::<_, U1, _>(&space, &interior_points, &u_weights_scalar);
         let u_interpolated = flatten_vertically(&values.u_interpolated).unwrap();
         let u_expected = flatten_vertically(&values.u_expected).unwrap();
         let grad_u_interpolated = flatten_vertically(&values.grad_u_interpolated).unwrap();
@@ -325,7 +336,8 @@ fn spatially_indexed_interpolation_tet4() {
     {
         // For boundary points, we only check values since gradients are discontinuous
         // at element interfaces
-        let values = compute_expected_interpolation_test_values::<_, U1, _>(&space, &interface_points, &u_weights_scalar);
+        let values =
+            compute_expected_interpolation_test_values::<_, U1, _>(&space, &interface_points, &u_weights_scalar);
         let u_interpolated = flatten_vertically(&values.u_interpolated).unwrap();
         let u_expected = flatten_vertically(&values.u_expected).unwrap();
         assert_matrix_eq!(u_interpolated, u_expected, comp = abs, tol = 1e-12);
@@ -333,7 +345,8 @@ fn spatially_indexed_interpolation_tet4() {
 
     {
         // Repeat interior quadrature points for vector function
-        let values = compute_expected_interpolation_test_values::<_, U3, _>(&space, &interior_points, &u_weights_vector);
+        let values =
+            compute_expected_interpolation_test_values::<_, U3, _>(&space, &interior_points, &u_weights_vector);
         let u_interpolated = flatten_vertically(&values.u_interpolated).unwrap();
         let u_expected = flatten_vertically(&values.u_expected).unwrap();
         let grad_u_interpolated = flatten_vertically(&values.grad_u_interpolated).unwrap();
@@ -344,7 +357,8 @@ fn spatially_indexed_interpolation_tet4() {
 
     {
         // Repeat interface quadrature points for vector function
-        let values = compute_expected_interpolation_test_values::<_, U3, _>(&space, &interface_points, &u_weights_vector);
+        let values =
+            compute_expected_interpolation_test_values::<_, U3, _>(&space, &interface_points, &u_weights_vector);
         let u_interpolated = flatten_vertically(&values.u_interpolated).unwrap();
         let u_expected = flatten_vertically(&values.u_expected).unwrap();
         assert_matrix_eq!(u_interpolated, u_expected, comp = abs, tol = 1e-12);
@@ -361,7 +375,7 @@ fn spatially_indexed_tet4_find_closest() {
 
     let indexed_mesh = SpatiallyIndexed::from_space(mesh);
     let quadrature = quadrature::total_order::tetrahedron(0).unwrap();
-    for element_idx in 0 .. indexed_mesh.num_elements() {
+    for element_idx in 0..indexed_mesh.num_elements() {
         for xi_q in quadrature.points() {
             let x_q = indexed_mesh.map_element_reference_coords(element_idx, xi_q);
             let (closest_element_idx, xi_closest) = indexed_mesh
