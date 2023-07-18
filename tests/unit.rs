@@ -14,7 +14,9 @@ where
 {
     let output_path = Path::new("data/unit_tests/")
         .join(test_name)
-        .join(format!("{file_stem}.vtu"));
+        // Use .vtk instead of .vtu because there's currently a bug which prevents
+        // correctly exporting empty meshes to .vtu
+        .join(format!("{file_stem}.vtk"));
     FiniteElementMeshDataSetBuilder::from_mesh(mesh)
         .try_export(output_path)
         .expect("Export failure is a test failure")

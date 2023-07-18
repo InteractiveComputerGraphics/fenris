@@ -1,12 +1,18 @@
 use numeric_literals::replace_float_literals;
+use std::cmp::Ordering;
 
-use crate::connectivity::{Tet10Connectivity, Tet20Connectivity, Tet4Connectivity};
-use crate::element::{ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement};
+use crate::connectivity::{Connectivity, Tet10Connectivity, Tet20Connectivity, Tet4Connectivity};
+use crate::element::{
+    BoundsForElement, ClosestPoint, ClosestPointInElement, ElementConnectivity, FiniteElement,
+    FixedNodesReferenceFiniteElement,
+};
 use crate::nalgebra::{
     distance, Matrix1x4, Matrix3, Matrix3x4, OMatrix, OPoint, Point3, Scalar, Vector3, U1, U10, U20, U3, U4,
 };
 use crate::Real;
+use fenris_geometry::AxisAlignedBoundingBox;
 use itertools::Itertools;
+use nalgebra::distance_squared;
 
 impl<T> ElementConnectivity<T> for Tet4Connectivity
 where
@@ -76,6 +82,10 @@ where
     }
 }
 
+/// A Tet10 element, see documentation of [`Tet10Connectivity`](crate::connectivity::Tet10Connectivity).
+///
+/// We currently assume that the reference-to-physical transformation is affine, meaning
+/// that the geometry of the element is assumed to be affine.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Tet10Element<T>
 where
@@ -558,6 +568,12 @@ where
     }
 }
 
+#[replace_float_literals(T::from_f64(literal).unwrap())]
+fn is_likely_in_tet_ref_interior<T: Real>(xi: &Point3<T>) -> bool {
+    let eps = 4.0 * T::default_epsilon();
+    xi.x >= -1.0 - eps && xi.y >= -1.0 - eps && xi.z >= -1.0 - eps && xi.x + xi.y + xi.z <= -1.0 + eps
+}
+
 impl<T> FiniteElement<T> for Tet4Element<T>
 where
     T: Real,
@@ -588,5 +604,69 @@ where
             .tuple_combinations()
             .map(|(x, y)| distance(x, y))
             .fold(T::zero(), |a, b| a.max(b.clone()))
+    }
+}
+
+impl<T: Real> BoundsForElement<T> for Tet4Element<T> {
+    fn element_bounds(&self) -> AxisAlignedBoundingBox<T, Self::GeometryDim> {
+        AxisAlignedBoundingBox::from_points(self.vertices()).unwrap()
+    }
+}
+
+impl<T: Real> ClosestPointInElement<T> for Tet4Element<T> {
+    #[allow(non_snake_case)]
+    fn closest_point(&self, p: &OPoint<T, Self::GeometryDim>) -> ClosestPoint<T, Self::ReferenceDim> {
+        let xi_interior = {
+            // Transformation is affine, so Jacobian is constant:
+            //  p = A xi + p0
+            // for some p0 which we can determine by evaluating at xi = 0
+            let A = self.reference_jacobian(&Point3::origin());
+            A.try_inverse()
+                .map(|a_inv| {
+                    let p0 = self.map_reference_coords(&Point3::origin());
+                    Point3::from(a_inv * (p - p0))
+                })
+                // If the inverse transformation doesn't lead to a point clearly inside
+                // the reference domain, we assume that the closest point is on the boundary
+                .filter(is_likely_in_tet_ref_interior)
+        };
+
+        let conn = Tet4Connectivity([0, 1, 2, 3]);
+        let face_elements_iter = (0..4)
+            .map(|face_idx| conn.get_face_connectivity(face_idx).unwrap())
+            .map(|face_conn| face_conn.element(self.vertices()).unwrap());
+
+        let (face_idx, _, xi_face, dist2_face) = face_elements_iter
+            .enumerate()
+            .map(|(face_idx, tri_element)| {
+                let xi_closest = tri_element.closest_point(p).point().clone();
+                let x_closest = tri_element.map_reference_coords(&xi_closest);
+                let dist2 = distance_squared(&x_closest, p);
+                (face_idx, tri_element, xi_closest, dist2)
+            })
+            .min_by(|(_, _, _, d1), (_, _, _, d2)| d1.partial_cmp(d2).unwrap_or(Ordering::Less))
+            .expect("Always have 4 > 0 faces");
+
+        if let Some(xi_interior) = xi_interior {
+            let x_interior = self.map_reference_coords(&xi_interior);
+            let dist2_interior = distance_squared(p, &x_interior);
+            if dist2_interior < dist2_face {
+                return ClosestPoint::InElement(xi_interior);
+            }
+        }
+
+        // Next, we need to obtain the coordinates for the point on the face in the
+        // tetrahedron reference element.
+        // We can do this by considering the corresponding tetrahedron reference element
+        // and use the same face index to map into "physical space" which will in fact
+        // be the reference coordinates that we need
+        let reference_element = Self::reference();
+        let xi = conn
+            .get_face_connectivity(face_idx)
+            .unwrap()
+            .element(reference_element.vertices())
+            .unwrap()
+            .map_reference_coords(&xi_face);
+        ClosestPoint::ClosestPoint(xi)
     }
 }

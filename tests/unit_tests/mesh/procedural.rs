@@ -1,7 +1,7 @@
 use fenris::assembly::global::assemble_scalar;
 use fenris::connectivity::Connectivity;
 use fenris::element::{ElementConnectivity, FiniteElement, SurfaceFiniteElement};
-use fenris::integrate::{dependency::NoDeps, FnFunction, UFunction};
+use fenris::integrate::{dependency::NoDeps, FnFunction};
 use fenris::integrate::{integrate_over_element, volume_form, ElementIntegralAssemblerBuilder};
 use fenris::io::vtk::FiniteElementMeshDataSetBuilder;
 use fenris::mesh::procedural::{create_rectangular_uniform_hex_mesh, create_rectangular_uniform_tet_mesh};
@@ -11,7 +11,7 @@ use fenris::util::global_vector_from_point_fn;
 use fenris_geometry::AxisAlignedBoundingBox3d;
 use matrixcompare::prop_assert_scalar_eq;
 use nalgebra::coordinates::XYZ;
-use nalgebra::{dvector, vector, Point3, Vector1, Vector3, Vector4, U1};
+use nalgebra::{vector, Point3, Vector1, Vector4, U1};
 use proptest::prelude::*;
 use std::path::PathBuf;
 

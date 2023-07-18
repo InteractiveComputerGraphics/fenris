@@ -14,7 +14,7 @@ rustdoc-args = [ "--html-in-header", "assets/doc-header.html",
                  "--html-before-content", "assets/doc-header.html" ]
 
 [dependencies]
-fenris = { workspace = true, path = ".." }
+fenris = { workspace = true }
 serde = "1.0.126"
 numeric_literals = "0.2.0"
 

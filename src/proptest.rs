@@ -1,11 +1,10 @@
-use crate::element::{Tet4Element, Tri3d2Element};
-use crate::geometry::proptest::Triangle3dParams;
+use crate::element::{Tet4Element, Tri3d2Element, Tri3d3Element};
 use crate::geometry::Orientation::Counterclockwise;
 use crate::mesh::procedural::create_rectangular_uniform_quad_mesh_2d;
 use crate::mesh::QuadMesh2d;
 use ::proptest::prelude::*;
 use fenris_geometry::proptest::Triangle2dParams;
-use fenris_geometry::{Triangle2d, Triangle3d};
+use fenris_geometry::Triangle2d;
 use nalgebra::{Point2, Point3, Vector2};
 use std::cmp::max;
 
@@ -36,32 +35,33 @@ impl Arbitrary for Tri3d2Element<f64> {
     }
 }
 
+impl Arbitrary for Tri3d3Element<f64> {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        let vertices: [_; 3] = std::array::from_fn(|_| point3());
+        vertices
+            .prop_map(|vertices| Tri3d3Element::from_vertices(vertices))
+            .boxed()
+    }
+}
+
 impl Arbitrary for Tet4Element<f64> {
     // TODO: Reasonable parameters?
     type Parameters = ();
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        any_with::<Triangle3d<f64>>(Triangle3dParams::default().with_orientation(Counterclockwise))
-            .prop_flat_map(|triangle| {
-                // To create an arbitrary tetrahedron element, we take a counter-clockwise oriented
-                // triangle, and pick a point somewhere on the "positive" side of the
-                // triangle plane. We do this by associating a parameter with each
-                // tangent vector defined by the sides of the triangle,
-                // plus a non-negative parameter that scales along the normal direction
-                let range = -10.0..10.0;
-                let tangent_params = [range.clone(), range.clone(), range.clone()];
-                let normal_param = 0.0..=10.0;
-                (Just(triangle), tangent_params, normal_param)
-            })
-            .prop_map(|(triangle, tangent_params, normal_param)| {
-                let mut tangent_pos = triangle.centroid();
-
-                for (side, param) in triangle.sides().iter().zip(&tangent_params) {
-                    tangent_pos.coords += *param * side;
-                }
-                let coord = tangent_pos + normal_param * triangle.normal_dir().normalize();
-                Tet4Element::from_vertices([triangle.0[0], triangle.0[1], triangle.0[2], coord])
+        let l = 5.0;
+        (Tri3d3Element::arbitrary(), -l..l, -l..l, 0.0..l)
+            .prop_map(|(tri_element, t1_scale, t2_scale, n_scale)| {
+                let [a, b, c] = tri_element.vertices().clone();
+                let t1 = b - a;
+                let t2 = c - a;
+                let n = t1.cross(&t2);
+                let d = a + t1_scale * t1 + t2_scale * t2 + n_scale * n;
+                Tet4Element::from_vertices([a, b, c, d])
             })
             .boxed()
     }
