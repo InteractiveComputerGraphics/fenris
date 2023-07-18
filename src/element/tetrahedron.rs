@@ -82,7 +82,7 @@ where
     }
 }
 
-/// A Tet10 element, see documentation of [`Tet10Connectivity`](fenris::connectivity::Tet10Connectivity).
+/// A Tet10 element, see documentation of [`Tet10Connectivity`](crate::connectivity::Tet10Connectivity).
 ///
 /// We currently assume that the reference-to-physical transformation is affine, meaning
 /// that the geometry of the element is assumed to be affine.
