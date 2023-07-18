@@ -68,6 +68,20 @@ fn tet20_lagrange_property() {
     }
 }
 
+#[test]
+fn tet4_closest_point_failure_case() {
+    let vertices = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.5, 0.5, 0.5]]
+        .map(Point3::from);
+    let element = Tet4Element::from_vertices(vertices);
+    let p = point![0.875, 0.375, 0.375];
+    let closest = element.closest_point(&p);
+
+    let xi_closest = closest.point();
+    let x_closest = element.map_reference_coords(&xi_closest);
+    assert_ne!(x_closest, p);
+
+}
+
 proptest! {
     #[test]
     fn tet4_partition_of_unity(xi in point_in_tet_ref_domain()) {
