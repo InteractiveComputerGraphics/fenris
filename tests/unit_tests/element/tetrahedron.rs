@@ -1,4 +1,4 @@
-use crate::unit_tests::element::{point_in_tet_ref_domain, point_in_tri_ref_domain};
+use crate::unit_tests::element::{is_definitely_in_tet_ref_interior, is_likely_in_tet_ref_interior, point_in_tet_ref_domain, point_in_tri_ref_domain};
 use fenris::connectivity::{Connectivity, Tet4Connectivity};
 use fenris::element::{
     ClosestPoint, ClosestPointInElement, ElementConnectivity, FiniteElement, FixedNodesReferenceFiniteElement,
@@ -10,16 +10,11 @@ use fenris::nalgebra::DVector;
 use fenris::quadrature;
 use fenris_geometry::Triangle;
 use fenris_optimize::calculus::{approximate_jacobian, VectorFunctionBuilder};
-use fenris_traits::Real;
 use itertools::izip;
 use matrixcompare::{assert_scalar_eq, prop_assert_matrix_eq};
-use nalgebra::{
-    distance, DVectorView, DimName, Dyn, MatrixView, OMatrix, OPoint, Point3, Vector1, Vector3, U1, U10, U20, U3, U4,
-};
-use numeric_literals::replace_float_literals;
+use nalgebra::{distance, DVectorView, DimName, Dyn, MatrixView, OMatrix, OPoint, Point3, Vector1, Vector3, U1, U10, U20, U3, U4, point};
 use proptest::array::uniform3;
 use proptest::prelude::*;
-use std::array;
 use util::assert_approx_matrix_eq;
 
 #[test]
@@ -339,17 +334,4 @@ proptest! {
             prop_assert!(matches!(closest, ClosestPoint::ClosestPoint(_)));
         }
     }
-}
-
-// This is copied from fenris source in order to prevent having this in the public API
-#[replace_float_literals(T::from_f64(literal).unwrap())]
-fn is_likely_in_tet_ref_interior<T: Real>(xi: &Point3<T>) -> bool {
-    let eps = 4.0 * T::default_epsilon();
-    xi.x >= -1.0 - eps && xi.y >= -1.0 - eps && xi.z >= -1.0 - eps && xi.x + xi.y + xi.z <= eps
-}
-
-#[replace_float_literals(T::from_f64(literal).unwrap())]
-fn is_definitely_in_tet_ref_interior<T: Real>(xi: &Point3<T>) -> bool {
-    let eps = T::default_epsilon().sqrt();
-    xi.x >= -1.0 + eps && xi.y >= -1.0 + eps && xi.z >= -1.0 + eps && xi.x + xi.y + xi.z <= -eps
 }

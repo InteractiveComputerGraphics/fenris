@@ -571,7 +571,7 @@ where
 #[replace_float_literals(T::from_f64(literal).unwrap())]
 fn is_likely_in_tet_ref_interior<T: Real>(xi: &Point3<T>) -> bool {
     let eps = 4.0 * T::default_epsilon();
-    xi.x >= -1.0 - eps && xi.y >= -1.0 - eps && xi.z >= -1.0 - eps && xi.x + xi.y + xi.z <= eps
+    xi.x >= -1.0 - eps && xi.y >= -1.0 - eps && xi.z >= -1.0 - eps && xi.x + xi.y + xi.z <= -1.0 + eps
 }
 
 impl<T> FiniteElement<T> for Tet4Element<T>
