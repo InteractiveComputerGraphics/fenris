@@ -1,4 +1,4 @@
-use nalgebra::{DefaultAllocator, DimMin, DimName, DVector, OPoint, OVector, U1};
+use nalgebra::{DefaultAllocator, DimMin, DimName, DVector, DVectorView, OPoint, OVector, U1};
 use fenris_traits::allocators::BiDimAllocator;
 use fenris_traits::Real;
 use nalgebra::allocator::Allocator;
@@ -48,11 +48,18 @@ where
         sol_vectors
     }
 
-    // TODO: Take "arbitrary" u, not just DVector
-    pub fn interpolate_into<SolutionDim>(&self, result: &mut [OVector<T, SolutionDim>], u: &DVector<T>)
+    pub fn interpolate_into<'a, SolutionDim>(&self, result: &mut [OVector<T, SolutionDim>], u: impl Into<DVectorView<'a, T>>)
     where
         SolutionDim: DimName,
         DefaultAllocator: Allocator<T, SolutionDim, U1>,
+    {
+        self.interpolate_into_(result, u.into())
+    }
+
+    fn interpolate_into_<'a, SolutionDim>(&self, result: &mut [OVector<T, SolutionDim>], u: DVectorView<'a, T>)
+        where
+            SolutionDim: DimName,
+            DefaultAllocator: Allocator<T, SolutionDim, U1>,
     {
         assert_eq!(
             result.len() + 1,
