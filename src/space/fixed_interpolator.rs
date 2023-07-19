@@ -78,11 +78,12 @@ where
             let node_values = &self.node_values[i_support_start..i_support_end];
             let node_indices = &self.node_indices[i_support_start..i_support_end];
 
-            result[i].fill(T::zero());
+            let mut interpolated = OVector::zeros();
             for (v, j) in izip!(node_values, node_indices) {
                 let u_j = u.rows_generic(SolutionDim::dim() * j, SolutionDim::name());
-                result[i] += u_j * v.clone();
+                interpolated += u_j * v.clone();
             }
+            result[i] = interpolated;
         }
     }
 }
