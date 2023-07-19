@@ -1,9 +1,11 @@
-use nalgebra::{DefaultAllocator, DimMin, DimName, DVector, DVectorView, OPoint, OVector, U1};
+use std::iter::repeat;
+use itertools::izip;
+use nalgebra::{DefaultAllocator, DimName, DVectorView, OPoint, OVector, U1};
 use fenris_traits::allocators::BiDimAllocator;
 use fenris_traits::Real;
 use nalgebra::allocator::Allocator;
 use serde::{Deserialize, Serialize};
-use crate::space::GeometricFiniteElementSpace;
+use crate::space::{FindClosestElement};
 
 /// Interpolates solution variables onto a fixed set of interpolation points.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -28,21 +30,20 @@ pub struct FixedInterpolator<T> {
     // This way the number of supported bases for a given point I is given by
     // count = supported_node_offsets[I + 1] - supported_node_offsets[I].
     supported_node_offsets: Vec<usize>,
-
-    /// Stores the value N and index of the basis function of each supported node
-    node_values: Vec<(T, usize)>,
+    node_values: Vec<T>,
+    node_indices: Vec<usize>,
 }
 
 impl<T> FixedInterpolator<T>
 where
     T: Real,
 {
-    pub fn interpolate<SolutionDim>(&self, u: &DVector<T>) -> Vec<OVector<T, SolutionDim>>
+    pub fn interpolate<'a, SolutionDim>(&self, u: impl Into<DVectorView<'a, T>>) -> Vec<OVector<T, SolutionDim>>
     where
         SolutionDim: DimName,
         DefaultAllocator: Allocator<T, SolutionDim, U1>,
     {
-        let num_sol_vectors = self.supported_node_offsets.len().saturating_sub(1);
+        let num_sol_vectors = self.supported_node_offsets.len().checked_sub(1).unwrap();
         let mut sol_vectors = vec![OVector::zeros(); num_sol_vectors];
         self.interpolate_into(&mut sol_vectors, u);
         sol_vectors
@@ -74,11 +75,12 @@ where
         for i in 0..result.len() {
             let i_support_start = self.supported_node_offsets[i];
             let i_support_end = self.supported_node_offsets[i + 1];
+            let node_values = &self.node_values[i_support_start..i_support_end];
+            let node_indices = &self.node_indices[i_support_start..i_support_end];
 
             result[i].fill(T::zero());
-
-            for (v, j) in &self.node_values[i_support_start..i_support_end] {
-                let u_j = u.generic_view((SolutionDim::dim() * j, 0), (SolutionDim::name(), U1::name()));
+            for (v, j) in izip!(node_values, node_indices) {
+                let u_j = u.rows_generic(SolutionDim::dim() * j, SolutionDim::name());
                 result[i] += u_j * v.clone();
             }
         }
@@ -86,67 +88,62 @@ where
 }
 
 impl<T> FixedInterpolator<T> {
-    pub fn from_compressed_values(node_values: Vec<(T, usize)>, supported_node_offsets: Vec<usize>) -> Self {
+    pub fn from_compressed_values(
+        node_values: Vec<T>,
+        node_indices: Vec<usize>,
+        supported_node_offsets: Vec<usize>
+    ) -> Self {
         assert!(
             supported_node_offsets
                 .iter()
                 .all(|i| *i < node_values.len() + 1),
             "Supported node offsets must be in bounds with respect to supported nodes."
         );
+        assert_eq!(node_values.len(), node_indices.len(),
+                   "Number of node values and indices must be the same");
 
         Self {
-            max_node_index: node_values.iter().map(|(_, i)| i).max().cloned(),
+            max_node_index: node_indices.iter().max().copied(),
             node_values,
             supported_node_offsets,
+            node_indices,
         }
     }
 }
 
-impl<T> FixedInterpolator<T> {
-    pub fn interpolate_space<'a, Space, D>(
-        _space: &'a Space,
-        _interpolation_points: &'a [OPoint<T, D>],
-    ) -> Result<Self, Box<dyn std::error::Error>>
+impl<T: Real> FixedInterpolator<T> {
+    /// Creates a new fixed interpolator for the given space and point set.
+    ///
+    /// Returns `None` if the space does not have any elements, in which case a meaningful
+    /// interpolator cannot be constructed.
+    pub fn from_space_and_points<Space>(space: &Space, points: &[OPoint<T, Space::GeometryDim>]) -> Self
     where
-        T: Real,
-        D: DimName + DimMin<D, Output = D>,
-        Space: GeometricFiniteElementSpace<'a, T, GeometryDim = D>, //+ DistanceQuery<'a, OPoint<T, D>>,
+        Space: FindClosestElement<T>,
         DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
     {
-        todo!("Reimplement this function or scrap it in favor of a different design?");
-        // let mut supported_node_offsets = Vec::new();
-        // let mut node_values = Vec::new();
-        //
-        // let mut basis_buffer = OMatrix::<_, U1, Dynamic>::zeros(0);
-        //
-        // for point in interpolation_points {
-        //     let point_node_support_begin = node_values.len();
-        //     supported_node_offsets.push(point_node_support_begin);
-        //
-        //     if !mesh.connectivity().is_empty() > 0 {
-        //         let element_idx = mesh
-        //             .nearest(point)
-        //             .expect("Logic error: Mesh should have non-zero number of cells/elements.");
-        //         let conn = mesh.get_connectivity(element_idx).unwrap();
-        //         let element = mesh.get_element(element_idx).unwrap();
-        //
-        //         let xi = map_physical_coordinates(&element, point)
-        //             .map_err(|_| "Failed to map physical coordinates to reference coordinates.")?;
-        //
-        //         basis_buffer.resize_horizontally_mut(element.num_nodes(), T::zero());
-        //         element.populate_basis(MatrixViewMut::from(&mut basis_buffer), &xi.coords);
-        //         for (index, v) in izip!(conn.vertex_indices(), basis_buffer.iter()) {
-        //             node_values.push((v.clone(), index.clone()));
-        //         }
-        //     }
-        // }
-        //
-        // supported_node_offsets.push(node_values.len());
-        // assert_eq!(interpolation_points.len() + 1, supported_node_offsets.len());
-        //
-        // Ok(FiniteElementInterpolator::from_compressed_values(
-        //     node_values,
-        //     supported_node_offsets,
-        // ))
+        let mut supported_node_offsets = Vec::new();
+        let mut node_values = Vec::new();
+        let mut node_indices = Vec::new();
+
+        for point in points {
+            let point_node_support_begin = node_values.len();
+            assert_eq!(point_node_support_begin, node_indices.len());
+            supported_node_offsets.push(point_node_support_begin);
+
+            let Some((element_idx, xi)) = space.find_closest_element_and_reference_coords(point)
+                // break out of the loop if there are no elements in the space
+                else { break };
+
+            let element_node_count = space.element_node_count(element_idx);
+            node_values.extend(repeat(T::zero()).take(element_node_count));
+            node_indices.extend(repeat(usize::MAX).take(element_node_count));
+            space.populate_element_basis(element_idx, &mut node_values[point_node_support_begin..], &xi);
+            space.populate_element_nodes(&mut node_indices[point_node_support_begin..], element_idx);
+        }
+
+        supported_node_offsets.push(node_values.len());
+        assert_eq!(points.len() + 1, supported_node_offsets.len());
+
+        Self::from_compressed_values(node_values, node_indices, supported_node_offsets)
     }
 }

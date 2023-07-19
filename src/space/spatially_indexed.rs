@@ -337,7 +337,7 @@ where
     Space: FiniteElementSpace<T> + BoundsForElementInSpace<T> + ClosestPointInElementInSpace<T>,
     DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>,
 {
-    fn interpolate_at_points(
+    fn interpolate_at_points_into(
         &self,
         points: &[OPoint<T, Self::GeometryDim>],
         interpolation_weights: DVectorView<T>,
@@ -354,7 +354,7 @@ where
     Space: VolumetricFiniteElementSpace<T> + BoundsForElementInSpace<T> + ClosestPointInElementInSpace<T>,
     DefaultAllocator: TriDimAllocator<T, Space::GeometryDim, Space::ReferenceDim, SolutionDim>,
 {
-    fn interpolate_gradient_at_points(
+    fn interpolate_gradient_at_points_into(
         &self,
         points: &[OPoint<T, Self::GeometryDim>],
         interpolation_weights: DVectorView<T>,

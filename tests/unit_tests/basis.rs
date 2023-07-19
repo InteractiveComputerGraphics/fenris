@@ -7,8 +7,8 @@ use matrixcompare::assert_scalar_eq;
 
 #[test]
 fn interpolate_into() {
-    let values = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-    let supported_nodes = vec![
+    let node_values = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+    let node_indices = vec![
         0, 1, // Interpolation point 1
         0, 3, 4, // Interpolation point 2
         1, 2, 4, // Interpolation point 3
@@ -16,7 +16,8 @@ fn interpolate_into() {
     let supported_node_offsets = vec![0, 2, 5, 8, 8];
 
     let interpolator = FixedInterpolator::from_compressed_values(
-        values.into_iter().zip(supported_nodes).collect(),
+        node_values,
+        node_indices,
         supported_node_offsets,
     );
 

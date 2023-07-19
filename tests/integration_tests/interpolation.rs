@@ -6,10 +6,7 @@ use fenris::mesh::procedural::{create_unit_box_uniform_tet_mesh_3d, create_unit_
 use fenris::mesh::refinement::refine_uniformly_repeat;
 use fenris::mesh::{Mesh, Tet4Mesh, TriangleMesh2d};
 use fenris::quadrature::Quadrature;
-use fenris::space::{
-    FindClosestElement, FiniteElementConnectivity, FiniteElementSpace, InterpolateGradientInSpace, InterpolateInSpace,
-    SpatiallyIndexed,
-};
+use fenris::space::{FindClosestElement, FiniteElementConnectivity, FiniteElementSpace, FixedInterpolator, InterpolateGradientInSpace, InterpolateInSpace, SpatiallyIndexed};
 use fenris::util::global_vector_from_point_fn;
 use fenris::{quadrature, SmallDim};
 use fenris_traits::allocators::{BiDimAllocator, TriDimAllocator};
@@ -19,6 +16,10 @@ use nalgebra::{
     vector, DVectorView, DefaultAllocator, OMatrix, OPoint, OVector, Point2, Point3, Vector1, Vector2, Vector3, U1, U2,
     U3,
 };
+use nalgebra::proptest::vector;
+use proptest::array::{uniform2, uniform3};
+use proptest::prelude::*;
+use proptest::collection::vec;
 use util::flatten_vertically;
 
 fn u_scalar_2d(p: &Point2<f64>) -> Vector1<f64> {
@@ -381,5 +382,49 @@ fn spatially_indexed_tet4_find_closest() {
             assert_eq!(closest_element_idx, element_idx);
             assert_matrix_eq!(xi_closest.coords, xi_q.coords, comp = abs, tol = 1e-12);
         }
+    }
+}
+
+fn point_in_unit_square() -> impl Strategy<Value=Point2<f64>> {
+    uniform2(0.0 ..= 1.0)
+        .prop_map(Point2::from)
+}
+
+fn point_in_unit_cube() -> impl Strategy<Value=Point3<f64>> {
+    uniform3(0.0 ..= 1.0)
+        .prop_map(Point3::from)
+}
+
+proptest! {
+    #[test]
+    fn fixed_interpolator_matches_on_demand_tri2d(
+        points in vec(point_in_unit_square(), 0 .. 20),
+        u in vector(-1.0 ..= 1.0, 3 * 9)
+    ) {
+        let mesh: TriangleMesh2d<f64> = create_unit_square_uniform_tri_mesh_2d(2);
+        assert_eq!(3 * mesh.vertices().len(), u.len(),
+            "size of solution variables vector is currently semi-hardcoded to be compatible \
+             with the number of mesh vertices");
+        let indexed = SpatiallyIndexed::from_space(mesh);
+        let fixed_interpolator = FixedInterpolator::from_space_and_points(&indexed, &points);
+        let interpolated_fixed = fixed_interpolator.interpolate::<U3>(&u);
+        let interpolated_indexed: Vec<Vector3<_>> = indexed.interpolate_at_points(&points, u.as_view());
+        prop_assert_eq!(interpolated_fixed, interpolated_indexed);
+    }
+
+    #[test]
+    fn fixed_interpolator_matches_on_demand_tet3d(
+        points in vec(point_in_unit_cube(), 0 .. 20),
+        u in vector(-1.0 ..= 1.0, 3 * 35)
+    ) {
+        let mesh: Tet4Mesh<f64> = create_unit_box_uniform_tet_mesh_3d(2);
+        assert_eq!(3 * mesh.vertices().len(), u.len(),
+            "size of solution variables vector is currently semi-hardcoded to be compatible \
+             with the number of mesh vertices");
+        let indexed = SpatiallyIndexed::from_space(mesh);
+        let fixed_interpolator = FixedInterpolator::from_space_and_points(&indexed, &points);
+        let interpolated_fixed = fixed_interpolator.interpolate::<U3>(&u);
+        let interpolated_indexed: Vec<Vector3<_>> = indexed.interpolate_at_points(&points, u.as_view());
+        prop_assert_eq!(interpolated_fixed, interpolated_indexed);
     }
 }
