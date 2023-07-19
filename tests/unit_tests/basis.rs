@@ -16,7 +16,8 @@ fn interpolate_into() {
     let supported_node_offsets = vec![0, 2, 5, 8, 8];
 
     // TODO: Test gradients... (They're implicitly tested in other proptests though)
-    let interpolator = FixedInterpolator::from_compressed_values(Some(node_values), None, node_indices, supported_node_offsets);
+    let interpolator =
+        FixedInterpolator::from_compressed_values(Some(node_values), None, node_indices, supported_node_offsets);
 
     let u = DVector::from_column_slice(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]);
 

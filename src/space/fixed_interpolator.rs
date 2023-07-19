@@ -1,12 +1,12 @@
 use crate::space::{FindClosestElement, VolumetricFiniteElementSpace};
 use fenris_traits::allocators::BiDimAllocator;
 use fenris_traits::Real;
-use itertools::{izip};
+use itertools::izip;
 use nalgebra::allocator::Allocator;
 use nalgebra::{DVectorView, DefaultAllocator, DimName, Dyn, MatrixView, MatrixViewMut, OMatrix, OPoint, OVector, U1};
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::iter::repeat;
-use rayon::prelude::*;
 
 /// Interpolates solution variables onto a fixed set of interpolation points.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -316,7 +316,7 @@ impl<T: Real> FixedInterpolator<T> {
         points: &[OPoint<T, Space::GeometryDim>],
         what_to_compute: ValuesOrGradients,
     ) -> Self
-        where
+    where
         // TODO: We currently have to restrict ourselves to volumetric finite element spaces
         // because we allow optionally computing gradients
         Space: FindClosestElement<T> + VolumetricFiniteElementSpace<T> + Sync,
@@ -334,7 +334,8 @@ impl<T: Real> FixedInterpolator<T> {
 
         // This is by far the most expensive operation, hence we do this in parallel first
         let mut closest_elements_and_ref_coords = Vec::new();
-        points.par_iter()
+        points
+            .par_iter()
             .map(|point| space.find_closest_element_and_reference_coords(point))
             .collect_into_vec(&mut closest_elements_and_ref_coords);
 
