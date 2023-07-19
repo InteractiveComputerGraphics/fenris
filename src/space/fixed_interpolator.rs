@@ -1,11 +1,12 @@
 use crate::space::{FindClosestElement, VolumetricFiniteElementSpace};
 use fenris_traits::allocators::BiDimAllocator;
 use fenris_traits::Real;
-use itertools::izip;
+use itertools::{izip};
 use nalgebra::allocator::Allocator;
 use nalgebra::{DVectorView, DefaultAllocator, DimName, Dyn, MatrixView, MatrixViewMut, OMatrix, OPoint, OVector, U1};
 use serde::{Deserialize, Serialize};
 use std::iter::repeat;
+use rayon::prelude::*;
 
 /// Interpolates solution variables onto a fixed set of interpolation points.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -265,6 +266,85 @@ impl<T: Real> FixedInterpolator<T> {
             supported_node_offsets.push(point_node_support_begin);
 
             let Some((element_idx, xi)) = space.find_closest_element_and_reference_coords(point)
+                // break out of the loop if there are no elements in the space
+                else { break };
+
+            let element_node_count = space.element_node_count(element_idx);
+            node_indices.extend(repeat(usize::MAX).take(element_node_count));
+            space.populate_element_nodes(&mut node_indices[point_node_support_begin..], element_idx);
+
+            if let Some(node_values) = &mut node_values {
+                debug_assert_eq!(point_node_support_begin, node_values.len());
+                node_values.extend(repeat(T::zero()).take(element_node_count));
+                space.populate_element_basis(element_idx, &mut node_values[point_node_support_begin..], &xi);
+            }
+
+            if let Some(node_gradients) = &mut node_gradients {
+                let point_node_gradients_begin = node_gradients.len();
+                // First store *reference* gradients in buffers
+                ref_gradient_buffer_flat.resize(d * element_node_count, T::zero());
+                let mut ref_gradients = MatrixViewMut::from_slice_generic(
+                    &mut ref_gradient_buffer_flat,
+                    Space::ReferenceDim::name(),
+                    Dyn(element_node_count),
+                );
+                space.populate_element_gradients(element_idx, ref_gradients.as_view_mut(), &xi);
+                // Next compute gradients in physical space by transforming by J^{-T}
+                // and storing directly in flat gradient storage
+                node_gradients.extend(repeat(T::zero()).take(d * element_node_count));
+                let mut gradient_buffer = MatrixViewMut::from_slice_generic(
+                    &mut node_gradients[point_node_gradients_begin..],
+                    Space::GeometryDim::name(),
+                    Dyn(element_node_count),
+                );
+                let jacobian = space.element_reference_jacobian(element_idx, &xi);
+                let j_inv_t = jacobian.try_inverse().unwrap().transpose();
+                gradient_buffer.gemm(T::one(), &j_inv_t, &ref_gradients, T::zero());
+            }
+        }
+
+        supported_node_offsets.push(node_indices.len());
+        assert_eq!(points.len() + 1, supported_node_offsets.len());
+
+        Self::from_compressed_values(node_values, node_gradients, node_indices, supported_node_offsets)
+    }
+
+    /// Same as [`from_space_and_points`], but runs parts of the algorithm in parallel with
+    /// `rayon`.
+    pub fn from_space_and_points_par<Space>(
+        space: &Space,
+        points: &[OPoint<T, Space::GeometryDim>],
+        what_to_compute: ValuesOrGradients,
+    ) -> Self
+        where
+        // TODO: We currently have to restrict ourselves to volumetric finite element spaces
+        // because we allow optionally computing gradients
+        Space: FindClosestElement<T> + VolumetricFiniteElementSpace<T> + Sync,
+        DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
+        OPoint<T, Space::GeometryDim>: Sync + Send,
+    {
+        let mut supported_node_offsets = Vec::new();
+        let mut node_values = what_to_compute.compute_values().then(|| Vec::new());
+        let mut node_gradients = what_to_compute.compute_gradients().then(|| Vec::new());
+        let mut node_indices = Vec::new();
+
+        let mut ref_gradient_buffer_flat = Vec::new();
+
+        let d = Space::GeometryDim::dim();
+
+        // This is by far the most expensive operation, hence we do this in parallel first
+        let mut closest_elements_and_ref_coords = Vec::new();
+        points.par_iter()
+            .map(|point| space.find_closest_element_and_reference_coords(point))
+            .collect_into_vec(&mut closest_elements_and_ref_coords);
+
+        // The rest is sequential for now, it's a bit more cumbersome to parallelize
+        // (needs some parallel prefix sum etc.)
+        for closest_element_and_ref_coord in closest_elements_and_ref_coords {
+            let point_node_support_begin = node_indices.len();
+            supported_node_offsets.push(point_node_support_begin);
+
+            let Some((element_idx, xi)) = closest_element_and_ref_coord
                 // break out of the loop if there are no elements in the space
                 else { break };
 

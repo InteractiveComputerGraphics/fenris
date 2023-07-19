@@ -409,6 +409,8 @@ proptest! {
         use ValuesOrGradients::{Both, OnlyValues, OnlyGradients};
         for what_to_compute in [Both, OnlyValues, OnlyGradients] {
             let fixed_interpolator = FixedInterpolator::from_space_and_points(&indexed, &points, what_to_compute);
+            let fixed_interpolator_par = FixedInterpolator::from_space_and_points_par(&indexed, &points, what_to_compute);
+            assert_eq!(fixed_interpolator, fixed_interpolator_par);
 
             if what_to_compute.compute_values() {
                 let interpolated_fixed = fixed_interpolator.interpolate::<U3>(&u);
@@ -440,6 +442,8 @@ proptest! {
         use ValuesOrGradients::{Both, OnlyValues, OnlyGradients};
         for what_to_compute in [Both, OnlyValues, OnlyGradients] {
             let fixed_interpolator = FixedInterpolator::from_space_and_points(&indexed, &points, what_to_compute);
+            let fixed_interpolator_par = FixedInterpolator::from_space_and_points_par(&indexed, &points, what_to_compute);
+            assert_eq!(fixed_interpolator, fixed_interpolator_par);
 
             if what_to_compute.compute_values() {
                 let interpolated_fixed = fixed_interpolator.interpolate::<U3>(&u);
