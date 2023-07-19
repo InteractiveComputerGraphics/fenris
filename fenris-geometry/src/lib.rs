@@ -58,14 +58,6 @@ pub trait GeometryCollection<'a> {
     fn get_geometry(&'a self, index: usize) -> Option<Self::Geometry>;
 }
 
-pub trait DistanceQuery<'a, QueryGeometry>: GeometryCollection<'a> {
-    //    type KNearestIter: Iterator<Item=usize>;
-
-    //    fn k_nearest(&'a self, query_geometry: &'a QueryGeometry, k: usize) -> Self::KNearestIter;
-
-    fn nearest(&'a self, query_geometry: &'a QueryGeometry) -> Option<usize>;
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignedDistanceResult<T, D>
 where
