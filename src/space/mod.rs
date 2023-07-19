@@ -15,7 +15,7 @@ mod spatially_indexed;
 
 pub use interpolate::*;
 pub use spatially_indexed::SpatiallyIndexed;
-pub use fixed_interpolator::FixedInterpolator;
+pub use fixed_interpolator::{FixedInterpolator, ValuesOrGradients};
 
 /// Describes the connectivity of elements in a finite element space.
 pub trait FiniteElementConnectivity {

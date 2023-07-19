@@ -1,11 +1,11 @@
 use std::iter::repeat;
 use itertools::izip;
-use nalgebra::{DefaultAllocator, DimName, DVectorView, OPoint, OVector, U1};
+use nalgebra::{DefaultAllocator, DimName, DVectorView, Dyn, MatrixView, MatrixViewMut, OMatrix, OPoint, OVector, U1};
 use fenris_traits::allocators::BiDimAllocator;
 use fenris_traits::Real;
 use nalgebra::allocator::Allocator;
 use serde::{Deserialize, Serialize};
-use crate::space::{FindClosestElement};
+use crate::space::{FindClosestElement, VolumetricFiniteElementSpace};
 
 /// Interpolates solution variables onto a fixed set of interpolation points.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -30,8 +30,36 @@ pub struct FixedInterpolator<T> {
     // This way the number of supported bases for a given point I is given by
     // count = supported_node_offsets[I + 1] - supported_node_offsets[I].
     supported_node_offsets: Vec<usize>,
-    node_values: Vec<T>,
     node_indices: Vec<usize>,
+    node_values: Option<Vec<T>>,
+    // Stored by flattening gradients in column-major ordering
+    node_gradients: Option<Vec<T>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ValuesOrGradients {
+    #[default]
+    Both,
+    OnlyValues,
+    OnlyGradients,
+}
+
+impl ValuesOrGradients {
+    pub fn compute_values(&self) -> bool {
+        use ValuesOrGradients::*;
+        match self {
+            Both | OnlyValues => true,
+            OnlyGradients => false,
+        }
+    }
+
+    pub fn compute_gradients(&self) -> bool {
+        use ValuesOrGradients::*;
+        match self {
+            Both | OnlyGradients => true,
+            OnlyValues => false,
+        }
+    }
 }
 
 impl<T> FixedInterpolator<T>
@@ -43,10 +71,10 @@ where
         SolutionDim: DimName,
         DefaultAllocator: Allocator<T, SolutionDim, U1>,
     {
-        let num_sol_vectors = self.supported_node_offsets.len().checked_sub(1).unwrap();
-        let mut sol_vectors = vec![OVector::zeros(); num_sol_vectors];
-        self.interpolate_into(&mut sol_vectors, u);
-        sol_vectors
+        let num_interpolation_points = self.supported_node_offsets.len().checked_sub(1).unwrap();
+        let mut interpolated_vectors = vec![OVector::zeros(); num_interpolation_points];
+        self.interpolate_into(&mut interpolated_vectors, u);
+        interpolated_vectors
     }
 
     pub fn interpolate_into<'a, SolutionDim>(&self, result: &mut [OVector<T, SolutionDim>], u: impl Into<DVectorView<'a, T>>)
@@ -71,11 +99,12 @@ where
             self.max_node_index.is_none() || SolutionDim::dim() * self.max_node_index.unwrap() < u.len(),
             "Cannot reference degrees of freedom not present in solution variables"
         );
+        let Some(node_values) = &self.node_values else { panic!("cannot interpolate without nodal values") };
 
         for i in 0..result.len() {
             let i_support_start = self.supported_node_offsets[i];
             let i_support_end = self.supported_node_offsets[i + 1];
-            let node_values = &self.node_values[i_support_start..i_support_end];
+            let node_values = &node_values[i_support_start..i_support_end];
             let node_indices = &self.node_indices[i_support_start..i_support_end];
 
             let mut interpolated = OVector::zeros();
@@ -86,28 +115,112 @@ where
             result[i] = interpolated;
         }
     }
+
+    pub fn interpolate_gradients<'a, GeometryDim, SolutionDim>(
+        &self,
+        u: impl Into<DVectorView<'a, T>>
+    ) -> Vec<OMatrix<T, GeometryDim, SolutionDim>>
+    where
+        SolutionDim: DimName,
+        GeometryDim: DimName,
+        DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>,
+    {
+        let num_points = self.supported_node_offsets.len().checked_sub(1).unwrap();
+        let mut gradients = vec![OMatrix::<_, GeometryDim, SolutionDim>::zeros(); num_points];
+        self.interpolate_gradients_into(&mut gradients, u);
+        gradients
+    }
+
+    pub fn interpolate_gradients_into<'a, GeometryDim, SolutionDim>(
+        &self,
+        result: &mut [OMatrix<T, GeometryDim, SolutionDim>],
+        u: impl Into<DVectorView<'a, T>>)
+    where
+        SolutionDim: DimName,
+        GeometryDim: DimName,
+        DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>,
+    {
+        self.interpolate_gradients_into_(result, u.into())
+    }
+
+    fn interpolate_gradients_into_<'a, SolutionDim, GeometryDim>(
+        &self,
+        gradients: &mut [OMatrix<T, GeometryDim, SolutionDim>],
+        u: DVectorView<'a, T>)
+    where
+        SolutionDim: DimName,
+        GeometryDim: DimName,
+        DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>,
+    {
+        assert_eq!(
+            gradients.len() + 1,
+            self.supported_node_offsets.len(),
+            "Number of interpolation points must match."
+        );
+        assert!(
+            self.max_node_index.is_none() || SolutionDim::dim() * self.max_node_index.unwrap() < u.len(),
+            "Cannot reference degrees of freedom not present in solution variables"
+        );
+
+        let Some(node_gradients) = &self.node_gradients
+            else { panic!("cannot interpolate gradients without nodal gradient values") };
+
+        let gradient_len = GeometryDim::dim();
+
+        for i in 0..gradients.len() {
+            let idx_start = self.supported_node_offsets[i];
+            let idx_end = self.supported_node_offsets[i + 1];
+            let gradients_begin = gradient_len * idx_start;
+            let gradients_end = gradient_len * idx_end;
+            let node_gradients = MatrixView::from_slice_generic(
+                &node_gradients[gradients_begin .. gradients_end],
+                GeometryDim::name(),
+                Dyn(idx_end - idx_start));
+            let node_indices = &self.node_indices[idx_start..idx_end];
+
+            let mut interpolated = OMatrix::<T, GeometryDim, SolutionDim>::zeros();
+            for (grad_j, j) in izip!(node_gradients.column_iter(), node_indices) {
+                let u_j = u.rows_generic(SolutionDim::dim() * j, SolutionDim::name());
+                // Outer product += grad_j * u_j.transpose()
+                interpolated.ger(T::one(), &grad_j, &u_j, T::one());
+            }
+            gradients[i] = interpolated;
+        }
+    }
 }
 
 impl<T> FixedInterpolator<T> {
     pub fn from_compressed_values(
-        node_values: Vec<T>,
+        node_values: Option<Vec<T>>,
+        node_gradients: Option<Vec<T>>,
         node_indices: Vec<usize>,
         supported_node_offsets: Vec<usize>
     ) -> Self {
         assert!(
             supported_node_offsets
                 .iter()
-                .all(|i| *i < node_values.len() + 1),
+                .all(|i| *i < node_indices.len() + 1),
             "Supported node offsets must be in bounds with respect to supported nodes."
         );
-        assert_eq!(node_values.len(), node_indices.len(),
-                   "Number of node values and indices must be the same");
+        if let Some(node_values) = &node_values {
+            assert_eq!(node_values.len(), node_indices.len(),
+                       "Number of node values and indices must be the same");
+        }
+        if let Some(node_gradients) = &node_gradients {
+            if node_indices.len() != 0 {
+                assert_eq!(node_gradients.len() % node_indices.len(), 0,
+                           "Number of gradient values must be compatible with number of indices");
+            } else if node_gradients.len() != 0 {
+                panic!("gradient data must be empty if indices are empty");
+            }
+        }
 
         Self {
             max_node_index: node_indices.iter().max().copied(),
             node_values,
             supported_node_offsets,
             node_indices,
+            node_gradients,
         }
     }
 }
@@ -117,18 +230,28 @@ impl<T: Real> FixedInterpolator<T> {
     ///
     /// Returns `None` if the space does not have any elements, in which case a meaningful
     /// interpolator cannot be constructed.
-    pub fn from_space_and_points<Space>(space: &Space, points: &[OPoint<T, Space::GeometryDim>]) -> Self
+    pub fn from_space_and_points<Space>(
+        space: &Space,
+        points: &[OPoint<T, Space::GeometryDim>],
+        what_to_compute: ValuesOrGradients
+    ) -> Self
     where
-        Space: FindClosestElement<T>,
+        // TODO: We currently have to restrict ourselves to volumetric finite element spaces
+        // because we allow optionally computing gradients
+        Space: FindClosestElement<T> + VolumetricFiniteElementSpace<T>,
         DefaultAllocator: BiDimAllocator<T, Space::GeometryDim, Space::ReferenceDim>,
     {
         let mut supported_node_offsets = Vec::new();
-        let mut node_values = Vec::new();
+        let mut node_values = what_to_compute.compute_values().then(|| Vec::new());
+        let mut node_gradients = what_to_compute.compute_gradients().then(|| Vec::new());
         let mut node_indices = Vec::new();
 
+        let mut ref_gradient_buffer_flat = Vec::new();
+
+        let d = Space::GeometryDim::dim();
+
         for point in points {
-            let point_node_support_begin = node_values.len();
-            assert_eq!(point_node_support_begin, node_indices.len());
+            let point_node_support_begin = node_indices.len();
             supported_node_offsets.push(point_node_support_begin);
 
             let Some((element_idx, xi)) = space.find_closest_element_and_reference_coords(point)
@@ -136,15 +259,42 @@ impl<T: Real> FixedInterpolator<T> {
                 else { break };
 
             let element_node_count = space.element_node_count(element_idx);
-            node_values.extend(repeat(T::zero()).take(element_node_count));
             node_indices.extend(repeat(usize::MAX).take(element_node_count));
-            space.populate_element_basis(element_idx, &mut node_values[point_node_support_begin..], &xi);
             space.populate_element_nodes(&mut node_indices[point_node_support_begin..], element_idx);
+
+            if let Some(node_values) = &mut node_values {
+                debug_assert_eq!(point_node_support_begin, node_values.len());
+                node_values.extend(repeat(T::zero()).take(element_node_count));
+                space.populate_element_basis(element_idx, &mut node_values[point_node_support_begin..], &xi);
+            }
+
+            if let Some(node_gradients) = &mut node_gradients {
+                let point_node_gradients_begin = node_gradients.len();
+                // First store *reference* gradients in buffers
+                ref_gradient_buffer_flat.resize(d * element_node_count, T::zero());
+                let mut ref_gradients = MatrixViewMut::from_slice_generic(
+                    &mut ref_gradient_buffer_flat,
+                    Space::ReferenceDim::name(),
+                    Dyn(element_node_count)
+                );
+                space.populate_element_gradients(element_idx, ref_gradients.as_view_mut(), &xi);
+                // Next compute gradients in physical space by transforming by J^{-T}
+                // and storing directly in flat gradient storage
+                node_gradients.extend(repeat(T::zero()).take(d * element_node_count));
+                let mut gradient_buffer = MatrixViewMut::from_slice_generic(
+                    &mut node_gradients[point_node_gradients_begin..],
+                    Space::GeometryDim::name(),
+                    Dyn(element_node_count)
+                );
+                let jacobian = space.element_reference_jacobian(element_idx, &xi);
+                let j_inv_t = jacobian.try_inverse().unwrap().transpose();
+                gradient_buffer.gemm(T::one(), &j_inv_t, &ref_gradients, T::zero());
+            }
         }
 
-        supported_node_offsets.push(node_values.len());
+        supported_node_offsets.push(node_indices.len());
         assert_eq!(points.len() + 1, supported_node_offsets.len());
 
-        Self::from_compressed_values(node_values, node_indices, supported_node_offsets)
+        Self::from_compressed_values(node_values, node_gradients, node_indices, supported_node_offsets)
     }
 }
