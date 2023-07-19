@@ -6,17 +6,23 @@ use fenris::mesh::procedural::{create_unit_box_uniform_tet_mesh_3d, create_unit_
 use fenris::mesh::refinement::refine_uniformly_repeat;
 use fenris::mesh::{Mesh, Tet4Mesh, TriangleMesh2d};
 use fenris::quadrature::Quadrature;
-use fenris::space::{FindClosestElement, FiniteElementConnectivity, FiniteElementSpace, FixedInterpolator, InterpolateGradientInSpace, InterpolateInSpace, SpatiallyIndexed, ValuesOrGradients};
+use fenris::space::{
+    FindClosestElement, FiniteElementConnectivity, FiniteElementSpace, FixedInterpolator, InterpolateGradientInSpace,
+    InterpolateInSpace, SpatiallyIndexed, ValuesOrGradients,
+};
 use fenris::util::global_vector_from_point_fn;
 use fenris::{quadrature, SmallDim};
 use fenris_traits::allocators::{BiDimAllocator, TriDimAllocator};
 use itertools::{izip, Itertools};
 use matrixcompare::{assert_matrix_eq, prop_assert_matrix_eq};
-use nalgebra::{vector, DVectorView, DefaultAllocator, OMatrix, OPoint, OVector, Point2, Point3, Vector1, Vector2, Vector3, U1, U2, U3, Matrix3, Matrix2x3};
 use nalgebra::proptest::vector;
+use nalgebra::{
+    vector, DVectorView, DefaultAllocator, Matrix2x3, Matrix3, OMatrix, OPoint, OVector, Point2, Point3, Vector1,
+    Vector2, Vector3, U1, U2, U3,
+};
 use proptest::array::{uniform2, uniform3};
-use proptest::prelude::*;
 use proptest::collection::vec;
+use proptest::prelude::*;
 use util::flatten_vertically;
 
 fn u_scalar_2d(p: &Point2<f64>) -> Vector1<f64> {
@@ -266,10 +272,8 @@ fn basic_extrapolation() {
         .try_export(data_output_path().join("interpolation/extrapolation/base_mesh.vtu"))
         .unwrap();
 
-    let u_outer: Vec<Vector1<_>> = SpatiallyIndexed::from_space(base_mesh).interpolate_at_points(
-        outer_mesh.vertices(),
-        DVectorView::from(&u_base),
-    );
+    let u_outer: Vec<Vector1<_>> = SpatiallyIndexed::from_space(base_mesh)
+        .interpolate_at_points(outer_mesh.vertices(), DVectorView::from(&u_base));
 
     FiniteElementMeshDataSetBuilder::from_mesh(&outer_mesh)
         .with_point_scalar_attributes("u", 1, flatten_vertically(&u_outer).unwrap().as_slice())
@@ -382,14 +386,12 @@ fn spatially_indexed_tet4_find_closest() {
     }
 }
 
-fn point_in_unit_square() -> impl Strategy<Value=Point2<f64>> {
-    uniform2(0.0 ..= 1.0)
-        .prop_map(Point2::from)
+fn point_in_unit_square() -> impl Strategy<Value = Point2<f64>> {
+    uniform2(0.0..=1.0).prop_map(Point2::from)
 }
 
-fn point_in_unit_cube() -> impl Strategy<Value=Point3<f64>> {
-    uniform3(0.0 ..= 1.0)
-        .prop_map(Point3::from)
+fn point_in_unit_cube() -> impl Strategy<Value = Point3<f64>> {
+    uniform3(0.0..=1.0).prop_map(Point3::from)
 }
 
 proptest! {

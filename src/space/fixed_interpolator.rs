@@ -1,11 +1,11 @@
-use std::iter::repeat;
-use itertools::izip;
-use nalgebra::{DefaultAllocator, DimName, DVectorView, Dyn, MatrixView, MatrixViewMut, OMatrix, OPoint, OVector, U1};
+use crate::space::{FindClosestElement, VolumetricFiniteElementSpace};
 use fenris_traits::allocators::BiDimAllocator;
 use fenris_traits::Real;
+use itertools::izip;
 use nalgebra::allocator::Allocator;
+use nalgebra::{DVectorView, DefaultAllocator, DimName, Dyn, MatrixView, MatrixViewMut, OMatrix, OPoint, OVector, U1};
 use serde::{Deserialize, Serialize};
-use crate::space::{FindClosestElement, VolumetricFiniteElementSpace};
+use std::iter::repeat;
 
 /// Interpolates solution variables onto a fixed set of interpolation points.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -77,8 +77,11 @@ where
         interpolated_vectors
     }
 
-    pub fn interpolate_into<'a, SolutionDim>(&self, result: &mut [OVector<T, SolutionDim>], u: impl Into<DVectorView<'a, T>>)
-    where
+    pub fn interpolate_into<'a, SolutionDim>(
+        &self,
+        result: &mut [OVector<T, SolutionDim>],
+        u: impl Into<DVectorView<'a, T>>,
+    ) where
         SolutionDim: DimName,
         DefaultAllocator: Allocator<T, SolutionDim, U1>,
     {
@@ -86,9 +89,9 @@ where
     }
 
     fn interpolate_into_<'a, SolutionDim>(&self, result: &mut [OVector<T, SolutionDim>], u: DVectorView<'a, T>)
-        where
-            SolutionDim: DimName,
-            DefaultAllocator: Allocator<T, SolutionDim, U1>,
+    where
+        SolutionDim: DimName,
+        DefaultAllocator: Allocator<T, SolutionDim, U1>,
     {
         assert_eq!(
             result.len() + 1,
@@ -118,7 +121,7 @@ where
 
     pub fn interpolate_gradients<'a, GeometryDim, SolutionDim>(
         &self,
-        u: impl Into<DVectorView<'a, T>>
+        u: impl Into<DVectorView<'a, T>>,
     ) -> Vec<OMatrix<T, GeometryDim, SolutionDim>>
     where
         SolutionDim: DimName,
@@ -134,8 +137,8 @@ where
     pub fn interpolate_gradients_into<'a, GeometryDim, SolutionDim>(
         &self,
         result: &mut [OMatrix<T, GeometryDim, SolutionDim>],
-        u: impl Into<DVectorView<'a, T>>)
-    where
+        u: impl Into<DVectorView<'a, T>>,
+    ) where
         SolutionDim: DimName,
         GeometryDim: DimName,
         DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>,
@@ -146,8 +149,8 @@ where
     fn interpolate_gradients_into_<'a, SolutionDim, GeometryDim>(
         &self,
         gradients: &mut [OMatrix<T, GeometryDim, SolutionDim>],
-        u: DVectorView<'a, T>)
-    where
+        u: DVectorView<'a, T>,
+    ) where
         SolutionDim: DimName,
         GeometryDim: DimName,
         DefaultAllocator: BiDimAllocator<T, GeometryDim, SolutionDim>,
@@ -173,9 +176,10 @@ where
             let gradients_begin = gradient_len * idx_start;
             let gradients_end = gradient_len * idx_end;
             let node_gradients = MatrixView::from_slice_generic(
-                &node_gradients[gradients_begin .. gradients_end],
+                &node_gradients[gradients_begin..gradients_end],
                 GeometryDim::name(),
-                Dyn(idx_end - idx_start));
+                Dyn(idx_end - idx_start),
+            );
             let node_indices = &self.node_indices[idx_start..idx_end];
 
             let mut interpolated = OMatrix::<T, GeometryDim, SolutionDim>::zeros();
@@ -194,7 +198,7 @@ impl<T> FixedInterpolator<T> {
         node_values: Option<Vec<T>>,
         node_gradients: Option<Vec<T>>,
         node_indices: Vec<usize>,
-        supported_node_offsets: Vec<usize>
+        supported_node_offsets: Vec<usize>,
     ) -> Self {
         assert!(
             supported_node_offsets
@@ -203,13 +207,19 @@ impl<T> FixedInterpolator<T> {
             "Supported node offsets must be in bounds with respect to supported nodes."
         );
         if let Some(node_values) = &node_values {
-            assert_eq!(node_values.len(), node_indices.len(),
-                       "Number of node values and indices must be the same");
+            assert_eq!(
+                node_values.len(),
+                node_indices.len(),
+                "Number of node values and indices must be the same"
+            );
         }
         if let Some(node_gradients) = &node_gradients {
             if node_indices.len() != 0 {
-                assert_eq!(node_gradients.len() % node_indices.len(), 0,
-                           "Number of gradient values must be compatible with number of indices");
+                assert_eq!(
+                    node_gradients.len() % node_indices.len(),
+                    0,
+                    "Number of gradient values must be compatible with number of indices"
+                );
             } else if node_gradients.len() != 0 {
                 panic!("gradient data must be empty if indices are empty");
             }
@@ -233,7 +243,7 @@ impl<T: Real> FixedInterpolator<T> {
     pub fn from_space_and_points<Space>(
         space: &Space,
         points: &[OPoint<T, Space::GeometryDim>],
-        what_to_compute: ValuesOrGradients
+        what_to_compute: ValuesOrGradients,
     ) -> Self
     where
         // TODO: We currently have to restrict ourselves to volumetric finite element spaces
@@ -275,7 +285,7 @@ impl<T: Real> FixedInterpolator<T> {
                 let mut ref_gradients = MatrixViewMut::from_slice_generic(
                     &mut ref_gradient_buffer_flat,
                     Space::ReferenceDim::name(),
-                    Dyn(element_node_count)
+                    Dyn(element_node_count),
                 );
                 space.populate_element_gradients(element_idx, ref_gradients.as_view_mut(), &xi);
                 // Next compute gradients in physical space by transforming by J^{-T}
@@ -284,7 +294,7 @@ impl<T: Real> FixedInterpolator<T> {
                 let mut gradient_buffer = MatrixViewMut::from_slice_generic(
                     &mut node_gradients[point_node_gradients_begin..],
                     Space::GeometryDim::name(),
-                    Dyn(element_node_count)
+                    Dyn(element_node_count),
                 );
                 let jacobian = space.element_reference_jacobian(element_idx, &xi);
                 let j_inv_t = jacobian.try_inverse().unwrap().transpose();

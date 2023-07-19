@@ -15,11 +15,7 @@ fn interpolate_into() {
     ]; // Interpolation point 4
     let supported_node_offsets = vec![0, 2, 5, 8, 8];
 
-    let interpolator = FixedInterpolator::from_compressed_values(
-        node_values,
-        node_indices,
-        supported_node_offsets,
-    );
+    let interpolator = FixedInterpolator::from_compressed_values(node_values, node_indices, supported_node_offsets);
 
     let u = DVector::from_column_slice(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]);
 
