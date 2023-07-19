@@ -99,10 +99,8 @@ where
         })
         .multiunzip();
 
-    let mut u_interpolated = vec![OVector::<_, SolutionDim>::zeros(); x_expected.len()];
-    let mut grad_u_interpolated = vec![OMatrix::<_, GeometryDim, SolutionDim>::zeros(); x_expected.len()];
-    space.interpolate_at_points(&x_expected, DVectorView::from(&u_vec), &mut u_interpolated);
-    space.interpolate_gradient_at_points(&x_expected, DVectorView::from(&u_vec), &mut grad_u_interpolated);
+    let u_interpolated = space.interpolate_at_points(&x_expected, u_vec.as_view());
+    let grad_u_interpolated = space.interpolate_gradient_at_points(&x_expected, u_vec.as_view());
 
     ExpectedInterpolationTestValues {
         u_expected,
@@ -270,11 +268,9 @@ fn basic_extrapolation() {
         .try_export(data_output_path().join("interpolation/extrapolation/base_mesh.vtu"))
         .unwrap();
 
-    let mut u_outer = vec![Vector1::zeros(); outer_mesh.vertices().len()];
-    SpatiallyIndexed::from_space(base_mesh).interpolate_at_points(
+    let u_outer: Vec<Vector1<_>> = SpatiallyIndexed::from_space(base_mesh).interpolate_at_points(
         outer_mesh.vertices(),
         DVectorView::from(&u_base),
-        &mut u_outer,
     );
 
     FiniteElementMeshDataSetBuilder::from_mesh(&outer_mesh)
