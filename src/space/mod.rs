@@ -9,11 +9,13 @@ use fenris_geometry::AxisAlignedBoundingBox;
 use nalgebra::{DefaultAllocator, OPoint, Scalar};
 
 mod interpolate;
+mod fixed_interpolator;
 mod space_impl;
 mod spatially_indexed;
 
 pub use interpolate::*;
 pub use spatially_indexed::SpatiallyIndexed;
+pub use fixed_interpolator::FixedInterpolator;
 
 /// Describes the connectivity of elements in a finite element space.
 pub trait FiniteElementConnectivity {

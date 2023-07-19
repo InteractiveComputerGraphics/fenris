@@ -1,13 +1,13 @@
-use crate::allocators::BiDimAllocator;
-use crate::space::GeometricFiniteElementSpace;
-use crate::Real;
+use nalgebra::{DefaultAllocator, DimMin, DimName, DVector, OPoint, OVector, U1};
+use fenris_traits::allocators::BiDimAllocator;
+use fenris_traits::Real;
 use nalgebra::allocator::Allocator;
-use nalgebra::{DVector, DefaultAllocator, DimMin, DimName, OPoint, OVector, U1};
 use serde::{Deserialize, Serialize};
+use crate::space::GeometricFiniteElementSpace;
 
 /// Interpolates solution variables onto a fixed set of interpolation points.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct FiniteElementInterpolator<T> {
+pub struct FixedInterpolator<T> {
     // Store the highest node index in supported_nodes, so that we can
     // guarantee that we don't go out of bounds during interpolation.
     max_node_index: Option<usize>,
@@ -33,7 +33,7 @@ pub struct FiniteElementInterpolator<T> {
     node_values: Vec<(T, usize)>,
 }
 
-impl<T> FiniteElementInterpolator<T>
+impl<T> FixedInterpolator<T>
 where
     T: Real,
 {
@@ -78,7 +78,7 @@ where
     }
 }
 
-impl<T> FiniteElementInterpolator<T> {
+impl<T> FixedInterpolator<T> {
     pub fn from_compressed_values(node_values: Vec<(T, usize)>, supported_node_offsets: Vec<usize>) -> Self {
         assert!(
             supported_node_offsets
@@ -95,7 +95,7 @@ impl<T> FiniteElementInterpolator<T> {
     }
 }
 
-impl<T> FiniteElementInterpolator<T> {
+impl<T> FixedInterpolator<T> {
     pub fn interpolate_space<'a, Space, D>(
         _space: &'a Space,
         _interpolation_points: &'a [OPoint<T, D>],
@@ -142,16 +142,4 @@ impl<T> FiniteElementInterpolator<T> {
         //     supported_node_offsets,
         // ))
     }
-}
-
-pub trait MakeInterpolator<T, D>
-where
-    T: Real,
-    D: DimName + DimMin<D, Output = D>,
-    DefaultAllocator: Allocator<T, D>,
-{
-    fn make_interpolator(
-        &self,
-        interpolation_points: &[OPoint<T, D>],
-    ) -> Result<FiniteElementInterpolator<T>, Box<dyn std::error::Error>>;
 }

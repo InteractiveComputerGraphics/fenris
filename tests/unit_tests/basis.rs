@@ -1,4 +1,4 @@
-use fenris::model::FiniteElementInterpolator;
+use fenris::space::FixedInterpolator;
 use nalgebra::{DVector, Vector2};
 
 use proptest::prelude::*;
@@ -15,7 +15,7 @@ fn interpolate_into() {
     ]; // Interpolation point 4
     let supported_node_offsets = vec![0, 2, 5, 8, 8];
 
-    let interpolator = FiniteElementInterpolator::from_compressed_values(
+    let interpolator = FixedInterpolator::from_compressed_values(
         values.into_iter().zip(supported_nodes).collect(),
         supported_node_offsets,
     );
