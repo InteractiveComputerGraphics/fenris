@@ -79,7 +79,7 @@ members = [
 [workspace.package]
 # Currently only fenris and fenris-solid inherit this version. The rule of thumb is that anything that depends *on* fenris
 # as part of the workspace should share the same version (and be released at the same time)
-version = "0.0.30"
+version = "0.0.31"
 # Other sub-packages also inherit this stuff
 authors = ["Andreas Longva <andreas.b.longva@gmail.com>"]
 edition = "2021"
