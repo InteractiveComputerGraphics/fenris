@@ -23,7 +23,7 @@ where
         interpolation_weights: DVectorView<T>,
     ) -> OVector<T, SolutionDim> {
         let mut buffer = [OVector::<_, SolutionDim>::zeros()];
-        self.interpolate_at_points(array::from_ref(point), interpolation_weights, &mut buffer);
+        self.interpolate_at_points_into(array::from_ref(point), interpolation_weights, &mut buffer);
         let [result] = buffer;
         result
     }
@@ -53,12 +53,22 @@ where
     /// An implementation may also panic if the length of the interpolation weights vector
     /// is not equal to $s n$, where $s$ is the solution dimension and $n$ is the number of
     /// nodes/vertices in the space.
-    fn interpolate_at_points(
+    fn interpolate_at_points_into(
         &self,
         points: &[OPoint<T, Self::GeometryDim>],
         interpolation_weights: DVectorView<T>,
         result_buffer: &mut [OVector<T, SolutionDim>],
     );
+
+    fn interpolate_at_points(
+        &self,
+        points: &[OPoint<T, Self::GeometryDim>],
+        interpolation_weights: DVectorView<T>,
+    ) -> Vec<OVector<T, SolutionDim>> {
+        let mut result = vec![OVector::<T, SolutionDim>::zeros(); points.len()];
+        self.interpolate_at_points_into(points, interpolation_weights, result.as_mut_slice());
+        result
+    }
 }
 
 /// A volumetric finite element space that allows interpolation of gradients at arbitrary points.
@@ -78,7 +88,7 @@ where
         interpolation_weights: DVectorView<T>,
     ) -> OMatrix<T, Self::GeometryDim, SolutionDim> {
         let mut buffer = [OMatrix::<_, Self::GeometryDim, SolutionDim>::zeros()];
-        self.interpolate_gradient_at_points(array::from_ref(point), interpolation_weights, &mut buffer);
+        self.interpolate_gradient_at_points_into(array::from_ref(point), interpolation_weights, &mut buffer);
         let [result] = buffer;
         result
     }
@@ -108,12 +118,22 @@ where
     /// An implementation may also panic if the length of the interpolation weights vector
     /// is not equal to $s n$, where $s$ is the solution dimension and $n$ is the number of
     /// nodes/vertices in the space.
-    fn interpolate_gradient_at_points(
+    fn interpolate_gradient_at_points_into(
         &self,
         points: &[OPoint<T, Self::GeometryDim>],
         interpolation_weights: DVectorView<T>,
         result_buffer: &mut [OMatrix<T, Self::GeometryDim, SolutionDim>],
     );
+
+    fn interpolate_gradient_at_points(
+        &self,
+        points: &[OPoint<T, Self::GeometryDim>],
+        interpolation_weights: DVectorView<T>,
+    ) -> Vec<OMatrix<T, Self::GeometryDim, SolutionDim>> {
+        let mut result = vec![OMatrix::<_, Self::GeometryDim, SolutionDim>::zeros(); points.len()];
+        self.interpolate_gradient_at_points_into(points, interpolation_weights, result.as_mut_slice());
+        result
+    }
 }
 
 define_thread_local_workspace!(INTERPOLATE_WORKSPACE);

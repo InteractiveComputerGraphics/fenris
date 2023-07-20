@@ -7,18 +7,22 @@ use fenris::mesh::refinement::refine_uniformly_repeat;
 use fenris::mesh::{Mesh, Tet4Mesh, TriangleMesh2d};
 use fenris::quadrature::Quadrature;
 use fenris::space::{
-    FindClosestElement, FiniteElementConnectivity, FiniteElementSpace, InterpolateGradientInSpace, InterpolateInSpace,
-    SpatiallyIndexed,
+    FindClosestElement, FiniteElementConnectivity, FiniteElementSpace, FixedInterpolator, InterpolateGradientInSpace,
+    InterpolateInSpace, SpatiallyIndexed, ValuesOrGradients,
 };
 use fenris::util::global_vector_from_point_fn;
 use fenris::{quadrature, SmallDim};
 use fenris_traits::allocators::{BiDimAllocator, TriDimAllocator};
 use itertools::{izip, Itertools};
-use matrixcompare::assert_matrix_eq;
+use matrixcompare::{assert_matrix_eq, prop_assert_matrix_eq};
+use nalgebra::proptest::vector;
 use nalgebra::{
-    vector, DVectorView, DefaultAllocator, OMatrix, OPoint, OVector, Point2, Point3, Vector1, Vector2, Vector3, U1, U2,
-    U3,
+    vector, DVectorView, DefaultAllocator, Matrix2x3, Matrix3, OMatrix, OPoint, OVector, Point2, Point3, Vector1,
+    Vector2, Vector3, U1, U2, U3,
 };
+use proptest::array::{uniform2, uniform3};
+use proptest::collection::vec;
+use proptest::prelude::*;
 use util::flatten_vertically;
 
 fn u_scalar_2d(p: &Point2<f64>) -> Vector1<f64> {
@@ -99,10 +103,8 @@ where
         })
         .multiunzip();
 
-    let mut u_interpolated = vec![OVector::<_, SolutionDim>::zeros(); x_expected.len()];
-    let mut grad_u_interpolated = vec![OMatrix::<_, GeometryDim, SolutionDim>::zeros(); x_expected.len()];
-    space.interpolate_at_points(&x_expected, DVectorView::from(&u_vec), &mut u_interpolated);
-    space.interpolate_gradient_at_points(&x_expected, DVectorView::from(&u_vec), &mut grad_u_interpolated);
+    let u_interpolated = space.interpolate_at_points(&x_expected, u_vec.as_view());
+    let grad_u_interpolated = space.interpolate_gradient_at_points(&x_expected, u_vec.as_view());
 
     ExpectedInterpolationTestValues {
         u_expected,
@@ -270,12 +272,8 @@ fn basic_extrapolation() {
         .try_export(data_output_path().join("interpolation/extrapolation/base_mesh.vtu"))
         .unwrap();
 
-    let mut u_outer = vec![Vector1::zeros(); outer_mesh.vertices().len()];
-    SpatiallyIndexed::from_space(base_mesh).interpolate_at_points(
-        outer_mesh.vertices(),
-        DVectorView::from(&u_base),
-        &mut u_outer,
-    );
+    let u_outer: Vec<Vector1<_>> = SpatiallyIndexed::from_space(base_mesh)
+        .interpolate_at_points(outer_mesh.vertices(), DVectorView::from(&u_base));
 
     FiniteElementMeshDataSetBuilder::from_mesh(&outer_mesh)
         .with_point_scalar_attributes("u", 1, flatten_vertically(&u_outer).unwrap().as_slice())
@@ -384,6 +382,83 @@ fn spatially_indexed_tet4_find_closest() {
 
             assert_eq!(closest_element_idx, element_idx);
             assert_matrix_eq!(xi_closest.coords, xi_q.coords, comp = abs, tol = 1e-12);
+        }
+    }
+}
+
+fn point_in_unit_square() -> impl Strategy<Value = Point2<f64>> {
+    uniform2(0.0..=1.0).prop_map(Point2::from)
+}
+
+fn point_in_unit_cube() -> impl Strategy<Value = Point3<f64>> {
+    uniform3(0.0..=1.0).prop_map(Point3::from)
+}
+
+proptest! {
+    #[test]
+    fn fixed_interpolator_matches_on_demand_tri2d(
+        points in vec(point_in_unit_square(), 0 .. 20),
+        u in vector(-1.0 ..= 1.0, 3 * 4)
+    ) {
+        let mesh: TriangleMesh2d<f64> = create_unit_square_uniform_tri_mesh_2d(1);
+        assert_eq!(3 * mesh.vertices().len(), u.len(),
+            "size of solution variables vector is currently semi-hardcoded to be compatible \
+             with the number of mesh vertices");
+        let indexed = SpatiallyIndexed::from_space(mesh);
+
+        use ValuesOrGradients::{Both, OnlyValues, OnlyGradients};
+        for what_to_compute in [Both, OnlyValues, OnlyGradients] {
+            let fixed_interpolator = FixedInterpolator::from_space_and_points(&indexed, &points, what_to_compute);
+            let fixed_interpolator_par = FixedInterpolator::from_space_and_points_par(&indexed, &points, what_to_compute);
+            assert_eq!(fixed_interpolator, fixed_interpolator_par);
+
+            if what_to_compute.compute_values() {
+                let interpolated_fixed = fixed_interpolator.interpolate::<U3>(&u);
+                let interpolated_indexed: Vec<Vector3<_>> = indexed.interpolate_at_points(&points, u.as_view());
+                prop_assert_eq!(interpolated_fixed, interpolated_indexed);
+            }
+
+            if what_to_compute.compute_gradients() {
+                let gradients_fixed = fixed_interpolator.interpolate_gradients::<U2, U3>(&u);
+                let gradients_indexed: Vec<Matrix2x3<_>> = indexed.interpolate_gradient_at_points(&points, u.as_view());
+                prop_assert_eq!(gradients_fixed.len(), gradients_indexed.len());
+                for (gradient_fixed, gradient_indexed) in izip!(&gradients_fixed, &gradients_indexed) {
+                    prop_assert_matrix_eq!(gradient_fixed, gradient_indexed, comp = abs, tol = 1e-9);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn fixed_interpolator_matches_on_demand_tet3d(
+        points in vec(point_in_unit_cube(), 0 .. 20),
+        u in vector(-1.0 ..= 1.0, 3 * 35)
+    ) {
+        let mesh: Tet4Mesh<f64> = create_unit_box_uniform_tet_mesh_3d(2);
+        assert_eq!(3 * mesh.vertices().len(), u.len(),
+            "size of solution variables vector is currently semi-hardcoded to be compatible \
+             with the number of mesh vertices");
+        let indexed = SpatiallyIndexed::from_space(mesh);
+        use ValuesOrGradients::{Both, OnlyValues, OnlyGradients};
+        for what_to_compute in [Both, OnlyValues, OnlyGradients] {
+            let fixed_interpolator = FixedInterpolator::from_space_and_points(&indexed, &points, what_to_compute);
+            let fixed_interpolator_par = FixedInterpolator::from_space_and_points_par(&indexed, &points, what_to_compute);
+            assert_eq!(fixed_interpolator, fixed_interpolator_par);
+
+            if what_to_compute.compute_values() {
+                let interpolated_fixed = fixed_interpolator.interpolate::<U3>(&u);
+                let interpolated_indexed: Vec<Vector3<_>> = indexed.interpolate_at_points(&points, u.as_view());
+                prop_assert_eq!(interpolated_fixed, interpolated_indexed);
+            }
+
+            if what_to_compute.compute_gradients() {
+                let gradients_fixed = fixed_interpolator.interpolate_gradients::<U3, U3>(&u);
+                let gradients_indexed: Vec<Matrix3<_>> = indexed.interpolate_gradient_at_points(&points, u.as_view());
+                prop_assert_eq!(gradients_fixed.len(), gradients_indexed.len());
+                for (gradient_fixed, gradient_indexed) in izip!(&gradients_fixed, &gradients_indexed) {
+                    prop_assert_matrix_eq!(gradient_fixed, gradient_indexed, comp = abs, tol = 1e-9);
+                }
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-use fenris::model::FiniteElementInterpolator;
+use fenris::space::FixedInterpolator;
 use nalgebra::{DVector, Vector2};
 
 use proptest::prelude::*;
@@ -7,18 +7,17 @@ use matrixcompare::assert_scalar_eq;
 
 #[test]
 fn interpolate_into() {
-    let values = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-    let supported_nodes = vec![
+    let node_values = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+    let node_indices = vec![
         0, 1, // Interpolation point 1
         0, 3, 4, // Interpolation point 2
         1, 2, 4, // Interpolation point 3
     ]; // Interpolation point 4
     let supported_node_offsets = vec![0, 2, 5, 8, 8];
 
-    let interpolator = FiniteElementInterpolator::from_compressed_values(
-        values.into_iter().zip(supported_nodes).collect(),
-        supported_node_offsets,
-    );
+    // TODO: Test gradients... (They're implicitly tested in other proptests though)
+    let interpolator =
+        FixedInterpolator::from_compressed_values(Some(node_values), None, node_indices, supported_node_offsets);
 
     let u = DVector::from_column_slice(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]);
 

@@ -8,10 +8,12 @@ use crate::SmallDim;
 use fenris_geometry::AxisAlignedBoundingBox;
 use nalgebra::{DefaultAllocator, OPoint, Scalar};
 
+mod fixed_interpolator;
 mod interpolate;
 mod space_impl;
 mod spatially_indexed;
 
+pub use fixed_interpolator::{FixedInterpolator, ValuesOrGradients};
 pub use interpolate::*;
 pub use spatially_indexed::SpatiallyIndexed;
 
