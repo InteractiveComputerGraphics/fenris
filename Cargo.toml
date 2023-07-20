@@ -79,7 +79,7 @@ members = [
 [workspace.package]
 # Currently only fenris and fenris-solid inherit this version. The rule of thumb is that anything that depends *on* fenris
 # as part of the workspace should share the same version (and be released at the same time)
-version = "0.0.31"
+version = "0.0.32"
 # Other sub-packages also inherit this stuff
 authors = ["Andreas Longva <andreas.b.longva@gmail.com>"]
 edition = "2021"
@@ -89,7 +89,7 @@ repository = "https://github.com/InteractiveComputerGraphics/fenris"
 [workspace.dependencies]
 nalgebra = { version = "0.32.1", default-features = false }
 nalgebra-sparse = { version = "0.9.0", default-features = false }
-fenris = { version = "0.0.31", path = "." }
+fenris = { version = "0.0.32", path = "." }
 
 [[bench]]
 name = "assembly"
