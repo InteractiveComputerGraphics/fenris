@@ -89,7 +89,7 @@ repository = "https://github.com/InteractiveComputerGraphics/fenris"
 [workspace.dependencies]
 nalgebra = { version = "0.32.1", default-features = false }
 nalgebra-sparse = { version = "0.9.0", default-features = false }
-fenris = { version = "0.0.30", path = "." }
+fenris = { version = "0.0.31", path = "." }
 
 [[bench]]
 name = "assembly"
