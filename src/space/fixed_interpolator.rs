@@ -309,8 +309,8 @@ impl<T: Real> FixedInterpolator<T> {
         Self::from_compressed_values(node_values, node_gradients, node_indices, supported_node_offsets)
     }
 
-    /// Same as [`from_space_and_points`], but runs parts of the algorithm in parallel with
-    /// `rayon`.
+    /// Same as [`from_space_and_points`](Self::from_space_and_points),
+    /// but runs parts of the algorithm in parallel with `rayon`.
     pub fn from_space_and_points_par<Space>(
         space: &Space,
         points: &[OPoint<T, Space::GeometryDim>],
