@@ -1,9 +1,6 @@
-use crate::connectivity::{
-    Connectivity, ConnectivityMut, Hex20Connectivity, Hex27Connectivity, Hex8Connectivity, Quad4d2Connectivity,
-    Quad9d2Connectivity, Tet10Connectivity, Tet4Connectivity, Tri3d2Connectivity, Tri6d2Connectivity,
-};
+use crate::connectivity::{Connectivity, ConnectivityMut, Hex20Connectivity, Hex27Connectivity, Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity, Tet10Connectivity, Tet20Connectivity, Tet4Connectivity, Tri3d2Connectivity, Tri6d2Connectivity};
 use crate::element::{ElementConnectivity, FiniteElement};
-use crate::mesh::{HexMesh, Mesh, Mesh2d, Mesh3d, Tet4Mesh};
+use crate::mesh::{HexMesh, Mesh, Mesh2d, Mesh3d, Tet20Mesh, Tet4Mesh};
 use nalgebra::allocator::Allocator;
 use nalgebra::{DefaultAllocator, DimName, OPoint, Point2, Point3, Scalar, U3};
 
@@ -14,7 +11,7 @@ use fenris_nested_vec::NestedVec;
 use itertools::{izip, Itertools};
 use numeric_literals::replace_float_literals;
 use rustc_hash::FxHashMap;
-use std::collections::HashMap;
+use std::collections::{HashMap};
 use std::convert::TryFrom;
 use std::error::Error;
 
@@ -651,5 +648,122 @@ where
             poly_mesh.vertices().to_vec(),
             connectivity,
         ))
+    }
+}
+
+#[replace_float_literals(T::from_f64(literal).unwrap())]
+impl<'a, T: Real> From<&'a Tet4Mesh<T>> for Tet20Mesh<T> {
+    fn from(tet4_mesh: &'a Tet4Mesh<T>) -> Self {
+        // We represent each new vertex with 4 integers as follows:
+        //
+        // # A vertex in the original mesh
+        //  [idx, 0, 0, 0],
+        //  where idx is the index of the vertex.
+        //
+        // # Internal point on edge
+        // Tet20 elements have 2 points per edge. We represent such a vertex as
+        //  [min_idx, max_idx, local_idx, 1]
+        // where min_idx is the smallest of the two vertex indices, max_idx is the largest
+        // and local_idx is either 0 or 1, indicating which of the two vertices on the edge
+        // is represented, from the direction of min_idx
+        //
+        // # Face midpoint
+        // Represented b
+        //  [a, b, c, 2]
+        // where a < b < c and a, b, c are the indices of the three vertices that make up the face
+        // in the original mesh.
+        const VERTEX: usize = 0;
+        const EDGE: usize = 1;
+        const FACE: usize = 2;
+
+        let normalized_vertex = |vertex_idx| {
+            [vertex_idx, 0, 0, VERTEX]
+        };
+        let normalized_edge = |[mut start, mut end, mut local_idx]: [usize; 3]| {
+            if start > end {
+                (start, end) = (end, start);
+                // "Flip" local idx, i.e. 0 -> 1, 1 -> 0
+                local_idx = (local_idx + 1) % 2;
+            }
+            [start, end, local_idx, EDGE]
+        };
+        let normalized_face = |mut face_vertices: [usize; 3]| {
+            face_vertices.sort_unstable();
+            let [a, b, c] = face_vertices;
+            [a, b, c, FACE]
+        };
+
+        let unlabeled_vertices_for_tet4_element = |&Tet4Connectivity([v0, v1, v2, v3])| {
+            [
+                normalized_vertex(v0),
+                normalized_vertex(v1),
+                normalized_vertex(v2),
+                normalized_vertex(v3),
+                normalized_edge([v0, v1, 0]),
+                normalized_edge([v0, v1, 1]),
+                normalized_edge([v0, v2, 0]),
+                normalized_edge([v0, v2, 1]),
+                normalized_edge([v0, v3, 0]),
+                normalized_edge([v0, v3, 1]),
+                normalized_edge([v1, v2, 0]),
+                normalized_edge([v1, v2, 1]),
+                normalized_edge([v1, v3, 0]),
+                normalized_edge([v1, v3, 1]),
+                normalized_edge([v2, v3, 0]),
+                normalized_edge([v2, v3, 1]),
+                normalized_face([v0, v1, v2]),
+                normalized_face([v0, v1, v3]),
+                normalized_face([v0, v2, v3]),
+                normalized_face([v1, v2, v3]),
+            ]
+        };
+
+        let mut unlabeled_vertices: Vec<_> = tet4_mesh.connectivity()
+            .iter()
+            .map(unlabeled_vertices_for_tet4_element)
+            .flatten()
+            .collect();
+        unlabeled_vertices.sort_unstable();
+        unlabeled_vertices.dedup();
+
+        let new_connectivity = tet4_mesh.connectivity()
+            .iter()
+            .map(unlabeled_vertices_for_tet4_element)
+            .map(|element_unlabeled_vertices| element_unlabeled_vertices.map(|unlabeled_vertex| {
+                // TODO: Maybe binary search is too slow? Construct a hash map...?
+                unlabeled_vertices.binary_search(&dbg!(unlabeled_vertex))
+                    .expect("all vertices exist by construction")
+            }))
+            .map(Tet20Connectivity)
+            .collect();
+
+        let new_vertices = unlabeled_vertices.into_iter()
+            .map(|unlabeled_vertex| {
+                let vertex_kind = unlabeled_vertex[3];
+                match vertex_kind {
+                    VERTEX => {
+                        let vertex_idx = unlabeled_vertex[0];
+                        tet4_mesh.vertices()[vertex_idx].clone()
+                    },
+                    EDGE => {
+                        let [start_idx, end_idx, local_idx, _] = unlabeled_vertex;
+                        let [start, end] = [start_idx, end_idx]
+                            .map(|v_idx| tet4_mesh.vertices()[v_idx].coords.clone());
+                        let numerator = T::from_usize(local_idx + 1).unwrap();
+                        let alpha = numerator / 3.0;
+                        OPoint::from(start + (end - start) * alpha)
+                    },
+                    FACE => {
+                        let [a_idx, b_idx, c_idx, _] = unlabeled_vertex;
+                        let [a, b, c] = [a_idx, b_idx, c_idx]
+                            .map(|v_idx| tet4_mesh.vertices()[v_idx].coords.clone());
+                        OPoint::from((a + b + c) / 3.0)
+                    },
+                    _ => unreachable!()
+                }
+            })
+            .collect();
+
+        Tet20Mesh::from_vertices_and_connectivity(new_vertices, new_connectivity)
     }
 }

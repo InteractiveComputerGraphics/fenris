@@ -16,6 +16,7 @@ use std::cmp::max;
 
 mod procedural;
 mod refinement;
+mod mesh_convert;
 
 #[test]
 fn quad4_find_boundary_faces() {
