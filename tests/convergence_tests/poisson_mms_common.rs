@@ -20,10 +20,10 @@ use itertools::izip;
 use matrixcompare::assert_matrix_eq;
 use nalgebra::allocator::Allocator;
 use nalgebra::OVector;
-use nalgebra_sparse::factorization::CscCholesky;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::path::PathBuf;
+use fenris_sparse::cg::{ConjugateGradient, RelativeResidualCriterion};
 
 /// For serializing to JSON for subsequent analysis/plots
 #[derive(Serialize, Deserialize)]
@@ -141,13 +141,24 @@ where
 
 pub fn solve_linear_system(matrix: &CsrMatrix<f64>, rhs: &DVector<f64>) -> eyre::Result<DVector<f64>> {
     // The discrete Laplace operator is positive definite (given appropriate boundary conditions),
-    // so we can use a Cholesky factorization
-    let cholesky =
-        CscCholesky::factor(&matrix.into()).map_err(|err| eyre!("Failed to solve linear system. Error: {}", err))?;
-    // TODO: So apparently `CscCholesky::solve` only works with dynamic matrices. Should support
-    // any kind of matrix, especially vectors (DVector in particular)!
-    // Need to make a PR for this
-    let u = cholesky.solve(rhs);
+    // so we can use the Conjugate Gradient solver
+
+    // TODO: Use parallel SPMV kernels
+
+    let mut matrix_diag_inv = matrix.diagonal_as_csr();
+    for m_ii in matrix_diag_inv.values_mut() {
+        *m_ii = m_ii.recip();
+    }
+
+    let mut u = DVector::zeros(rhs.len());
+    ConjugateGradient::new()
+        .with_operator(matrix)
+        .with_preconditioner(&matrix_diag_inv)
+        .with_max_iter(10000)
+        .with_stopping_criterion(RelativeResidualCriterion::new(1e-9))
+        .solve_with_guess(rhs, &mut u)
+        .map_err(|cg_error| eyre!("{cg_error}"))?;
+
     Ok(u.reshape_generic(Dyn(rhs.len()), U1::name()))
 }
 
