@@ -8,7 +8,7 @@ use fenris::assembly::operators::Operator;
 use fenris::element::ElementConnectivity;
 use fenris::io::vtk::VtkCellConnectivity;
 use fenris::mesh::procedural::{create_unit_box_uniform_hex_mesh_3d, create_unit_box_uniform_tet_mesh_3d};
-use fenris::mesh::{Hex20Mesh, Hex27Mesh, Mesh3d, Tet10Mesh};
+use fenris::mesh::{Hex20Mesh, Hex27Mesh, Mesh3d, Tet10Mesh, Tet20Mesh};
 use fenris::nalgebra::coordinates::XYZ;
 use fenris::nalgebra::{OPoint, OVector, Point3, Vector1, Vector3, U1, U3};
 use fenris::quadrature;
@@ -119,7 +119,7 @@ fn poisson_3d_tet4() {
 
 #[test]
 fn poisson_3d_tet10() {
-    let resolutions = [1, 2, 4, 8];
+    let resolutions = [1, 2, 4, 8, 12];
     let mesh_producer = |res| Tet10Mesh::from(&create_unit_box_uniform_tet_mesh_3d(res));
     // TODO: Use "correct" quadrature
     let quadrature = quadrature::total_order::tetrahedron(2).unwrap();
@@ -128,20 +128,11 @@ fn poisson_3d_tet10() {
 }
 
 #[test]
-#[ignore]
 fn poisson_3d_tet20() {
-    // TODO: We don't have proper conversion for Tet20 atm, so we can't easily implement this
-    // test without some effort for conversion.
-    // let resolutions = [1, 2, 4, 8, 16];
-    // let mesh_producer = |res| Tet20Mesh::from(&create_unit_box_uniform_tet_mesh_3d(res));
-    // // TODO: Use "correct" quadrature
-    // let quadrature = quadrature::total_order::tetrahedron(2).unwrap();
-    // let error_quadrature = quadrature::total_order::tetrahedron(6).unwrap();
-    // solve_and_produce_output(
-    //     "Tet20",
-    //     &resolutions,
-    //     mesh_producer,
-    //     quadrature,
-    //     error_quadrature,
-    // );
+    let resolutions = [1, 2, 4, 6, 8, 12];
+    let mesh_producer = |res| Tet20Mesh::from(&create_unit_box_uniform_tet_mesh_3d(res));
+    // TODO: Use "correct" quadrature
+    let quadrature = quadrature::total_order::tetrahedron(4).unwrap();
+    let error_quadrature = quadrature::total_order::tetrahedron(6).unwrap();
+    solve_and_produce_output("Tet20", &resolutions, mesh_producer, quadrature, error_quadrature);
 }

@@ -14,6 +14,7 @@ use proptest::collection::vec;
 use proptest::prelude::*;
 use std::cmp::max;
 
+mod mesh_convert;
 mod procedural;
 mod refinement;
 
