@@ -119,7 +119,7 @@ fn poisson_3d_tet4() {
 
 #[test]
 fn poisson_3d_tet10() {
-    let resolutions = [1, 2, 4, 8];
+    let resolutions = [1, 2, 4, 8, 12];
     let mesh_producer = |res| Tet10Mesh::from(&create_unit_box_uniform_tet_mesh_3d(res));
     // TODO: Use "correct" quadrature
     let quadrature = quadrature::total_order::tetrahedron(2).unwrap();
@@ -129,7 +129,7 @@ fn poisson_3d_tet10() {
 
 #[test]
 fn poisson_3d_tet20() {
-    let resolutions = [1, 2, 4, 6];
+    let resolutions = [1, 2, 4, 6, 8, 12];
     let mesh_producer = |res| Tet20Mesh::from(&create_unit_box_uniform_tet_mesh_3d(res));
     // TODO: Use "correct" quadrature
     let quadrature = quadrature::total_order::tetrahedron(4).unwrap();
