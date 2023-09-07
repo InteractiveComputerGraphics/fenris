@@ -731,7 +731,7 @@ impl<'a, T: Real> From<&'a Tet4Mesh<T>> for Tet20Mesh<T> {
             .map(unlabeled_vertices_for_tet4_element)
             .map(|element_unlabeled_vertices| element_unlabeled_vertices.map(|unlabeled_vertex| {
                 // TODO: Maybe binary search is too slow? Construct a hash map...?
-                unlabeled_vertices.binary_search(&dbg!(unlabeled_vertex))
+                unlabeled_vertices.binary_search(&unlabeled_vertex)
                     .expect("all vertices exist by construction")
             }))
             .map(Tet20Connectivity)
