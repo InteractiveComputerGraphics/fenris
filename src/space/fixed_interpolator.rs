@@ -103,7 +103,9 @@ where
             self.max_node_index.is_none() || SolutionDim::dim() * self.max_node_index.unwrap() < u.len(),
             "Cannot reference degrees of freedom not present in solution variables"
         );
-        let Some(node_values) = &self.node_values else { panic!("cannot interpolate without nodal values") };
+        let Some(node_values) = &self.node_values else {
+            panic!("cannot interpolate without nodal values")
+        };
 
         for i in 0..result.len() {
             let i_support_start = self.supported_node_offsets[i];
@@ -166,8 +168,9 @@ where
             "Cannot reference degrees of freedom not present in solution variables"
         );
 
-        let Some(node_gradients) = &self.node_gradients
-            else { panic!("cannot interpolate gradients without nodal gradient values") };
+        let Some(node_gradients) = &self.node_gradients else {
+            panic!("cannot interpolate gradients without nodal gradient values")
+        };
 
         let gradient_len = GeometryDim::dim();
 
@@ -266,8 +269,10 @@ impl<T: Real> FixedInterpolator<T> {
             supported_node_offsets.push(point_node_support_begin);
 
             let Some((element_idx, xi)) = space.find_closest_element_and_reference_coords(point)
-                // break out of the loop if there are no elements in the space
-                else { break };
+            // break out of the loop if there are no elements in the space
+            else {
+                break;
+            };
 
             let element_node_count = space.element_node_count(element_idx);
             node_indices.extend(repeat(usize::MAX).take(element_node_count));
@@ -346,8 +351,10 @@ impl<T: Real> FixedInterpolator<T> {
             supported_node_offsets.push(point_node_support_begin);
 
             let Some((element_idx, xi)) = closest_element_and_ref_coord
-                // break out of the loop if there are no elements in the space
-                else { break };
+            // break out of the loop if there are no elements in the space
+            else {
+                break;
+            };
 
             let element_node_count = space.element_node_count(element_idx);
             node_indices.extend(repeat(usize::MAX).take(element_node_count));

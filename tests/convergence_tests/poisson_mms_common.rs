@@ -16,6 +16,7 @@ use fenris::nalgebra::{DVector, DefaultAllocator, DimName, Dyn, OPoint, UniformN
 use fenris::nalgebra_sparse::CsrMatrix;
 use fenris::quadrature::QuadraturePair;
 use fenris::SmallDim;
+use fenris_sparse::cg::{ConjugateGradient, RelativeResidualCriterion};
 use itertools::izip;
 use matrixcompare::assert_matrix_eq;
 use nalgebra::allocator::Allocator;
@@ -23,7 +24,6 @@ use nalgebra::OVector;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::path::PathBuf;
-use fenris_sparse::cg::{ConjugateGradient, RelativeResidualCriterion};
 
 /// For serializing to JSON for subsequent analysis/plots
 #[derive(Serialize, Deserialize)]

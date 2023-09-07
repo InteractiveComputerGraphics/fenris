@@ -1,6 +1,3 @@
-use matrixcompare::assert_scalar_eq;
-use nalgebra::coordinates::XYZ;
-use nalgebra::{Point3, U1, Vector1};
 use fenris::assembly::global::assemble_scalar;
 use fenris::assembly::local::UniformQuadratureTable;
 use fenris::error::estimate_L2_error;
@@ -10,6 +7,9 @@ use fenris::mesh::procedural::create_rectangular_uniform_tet_mesh;
 use fenris::mesh::Tet20Mesh;
 use fenris::quadrature::total_order;
 use fenris::util::global_vector_from_point_fn;
+use matrixcompare::assert_scalar_eq;
+use nalgebra::coordinates::XYZ;
+use nalgebra::{Point3, Vector1, U1};
 
 #[test]
 fn tet20_from_tet4_can_represent_cubic_polynomial() {
@@ -21,12 +21,7 @@ fn tet20_from_tet4_can_represent_cubic_polynomial() {
 
     let polynomial = |p: &Point3<f64>| -> f64 {
         let XYZ { x, y, z } = *p.coords;
-        2.0 * x.powi(3)
-            - 3.0 * y.powi(3)
-            + 1.0 * z.powi(3)
-            - 2.0 * x * y * z
-            + 3.0 * x.powi(2)
-            - 4.0 * y.powi(2)
+        2.0 * x.powi(3) - 3.0 * y.powi(3) + 1.0 * z.powi(3) - 2.0 * x * y * z + 3.0 * x.powi(2) - 4.0 * y.powi(2)
             + 1.0 * z.powi(2)
             + 2.0 * x * y
             - 3.0 * x * z

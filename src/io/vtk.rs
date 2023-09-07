@@ -3,7 +3,11 @@ use crate::Real;
 use nalgebra::{DefaultAllocator, DimName, Scalar};
 use vtkio::model::{Attribute, CellType, Cells, DataSet, UnstructuredGridPiece, VertexNumbers};
 
-use crate::connectivity::{Connectivity, Hex20Connectivity, Hex27Connectivity, Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity, Segment2d2Connectivity, Segment2d3Connectivity, Tet10Connectivity, Tet20Connectivity, Tet4Connectivity, Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity};
+use crate::connectivity::{
+    Connectivity, Hex20Connectivity, Hex27Connectivity, Hex8Connectivity, Quad4d2Connectivity, Quad9d2Connectivity,
+    Segment2d2Connectivity, Segment2d3Connectivity, Tet10Connectivity, Tet20Connectivity, Tet4Connectivity,
+    Tri3d2Connectivity, Tri3d3Connectivity, Tri6d2Connectivity,
+};
 
 use nalgebra::allocator::Allocator;
 
@@ -118,7 +122,7 @@ impl VtkCellConnectivity for Tet20Connectivity {
         // but we should try to support LagrangeTetrahedra instead,
         // though this is probably only available for the XML-based format
         assert_eq!(connectivity.len(), 4); //self.vertex_indices().len());
-        connectivity[0 .. 4].copy_from_slice(&self.0[0 .. 4]);
+        connectivity[0..4].copy_from_slice(&self.0[0..4]);
     }
 }
 

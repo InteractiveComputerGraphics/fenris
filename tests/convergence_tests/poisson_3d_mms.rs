@@ -134,11 +134,5 @@ fn poisson_3d_tet20() {
     // TODO: Use "correct" quadrature
     let quadrature = quadrature::total_order::tetrahedron(4).unwrap();
     let error_quadrature = quadrature::total_order::tetrahedron(6).unwrap();
-    solve_and_produce_output(
-        "Tet20",
-        &resolutions,
-        mesh_producer,
-        quadrature,
-        error_quadrature,
-    );
+    solve_and_produce_output("Tet20", &resolutions, mesh_producer, quadrature, error_quadrature);
 }
