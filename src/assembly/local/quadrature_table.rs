@@ -147,6 +147,30 @@ where
             data: self.data,
         }
     }
+
+    /// Replaces the data of the quadrature table with the given data.
+    pub fn with_data<NewData>(self, data: NestedVec<NewData>) -> GeneralQuadratureTable<T, GeometryDim, NewData> {
+        GeneralQuadratureTable::from_points_weights_and_data(self.points, self.weights, data)
+    }
+
+    /// Replaces the data of the quadrature table by calling the given closure with every quadrature
+    /// point in reference coordinates and its element index.
+    pub fn with_data_from_fn<NewData>(
+        self,
+        mut data_fn: impl FnMut(usize, &OPoint<T, GeometryDim>, &Data) -> NewData,
+    ) -> GeneralQuadratureTable<T, GeometryDim, NewData> {
+        let mut data = NestedVec::new();
+
+        for (element_index, (points, datas)) in self.points.iter().zip(self.data.iter()).enumerate() {
+            let mut arr = data.begin_array();
+
+            for (point, data) in points.iter().zip(datas.iter()) {
+                arr.push_single(data_fn(element_index, point, data));
+            }
+        }
+
+        self.with_data(data)
+    }
 }
 
 pub struct GeneralQuadratureParts<T, GeometryDim, Data>
@@ -263,6 +287,28 @@ where
 
     pub fn with_uniform_data<Data2: Clone>(self, data: Data2) -> UniformQuadratureTable<T, GeometryDim, Data2> {
         UniformQuadratureTable::from_quadrature_and_uniform_data((self.weights, self.points), data)
+    }
+}
+
+impl<T, GeometryDim, Data> UniformQuadratureTable<T, GeometryDim, Data>
+where
+    T: Scalar,
+    GeometryDim: DimName,
+    Data: Clone,
+    DefaultAllocator: Allocator<T, GeometryDim>,
+{
+    pub fn to_general(&self, num_elements: usize) -> GeneralQuadratureTable<T, GeometryDim, Data> {
+        let mut points = NestedVec::new();
+        let mut weights = NestedVec::new();
+        let mut data = NestedVec::new();
+
+        for _ in 0..num_elements {
+            points.push(&self.points);
+            weights.push(&self.weights);
+            data.push(&self.data);
+        }
+
+        GeneralQuadratureTable::from_points_weights_and_data(points, weights, data)
     }
 }
 
